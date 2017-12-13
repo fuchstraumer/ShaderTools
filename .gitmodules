@@ -1,0 +1,18 @@
+[submodule "third_party/glslang"]
+	path = third_party/glslang
+	url = https://github.com/google/glslang
+[submodule "third_party/shaderc"]
+	path = third_party/shaderc
+	url = https://github.com/google/shaderc
+[submodule "third_party/spirv-cross"]
+	path = third_party/spirv-cross
+	url = https://github.com/KhronosGroup/SPIRV-Cross
+[submodule "submodules/spirv-tools"]
+	path = submodules/spirv-tools
+	url = https://github.com/KhronosGroup/SPIRV-Tools
+[submodule "json"]
+	path = json
+	url = https://github.com/nlohmann/json
+[submodule "metastuff"]
+	path = metastuff
+	url = https://github.com/eliasdaler/metastuff
