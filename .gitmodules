@@ -16,3 +16,6 @@
 [submodule "metastuff"]
 	path = metastuff
 	url = https://github.com/eliasdaler/metastuff
+[submodule "third_party/spirv-tools"]
+	path = third_party/spirv-tools
+	url = https://github.com/KhronosGroup/SPIRV-Tools.git
