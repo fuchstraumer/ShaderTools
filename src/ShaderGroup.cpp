@@ -170,6 +170,36 @@ namespace st {
             stages. We will then group these further by VK_DESCRIPTOR_TYPE, and use them to start
             filling out entries in our VkDescriptorSetLayoutBinding object.
         */
+        for (const auto& entry : descriptorSets) {
+            for (const auto& obj : entry.second.Members) {
+                const auto& set_idx = obj.second.ParentSet;
+                if (set_idx + 1> bindings.size()) {
+                    bindings.resize(set_idx + 1);
+                }
+                
+                const auto& binding_idx = obj.second.Binding;
+                // Don't access out of bounds.
+                if (binding_idx + 1 > bindings[set_idx].size()) {
+                    // Add a new valid object, which is required for the next check to succeed.
+                    bindings[set_idx].resize(binding_idx + 1);
+                    bindings[set_idx][binding_idx] = VkDescriptorSetLayoutBinding{
+                        binding_idx, obj.first, 1, obj.second.Stages, nullptr
+                    };
+                    continue;
+                }
+
+                // Compare types at binding idx, if not the same throw because that means
+                // we somehow found an invalid shader (i.e, binding 0 in vertex is ubo, 
+                // binding 0 in fragment is a texture)
+                if (bindings[set_idx][binding_idx].descriptorType != obj.first) {
+                    throw std::domain_error("Two descriptors objects in the same set and at the same binding location have differing types!");
+                }
+                else {
+                    bindings[set_idx][binding_idx].stageFlags |= obj.second.Stages;
+                }
+                
+            }
+        }
     }
 
 

@@ -3,7 +3,7 @@
 #define SHADER_TOOLS_GROUP_HPP
 #include "Compiler.hpp"
 #include "ShaderStructs.hpp"
-
+#include <map>
 namespace st {
 
     class ShaderGroup {
@@ -25,7 +25,10 @@ namespace st {
         // only allowed to have one VkPushConstantRange per shader stage.
         std::unordered_multimap<VkShaderStageFlags, DescriptorSetInfo> descriptorSets;
         std::unordered_map<VkShaderStageFlags, PushConstantInfo> pushConstants;
-        std::vector<VkDescriptorSetLayoutBinding> bindings;
+        // Corresponds to all the bindings for a singular set.
+        using descriptor_pack_t = std::vector<VkDescriptorSetLayoutBinding>;
+        // Corresponds to all sets and each of their unique packs of bound objects across all shader stages.
+        std::vector<descriptor_pack_t> bindings;
         std::vector<VkPushConstantRange> ranges;
     };
 
