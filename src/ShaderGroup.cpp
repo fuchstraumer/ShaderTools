@@ -2,6 +2,7 @@
 #include "spirv-cross/spirv_cross.hpp"
 #include "spirv-cross/spirv_glsl.hpp"
 #include <fstream>
+#include <filesystem>
 namespace st {
 
     uint32_t DeserializeUint32(const char (&buf)[4]) {
@@ -45,16 +46,32 @@ namespace st {
         return result;
     }
 
-    const size_t & ShaderGroup::GetNumSets() const noexcept {
-        return bindings.size();
-    }
+    void ShaderGroup::SaveToJSON(const std::string & output_name) {
 
-    std::vector<VkDescriptorSetLayoutBinding> ShaderGroup::GetLayoutBindings(const size_t& set_idx) const noexcept {
-        std::vector<VkDescriptorSetLayoutBinding> result;
-        for (const auto& entry : bindings[set_idx]) {
-            result.push_back(entry.second);
+        if (sortedSets.empty()) {
+            collateBindings();
         }
-        return result;
+
+        namespace fs = std::experimental::filesystem;
+        fs::path output_path(output_name);
+        if (!output_path.has_extension()) {
+            output_path.replace_extension(".json");
+        }
+        else if (output_path.extension().string() != std::string(".json")) {
+            output_path.replace_extension(".json");
+        }
+
+        std::ofstream output_file(output_path.string());
+        if (!output_file.is_open()) {
+            throw std::runtime_error("Couldn't open JSON output file!");
+        }
+
+        nlohmann::json out;
+        output_file << std::setw(4);
+        out = sortedSets;
+        output_file << out;
+        output_file.close();
+        
     }
 
     void parseUniformBuffers(DescriptorSetInfo& info, const spirv_cross::CompilerGLSL& cmplr, const VkShaderStageFlags& stage) {
@@ -74,7 +91,8 @@ namespace st {
                 member.Offset = range.offset;
                 obj.Members.push_back(std::move(member));
             }
-            info.Members.insert(std::make_pair(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, std::move(obj)));
+            obj.Type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            info.Members.push_back(std::move(obj));
         }
     }
 
@@ -87,7 +105,8 @@ namespace st {
             obj.Binding = cmplr.get_decoration(ubuff.id, spv::DecorationBinding);
             obj.ParentSet = cmplr.get_decoration(ubuff.id, spv::DecorationDescriptorSet);
             obj.Name = cmplr.get_name(ubuff.id);
-            info.Members.insert(std::make_pair(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, std::move(obj)));
+            obj.Type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            info.Members.push_back(std::move(obj));
         }
     }
 
@@ -100,7 +119,8 @@ namespace st {
             obj.Binding = cmplr.get_decoration(ubuff.id, spv::DecorationBinding);
             obj.ParentSet = cmplr.get_decoration(ubuff.id, spv::DecorationDescriptorSet);
             obj.Name = cmplr.get_name(ubuff.id);
-            info.Members.insert(std::make_pair(VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, std::move(obj)));
+            obj.Type = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
+            info.Members.push_back(std::move(obj));
         }
     }
 
@@ -113,7 +133,8 @@ namespace st {
             obj.Binding = cmplr.get_decoration(ubuff.id, spv::DecorationBinding);
             obj.ParentSet = cmplr.get_decoration(ubuff.id, spv::DecorationDescriptorSet);
             obj.Name = cmplr.get_name(ubuff.id);
-            info.Members.insert(std::make_pair(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, std::move(obj)));
+            obj.Type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+            info.Members.push_back(std::move(obj));
         }
     }
 
@@ -126,7 +147,8 @@ namespace st {
             obj.Binding = cmplr.get_decoration(ubuff.id, spv::DecorationBinding);
             obj.ParentSet = cmplr.get_decoration(ubuff.id, spv::DecorationDescriptorSet);
             obj.Name = cmplr.get_name(ubuff.id);
-            info.Members.insert(std::make_pair(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, std::move(obj)));
+            obj.Type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            info.Members.push_back(std::move(obj));
         }
     }
 
@@ -139,7 +161,8 @@ namespace st {
             obj.Binding = cmplr.get_decoration(ubuff.id, spv::DecorationBinding);
             obj.ParentSet = cmplr.get_decoration(ubuff.id, spv::DecorationDescriptorSet);
             obj.Name = cmplr.get_name(ubuff.id);
-            info.Members.insert(std::make_pair(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, std::move(obj)));
+            obj.Type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+            info.Members.push_back(std::move(obj));
         }
     }
 
@@ -152,7 +175,8 @@ namespace st {
             obj.Binding = cmplr.get_decoration(ubuff.id, spv::DecorationBinding);
             obj.ParentSet = cmplr.get_decoration(ubuff.id, spv::DecorationDescriptorSet);
             obj.Name = cmplr.get_name(ubuff.id);
-            info.Members.insert(std::make_pair(VK_DESCRIPTOR_TYPE_SAMPLER, std::move(obj)));
+            obj.Type = VK_DESCRIPTOR_TYPE_SAMPLER;
+            info.Members.push_back(std::move(obj));
         }
     }
 
@@ -195,7 +219,7 @@ namespace st {
                 }
             }
         }
-        collateBindings();
+
     }
 
     void ShaderGroup::collateBindings() {
@@ -206,32 +230,47 @@ namespace st {
         */
         for (const auto& entry : descriptorSets) {
             for (const auto& obj : entry.second.Members) {
-                const auto& set_idx = obj.second.ParentSet;
-                if (set_idx + 1> bindings.size()) {
-                    bindings.resize(set_idx + 1);
+                const auto& set_idx = obj.ParentSet;
+                if (set_idx + 1 > sortedSets.size()) {
+                    sortedSets.resize(set_idx + 1);
                 }
                 
-                const auto& binding_idx = obj.second.Binding;
-                
-                auto inserted = bindings[set_idx].insert(std::make_pair(binding_idx, VkDescriptorSetLayoutBinding{
-                    binding_idx, obj.first, 1, obj.second.Stages, nullptr
-                }));
-                if (inserted.second) {
-                    continue;
+                // Check to see if set at index has been created yet.
+                if (sortedSets[set_idx].Index == std::numeric_limits<uint32_t>::max()) {
+                    sortedSets[set_idx].Index = set_idx;
                 }
 
-                // Compare types at binding idx, if not the same throw because that means
-                // we somehow found an invalid shader (i.e, binding 0 in vertex is ubo, 
-                // binding 0 in fragment is a texture)
-                if (bindings[set_idx][binding_idx].descriptorType != obj.first) {
-                    throw std::domain_error("Two descriptors objects in the same set and at the same binding location have differing types!");
+                const auto& binding_idx = obj.Binding;
+                auto& set = sortedSets[set_idx];
+                if (binding_idx + 1 > set.Members.size()) {
+                    set.Members.resize(binding_idx + 1);
+                    set.Members[binding_idx] = obj;
+                }
+                else if (set.Members[binding_idx].Type == VK_DESCRIPTOR_TYPE_MAX_ENUM) {
+                    set.Members[binding_idx] = obj;
+                }
+                else if (set.Members[binding_idx].Name.empty()) {
+                    set.Members[binding_idx] = obj;
                 }
                 else {
-                    bindings[set_idx][binding_idx].stageFlags |= obj.second.Stages;
+                    // Already exists.
+                    if (set.Members[binding_idx].Binding == obj.Binding) {
+                        if (set.Members[binding_idx].Type != obj.Type) {
+                            throw std::domain_error("Two descriptors objects in the same set and at the same binding location have differing types!");
+                        }
+                        else {
+                            // OR stage flags together and move on.
+                            set.Members[binding_idx].Stages |= obj.Stages;
+                        }
+                    }
                 }
+                
+                
+                    
                 
             }
         }
+
     }
 
 
