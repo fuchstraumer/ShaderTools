@@ -16,7 +16,7 @@ namespace st {
         
         const std::vector<uint32_t>& Compile(const std::string& path_to_source, const VkShaderStageFlags& stage);
         bool HasShader(const std::string& binary_path);
-        const std::vector<uint32_t>& GetBinary(const std::string& binary_path);
+        const std::vector<uint32_t>& GetBinary(const std::string& binary_path) const;
         void AddBinary(const std::string& path, std::vector<uint32_t> binary_data);
         
     private:

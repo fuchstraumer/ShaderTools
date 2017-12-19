@@ -47,7 +47,13 @@ namespace st {
         }
 
         const size_t idx = path_to_source.find_last_of('/');
-        const std::string filename(path_to_source.cbegin() + idx, path_to_source.cend());
+        std::string filename;
+        if (idx != std::string::npos) {
+            filename = std::string(path_to_source.cbegin() + idx, path_to_source.cend());
+        }
+        else {
+            filename = path_to_source;
+        }
 
         std::ifstream input_file(path_to_source);
         if(!input_file.is_open()) {
@@ -68,6 +74,26 @@ namespace st {
             throw std::runtime_error("Failed to insert shader into compiled shader map!");
         }
         return (inserted.first)->second;   
+    }
+
+    bool ShaderCompiler::HasShader(const std::string & binary_path) {
+        return compiledShaders.count(binary_path) != 0;
+    }
+
+    const std::vector<uint32_t>& ShaderCompiler::GetBinary(const std::string & binary_path) const {
+        if (compiledShaders.count(binary_path) != 0) {
+            return compiledShaders.at(binary_path);
+        }
+        else {
+            throw std::runtime_error("Requested shader does not exist!");
+        }
+    }
+
+    void ShaderCompiler::AddBinary(const std::string & path, std::vector<uint32_t> binary_data) {
+        auto inserted = compiledShaders.insert(std::make_pair(path, std::move(binary_data)));
+        if (!inserted.second) {
+            throw std::runtime_error("Tried to insert already-stored shader binary!");
+        }
     }
 
 }
