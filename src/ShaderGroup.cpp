@@ -45,6 +45,18 @@ namespace st {
         return result;
     }
 
+    const size_t & ShaderGroup::GetNumSets() const noexcept {
+        return bindings.size();
+    }
+
+    std::vector<VkDescriptorSetLayoutBinding> ShaderGroup::GetLayoutBindings(const size_t& set_idx) const noexcept {
+        std::vector<VkDescriptorSetLayoutBinding> result;
+        for (const auto& entry : bindings[set_idx]) {
+            result.push_back(entry.second);
+        }
+        return result;
+    }
+
     void parseUniformBuffers(DescriptorSetInfo& info, const spirv_cross::CompilerGLSL& cmplr, const VkShaderStageFlags& stage) {
         using namespace spirv_cross;
         const auto rsrcs = cmplr.get_shader_resources();
@@ -61,7 +73,7 @@ namespace st {
     void parseStorageBuffers(DescriptorSetInfo& info, const spirv_cross::CompilerGLSL& cmplr, const VkShaderStageFlags& stage) {
         using namespace spirv_cross;
         const auto rsrcs = cmplr.get_shader_resources();
-        for(const auto& ubuff : rsrcs.uniform_buffers) {
+        for(const auto& ubuff : rsrcs.storage_buffers) {
             DescriptorObject obj;
             obj.Stages = stage;
             obj.Binding = cmplr.get_decoration(ubuff.id, spv::DecorationBinding);
@@ -87,7 +99,7 @@ namespace st {
     void parseStorageImages(DescriptorSetInfo& info, const spirv_cross::CompilerGLSL& cmplr, const VkShaderStageFlags& stage) {
         using namespace spirv_cross;
         const auto rsrcs = cmplr.get_shader_resources();
-        for(const auto& ubuff : rsrcs.uniform_buffers) {
+        for(const auto& ubuff : rsrcs.storage_images) {
             DescriptorObject obj;
             obj.Stages = stage;
             obj.Binding = cmplr.get_decoration(ubuff.id, spv::DecorationBinding);
@@ -100,7 +112,7 @@ namespace st {
     void parseCombinedSampledImages(DescriptorSetInfo& info, const spirv_cross::CompilerGLSL& cmplr, const VkShaderStageFlags& stage) {
         using namespace spirv_cross;
         const auto rsrcs = cmplr.get_shader_resources();
-        for(const auto& ubuff : rsrcs.uniform_buffers) {
+        for(const auto& ubuff : rsrcs.sampled_images) {
             DescriptorObject obj;
             obj.Stages = stage;
             obj.Binding = cmplr.get_decoration(ubuff.id, spv::DecorationBinding);
@@ -113,7 +125,7 @@ namespace st {
     void parseSeparableSampledImages(DescriptorSetInfo& info, const spirv_cross::CompilerGLSL& cmplr, const VkShaderStageFlags& stage) {
         using namespace spirv_cross;
         const auto rsrcs = cmplr.get_shader_resources();
-        for(const auto& ubuff : rsrcs.uniform_buffers) {
+        for(const auto& ubuff : rsrcs.separate_images) {
             DescriptorObject obj;
             obj.Stages = stage;
             obj.Binding = cmplr.get_decoration(ubuff.id, spv::DecorationBinding);
@@ -126,7 +138,7 @@ namespace st {
     void parseSeparableSamplers(DescriptorSetInfo& info, const spirv_cross::CompilerGLSL& cmplr, const VkShaderStageFlags& stage) {
         using namespace spirv_cross;
         const auto rsrcs = cmplr.get_shader_resources();
-        for(const auto& ubuff : rsrcs.uniform_buffers) {
+        for(const auto& ubuff : rsrcs.separate_samplers) {
             DescriptorObject obj;
             obj.Stages = stage;
             obj.Binding = cmplr.get_decoration(ubuff.id, spv::DecorationBinding);
@@ -137,7 +149,7 @@ namespace st {
     }
 
     PushConstantInfo parsePushConstants(const spirv_cross::CompilerGLSL& cmplr, const VkShaderStageFlags& stage) {
-
+        return PushConstantInfo{};
     }
     
     void ShaderGroup::parseBinary(const std::vector<uint32_t>& binary, const VkShaderStageFlags& stage) {
@@ -162,6 +174,7 @@ namespace st {
                 }
             }
         }
+        collateBindings();
     }
 
     void ShaderGroup::collateBindings() {
@@ -178,13 +191,11 @@ namespace st {
                 }
                 
                 const auto& binding_idx = obj.second.Binding;
-                // Don't access out of bounds.
-                if (binding_idx + 1 > bindings[set_idx].size()) {
-                    // Add a new valid object, which is required for the next check to succeed.
-                    bindings[set_idx].resize(binding_idx + 1);
-                    bindings[set_idx][binding_idx] = VkDescriptorSetLayoutBinding{
-                        binding_idx, obj.first, 1, obj.second.Stages, nullptr
-                    };
+                
+                auto inserted = bindings[set_idx].insert(std::make_pair(binding_idx, VkDescriptorSetLayoutBinding{
+                    binding_idx, obj.first, 1, obj.second.Stages, nullptr
+                }));
+                if (inserted.second) {
                     continue;
                 }
 
