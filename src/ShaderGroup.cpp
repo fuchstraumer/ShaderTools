@@ -66,6 +66,14 @@ namespace st {
             obj.Binding = cmplr.get_decoration(ubuff.id, spv::DecorationBinding);
             obj.ParentSet = cmplr.get_decoration(ubuff.id, spv::DecorationDescriptorSet);
             obj.Name = cmplr.get_name(ubuff.id);
+            auto ranges = cmplr.get_active_buffer_ranges(ubuff.id);
+            for(auto& range : ranges) {
+                ShaderDataObject member;
+                member.Name = cmplr.get_member_name(ubuff.base_type_id, range.index);
+                member.Size = range.range;
+                member.Offset = range.offset;
+                obj.Members.push_back(std::move(member));
+            }
             info.Members.insert(std::make_pair(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, std::move(obj)));
         }
     }
@@ -149,7 +157,20 @@ namespace st {
     }
 
     PushConstantInfo parsePushConstants(const spirv_cross::CompilerGLSL& cmplr, const VkShaderStageFlags& stage) {
-        return PushConstantInfo{};
+        const auto push_constants = cmplr.get_shader_resources();
+        const auto& pconstant = push_constants.push_constant_buffers.front();
+        auto ranges = cmplr.get_active_buffer_ranges(pconstant.id);
+        PushConstantInfo result;
+        result.Stages = stage;
+        result.Name = cmplr.get_name(pconstant.id);
+        for(auto& range : ranges) {
+            ShaderDataObject member;
+            member.Name = cmplr.get_member_name(pconstant.base_type_id, range.index);
+            member.Size = range.range;
+            member.Offset = range.offset;
+            result.Members.push_back(std::move(member));
+        }
+        return result;
     }
     
     void ShaderGroup::parseBinary(const std::vector<uint32_t>& binary, const VkShaderStageFlags& stage) {
