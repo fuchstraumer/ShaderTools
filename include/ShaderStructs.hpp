@@ -94,6 +94,12 @@ namespace st {
             }
         }
 
+        explicit operator VkDescriptorSetLayoutBinding() const {
+            return VkDescriptorSetLayoutBinding {
+                Binding, Type, 1, Stages, nullptr
+            };
+        }
+
         std::string GetType() const {
             return GetTypeString(Type);
         }
