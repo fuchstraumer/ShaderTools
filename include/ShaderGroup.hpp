@@ -2,8 +2,7 @@
 #ifndef SHADER_TOOLS_GROUP_HPP
 #define SHADER_TOOLS_GROUP_HPP
 #include "Compiler.hpp"
-#include "ShaderStructs.hpp"
-#include <map>
+#include "BindingGenerator.hpp"
 namespace st {
 
     class ShaderGroup {
@@ -13,24 +12,13 @@ namespace st {
 
         void AddShader(const std::string& compiled_shader_path, const VkShaderStageFlags& stages);
         const std::vector<uint32_t>& CompileAndAddShader(const std::string& uncompiled_shader_path, const VkShaderStageFlags& stages);
-        
-        size_t GetNumSets() const noexcept;
-        std::vector<VkDescriptorSetLayoutBinding> GetLayoutBindings(const size_t& set_index) const;
-        std::vector<VkPushConstantRange> GetPushConstantRanges();
 
-        void SaveToJSON(const std::string& output_name);
-        void LoadFromJSON(const std::string& input_name);
 
     private:
 
-        void parseBinary(const std::vector<uint32_t>& binary, const VkShaderStageFlags& stage);
-        void collateBindings();
+        BindingGenerator bindings;
         ShaderCompiler compiler;
-        // Reason for difference: we can have multiple sets per shader stage, but we're currently
-        // only allowed to have one VkPushConstantRange per shader stage.
-        std::unordered_multimap<VkShaderStageFlags, DescriptorSetInfo> descriptorSets;
-        std::vector<DescriptorSetInfo> sortedSets;
-        std::unordered_map<VkShaderStageFlags, PushConstantInfo> pushConstants;
+
     };
 
 }
