@@ -15,10 +15,11 @@ namespace st {
         const std::vector<uint32_t>& CompileAndAddShader(const std::string& uncompiled_shader_path, const VkShaderStageFlags& stages);
         
         size_t GetNumSets() const noexcept;
-        std::vector<VkDescriptorSetLayoutBinding> GetLayoutBindings(const size_t& set_index) const noexcept;
+        std::vector<VkDescriptorSetLayoutBinding> GetLayoutBindings(const size_t& set_index) const;
         std::vector<VkPushConstantRange> GetPushConstantRanges();
 
         void SaveToJSON(const std::string& output_name);
+        void LoadFromJSON(const std::string& input_name);
 
     private:
 

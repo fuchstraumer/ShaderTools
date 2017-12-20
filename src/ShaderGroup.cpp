@@ -46,6 +46,19 @@ namespace st {
         return result;
     }
 
+    size_t ShaderGroup::GetNumSets() const noexcept {
+        return sortedSets.size();
+    }
+
+    std::vector<VkDescriptorSetLayoutBinding> ShaderGroup::GetLayoutBindings(const size_t& idx) const {
+        auto& set = sortedSets[idx];
+        std::vector<VkDescriptorSetLayoutBinding> result;
+        for(auto& member : set.Members) {
+            result.push_back((VkDescriptorSetLayoutBinding)member);
+        }
+        return result;
+    }
+
     void ShaderGroup::SaveToJSON(const std::string & output_name) {
 
         if (sortedSets.empty()) {
@@ -72,6 +85,19 @@ namespace st {
         output_file << out;
         output_file.close();
         
+    }
+
+    void ShaderGroup::LoadFromJSON(const std::string& input) {
+
+        std::ifstream input_file(input);
+        if(!input_file.is_open()) {
+            throw std::domain_error("ShaderGroup failed to open input file for reading!");
+        }
+
+        nlohmann::json j;
+        input_file >> j;
+        sortedSets = j;
+        input_file.close();
     }
 
     void parseUniformBuffers(DescriptorSetInfo& info, const spirv_cross::CompilerGLSL& cmplr, const VkShaderStageFlags& stage) {
