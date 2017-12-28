@@ -3,6 +3,7 @@
 #include <fstream>
 #include <sstream>
 #include <iostream>
+#include <mutex>
 
 namespace fs = std::experimental::filesystem;
 
@@ -69,6 +70,8 @@ namespace st {
             throw std::runtime_error(except_msg.c_str());
         }
 
+        static std::mutex insertion_mutex;
+        std::lock_guard<std::mutex> insertion_guard(insertion_mutex);
         auto inserted = compiledShaders.insert(std::make_pair(fs::absolute(path_to_source), std::vector<uint32_t>{ result.begin(), result.end() }));
         if(!inserted.second) {
             throw std::runtime_error("Failed to insert shader into compiled shader map!");
@@ -91,6 +94,8 @@ namespace st {
 
     void ShaderCompiler::AddBinary(const std::string & path, std::vector<uint32_t> binary_data) {
         const fs::path absolute_path = fs::absolute(fs::path(path));
+        static std::mutex insertion_mutex;
+        std::lock_guard<std::mutex> insertion_guard(insertion_mutex);
         auto inserted = compiledShaders.insert(std::make_pair(absolute_path, std::move(binary_data)));
         if (!inserted.second) {
             throw std::runtime_error("Tried to insert already-stored shader binary!");
