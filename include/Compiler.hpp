@@ -15,7 +15,7 @@ namespace st {
         ShaderCompiler() = default;
         ~ShaderCompiler() = default;
         
-        const std::vector<uint32_t>& Compile(const std::string& path_to_source, const VkShaderStageFlags& stage);
+        const std::vector<uint32_t>& Compile(const std::string& path_to_source, VkShaderStageFlags stage = VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM);
         bool HasShader(const std::string& binary_path) const;
         const std::vector<uint32_t>& GetBinary(const std::string& binary_path) const;
         void AddBinary(const std::string& path, std::vector<uint32_t> binary_data);

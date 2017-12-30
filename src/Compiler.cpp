@@ -9,6 +9,16 @@ namespace fs = std::experimental::filesystem;
 
 namespace st {
 
+    
+    static const std::map<std::string, VkShaderStageFlags> extension_stage_map {
+        { ".vert", VK_SHADER_STAGE_VERTEX_BIT },
+        { ".frag", VK_SHADER_STAGE_FRAGMENT_BIT },
+        { ".geom", VK_SHADER_STAGE_GEOMETRY_BIT },
+        { ".teval", VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT },
+        { ".tcntl", VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT },
+        { ".comp", VK_SHADER_STAGE_COMPUTE_BIT }
+    };
+
     std::string ShaderCompiler::preferredShaderDirectory = std::string("./");
     bool ShaderCompiler::saveCompiledBinaries = false;
 
@@ -16,7 +26,8 @@ namespace st {
 
     }
 
-    const std::vector<uint32_t>& ShaderCompiler::Compile(const std::string& path_to_source_str, const VkShaderStageFlags& stage) {
+    const std::vector<uint32_t>& ShaderCompiler::Compile(const std::string& path_to_source_str, VkShaderStageFlags stage) {
+
         fs::path path_to_source(path_to_source_str);
         if(compiledShaders.count(path_to_source) != 0) {
             return compiledShaders.at(path_to_source);
@@ -26,6 +37,17 @@ namespace st {
         if (!fs::exists(path_to_source)) {
             std::cerr << "Given shader source path/file does not exist!\n";
             throw std::runtime_error("Failed to open/find given shader file.");
+        }
+
+        
+        if (stage == VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM) {
+            // We weren't given a stage, try to infer it from the file.
+            const std::string stage_ext = path_to_source.extension().string();
+            auto iter = extension_stage_map.find(stage_ext);
+            if (iter == extension_stage_map.end()) {
+                throw std::runtime_error("No stage passed to ShaderCompiler::Compiler, and couldn't parse file's extension to infer shader's stage!");
+            }
+            stage = (*iter).second;
         }
         
         shaderc::Compiler compiler;
