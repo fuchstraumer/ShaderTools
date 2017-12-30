@@ -20,9 +20,17 @@ namespace st {
         const std::vector<uint32_t>& GetBinary(const std::string& binary_path) const;
         void AddBinary(const std::string& path, std::vector<uint32_t> binary_data);
         
+        static std::string GetPreferredDirectory();
+        static void SetPreferredDirectory(const std::string& new_dir);
         
     private:
+        static std::string preferredShaderDirectory;
+        static bool saveCompiledBinaries;
         std::map<std::experimental::filesystem::path, std::vector<uint32_t>> compiledShaders;
+        void saveShaderToFile(const std::experimental::filesystem::path& source_path);
+        void saveBinary(const std::experimental::filesystem::path& source_path, const std::experimental::filesystem::path& path_to_save_to);
+        void loadAllSavedShaders();
+        bool shaderSourceNewerThanBinary(const std::experimental::filesystem::path& source, const std::experimental::filesystem::path& binary);
     };
 
 }

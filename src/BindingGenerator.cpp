@@ -86,12 +86,20 @@ namespace st {
     void parseStorageBuffers(DescriptorSetInfo& info, const spirv_cross::CompilerGLSL& cmplr, const VkShaderStageFlags& stage) {
         using namespace spirv_cross;
         const auto rsrcs = cmplr.get_shader_resources();
-        for(const auto& ubuff : rsrcs.storage_buffers) {
+        for(const auto& sbuff : rsrcs.storage_buffers) {
             DescriptorObject obj;
             obj.Stages = stage;
-            obj.Binding = cmplr.get_decoration(ubuff.id, spv::DecorationBinding);
-            obj.ParentSet = cmplr.get_decoration(ubuff.id, spv::DecorationDescriptorSet);
-            obj.Name = cmplr.get_name(ubuff.id);
+            obj.Binding = cmplr.get_decoration(sbuff.id, spv::DecorationBinding);
+            obj.ParentSet = cmplr.get_decoration(sbuff.id, spv::DecorationDescriptorSet);
+            obj.Name = cmplr.get_name(sbuff.id);
+            auto ranges = cmplr.get_active_buffer_ranges(sbuff.id);
+            for (const auto& member : ranges) {
+                ShaderDataObject member;
+                member.Name = cmplr.get_member_name(sbuff.base_type_id, member.index);
+                member.Size = member.range;
+                member.Offset = member.offset;
+                obj.Members.push_back(member);
+            }
             obj.Type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
             info.Members.push_back(std::move(obj));
         }
@@ -198,13 +206,8 @@ namespace st {
         descriptorSets.insert(std::make_pair(stage, std::move(info)));
         { 
             const auto rsrcs = glsl.get_shader_resources();
-            if (!rsrcs.push_constant_buffers.empty()) {
-                PushConstantInfo push_constant = parsePushConstants(glsl, stage);
-                auto inserted = pushConstants.insert(std::make_pair(stage, std::move(push_constant)));
-                if(!inserted.second) {
-                    throw std::runtime_error("Failed to insert a push constant into storage map: is there already another object for this stage?");
-                }
-            }
+            PushConstantInfo push_constant = parsePushConstants(glsl, stage);
+            auto inserted = pushConstants.insert(std::make_pair(stage, std::move(push_constant)));
         }
 
     }

@@ -9,6 +9,13 @@ namespace fs = std::experimental::filesystem;
 
 namespace st {
 
+    std::string ShaderCompiler::preferredShaderDirectory = std::string("./");
+    bool ShaderCompiler::saveCompiledBinaries = false;
+
+    ShaderCompiler::ShaderCompiler() { 
+
+    }
+
     const std::vector<uint32_t>& ShaderCompiler::Compile(const std::string& path_to_source_str, const VkShaderStageFlags& stage) {
         fs::path path_to_source(path_to_source_str);
         if(compiledShaders.count(path_to_source) != 0) {
@@ -99,6 +106,62 @@ namespace st {
         auto inserted = compiledShaders.insert(std::make_pair(absolute_path, std::move(binary_data)));
         if (!inserted.second) {
             throw std::runtime_error("Tried to insert already-stored shader binary!");
+        }
+    }
+
+    void ShaderCompiler::saveShaderToFile(const fs::path& source_path) {
+
+        if (fs::exists(fs::path(preferredShaderDirectory))) {
+            bool success = fs::create_directories(fs::path(preferredShaderDirectory));
+            if (!success) {
+                throw std::runtime_error("Failed to create directory to save shaders into.");
+            }
+        }
+        // check for existing binary and check for version parity
+        fs::path binary_path = source_path.filename();
+        binary_path.replace_extension(source_path.extension().string() + std::string(".spv"));
+        binary_path = source_path.replace_filename(binary_path);
+        
+        if (fs::exists(binary_path)) {
+            // Binary exists already, check if we need to re-save what we have 
+            // loaded in the executable right now
+            if (shaderSourceNewerThanBinary(source_path, binary_path)) {
+                saveBinary(source_path, binary_path);
+                return;
+            } 
+            else {
+                // shader source and binary vaguely the same version-wise
+                return;
+            }
+        }
+        else {
+            saveBinary(source_path, binary_path);
+            return;
+        }
+    }
+
+    void ShaderCompiler::saveBinary(const fs::path& source, const fs::path& dest) {
+
+        const auto& binary_src = compiledShaders.at(fs::absolute(source));
+
+        std::ofstream outfile(dest, std::ofstream::binary);
+        outfile.write(reinterpret_cast<const char*>(binary_src.data()), sizeof(uint32_t) * binary_src.size());
+        outfile.close();
+
+    }
+
+    bool shaderSourceNewerThanBinary(const std::experimental::filesystem::path& source, const std::experimental::filesystem::path& binary) {
+        const fs::file_time_type source_mod_time(fs::last_write_time(source));
+        if (source_mod_time == fs::file_time_type::min()) {
+            throw std::runtime_error("File write time for a source shader file is invalid - suggests invalid path passed to checker method!");
+        }
+        const fs::file_time_type binary_mod_time(fs::last_write_time(source));
+        if (binary_mod_time == fs::file_time_type::min()) {
+            return true;
+        }
+        else {
+            // don't check equals, as they could be equal (very nearly, at least)
+            return binary_mod_time < source_mod_time;
         }
     }
 
