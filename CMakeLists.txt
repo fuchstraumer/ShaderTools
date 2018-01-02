@@ -30,3 +30,5 @@ ADD_EXECUTABLE(ShaderTools "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp" ${SOURCES}
 ENDIF()
 TARGET_LINK_LIBRARIES(ShaderTools shaderc spirv-cross-core spirv-cross-glsl spirv-cross-cpp)
 TARGET_INCLUDE_DIRECTORIES(ShaderTools PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/third_party" "${CMAKE_CURRENT_SOURCE_DIR}/include" "${Vulkan_INCLUDE_DIRS}")
+INSTALL(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include/" DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/ShaderTools/")
+INSTALL(TARGETS shaderc spirv-cross-core spirv-cross-glsl spirv-cross-cpp LIBRARY DESTINATION "lib" ARCHIVE DESTINATION "lib")
