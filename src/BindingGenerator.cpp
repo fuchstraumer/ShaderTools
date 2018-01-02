@@ -56,7 +56,7 @@ namespace st {
 
         nlohmann::json j;
         input_file >> j;
-        sortedSets = j;
+        //sortedSets = j;
         input_file.close();
     }
 
@@ -94,11 +94,11 @@ namespace st {
             obj.Name = cmplr.get_name(sbuff.id);
             auto ranges = cmplr.get_active_buffer_ranges(sbuff.id);
             for (const auto& member : ranges) {
-                ShaderDataObject member;
-                member.Name = cmplr.get_member_name(sbuff.base_type_id, member.index);
-                member.Size = member.range;
-                member.Offset = member.offset;
-                obj.Members.push_back(member);
+                ShaderDataObject sdo;
+                sdo.Name = cmplr.get_member_name(sbuff.base_type_id, member.index);
+                sdo.Size = member.range;
+                sdo.Offset = member.offset;
+                obj.Members.push_back(sdo);
             }
             obj.Type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
             info.Members.push_back(std::move(obj));

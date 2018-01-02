@@ -22,10 +22,6 @@ namespace st {
     std::string ShaderCompiler::preferredShaderDirectory = std::string("./");
     bool ShaderCompiler::saveCompiledBinaries = false;
 
-    ShaderCompiler::ShaderCompiler() { 
-
-    }
-
     const std::vector<uint32_t>& ShaderCompiler::Compile(const std::string& path_to_source_str, VkShaderStageFlags stage) {
 
         fs::path path_to_source(path_to_source_str);
