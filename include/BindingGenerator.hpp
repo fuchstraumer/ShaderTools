@@ -7,7 +7,14 @@ namespace st {
     class BindingGeneratorImpl;
 
     class ST_API BindingGenerator {
+        BindingGenerator(const BindingGenerator&) = delete;
+        BindingGenerator& operator=(const BindingGenerator&) = delete;
     public:
+
+        BindingGenerator() = default;
+        ~BindingGenerator() = default;
+        BindingGenerator(BindingGenerator&& other) noexcept;
+        BindingGenerator& operator=(BindingGenerator&& other) noexcept;
 
         void ParseBinary(const uint32_t binary_size, const uint32_t* binary, const VkShaderStageFlags stage);
         void CollateBindings();

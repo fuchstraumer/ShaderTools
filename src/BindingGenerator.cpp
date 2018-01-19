@@ -8,13 +8,38 @@
 namespace st {
 
     class BindingGeneratorImpl {
+        BindingGeneratorImpl(const BindingGeneratorImpl&) = delete;
+        BindingGeneratorImpl& operator=(const BindingGeneratorImpl&) = delete;
     public:
+
+        BindingGeneratorImpl() = default;
+        ~BindingGeneratorImpl() = default;
+        BindingGeneratorImpl(BindingGeneratorImpl&& other) noexcept;
+        BindingGeneratorImpl& operator=(BindingGeneratorImpl&& other) noexcept;
+
         void parseBinary(const uint32_t binary_sz, const uint32_t* binary, const VkShaderStageFlags stage);
         void collateBindings();
         std::unordered_multimap<VkShaderStageFlags, DescriptorSetInfo> descriptorSets;
         std::vector<DescriptorSetInfo> sortedSets;
         std::unordered_map<VkShaderStageFlags, PushConstantInfo> pushConstants;
     };
+
+    BindingGenerator::BindingGenerator(BindingGenerator&& other) noexcept : impl(std::move(other.impl)) {}
+
+    BindingGeneratorImpl::BindingGeneratorImpl(BindingGeneratorImpl&& other) noexcept : descriptorSets(std::move(other.descriptorSets)),
+        sortedSets(std::move(other.sortedSets)), pushConstants(std::move(other.pushConstants)) {}
+
+    BindingGenerator& BindingGenerator::operator=(BindingGenerator&& other) noexcept {
+        impl = std::move(other.impl);
+        return *this;
+    }
+
+    BindingGeneratorImpl& BindingGeneratorImpl::operator=(BindingGeneratorImpl&& other) noexcept {
+        descriptorSets = std::move(other.descriptorSets);
+        sortedSets = std::move(other.sortedSets);
+        pushConstants = std::move(other.pushConstants);
+        return *this;
+    }
 
     size_t BindingGenerator::GetNumSets() const noexcept {
         return impl->sortedSets.size();

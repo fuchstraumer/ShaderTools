@@ -8,14 +8,18 @@ namespace st {
     class ShaderCompilerImpl;
 
     class ST_API ShaderCompiler {
+        ShaderCompiler(const ShaderCompiler&) = delete;
+        ShaderCompiler& operator=(const ShaderCompiler&) = delete;
     public:
         ShaderCompiler() = default;
         ~ShaderCompiler() = default;
+        ShaderCompiler(ShaderCompiler&& other) noexcept;
+        ShaderCompiler& operator=(ShaderCompiler&& other) noexcept;
 
-        bool Compile(const char* path_to_source, VkShaderStageFlags stage);
+        bool Compile(const char* path_to_source, const VkShaderStageFlags stage);
         bool HasShader(const char* binary_path) const;
         void GetBinary(const char* binary_path, uint32_t* binary_size, uint32_t* binary = nullptr) const;
-        void AddBinary(const char* path, uint32_t binary_size, uint32_t* binary_src);
+        void AddBinary(const char* path, const uint32_t binary_size, const uint32_t* binary_src);
         
         static const char* GetPreferredDirectory();
         static void SetPreferredDirectory(const char* directory);

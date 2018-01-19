@@ -27,7 +27,7 @@ namespace st {
         static bool saveCompiledBinaries;
         std::map<std::experimental::filesystem::path, std::vector<uint32_t>> compiledShaders;
 
-        bool compile(const char* path_to_src, VkShaderStageFlags stage);
+        bool compile(const char* path_to_src, const VkShaderStageFlags stage);
 
         void saveShaderToFile(const std::experimental::filesystem::path& source_path);
         void saveBinary(const std::experimental::filesystem::path& source_path, const std::experimental::filesystem::path& path_to_save_to);
@@ -46,7 +46,21 @@ namespace st {
         { ".comp", VK_SHADER_STAGE_COMPUTE_BIT }
     };
 
-    bool ShaderCompiler::Compile(const char* path_to_source_str, VkShaderStageFlags stage) {
+    ShaderCompiler::ShaderCompiler(ShaderCompiler&& other) noexcept : impl(std::move(other.impl)) {}
+
+    ShaderCompilerImpl::ShaderCompilerImpl(ShaderCompilerImpl&& other) noexcept : compiledShaders(std::move(other.compiledShaders)) {}
+
+    ShaderCompiler& ShaderCompiler::operator=(ShaderCompiler&& other) noexcept {
+        impl = std::move(other.impl);
+        return *this;
+    }
+
+    ShaderCompilerImpl& ShaderCompilerImpl::operator=(ShaderCompilerImpl&& other) noexcept {
+        compiledShaders = std::move(other.compiledShaders);
+        return *this;
+    }
+
+    bool ShaderCompiler::Compile(const char* path_to_source_str, const VkShaderStageFlags stage) {
         return impl->compile(path_to_source_str, stage);
     }
 
@@ -72,7 +86,7 @@ namespace st {
 
     }
 
-    void ShaderCompiler::AddBinary(const char* path, uint32_t sz, uint32_t* binary_data) {
+    void ShaderCompiler::AddBinary(const char* path, const uint32_t sz, const uint32_t* binary_data) {
         const fs::path absolute_path = fs::absolute(fs::path(path));
         static std::mutex insertion_mutex;
         std::lock_guard<std::mutex> insertion_guard(insertion_mutex);
