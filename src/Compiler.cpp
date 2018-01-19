@@ -33,6 +33,9 @@ namespace st {
         void saveBinary(const std::experimental::filesystem::path& source_path, const std::experimental::filesystem::path& path_to_save_to);
         bool shaderSourceNewerThanBinary(const std::experimental::filesystem::path& source, const std::experimental::filesystem::path& binary);
     };
+
+    std::string ShaderCompilerImpl::preferredShaderDirectory = std::string("./");
+    bool ShaderCompilerImpl::saveCompiledBinaries = false;
     
     static const std::map<std::string, VkShaderStageFlags> extension_stage_map {
         { ".vert", VK_SHADER_STAGE_VERTEX_BIT },

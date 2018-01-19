@@ -101,8 +101,8 @@ namespace st {
             for(auto& range : ranges) {
                 ShaderDataObject member;
                 member.Name = cmplr.get_member_name(ubuff.base_type_id, range.index);
-                member.Size = range.range;
-                member.Offset = range.offset;
+                member.Size = static_cast<uint32_t>(range.range);
+                member.Offset = static_cast<uint32_t>(range.offset);
                 obj.Members.push_back(std::move(member));
             }
             obj.Type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -123,8 +123,8 @@ namespace st {
             for (const auto& member : ranges) {
                 ShaderDataObject sdo;
                 sdo.Name = cmplr.get_member_name(sbuff.base_type_id, member.index);
-                sdo.Size = member.range;
-                sdo.Offset = member.offset;
+                sdo.Size = static_cast<uint32_t>(member.range);
+                sdo.Offset = static_cast<uint32_t>(member.offset);
                 obj.Members.push_back(sdo);
             }
             obj.Type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
@@ -212,8 +212,8 @@ namespace st {
         for(auto& range : ranges) {
             ShaderDataObject member;
             member.Name = cmplr.get_member_name(pconstant.base_type_id, range.index);
-            member.Size = range.range;
-            member.Offset = range.offset;
+            member.Size = static_cast<uint32_t>(range.range);
+            member.Offset = static_cast<uint32_t>(range.offset);
             result.Members.push_back(std::move(member));
         }
         return result;

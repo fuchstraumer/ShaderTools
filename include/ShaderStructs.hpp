@@ -116,12 +116,12 @@ namespace st {
         VkShaderStageFlags Stages;
         std::string Name;
         std::vector<ShaderDataObject> Members;
-        size_t Offset;
+        uint32_t Offset;
         explicit operator VkPushConstantRange() const noexcept {
             VkPushConstantRange result;
             result.stageFlags = Stages;
             result.offset = Offset;
-            size_t size = 0;
+            uint32_t size = 0;
             for (auto& obj : Members) {
                 size += obj.Size;
             }

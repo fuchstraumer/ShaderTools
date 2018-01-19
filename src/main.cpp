@@ -1,6 +1,7 @@
+#include <map>
 #include <iostream>
-#include "ShaderGroup.hpp"
-#include <filesystem>
+#include "include/Compiler.hpp"
+#include "include/BindingGenerator.hpp"
 
 static const std::map<std::string, VkShaderStageFlags> extension_stage_map {
     { ".vert", VK_SHADER_STAGE_VERTEX_BIT },
