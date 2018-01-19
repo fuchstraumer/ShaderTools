@@ -1,27 +1,52 @@
 #include "BindingGenerator.hpp"
+#include "ShaderStructs.hpp"
 #include "spirv-cross/spirv_cross.hpp"
 #include "spirv-cross/spirv_glsl.hpp"
 #include <fstream>
 #include <filesystem>
-
+#include <unordered_map>
 namespace st {
 
+    class BindingGeneratorImpl {
+    public:
+        void parseBinary(const uint32_t binary_sz, const uint32_t* binary, const VkShaderStageFlags stage);
+        void collateBindings();
+        std::unordered_multimap<VkShaderStageFlags, DescriptorSetInfo> descriptorSets;
+        std::vector<DescriptorSetInfo> sortedSets;
+        std::unordered_map<VkShaderStageFlags, PushConstantInfo> pushConstants;
+    };
+
     size_t BindingGenerator::GetNumSets() const noexcept {
-        return sortedSets.size();
+        return impl->sortedSets.size();
     }
 
-    std::vector<VkDescriptorSetLayoutBinding> BindingGenerator::GetLayoutBindings(const size_t& idx) const {
-        auto& set = sortedSets[idx];
-        std::vector<VkDescriptorSetLayoutBinding> result;
-        for(auto& member : set.Members) {
-            result.push_back((VkDescriptorSetLayoutBinding)member);
+    void BindingGenerator::GetLayoutBindings(const size_t& idx, uint32_t* num_bindings, VkDescriptorSetLayoutBinding* bindings) const {
+        
+        auto& set = impl->sortedSets[idx];
+        *num_bindings = static_cast<uint32_t>(set.Members.size());
+        if (bindings != nullptr) {
+            std::vector<VkDescriptorSetLayoutBinding> result;
+            for (auto& member : set.Members) {
+                result.push_back((VkDescriptorSetLayoutBinding)member);
+            }
+            std::copy(result.cbegin(), result.cend(), bindings);
         }
-        return result;
     }
 
-    void BindingGenerator::SaveToJSON(const std::string & output_name) {
+    void BindingGenerator::GetPushConstantRanges(uint32_t * num_ranges, VkPushConstantRange * results) const {
+        std::vector<VkPushConstantRange> ranges;
+        for (auto& entry : impl->pushConstants) {
+            ranges.push_back((VkPushConstantRange)entry.second);
+        }
+        *num_ranges = static_cast<uint32_t>(ranges.size());
+        if (results != nullptr) {
+            std::copy(ranges.cbegin(), ranges.cend(), results);
+        }
+    }
 
-        if (sortedSets.empty()) {
+    void BindingGenerator::SaveToJSON(const char* output_name) {
+
+        if (impl->sortedSets.empty()) {
             CollateBindings();
         }
 
@@ -41,13 +66,13 @@ namespace st {
 
         nlohmann::json out;
         output_file << std::setw(4);
-        out = sortedSets;
+        out = impl->sortedSets;
         output_file << out;
         output_file.close();
         
     }
 
-    void BindingGenerator::LoadFromJSON(const std::string& input) {
+    void BindingGenerator::LoadFromJSON(const char* input) {
 
         std::ifstream input_file(input);
         if(!input_file.is_open()) {
@@ -56,7 +81,9 @@ namespace st {
 
         nlohmann::json j;
         input_file >> j;
-        //sortedSets = j;
+        for (auto& entry : j) {
+            impl->sortedSets.push_back(entry);
+        }
         input_file.close();
     }
 
@@ -192,8 +219,13 @@ namespace st {
         return result;
     }
     
-    void BindingGenerator::ParseBinary(const std::vector<uint32_t>& binary, const VkShaderStageFlags& stage) {
+    void BindingGenerator::ParseBinary(const uint32_t binary_size, const uint32_t* binary, const VkShaderStageFlags stage) {
+        impl->parseBinary(binary_size, binary, stage);
+    }
+
+    void BindingGeneratorImpl::parseBinary(const uint32_t sz, const uint32_t* src, const VkShaderStageFlags stage) {
         using namespace spirv_cross;
+        std::vector<uint32_t> binary{ src, src + sz };
         CompilerGLSL glsl(binary);
         DescriptorSetInfo info;
         parseUniformBuffers(info, glsl, stage);
@@ -204,7 +236,7 @@ namespace st {
         parseSeparableSampledImages(info, glsl, stage);
         parseSeparableSamplers(info, glsl, stage);
         descriptorSets.insert(std::make_pair(stage, std::move(info)));
-        { 
+        {
             const auto rsrcs = glsl.get_shader_resources();
             PushConstantInfo push_constant = parsePushConstants(glsl, stage);
             auto inserted = pushConstants.insert(std::make_pair(stage, std::move(push_constant)));
@@ -213,13 +245,17 @@ namespace st {
     }
 
     void BindingGenerator::CollateBindings() {
+        impl->collateBindings();
+    }
+
+    void BindingGeneratorImpl::collateBindings() {
         /*  Now, we need to check the descriptor sets in all the active stages we added and
-            find all descriptor sets - and their component objects - that are used in multiple
-            stages. We will then group these further by VK_DESCRIPTOR_TYPE, and use them to start
-            filling out entries in our VkDescriptorSetLayoutBinding object.
+        find all descriptor sets - and their component objects - that are used in multiple
+        stages. We will then group these further by VK_DESCRIPTOR_TYPE, and use them to start
+        filling out entries in our VkDescriptorSetLayoutBinding object.
         */
 
-        if(!sortedSets.empty()) {
+        if (!sortedSets.empty()) {
             // Clear these, as we have to resort 
             // from the raw imported/parsed data 
             sortedSets.clear();
@@ -231,7 +267,7 @@ namespace st {
                 if (set_idx + 1 > sortedSets.size()) {
                     sortedSets.resize(set_idx + 1);
                 }
-                
+
                 // Check to see if set at index has been created yet.
                 if (sortedSets[set_idx].Index == std::numeric_limits<uint32_t>::max()) {
                     sortedSets[set_idx].Index = set_idx;
@@ -261,13 +297,8 @@ namespace st {
                         }
                     }
                 }
-                
-                
-                    
-                
             }
         }
-
     }
 
 }

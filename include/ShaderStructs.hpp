@@ -1,13 +1,10 @@
 #pragma once
 #ifndef SHADER_TOOLS_STRUCTS_HPP
 #define SHADER_TOOLS_STRUCTS_HPP
-#include <string>
+#include "CommonInclude.hpp"
 #include <vector>
-#include <vulkan/vulkan.h>
-#include <cstdint>
 #include <map>
-#include "nlohmann/src/json.hpp"
-#include "metastuff/include/Meta.h"
+
 namespace st {
 
     inline std::string GetTypeString(const VkDescriptorType& type) {
@@ -119,6 +116,18 @@ namespace st {
         VkShaderStageFlags Stages;
         std::string Name;
         std::vector<ShaderDataObject> Members;
+        size_t Offset;
+        explicit operator VkPushConstantRange() const noexcept {
+            VkPushConstantRange result;
+            result.stageFlags = Stages;
+            result.offset = Offset;
+            size_t size = 0;
+            for (auto& obj : Members) {
+                size += obj.Size;
+            }
+            result.size = size;
+            return result;
+        }
     };
 
     template<typename T>

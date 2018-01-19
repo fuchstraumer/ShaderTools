@@ -1,36 +1,27 @@
 #pragma once
 #ifndef SHADER_TOOLS_COMPILER_HPP
 #define SHADER_TOOLS_COMPILER_HPP
-#include <vulkan/vulkan.h>
-#include <string>
-#include <map>
-#include <vector>
-#include <cstdint>
-#include <filesystem>
+#include "CommonInclude.hpp"
 
 namespace st {
 
-    class ShaderCompiler {
+    class ShaderCompilerImpl;
+
+    class ST_API ShaderCompiler {
     public:
         ShaderCompiler() = default;
         ~ShaderCompiler() = default;
+
+        bool Compile(const char* path_to_source, VkShaderStageFlags stage);
+        bool HasShader(const char* binary_path) const;
+        void GetBinary(const char* binary_path, uint32_t* binary_size, uint32_t* binary = nullptr) const;
+        void AddBinary(const char* path, uint32_t binary_size, uint32_t* binary_src);
         
-        const std::vector<uint32_t>& Compile(const std::string& path_to_source, VkShaderStageFlags stage = VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM);
-        bool HasShader(const std::string& binary_path) const;
-        const std::vector<uint32_t>& GetBinary(const std::string& binary_path) const;
-        void AddBinary(const std::string& path, std::vector<uint32_t> binary_data);
-        
-        static std::string GetPreferredDirectory();
-        static void SetPreferredDirectory(const std::string& new_dir);
+        static const char* GetPreferredDirectory();
+        static void SetPreferredDirectory(const char* directory);
         
     private:
-        static std::string preferredShaderDirectory;
-        static bool saveCompiledBinaries;
-        std::map<std::experimental::filesystem::path, std::vector<uint32_t>> compiledShaders;
-        void saveShaderToFile(const std::experimental::filesystem::path& source_path);
-        void saveBinary(const std::experimental::filesystem::path& source_path, const std::experimental::filesystem::path& path_to_save_to);
-        void loadAllSavedShaders();
-        bool shaderSourceNewerThanBinary(const std::experimental::filesystem::path& source, const std::experimental::filesystem::path& binary);
+        std::unique_ptr<ShaderCompilerImpl> impl;
     };
 
 }

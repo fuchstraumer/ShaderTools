@@ -1,14 +1,38 @@
 #include "Compiler.hpp"
-#include <shaderc/shaderc.hpp>
 #include <fstream>
 #include <sstream>
 #include <iostream>
 #include <mutex>
+#include <string>
+#include <map>
+#include <vector>
+#include <filesystem>
+#include <shaderc/shaderc.hpp>
 
 namespace fs = std::experimental::filesystem;
 
 namespace st {
 
+    class ShaderCompilerImpl {
+        ShaderCompilerImpl(const ShaderCompilerImpl&) = delete;
+        ShaderCompilerImpl& operator=(const ShaderCompilerImpl&) = delete;
+    public:
+
+        ShaderCompilerImpl() = default;
+        ~ShaderCompilerImpl() = default;
+        ShaderCompilerImpl(ShaderCompilerImpl&& other) noexcept;
+        ShaderCompilerImpl& operator=(ShaderCompilerImpl&& other) noexcept;
+
+        static std::string preferredShaderDirectory;
+        static bool saveCompiledBinaries;
+        std::map<std::experimental::filesystem::path, std::vector<uint32_t>> compiledShaders;
+
+        bool compile(const char* path_to_src, VkShaderStageFlags stage);
+
+        void saveShaderToFile(const std::experimental::filesystem::path& source_path);
+        void saveBinary(const std::experimental::filesystem::path& source_path, const std::experimental::filesystem::path& path_to_save_to);
+        bool shaderSourceNewerThanBinary(const std::experimental::filesystem::path& source, const std::experimental::filesystem::path& binary);
+    };
     
     static const std::map<std::string, VkShaderStageFlags> extension_stage_map {
         { ".vert", VK_SHADER_STAGE_VERTEX_BIT },
@@ -19,14 +43,55 @@ namespace st {
         { ".comp", VK_SHADER_STAGE_COMPUTE_BIT }
     };
 
-    std::string ShaderCompiler::preferredShaderDirectory = std::string("./");
-    bool ShaderCompiler::saveCompiledBinaries = false;
+    bool ShaderCompiler::Compile(const char* path_to_source_str, VkShaderStageFlags stage) {
+        return impl->compile(path_to_source_str, stage);
+    }
 
-    const std::vector<uint32_t>& ShaderCompiler::Compile(const std::string& path_to_source_str, VkShaderStageFlags stage) {
+    bool ShaderCompiler::HasShader(const char* binary_path) const {
+        const fs::path absolute_path = fs::absolute(fs::path(binary_path));
+        return impl->compiledShaders.count(absolute_path) != 0;
+    }
 
+    void ShaderCompiler::GetBinary(const char* binary_path, uint32_t* binary_size, uint32_t* binary_src) const {
+        if (!HasShader(binary_path)) {
+            *binary_size = std::numeric_limits<uint32_t>::max();
+            std::cerr << "Requested binary does not exist.";
+        }
+        else {
+            const fs::path absolute_path = fs::absolute(fs::path(binary_path));
+            const auto& binary = impl->compiledShaders.at(absolute_path);
+            *binary_size = static_cast<uint32_t>(binary.size());
+            if (binary_src != nullptr) {
+                std::copy(binary.cbegin(), binary.cend(), binary_src);
+                return;
+            }
+        }
+
+    }
+
+    void ShaderCompiler::AddBinary(const char* path, uint32_t sz, uint32_t* binary_data) {
+        const fs::path absolute_path = fs::absolute(fs::path(path));
+        static std::mutex insertion_mutex;
+        std::lock_guard<std::mutex> insertion_guard(insertion_mutex);
+        auto inserted = impl->compiledShaders.emplace(absolute_path, std::move(std::vector<uint32_t>{ binary_data, binary_data + sz }));
+        if (!inserted.second) {
+            throw std::runtime_error("Tried to insert already-stored shader binary!");
+        }
+    }
+
+    const char * ShaderCompiler::GetPreferredDirectory() {
+        return ShaderCompilerImpl::preferredShaderDirectory.c_str();
+    }
+
+    void ShaderCompiler::SetPreferredDirectory(const char * directory) {
+        ShaderCompilerImpl::preferredShaderDirectory = std::string(directory);
+    }
+
+    bool ShaderCompilerImpl::compile(const char* path_to_source_str, VkShaderStageFlags stage) {
         fs::path path_to_source(path_to_source_str);
-        if(compiledShaders.count(path_to_source) != 0) {
-            return compiledShaders.at(path_to_source);
+        if (compiledShaders.count(path_to_source) != 0) {
+            std::cerr << "Shader at given path has already been compiled...\n";
+            return false;
         }
 
         // First check to verify the path given exists.
@@ -35,7 +100,7 @@ namespace st {
             throw std::runtime_error("Failed to open/find given shader file.");
         }
 
-        
+
         if (stage == VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM) {
             // We weren't given a stage, try to infer it from the file.
             const std::string stage_ext = path_to_source.extension().string();
@@ -45,7 +110,7 @@ namespace st {
             }
             stage = (*iter).second;
         }
-        
+
         shaderc::Compiler compiler;
         shaderc::CompileOptions options;
 
@@ -55,40 +120,40 @@ namespace st {
         options.SetSourceLanguage(shaderc_source_language_glsl);
 
         shaderc_shader_kind shader_stage;
-        switch(stage) {
-            case VK_SHADER_STAGE_VERTEX_BIT:
-                shader_stage = shaderc_glsl_vertex_shader;
-                break;
-            case VK_SHADER_STAGE_FRAGMENT_BIT:
-                shader_stage = shaderc_glsl_fragment_shader;
-                break;
-// MoltenVK cannot yet use the geometry or tesselation shaders.
+        switch (stage) {
+        case VK_SHADER_STAGE_VERTEX_BIT:
+            shader_stage = shaderc_glsl_vertex_shader;
+            break;
+        case VK_SHADER_STAGE_FRAGMENT_BIT:
+            shader_stage = shaderc_glsl_fragment_shader;
+            break;
+            // MoltenVK cannot yet use the geometry or tesselation shaders.
 #ifndef __APPLE__ 
-            case VK_SHADER_STAGE_GEOMETRY_BIT:
-                shader_stage = shaderc_glsl_default_geometry_shader;
-                break;
-            case VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT:
-                shader_stage = shaderc_glsl_tess_control_shader;
-                break;
-            case VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT:
-                shader_stage = shaderc_glsl_tess_evaluation_shader;
-                break;
+        case VK_SHADER_STAGE_GEOMETRY_BIT:
+            shader_stage = shaderc_glsl_default_geometry_shader;
+            break;
+        case VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT:
+            shader_stage = shaderc_glsl_tess_control_shader;
+            break;
+        case VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT:
+            shader_stage = shaderc_glsl_tess_evaluation_shader;
+            break;
 #endif 
-            case VK_SHADER_STAGE_COMPUTE_BIT:
-                shader_stage = shaderc_glsl_compute_shader;
-                break;
-            default:
-                throw std::domain_error("Invalid shader stage bitfield, or shader stage not supported on current platform!");
+        case VK_SHADER_STAGE_COMPUTE_BIT:
+            shader_stage = shaderc_glsl_compute_shader;
+            break;
+        default:
+            throw std::domain_error("Invalid shader stage bitfield, or shader stage not supported on current platform!");
         }
 
         std::ifstream input_file(path_to_source);
-        if(!input_file.is_open()) {
+        if (!input_file.is_open()) {
             throw std::runtime_error("Failed to open supplied file in GLSLCompiler!");
         }
         const std::string source_code((std::istreambuf_iterator<char>(input_file)), (std::istreambuf_iterator<char>()));
         const std::string file_name = path_to_source.filename().string();
         shaderc::SpvCompilationResult result = compiler.CompileGlslToSpv(source_code, shader_stage, file_name.c_str());
-        if(result.GetCompilationStatus() != shaderc_compilation_status_success) {
+        if (result.GetCompilationStatus() != shaderc_compilation_status_success) {
             const std::string err_msg = result.GetErrorMessage();
             std::cerr << "Shader compiliation failed: " << err_msg.c_str() << "\n";
             const std::string except_msg = std::string("Failed to compile shader: ") + err_msg + std::string("\n");
@@ -98,36 +163,13 @@ namespace st {
         static std::mutex insertion_mutex;
         std::lock_guard<std::mutex> insertion_guard(insertion_mutex);
         auto inserted = compiledShaders.insert(std::make_pair(fs::absolute(path_to_source), std::vector<uint32_t>{ result.begin(), result.end() }));
-        if(!inserted.second) {
+        if (!inserted.second) {
             throw std::runtime_error("Failed to insert shader into compiled shader map!");
         }
-        return (inserted.first)->second;   
+        return true;
     }
 
-    bool ShaderCompiler::HasShader(const std::string & binary_path) const {
-        const fs::path absolute_path = fs::absolute(fs::path(binary_path));
-        return compiledShaders.count(absolute_path) != 0;
-    }
-
-    const std::vector<uint32_t>& ShaderCompiler::GetBinary(const std::string & binary_path) const {
-        if (!HasShader(binary_path)) {
-            throw std::runtime_error("Requested binary not found!");
-        }
-        const fs::path absolute_path = fs::absolute(fs::path(binary_path));
-        return compiledShaders.at(absolute_path);
-    }
-
-    void ShaderCompiler::AddBinary(const std::string & path, std::vector<uint32_t> binary_data) {
-        const fs::path absolute_path = fs::absolute(fs::path(path));
-        static std::mutex insertion_mutex;
-        std::lock_guard<std::mutex> insertion_guard(insertion_mutex);
-        auto inserted = compiledShaders.insert(std::make_pair(absolute_path, std::move(binary_data)));
-        if (!inserted.second) {
-            throw std::runtime_error("Tried to insert already-stored shader binary!");
-        }
-    }
-
-    void ShaderCompiler::saveShaderToFile(const fs::path& source_path) {
+    void ShaderCompilerImpl::saveShaderToFile(const fs::path& source_path) {
 
         if (fs::exists(fs::path(preferredShaderDirectory))) {
             bool success = fs::create_directories(fs::path(preferredShaderDirectory));
@@ -138,7 +180,6 @@ namespace st {
         // check for existing binary and check for version parity
         fs::path binary_path = source_path.filename();
         binary_path.replace_extension(source_path.extension().string() + std::string(".spv"));
-        binary_path = source_path.replace_filename(binary_path);
         
         if (fs::exists(binary_path)) {
             // Binary exists already, check if we need to re-save what we have 
@@ -158,7 +199,7 @@ namespace st {
         }
     }
 
-    void ShaderCompiler::saveBinary(const fs::path& source, const fs::path& dest) {
+    void ShaderCompilerImpl::saveBinary(const fs::path& source, const fs::path& dest) {
 
         const auto& binary_src = compiledShaders.at(fs::absolute(source));
 
@@ -168,7 +209,7 @@ namespace st {
 
     }
 
-    bool shaderSourceNewerThanBinary(const std::experimental::filesystem::path& source, const std::experimental::filesystem::path& binary) {
+    bool ShaderCompilerImpl::shaderSourceNewerThanBinary(const std::experimental::filesystem::path& source, const std::experimental::filesystem::path& binary) {
         const fs::file_time_type source_mod_time(fs::last_write_time(source));
         if (source_mod_time == fs::file_time_type::min()) {
             throw std::runtime_error("File write time for a source shader file is invalid - suggests invalid path passed to checker method!");
