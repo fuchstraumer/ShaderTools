@@ -27,3 +27,11 @@ TARGET_LINK_LIBRARIES(ShaderTools shaderc spirv-cross-core spirv-cross-glsl spir
 TARGET_INCLUDE_DIRECTORIES(ShaderTools PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/third_party" "${CMAKE_CURRENT_SOURCE_DIR}/include" "${Vulkan_INCLUDE_DIRS}")
 INSTALL(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include/" DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/ShaderTools/")
 INSTALL(TARGETS ShaderTools RUNTIME DESTINATION "bin" ARCHIVE DESTINATION "lib")
+
+OPTION(BUILD_TESTS "Build some test executables for shader parsing and compiliation." OFF)
+IF(BUILD_TESTS)
+ADD_EXECUTABLE(ParseTest0 "${CMAKE_CURRENT_SOURCE_DIR}/tests/test.cpp")
+ADD_DEPENDENCIES(ParseTest0 ShaderTools)
+TARGET_LINK_LIBRARIES(ParseTest0 ShaderTools)
+TARGET_INCLUDE_DIRECTORIES(ParseTest0 "${CMAKE_CURRENT_SOURCE_DIR}/include")
+ENDIF()
