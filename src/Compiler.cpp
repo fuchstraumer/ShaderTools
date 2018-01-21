@@ -46,6 +46,8 @@ namespace st {
         { ".comp", VK_SHADER_STAGE_COMPUTE_BIT }
     };
 
+    ShaderCompiler::ShaderCompiler() : impl(std::make_unique<ShaderCompilerImpl>()) {}
+
     ShaderCompiler::ShaderCompiler(ShaderCompiler&& other) noexcept : impl(std::move(other.impl)) {}
 
     ShaderCompilerImpl::ShaderCompilerImpl(ShaderCompilerImpl&& other) noexcept : compiledShaders(std::move(other.compiledShaders)) {}

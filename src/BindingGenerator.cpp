@@ -24,6 +24,8 @@ namespace st {
         std::unordered_map<VkShaderStageFlags, PushConstantInfo> pushConstants;
     };
 
+    BindingGenerator::BindingGenerator() : impl(std::make_unique<BindingGeneratorImpl>()) {}
+
     BindingGenerator::BindingGenerator(BindingGenerator&& other) noexcept : impl(std::move(other.impl)) {}
 
     BindingGeneratorImpl::BindingGeneratorImpl(BindingGeneratorImpl&& other) noexcept : descriptorSets(std::move(other.descriptorSets)),

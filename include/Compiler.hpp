@@ -11,7 +11,8 @@ namespace st {
         ShaderCompiler(const ShaderCompiler&) = delete;
         ShaderCompiler& operator=(const ShaderCompiler&) = delete;
     public:
-        ShaderCompiler() = default;
+    
+        ShaderCompiler();
         ~ShaderCompiler() = default;
         ShaderCompiler(ShaderCompiler&& other) noexcept;
         ShaderCompiler& operator=(ShaderCompiler&& other) noexcept;

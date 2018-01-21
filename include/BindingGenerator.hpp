@@ -11,7 +11,7 @@ namespace st {
         BindingGenerator& operator=(const BindingGenerator&) = delete;
     public:
 
-        BindingGenerator() = default;
+        BindingGenerator();
         ~BindingGenerator() = default;
         BindingGenerator(BindingGenerator&& other) noexcept;
         BindingGenerator& operator=(BindingGenerator&& other) noexcept;
