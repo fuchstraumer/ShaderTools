@@ -28,7 +28,7 @@ namespace st {
         std::map<std::experimental::filesystem::path, std::vector<uint32_t>> compiledShaders;
 
         bool compile(const char* path_to_src, const VkShaderStageFlags stage);
-
+        VkShaderStageFlags getStage(const char* path) const;
         void saveShaderToFile(const std::experimental::filesystem::path& source_path);
         void saveBinary(const std::experimental::filesystem::path& source_path, const std::experimental::filesystem::path& path_to_save_to);
         bool shaderSourceNewerThanBinary(const std::experimental::filesystem::path& source, const std::experimental::filesystem::path& binary);
@@ -64,6 +64,10 @@ namespace st {
 
     bool ShaderCompiler::Compile(const char* path_to_source_str, const VkShaderStageFlags stage) {
         return impl->compile(path_to_source_str, stage);
+    }
+
+    VkShaderStageFlags ShaderCompiler::GetShaderStage(const char* path_to_source) const {
+        return impl->getStage(path_to_source);
     }
 
     bool ShaderCompiler::HasShader(const char* binary_path) const {
@@ -119,15 +123,8 @@ namespace st {
             throw std::runtime_error("Failed to open/find given shader file.");
         }
 
-
         if (stage == VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM) {
-            // We weren't given a stage, try to infer it from the file.
-            const std::string stage_ext = path_to_source.extension().string();
-            auto iter = extension_stage_map.find(stage_ext);
-            if (iter == extension_stage_map.end()) {
-                throw std::runtime_error("No stage passed to ShaderCompiler::Compiler, and couldn't parse file's extension to infer shader's stage!");
-            }
-            stage = (*iter).second;
+            stage = getStage(path_to_source_str);
         }
 
         shaderc::Compiler compiler;
@@ -186,6 +183,17 @@ namespace st {
             throw std::runtime_error("Failed to insert shader into compiled shader map!");
         }
         return true;
+    }
+
+    void ShaderCompilerImpl::getStage(const char* path_to_source) const {
+        // We weren't given a stage, try to infer it from the file.
+        const std::string stage_ext = fs::path(path_to_source).extension().string();
+        auto iter = extension_stage_map.find(stage_ext);
+        if (iter == extension_stage_map.end()) {
+            std::cerr << "Failed to infer a shader's stage flag from it's extension.\n";
+            throw std::runtime_error("Could not infer shader file's stage based on extension!");
+        }
+        return (*iter).second;
     }
 
     void ShaderCompilerImpl::saveShaderToFile(const fs::path& source_path) {
