@@ -5,6 +5,7 @@
 #include <fstream>
 #include <filesystem>
 #include <unordered_map>
+#define SCL_SECURE_NO_WARNINGS
 namespace st {
 
     class BindingGeneratorImpl {
@@ -22,9 +23,13 @@ namespace st {
         std::unordered_multimap<VkShaderStageFlags, DescriptorSetInfo> descriptorSets;
         std::vector<DescriptorSetInfo> sortedSets;
         std::unordered_map<VkShaderStageFlags, PushConstantInfo> pushConstants;
+        std::unordered_map<VkShaderStageFlags, std::vector<VertexAttributeInfo>> inputAttributes;
+        std::unordered_map<VkShaderStageFlags, std::vector<VertexAttributeInfo>> outputAttributes;
     };
 
     BindingGenerator::BindingGenerator() : impl(std::make_unique<BindingGeneratorImpl>()) {}
+
+    BindingGenerator::~BindingGenerator() {}
 
     BindingGenerator::BindingGenerator(BindingGenerator&& other) noexcept : impl(std::move(other.impl)) {}
 
@@ -71,6 +76,15 @@ namespace st {
         }
     }
 
+    constexpr static std::array<VkShaderStageFlags, 6> possible_stages{
+        VK_SHADER_STAGE_VERTEX_BIT,
+        VK_SHADER_STAGE_FRAGMENT_BIT,
+        VK_SHADER_STAGE_GEOMETRY_BIT,
+        VK_SHADER_STAGE_COMPUTE_BIT,
+        VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT,
+        VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT
+    };
+
     void BindingGenerator::SaveToJSON(const char* output_name) {
 
         if (impl->sortedSets.empty()) {
@@ -94,15 +108,35 @@ namespace st {
         nlohmann::json out;
         output_file << std::setw(4);
         out = impl->sortedSets;
+        
+        std::vector<StageAttributes> collected_attr;
+        
+        for (size_t i = 0; i < possible_stages.size(); ++i) {
+            StageAttributes stage_attr;
+            stage_attr.Stage = possible_stages[i];
+            if (impl->inputAttributes.count(possible_stages[i]) != 0) {
+                stage_attr.InputAttributes = impl->inputAttributes.at(possible_stages[i]);
+            }
+            if (impl->outputAttributes.count(possible_stages[i]) != 0) {
+                stage_attr.OutputAttributes = impl->outputAttributes.at(possible_stages[i]);
+            }
+
+            if ((!stage_attr.InputAttributes.empty()) || (!stage_attr.OutputAttributes.empty())) {
+                collected_attr.push_back(stage_attr);
+            }
+        }
+
+        out.push_back(collected_attr);
+
         output_file << out;
         output_file.close();
-        
+
     }
 
     void BindingGenerator::LoadFromJSON(const char* input) {
 
         std::ifstream input_file(input);
-        if(!input_file.is_open()) {
+        if (!input_file.is_open()) {
             throw std::domain_error("BindingGenerator failed to open input file for reading!");
         }
 
@@ -114,6 +148,35 @@ namespace st {
         input_file.close();
     }
 
+    std::vector<VertexAttributeInfo> parseVertAttrs(const spirv_cross::CompilerGLSL& cmplr, const std::vector<spirv_cross::Resource>& rsrcs) {
+        std::vector<VertexAttributeInfo> attributes;
+        uint32_t idx = 0;
+        uint32_t running_offset = 0;
+        for (const auto& attr : rsrcs) {
+            VertexAttributeInfo attr_info;
+            attr_info.Name = cmplr.get_name(attr.id);
+            attr_info.Location = cmplr.get_decoration(attr.id, spv::DecorationLocation);
+            attr_info.Binding = cmplr.get_decoration(attr.id, spv::DecorationBinding);
+            attr_info.Offset = running_offset;
+            attr_info.Type = cmplr.get_type(attr.type_id);
+            running_offset += attr_info.Type.vecsize * attr_info.Type.width;
+            attributes.push_back(std::move(attr_info));
+            ++idx;
+        }
+        return attributes;
+    }
+
+    std::vector<VertexAttributeInfo> parseInputAttributes(const spirv_cross::CompilerGLSL& cmplr) {
+        using namespace spirv_cross;
+        const auto rsrcs = cmplr.get_shader_resources();
+        return parseVertAttrs(cmplr, rsrcs.stage_inputs);
+    }
+
+    std::vector<VertexAttributeInfo> parseOutputAttributes(const spirv_cross::CompilerGLSL& cmplr) {
+        using namespace spirv_cross;
+        const auto rsrcs = cmplr.get_shader_resources();
+        return parseVertAttrs(cmplr, rsrcs.stage_outputs);
+    }
     
     void parseUniformBuffers(DescriptorSetInfo& info, const spirv_cross::CompilerGLSL& cmplr, const VkShaderStageFlags& stage) {
         using namespace spirv_cross;
@@ -268,7 +331,10 @@ namespace st {
             PushConstantInfo push_constant = parsePushConstants(glsl, stage);
             auto inserted = pushConstants.insert(std::make_pair(stage, std::move(push_constant)));
         }
-
+        {
+            inputAttributes.emplace(stage, parseInputAttributes(glsl));
+            outputAttributes.emplace(stage, parseOutputAttributes(glsl));
+        }
     }
 
     void BindingGenerator::CollateBindings() {
