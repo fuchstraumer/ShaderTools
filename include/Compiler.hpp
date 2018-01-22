@@ -13,7 +13,7 @@ namespace st {
     public:
     
         ShaderCompiler();
-        ~ShaderCompiler() = default;
+        ~ShaderCompiler();
         ShaderCompiler(ShaderCompiler&& other) noexcept;
         ShaderCompiler& operator=(ShaderCompiler&& other) noexcept;
 

@@ -8,7 +8,7 @@
 #include <vector>
 #include <filesystem>
 #include <shaderc/shaderc.hpp>
-
+#define SCL_SECURE_NO_WARNINGS
 namespace fs = std::experimental::filesystem;
 
 namespace st {
@@ -47,6 +47,8 @@ namespace st {
     };
 
     ShaderCompiler::ShaderCompiler() : impl(std::make_unique<ShaderCompilerImpl>()) {}
+
+    ShaderCompiler::~ShaderCompiler() {}
 
     ShaderCompiler::ShaderCompiler(ShaderCompiler&& other) noexcept : impl(std::move(other.impl)) {}
 
@@ -185,7 +187,7 @@ namespace st {
         return true;
     }
 
-    void ShaderCompilerImpl::getStage(const char* path_to_source) const {
+    VkShaderStageFlags ShaderCompilerImpl::getStage(const char* path_to_source) const {
         // We weren't given a stage, try to infer it from the file.
         const std::string stage_ext = fs::path(path_to_source).extension().string();
         auto iter = extension_stage_map.find(stage_ext);
@@ -241,7 +243,7 @@ namespace st {
         if (source_mod_time == fs::file_time_type::min()) {
             throw std::runtime_error("File write time for a source shader file is invalid - suggests invalid path passed to checker method!");
         }
-        const fs::file_time_type binary_mod_time(fs::last_write_time(source));
+        const fs::file_time_type binary_mod_time(fs::last_write_time(binary));
         if (binary_mod_time == fs::file_time_type::min()) {
             return true;
         }
