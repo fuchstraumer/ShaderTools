@@ -2,68 +2,17 @@
 #ifndef SHADER_TOOLS_STRUCTS_HPP
 #define SHADER_TOOLS_STRUCTS_HPP
 #include "CommonInclude.hpp"
+#include "spirv_cross.hpp"
 #include <vector>
 #include <map>
 
 namespace st {
 
-    inline std::string GetTypeString(const VkDescriptorType& type) {
-        switch (type) {
-        case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
-            return std::string("UniformBuffer");
-        case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
-            return std::string("UniformBufferDynamic");
-        case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
-            return std::string("StorageBuffer");
-        case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
-            return std::string("StorageBufferDynamic");
-        case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
-            return std::string("CombinedImageSampler");
-        case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
-            return std::string("SampledImage");
-        case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
-            return std::string("StorageImage");
-        case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
-            return std::string("InputAttachment");
-        case VK_DESCRIPTOR_TYPE_SAMPLER:
-            return std::string("Sampler");
-        default:
-            throw std::domain_error("Invalid VkDescriptorType enum value passed to enum-to-string method.");
-        }
-    }
+    std::string GetTypeString(const VkDescriptorType& type);
+    VkDescriptorType GetTypeFromString(const std::string& str);
 
-    inline VkDescriptorType GetTypeFromString(const std::string& str) {
-        if (str == std::string("UniformBuffer")) {
-            return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        }
-        else if (str == std::string("UniformBufferDynamic")) {
-            return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-        }
-        else if (str == std::string("StorageBuffer")) {
-            return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-        }
-        else if (str == std::string("StorageBufferDynamic")) {
-            return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
-        }
-        else if (str == std::string("CombinedImageSampler")) {
-            return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        }
-        else if (str == std::string("SampledImage")) {
-            return VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-        }
-        else if (str == std::string("StorageImage")) {
-            return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-        }
-        else if (str == std::string("InputAttachment")) {
-            return VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
-        }
-        else if (str == std::string("Sampler")) {
-            return VK_DESCRIPTOR_TYPE_SAMPLER;
-        }
-        else {
-            throw std::domain_error("Invalid string passed to string-to-enum method!");
-        }
-    }
+    std::string StageFlagToStr(const VkShaderStageFlags& flag);
+    VkShaderStageFlags StrToStageFlags(const std::string& str);
 
     struct ShaderDataObject {
         std::string Name;
@@ -77,33 +26,12 @@ namespace st {
         VkDescriptorType Type = VK_DESCRIPTOR_TYPE_MAX_ENUM;
         std::vector<ShaderDataObject> Members;
 
-        bool operator==(const DescriptorObject& other) {
-            return (Name == other.Name) && (Binding == other.Binding) &&
-                   (ParentSet == other.ParentSet) && (Stages == other.Stages);
-        }
-        bool operator<(const DescriptorObject& other) {
-            // Sort by parent set first, then binding loc within those sets.
-            if(ParentSet != other.ParentSet) {
-                return ParentSet < other.ParentSet;
-            }
-            else {
-                return Binding < other.Binding;
-            }
-        }
+        bool operator==(const DescriptorObject& other);
+        bool operator<(const DescriptorObject& other);
 
-        explicit operator VkDescriptorSetLayoutBinding() const {
-            return VkDescriptorSetLayoutBinding {
-                Binding, Type, 1, Stages, nullptr
-            };
-        }
-
-        std::string GetType() const {
-            return GetTypeString(Type);
-        }
-
-        void SetType(std::string type_str) {
-            Type = GetTypeFromString(type_str);
-        }
+        explicit operator VkDescriptorSetLayoutBinding() const;
+        std::string GetType() const;
+        void SetType(std::string type_str);
 
     };
 
@@ -117,17 +45,31 @@ namespace st {
         std::string Name;
         std::vector<ShaderDataObject> Members;
         uint32_t Offset;
-        explicit operator VkPushConstantRange() const noexcept {
-            VkPushConstantRange result;
-            result.stageFlags = Stages;
-            result.offset = Offset;
-            uint32_t size = 0;
-            for (auto& obj : Members) {
-                size += obj.Size;
-            }
-            result.size = size;
-            return result;
-        }
+        explicit operator VkPushConstantRange() const noexcept;
+    };
+        
+    std::string TypeToStr(const spirv_cross::SPIRType& stype);
+    spirv_cross::SPIRType::BaseType BaseTypeEnumFromStr(const std::string& str);
+    spirv_cross::SPIRType TypeFromStr(const std::string& str);
+    VkFormat FormatFromSPIRType(const spirv_cross::SPIRType& type);
+
+    struct VertexAttributeInfo {
+        std::string Name;
+        spirv_cross::SPIRType Type;
+        std::string GetTypeStr() const;
+        void SetTypeWithStr(std::string str);
+        explicit operator VkVertexInputAttributeDescription() const noexcept;
+        uint32_t Location;
+        uint32_t Binding;
+        uint32_t Offset;
+    };
+
+    struct StageAttributes {
+        std::vector<VertexAttributeInfo> InputAttributes;
+        std::vector<VertexAttributeInfo> OutputAttributes;
+        VkShaderStageFlags Stage;
+        void SetStageWithStr(std::string str);
+        std::string GetStageStr() const;
     };
 
     template<typename T>
@@ -181,6 +123,28 @@ namespace meta {
         );
     }
 
+    template<>
+    inline auto registerMembers<st::VertexAttributeInfo>() {
+        using namespace st;
+        return members(
+            member("Name", &VertexAttributeInfo::Name),
+            member("Location", &VertexAttributeInfo::Location),
+            member("Binding", &VertexAttributeInfo::Binding),
+            member("Offset", &VertexAttributeInfo::Offset),
+            member("Type", &VertexAttributeInfo::GetTypeStr, &VertexAttributeInfo::SetTypeWithStr)
+        );
+    }
+
+    template<>
+    inline auto registerMembers<st::StageAttributes>() {
+        using namespace st;
+        return members(
+            member("Stage", &StageAttributes::GetStageStr, &StageAttributes::SetStageWithStr),
+            member("InputAttributes", &StageAttributes::InputAttributes),
+            member("OutputAttributes", &StageAttributes::OutputAttributes)
+        );
+    }
+
     template<typename Class, typename = std::enable_if_t<meta::isRegistered<Class>()>>
     nlohmann::json serialize(const Class& obj) {
         nlohmann::json result;
@@ -207,6 +171,32 @@ namespace meta {
         for(auto& elem : _obj) {
             result[i] = elem;
             ++i;
+        }
+        return result;
+    }
+
+    template<typename T0, typename T1>
+    nlohmann::json serialize(const std::pair<T0, T1>& pair) {
+        nlohmann::json result;
+        result[0] = pair.first;
+        result[1] = pair.second;
+        return result;
+    }
+
+    template<typename Key, typename Value>
+    nlohmann::json serialize(std::map<Key, Value>& _map) {
+        nlohmann::json result;
+        for (auto& entry : _map) {
+            result.push_back(entry);
+        }
+        return result;
+    }
+
+    template<typename Key, typename Value>
+    nlohmann::json deserialize(std::unordered_map<Key, Value>& _map) {
+        nlohmann::json result;
+        for (auto& entry : _map) {
+            result.push_back(entry);
         }
         return result;
     }
