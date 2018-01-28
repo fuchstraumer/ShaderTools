@@ -17,8 +17,6 @@
 #define ST_API
 #endif
 
-#include "nlohmann/src/json.hpp"
-#include "metastuff/include/Meta.h"
 #include <vulkan/vulkan.h>
 #include <cstdint>
 #include <memory>
