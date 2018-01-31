@@ -71,9 +71,13 @@ But it's also because I wasn't exactly eager to write a whole parser for shaders
 for me. 
 
 ## An important note
- 
-The binding generator class _only works on one shader at a time_. Submitting multiple shaders *will cause bugs and errors in the parsing*. Because
-of this, the class is cleared and reset everytime `ParseBinary()` is called.
+
+The binding generator works on multiple stages at a time, and really requires all stages being used for a given pipeline be parsed by
+successive calls to `ParseBinary` before valid objects can be retrieved. This is due to how the parsing/sorting system works, and due
+to how things like push constants work.
+
+Once you're done submitting shader stages and want to use a new shader group, call `BindingGenerator.Clear()` to reset the implementations
+state and clear the data stored thus far.
 
 #### Parsing binaries
 
@@ -105,3 +109,23 @@ uint32_t num_bindings = 0;
 bindings.GetLayoutBindings(0, &num_bindings, nullptr);
 std::vector<VkDescriptorSetLayoutBinding> bindings(num_bindings);
 bindings.GetLayoutBindings(0, &num_bindings, bindings.data());
+```
+
+The retrieved bindings can now be used to create a `VkPipelineLayout` object, alongside
+the next member we'll retrieve:
+
+##### VkPushConstantRange and VkVertexInputAttribute retrieval
+
+Retrieval of both these objects proceeds like it did `VkDescriptorSetLayoutBinding`s -
+1. Find out how many objects will be retrieved
+2. Create a container able to hold X objects when retrieved
+3. Call the function again with the size and container pointers as parameters
+
+#### VkVertexInputBindings
+
+An important note is that these types of objects cannot possible be parsed or retrieved by the shader tools. These
+objects are going to change based on how the resources and attributes are bound/attached to different buffers, as well
+as depending on these objects being either per-vertex or per-instance attributes. These is no way I currently know of to:
+- Retrieve vertex buffer binding from an attribute
+- Find out if an attribute is per instance or per vertex 
+- and lastly, find out what the exact offset of an attribute in a vbo is
