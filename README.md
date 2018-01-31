@@ -60,7 +60,8 @@ high priority for me right now.
 # BindingGenerator
 
 The binding generator is where the real "magic" happens. It takes compiled binaries and parses their various attributes and can construct
-appropriate Vulkan structures for use.
+appropriate Vulkan structures for use. Despite the fact that it mostly parses, I called it a "BindingGenerator" as it takes care of generating
+the Vulkan resources explicitly related to resource bindings and layouts (guess I could've called it LayoutGenerator, but that's even more banal)
 
 Why compiled binaries? This is because the SPIR-V compiler will implicitly optimize unused items out, so the returned bindings and structures 
 only consider what is actually being used. This can be beneficial, but it can also highlight errors in shader code when the generated objects
@@ -70,3 +71,37 @@ But it's also because I wasn't exactly eager to write a whole parser for shaders
 for me. 
 
 ## An important note
+ 
+The binding generator class _only works on one shader at a time_. Submitting multiple shaders *will cause bugs and errors in the parsing*. Because
+of this, the class is cleared and reset everytime `ParseBinary()` is called.
+
+#### Parsing binaries
+
+Is done by calling the function briefly referenced above, `ParseBinary()`. Example showing compiling then parsing:
+```cpp
+ShaderCompiler compiler;
+compiler.Compile("my_vertex_shader.vert");
+
+uint32_t sz = 0;
+compiler.GetBinary("my_vertex_shader.vert", &sz, nullptr);
+std::vector<uint32_t> binary_data(sz);
+compiler.GetBinary("my_vertex_shader.vert", &sz, binary_data.data());
+
+BindingGenerator bindings;
+// instead of passing sz, could also use binary_data.size()
+// Stage must be explicitly passed as stage can't be inferred from the extension here.
+bindings.ParseBinary(sz, binary_data.data(), VK_SHADER_STAGE_FLAGS_VERTEX_BIT);
+```
+
+#### Retrieving objects after parsing
+
+##### VkDescriptorSetLayout retrieval
+
+```cpp
+// First, we need to figure out how many sets we have. 
+uint32_t num_sets = bindings.GetNumSets();
+// Just going to get items for set 0, but process remains the same for retrieving SetLayouts for other sets
+uint32_t num_bindings = 0;
+bindings.GetLayoutBindings(0, &num_bindings, nullptr);
+std::vector<VkDescriptorSetLayoutBinding> bindings(num_bindings);
+bindings.GetLayoutBindings(0, &num_bindings, bindings.data());

@@ -19,17 +19,15 @@ namespace st {
         void ParseBinary(const uint32_t binary_size, const uint32_t* binary, const VkShaderStageFlags stage);
         void CollateBindings();
 
-        size_t GetNumSets() const noexcept;
-        void GetLayoutBindings(const size_t& set_index, uint32_t* num_bindings, VkDescriptorSetLayoutBinding* bindings) const;
+        uint32_t GetNumSets() const noexcept;
+        void GetLayoutBindings(const uint32_t& set_index, uint32_t* num_bindings, VkDescriptorSetLayoutBinding* bindings) const;
         void GetPushConstantRanges(uint32_t* num_ranges, VkPushConstantRange* ranges) const;
         void GetVertexAttributes(uint32_t* num_attrs, VkVertexInputAttributeDescription* attrs) const;
-        void GetVertexBindings(uint32_t* num_bindings, VkVertexInputBindingDescription* bindings) const;
 
         void SaveToJSON(const char* output_name);
         void LoadFromJSON(const char* input_name);
 
         void Clear();
-        
     private:
         std::unique_ptr<BindingGeneratorImpl> impl;
     };

@@ -48,11 +48,11 @@ namespace st {
         return *this;
     }
 
-    size_t BindingGenerator::GetNumSets() const noexcept {
+    uint32_t BindingGenerator::GetNumSets() const noexcept {
         return impl->sortedSets.size();
     }
 
-    void BindingGenerator::GetLayoutBindings(const size_t& idx, uint32_t* num_bindings, VkDescriptorSetLayoutBinding* bindings) const {
+    void BindingGenerator::GetLayoutBindings(const uint32_t& idx, uint32_t* num_bindings, VkDescriptorSetLayoutBinding* bindings) const {
         
         auto& set = impl->sortedSets[idx];
         *num_bindings = static_cast<uint32_t>(set.Members.size());
@@ -146,11 +146,6 @@ namespace st {
             impl->sortedSets.push_back(entry);
         }
         input_file.close();
-    }
-
-    void BindingGenerator::Clear() {
-        impl.reset();
-        impl = std::make_unique<BindingGeneratorImpl>();
     }
 
     std::vector<VertexAttributeInfo> parseVertAttrs(const spirv_cross::CompilerGLSL& cmplr, const std::vector<spirv_cross::Resource>& rsrcs) {
@@ -312,6 +307,11 @@ namespace st {
             result.Members.push_back(std::move(member));
         }
         return result;
+    }
+
+    void BindingGenerator::Clear() {
+        impl.reset();
+        impl = std::make_unique<BindingGeneratorImpl>();
     }
     
     void BindingGenerator::ParseBinary(const uint32_t binary_size, const uint32_t* binary, const VkShaderStageFlags stage) {
