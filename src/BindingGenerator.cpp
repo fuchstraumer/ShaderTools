@@ -148,6 +148,11 @@ namespace st {
         input_file.close();
     }
 
+    void BindingGenerator::Clear() {
+        impl.reset();
+        impl = std::make_unique<BindingGeneratorImpl>();
+    }
+
     std::vector<VertexAttributeInfo> parseVertAttrs(const spirv_cross::CompilerGLSL& cmplr, const std::vector<spirv_cross::Resource>& rsrcs) {
         std::vector<VertexAttributeInfo> attributes;
         uint32_t idx = 0;

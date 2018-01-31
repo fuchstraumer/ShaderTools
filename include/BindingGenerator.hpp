@@ -28,6 +28,8 @@ namespace st {
         void SaveToJSON(const char* output_name);
         void LoadFromJSON(const char* input_name);
 
+        void Clear();
+        
     private:
         std::unique_ptr<BindingGeneratorImpl> impl;
     };
