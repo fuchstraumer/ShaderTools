@@ -408,6 +408,21 @@ namespace st {
                 }
             }
         }
+
+
+        for (auto& set : sortedSets) {
+            size_t curr_idx = 0;
+            for (auto& member : set.Members) {
+                if (member.Name.empty()) {
+                    member.Name = std::string("OPTIMIZED_OUT");
+                    member.Type = VK_DESCRIPTOR_TYPE_RANGE_SIZE;
+                    member.Binding = curr_idx;
+                }
+                ++curr_idx;
+            }
+        }
+
     }
+
 
 }
