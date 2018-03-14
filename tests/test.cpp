@@ -1,5 +1,6 @@
 #include <map>
 #include <iostream>
+#include <vector>
 #include "Compiler.hpp"
 #include "BindingGenerator.hpp"
 
