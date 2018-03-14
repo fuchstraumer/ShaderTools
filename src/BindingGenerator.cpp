@@ -323,6 +323,12 @@ namespace st {
         std::vector<uint32_t> binary{ src, src + sz };
         CompilerGLSL glsl(binary);
         DescriptorSetInfo info;
+        if (!descriptorSets.empty()) {
+            info.Index = descriptorSets.size() - 1;
+        }
+        else {
+            info.Index = 0;
+        }
         parseUniformBuffers(info, glsl, stage);
         parseStorageBuffers(info, glsl, stage);
         parseInputAttachments(info, glsl, stage);
@@ -332,7 +338,12 @@ namespace st {
         parseSeparableSamplers(info, glsl, stage);
         descriptorSets.insert(std::make_pair(stage, std::move(info)));
         {
+
             const auto rsrcs = glsl.get_shader_resources();
+            if (!rsrcs.push_constant_buffers.empty()) {
+                PushConstantInfo push_constant = parsePushConstants(glsl, stage);
+                auto inserted = pushConstants.insert(std::make_pair(stage, std::move(push_constant)));
+            }
             PushConstantInfo push_constant = parsePushConstants(glsl, stage);
             auto inserted = pushConstants.insert(std::make_pair(stage, std::move(push_constant)));
         }
