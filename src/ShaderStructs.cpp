@@ -21,6 +21,12 @@ namespace st {
             return std::string("InputAttachment");
         case VK_DESCRIPTOR_TYPE_SAMPLER:
             return std::string("Sampler");
+        case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
+            return std::string("UniformTexelBuffer");
+        case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
+            return std::string("StorageTexelBuffer");
+        case VK_DESCRIPTOR_TYPE_RANGE_SIZE:
+            return std::string("NULL_TYPE");
         default:
             throw std::domain_error("Invalid VkDescriptorType enum value passed to enum-to-string method.");
         }
@@ -53,6 +59,15 @@ namespace st {
         }
         else if (str == std::string("Sampler")) {
             return VK_DESCRIPTOR_TYPE_SAMPLER;
+        }
+        else if (str == std::string("UniformTexelBuffer")) {
+            return VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
+        }
+        else if (str == std::string("StorageTexelBuffer")) {
+            return VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
+        }
+        else if (str == std::string("NULL_TYPE")) {
+            return VK_DESCRIPTOR_TYPE_RANGE_SIZE;
         }
         else {
             throw std::domain_error("Invalid string passed to string-to-enum method!");
