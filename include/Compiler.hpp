@@ -17,6 +17,7 @@ namespace st {
         ShaderCompiler(ShaderCompiler&& other) noexcept;
         ShaderCompiler& operator=(ShaderCompiler&& other) noexcept;
 
+        bool Compile(const char* file_src, const size_t len, const VkShaderStageFlags stage);
         bool Compile(const char* path_to_source, const VkShaderStageFlags stage = VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM);
         VkShaderStageFlags GetShaderStage(const char* path_to_source) const;
         bool HasShader(const char* binary_path) const;
