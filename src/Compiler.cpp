@@ -117,13 +117,13 @@ namespace st {
         ShaderCompilerImpl::preferredShaderDirectory = std::string(directory);
     }
 
-    bool ShaderCompilerImpl::compile(const char* src_str, const size_t len src_len, const VkShaderStageFlags stage) {
+    bool ShaderCompilerImpl::compile(const char* src_str, const size_t src_len, const VkShaderStageFlags stage) {
 
                 shaderc::Compiler compiler;
         shaderc::CompileOptions options;
 
         options.SetGenerateDebugInfo();
-        options.SetOptimizationLevel(shaderc_optimization_level_zero);
+        options.SetOptimizationLevel(shaderc_optimization_level_size);
         options.SetTargetEnvironment(shaderc_target_env_vulkan, 1);
         options.SetSourceLanguage(shaderc_source_language_glsl);
 
