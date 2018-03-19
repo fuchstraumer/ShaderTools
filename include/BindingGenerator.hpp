@@ -16,6 +16,7 @@ namespace st {
         BindingGenerator(BindingGenerator&& other) noexcept;
         BindingGenerator& operator=(BindingGenerator&& other) noexcept;
 
+        void ParseBinary(const char* binary_location, const VkShaderStageFlags stage);
         void ParseBinary(const uint32_t binary_size, const uint32_t* binary, const VkShaderStageFlags stage);
         void CollateBindings();
 

@@ -19,6 +19,8 @@ namespace st {
         BindingGeneratorImpl& operator=(BindingGeneratorImpl&& other) noexcept;
 
         void parseBinary(const uint32_t binary_sz, const uint32_t* binary, const VkShaderStageFlags stage);
+        void parseBinary(const char* fname, const VkShaderStageFlags stage);
+        void parseImpl(const std::vector<uint32_t>& binary_data, const VkShaderStageFlags stage);
         void collateBindings();
         std::unordered_multimap<VkShaderStageFlags, DescriptorSetInfo> descriptorSets;
         std::vector<DescriptorSetInfo> sortedSets;
@@ -313,15 +315,46 @@ namespace st {
         impl.reset();
         impl = std::make_unique<BindingGeneratorImpl>();
     }
+
+    void BindingGenerator::ParseBinary(const char* binary_fname, const VkShaderStageFlags stage) {
+        impl->parseBinary(binary_fname, stage);
+    }
     
     void BindingGenerator::ParseBinary(const uint32_t binary_size, const uint32_t* binary, const VkShaderStageFlags stage) {
         impl->parseBinary(binary_size, binary, stage);
     }
 
+    void BindingGeneratorImpl::parseBinary(const char* fname, const VkShaderStageFlags stage) {
+        std::ifstream input_binary(fname, std::ios::binary | std::ios::in | std::ios::ate);
+        
+        if (!input_binary.is_open()) {
+            throw std::runtime_error("Could not open binary shader file!");
+        }
+
+        std::vector<uint32_t> loaded_binary;
+        {
+            std::vector<char> input_buff;
+            size_t code_size = static_cast<size_t>(input_binary.tellg());
+            input_buff.resize(code_size);
+            input_binary.seekg(0, std::ios::beg);
+            input_binary.read(input_buff.data(), code_size);
+            input_binary.close();
+
+            loaded_binary.resize(input_buff.size() / sizeof(uint32_t) + 1);
+            std::copy(loaded_binary.data(), input_buff.cbegin(), input_buff.cend());
+        }
+
+        parseImpl(loaded_binary, stage);
+    }
+
     void BindingGeneratorImpl::parseBinary(const uint32_t sz, const uint32_t* src, const VkShaderStageFlags stage) {
-        using namespace spirv_cross;
         std::vector<uint32_t> binary{ src, src + sz };
-        CompilerGLSL glsl(binary);
+        parseImpl(binary, stage);
+    }
+
+    void BindingGeneratorImpl::parseImpl(const std::vector<uint32_t>& binary_data, const VkShaderStageFlags stage) {
+        using namespace spirv_cross;
+        CompilerGLSL glsl(binary_data);
         DescriptorSetInfo info;
         if (!descriptorSets.empty()) {
             info.Index = static_cast<uint32_t>(descriptorSets.size() - 1);
