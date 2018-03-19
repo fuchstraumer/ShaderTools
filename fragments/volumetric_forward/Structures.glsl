@@ -1,0 +1,83 @@
+
+struct Material {
+    vec4 ambient;
+    vec4 diffuse; 
+    vec4 specular;
+    vec4 transmittance;
+    vec4 emission;
+    float shininess;
+    float ior;
+    float alpha;
+    int illuminationModel;
+    float roughness;
+    float metallic;
+    float sheen;
+    float clearcoatThickness;
+    float clearcoatRoughness;
+    float anisotropy;
+    float anisotropyRotation;
+    float globalAmbient;
+};
+
+struct PointLight {
+    vec4 Position;
+    vec4 PositionViewSpace;
+    vec3 Color;
+    float Range;
+    float Intensity;
+    bool Enabled;
+    vec2 Padding;
+}; // 64 bytes
+
+struct SpotLight {
+    vec4 Position;
+    vec4 PositionViewSpace;
+    vec4 Direction;
+    vec4 DirectionViewSpace;
+    vec3 Color;
+    float SpotLightAngle;
+    float Range;
+    float Intensity;
+    bool Enabled;
+    float Padding;
+}; // 96 bytes
+
+struct DirectionalLight {
+    vec4 Direction;
+    vec4 DirectionViewSpace;
+    vec3 Color;
+    float Intensity;
+    bool Enabled;
+    vec3 Padding;
+}; // 64 bytes
+
+struct AABB {
+    vec4 Min;
+    vec4 Max;
+};
+
+struct Plane {
+    vec3 N;
+    float d;
+};
+
+struct Frustum {
+    Plane planes[4];
+};
+
+struct Sphere {
+    vec3 c;
+    float r;
+};
+
+struct Cone {
+    vec3 T;
+    float h;
+    vec3 d;
+    float r;
+};
+
+struct LightingResult {
+    vec3 Diffuse;
+    vec3 Specular;
+};

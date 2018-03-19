@@ -1,0 +1,14 @@
+
+#include "Structures.glsl"
+
+#pragma USE_RESOURCES VOLUMETRIC_FORWARD
+#pragma USE_RESOURCES INDIRECT_ARGS
+
+layout(local_size_x = 1, local_size_y = 1, local_size_z  = 1)
+
+void main() {
+    uint count = atomicCounter(UniqueClustersCounter);
+    IndirectArgs.NumThreadGroupsX = count;
+    IndirectArgs.NumThreadGroupsY = 1;
+    IndirectArgs.NumThreadGroupsZ = 1;
+}

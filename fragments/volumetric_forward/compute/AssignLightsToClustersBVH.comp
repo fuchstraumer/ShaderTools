@@ -1,0 +1,180 @@
+
+#include "Structures.glsl"
+#include "Functions.glsl"
+
+#pragma USE_RESOURCES VOLUMETRIC_FORWARD
+#pragma USE_RESOURCES SORT_RESOURCES
+#pragma USE_RESOURCES VOLUMETRIC_FORWARD_LIGHTS
+
+layout (local_size_x = 32, local_size_y = 1, local_size_z = 1)
+
+$SPC const uint MaxLights = 1024;
+
+const uint NumChildNodes[6] = {
+    1,
+    33,
+    1057,
+    33825,
+    1082401,
+    34636833
+};
+
+// 32 layers of nodes
+shared uint gs_NodeStack[1024]; 
+// Current index in the above node stack
+shared uint gs_StackPtr;
+// The index of the parent node of the BVH node currently being processed
+shared uint gs_ParentIdx;
+
+shared uint gs_ClusterIndex1D;
+shared AABB gs_ClusterAABB;
+shared uint gs_PointLightCount;
+shared uint gs_SpotLightCount;
+shared uint gs_PointLightStartOffset;
+shared uint gs_SpotLightStartOffset;
+shared uint gs_PointLightList[MaxLights];
+shared uint gs_SpotLightList[MaxLights];
+
+void AppendSpotLight(uint light_index) {
+    uint idx = atomicAdd(gs_SpotLightCount, 1);
+    if (idx < MaxLights) {
+        gs_SpotLightList[idx] = light_index;
+    }
+}
+
+void AppendPointLight(uint light_index) {
+    uint idx = atomicAdd(gs_PointLightCount, 1);
+    if (idx < MaxLights) {
+        gs_PointLightList[idx] = light_index;
+    }
+}
+
+void PushNode(uint node_index) {
+    int stack_idx = atomicAdd(gs_StackPtr, 1);
+    if (stack_idx < 1024) {
+        gs_NodeStack[stack_idx] = node_index;
+    }
+}
+
+uint PopNode() {
+    uint node_idx = 0;
+    int stack_idx = atomicAdd(gs_StackPtr, -1);
+    if (stack_idx > 0 && stack_idx < 1024) {
+        node_idx = gs_NodeStack[stack_idx - 1];
+    }
+
+    return node_idx;
+}
+
+// Gets the index of the first node in the current bvh
+uint FirstChild(uint parent_index, uint num_levels) {
+    return (num_levels > 0) ? parent_index * 32 + 1 : 0;
+}
+
+bool IsLeafNode(uint child_index, uint num_levels) {
+    return (num_levels > 0) ? child_index > (NumChildNodes[num_levels - 1]) : true;
+}
+
+uint GetLeafIndex(uint node_index, uint num_levels) {
+    return (num_levels > 0) ? node_index - NumChildNodes[num_levels - 1] : node_index;
+}
+
+void main() {
+
+    if (gl_LocalInvocationIndex == 0) {
+        gs_PointLightCount = 0;
+        gs_SpotLightCount = 0;
+        gs_StackPtr = 0;
+        gs_ParentIdx = 0;
+        gs_ClusterIndex1D = imageLoad(UniqueClusters, gl_WorkGroupID.x);
+        gs_ClusterAABB = ClusterAABBs.Data[gs_ClusterIndex1D];
+        PushNode(0); // pushing root node.
+    }
+
+    groupMemoryBarrier();
+
+    do {
+        uint child_index = GetFirstChild(gs_ParentIdx, BVHParams.PointLightLevels) + gl_LocalInvocationIndex;
+        if (IsLeafNode(child_index, BVHParams.PointLightLevels)) {
+            uint leaf_index = GetLeafIndex(child_index, BVHParams.PointLightLevels);
+            if (leaf_index < LightCounts.NumPointLights) {
+                uint light_index = imageLoad(PointLightIndices, leaf_index);
+                PointLight light = PointLights.Data[light_index];
+                Sphere sphere; sphere.c = light.PositionViewSpace.xyz; sphere.r = light.Range;
+
+                if (light.Enabled && SphereInsideAABB(sphere, gs_ClusterAABB)) {
+                    AppendPointLight(light_index);
+                }
+            }
+        }
+        else if (AABBIntersectAABB(gs_ClusterAABB, PointLightBVH.Data[child_index])) {
+            PushNode(child_index);
+        }
+
+        groupMemoryBarrier();
+
+        if (gl_LocalInvocationIndex == 0) {
+            gs_ParentIdx = PopNode();
+        }
+
+        groupMemoryBarrier();
+
+    } while (gs_ParentIdx > 0);
+
+    groupMemoryBarrier();
+
+    if (gl_LocalInvocationIndex == 0) {
+        gs_StackPtr = 0;
+        gs_ParentIdx = 0;
+        PushNode(0);
+    }
+
+    groupMemoryBarrier();
+
+    do {
+
+        uint child_index = GetFirstChild(gs_ParentIdx, BVHParams.SpotLightLevels) + gl_LocalInvocationIndex;
+        if (IsLeafNode(child_index, BVHParams.SpotLightLevels)) {
+            uint leaf_index = GetLeafIndex(child_index, BVHParams.SpotLightLevels);
+            if (leaf_index < LightCounts.NumSpotLights) {
+                uint light_index = imageLoad(SpotLightIndices, leaf_index);
+                SpotLight light = SpotLights.Data[light_index];
+                Sphere sphere; sphere.c = light.PositionViewSpace.xyz; sphere.r = light.Range;
+
+                if (light.Enabled && SphereInsideAABB(sphere, gs_ClusterAABB)) {
+                    AppendSpotLight(light_index);
+                }
+            }
+        }
+        else if (AABBIntersectAABB(gs_ClusterAABB, SpotLightBVH.Data[child_index])) {
+            PushNode(child_index);
+        }
+
+        groupMemoryBarrier();
+
+        if (gl_LocalInvocationIndex == 0) {
+            gs_ParentIdx = PopNode();
+        }
+
+        groupMemoryBarrier();
+
+    } while (gs_ParentIdx > 0);
+
+    if (gl_LocalInvocationIndex == 0) {
+        gs_PointLightStartOffset = imageAtomicAdd(PointLightIndexCounter, int(0), gs_PointLightCount);
+        imageStore(PointLightGrid, int(gs_ClusterIndex1D), uvec4(gs_PointLightStartOffset, gs_PointLightCount, 0, 0));
+
+        gs_SpotLightStartOffset = imageAtomicAdd(SpotLightIndexCounter, int(0), gs_SpotLightCount);
+        imageStore(SpotLightGrid,  int(gs_ClusterIndex1D), uvec4(gs_SpotLightStartOffset, gs_SpotLightCount, 0, 0));
+    }
+
+    groupMemoryBarrier();
+
+    for (i = gl_LocalInvocationIndex; i < gs_PointLightCount; i += 32) {
+        imageStore(PointLightIndexList, int(gs_PointLightStartOffset + i), uvec4(gs_PointLightList[i], 0, 0, 0));
+    }
+
+    for (i = gl_LocalInvocationIndex; i < gs_SpotLightCount; i += 32) {
+        imageStore(SpotLightIndexList, int(gs_SpotLightStartOffset + i), uvec4(gs_SpotLightList[i], 0, 0, 0));
+    }
+}
