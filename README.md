@@ -1,6 +1,8 @@
-# ShaderTools - Easy shader reflection for Vulkan
+# ShaderTools - Tools for working with shaders and Vulkan
 
-The intent of this library is to make dynamic generation of Vulkan objects required to set up a graphics pipeline easier. It has two main parts:
+This project initially started as a GLSL -> SPIR-V compiler, along with being able to generate `VkDescriptorSetLayoutBinding`s + `VkVertexInputAttributeInfo`s from SPIR-V shader files, along with the singular `VkPushConstantRange` for a set of shaders.
+
+It now also includes ShaderGenerator, which has a number of useful advantages over manually writing + compiling all your GLSL shaders that I'll review shortly.
 
 # ShaderCompiler 
 
@@ -129,3 +131,59 @@ as depending on these objects being either per-vertex or per-instance attributes
 - Retrieve vertex buffer binding from an attribute
 - Find out if an attribute is per instance or per vertex 
 - and lastly, find out what the exact offset of an attribute in a vbo is
+
+# ShaderGenerator
+###### This section is still WIP as all hell!
+
+ShaderGenerator is intended to greatly simplify the process of writing shaders, especially given that Vulkan requires specifying resource layouts using `(set = N, binding = M)` specifiers. Instead of requiring the copy and pasting of these bindings across multiple shader files, along with making sure each shader file has the same bindings and number of bindings per set, this is all managed using a preprocessing step.
+
+Like most shader compilers, `#include`s are also supported now.
+
+### Resource Blocks
+
+In Vulkan, descriptor objects are grouped in sets: this is most useful to reduce binding commands between drawing various objects. But it also provides a useful way to group resources logically, and this is how ShaderGenerator approaches the problem. The first step is adding a resource file to the shader generator - at this point, the various blocks are run through initial processing.
+
+Declaring a new block is done with: `#pragma BEGIN_RESOURCES (BLOCK_NAME)`
+Add a newline after the last object in a block, and close it with `#pragma END_RESOURCES (BLOCK_NAME)`
+Using a block in a shader is done with: `#pragma USE_RESOURCES (BLOCK_NAME)` 
+
+When using a block, make sure to `#include` any structures in your blocks BEFORE you use a resource block. 
+
+### Resource types
+
+###### WIP
+
+### Specialization constants
+
+Specialization constants are easily declared by simply prefixing the usual `const T val = (value)` with `SPC`. So, a constant index for a loop could be `SPC const uint LoopLimit = 25;`. This will then be parsed and assigned the proper `constant_id` decorator during the final generation step.
+
+### Push constants
+
+###### Also WIP as hell
+
+## Generation, from start to finish
+```cpp
+// Stage must be passed to constructor, as it effects the parsing somewhat significantly
+// and different stages have different built-in fragments to insert during generation
+st::ShaderGenerator shader(VK_SHADER_STAGE_VERTEX_BIT);
+// Several include paths can be added, either one-by-one like so or
+// by passing a const char* array
+shader.AddIncludePath("my_include_dir");
+// Add one resource file (easiest to do, imo), or several before adding
+// the body of the shader
+shader.AddResources("Resources.glsl");
+// Before requesting the full source, complete the generation step
+// by adding the "body" of your shader: usually, the parts around main()
+shader.AddBody(fname.second.c_str());
+
+// To keep the API dll-friendly, std library containers aren't used.
+// Instead, like most C-style APIs, you need to query a size before
+// actually retrieving data
+size_t sz = 0;
+shader.GetFullSource(&sz, nullptr);
+// With the size found, create a string and resize it to fit the 
+// generated shader file.
+std::string src; src.resize(sz);
+shader.GetFullSource(&sz, src.data());
+```
+
