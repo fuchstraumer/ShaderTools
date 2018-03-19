@@ -49,7 +49,7 @@ namespace st {
     }
 
     uint32_t BindingGenerator::GetNumSets() const noexcept {
-        return impl->sortedSets.size();
+        return static_cast<uint32_t>(impl->sortedSets.size());
     }
 
     void BindingGenerator::GetLayoutBindings(const uint32_t& idx, uint32_t* num_bindings, VkDescriptorSetLayoutBinding* bindings) const {
@@ -324,7 +324,7 @@ namespace st {
         CompilerGLSL glsl(binary);
         DescriptorSetInfo info;
         if (!descriptorSets.empty()) {
-            info.Index = descriptorSets.size() - 1;
+            info.Index = static_cast<uint32_t>(descriptorSets.size() - 1);
         }
         else {
             info.Index = 0;
@@ -416,7 +416,7 @@ namespace st {
                 if (member.Name.empty()) {
                     member.Name = std::string("OPTIMIZED_OUT");
                     member.Type = VK_DESCRIPTOR_TYPE_RANGE_SIZE;
-                    member.Binding = curr_idx;
+                    member.Binding = static_cast<uint32_t>(curr_idx);
                 }
                 ++curr_idx;
             }

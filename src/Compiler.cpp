@@ -165,7 +165,7 @@ namespace st {
 
         static std::mutex insertion_mutex;
         std::lock_guard<std::mutex> insertion_guard(insertion_mutex);
-        auto inserted = compiledShaders.insert(std::make_pair(fs::absolute(path_to_source), std::vector<uint32_t>{ result.begin(), result.end() }));
+        auto inserted = compiledShaders.insert(std::make_pair(fs::current_path() / fs::path(std::to_string(compiledShaders.size())), std::vector<uint32_t>{ result.begin(), result.end() }));
         if (!inserted.second) {
             throw std::runtime_error("Failed to insert shader into compiled shader map!");
         }

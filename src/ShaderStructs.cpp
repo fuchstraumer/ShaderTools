@@ -408,6 +408,9 @@ namespace st {
                 throw std::domain_error("Invalid type width for conversion to a VkFormat enum.");
             }
         }
+        else {
+            throw std::domain_error("Vector size in vertex input attributes isn't supported for parsing from SPIRType->VkFormat");
+        }
     }
 
     std::string VertexAttributeInfo::GetTypeStr() const {
