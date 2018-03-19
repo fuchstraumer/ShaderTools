@@ -341,7 +341,7 @@ namespace st {
             input_binary.close();
 
             loaded_binary.resize(input_buff.size() / sizeof(uint32_t) + 1);
-            std::copy(loaded_binary.data(), input_buff.cbegin(), input_buff.cend());
+            memcpy(loaded_binary.data(), input_buff.data(), input_buff.size());
         }
 
         parseImpl(loaded_binary, stage);
@@ -377,8 +377,6 @@ namespace st {
                 PushConstantInfo push_constant = parsePushConstants(glsl, stage);
                 auto inserted = pushConstants.insert(std::make_pair(stage, std::move(push_constant)));
             }
-            PushConstantInfo push_constant = parsePushConstants(glsl, stage);
-            auto inserted = pushConstants.insert(std::make_pair(stage, std::move(push_constant)));
         }
         {
             inputAttributes.emplace(stage, parseInputAttributes(glsl));

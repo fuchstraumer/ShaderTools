@@ -132,9 +132,16 @@ namespace st {
     }
 
     DescriptorObject::operator VkDescriptorSetLayoutBinding() const {
-        return VkDescriptorSetLayoutBinding{
-            Binding, Type, 1, Stages, nullptr
-        };
+        if (Type != VK_DESCRIPTOR_TYPE_MAX_ENUM && Type != VK_DESCRIPTOR_TYPE_RANGE_SIZE) {
+            return VkDescriptorSetLayoutBinding{
+                Binding, Type, 1, Stages, nullptr
+            };
+        }
+        else {
+            return VkDescriptorSetLayoutBinding{
+                Binding, Type, 0, Stages, nullptr
+            };
+        }
     }
 
     std::string DescriptorObject::GetType() const {

@@ -503,6 +503,10 @@ namespace st {
         impl->addBody(path);
     }
 
+    void ShaderGenerator::AddIncludePath(const char * path_to_include) {
+        impl->addIncludePath(path_to_include);
+    }
+
     void ShaderGenerator::GetFullSource(size_t * len, char * dest) const {
         
         const std::string source = impl->getFullSource();

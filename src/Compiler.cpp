@@ -119,7 +119,7 @@ namespace st {
 
     bool ShaderCompilerImpl::compile(const char* src_str, const size_t src_len, const VkShaderStageFlags stage) {
 
-                shaderc::Compiler compiler;
+        shaderc::Compiler compiler;
         shaderc::CompileOptions options;
 
         options.SetGenerateDebugInfo();
