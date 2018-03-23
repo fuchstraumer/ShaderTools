@@ -15,10 +15,13 @@
 #include <sstream>
 #include <unordered_map>
 
+#include "FilesystemUtils.hpp"
+
 namespace fs = std::experimental::filesystem;
-extern std::unordered_map<uint32_t, std::string> shaderFiles;
+
 
 namespace st {
+    extern std::unordered_map<Shader, std::string> shaderFiles;
 
     const char* const ShaderGenerator::BasePath = "../examples/fragments/";
     const char* const ShaderGenerator::LibPath = "../examples/fragments/include";
@@ -520,7 +523,7 @@ namespace st {
         
     }
 
-    uint32_t ShaderGenerator::SaveCurrentToFile(const char* fname) const {
+    Shader ShaderGenerator::SaveCurrentToFile(const char* fname) const {
         
         const std::string source_str = impl->getFullSource();
         std::ofstream output_file(fname);
@@ -528,17 +531,15 @@ namespace st {
             throw std::runtime_error("Could not open file to write completed plaintext shader to!");
         }
 
-        fs::path file_path(fname);
-        const uint32_t file_hash = static_cast<uint32_t>(std::hash<std::string>()(fs::absolute(fname).string()));
-        auto inserted = shaderFiles.emplace(file_hash, source_str);
-        if (!inserted.second) {
-            throw std::runtime_error("Couldn't add generated shader to shaderFiles map!");
-        }
+        fs::path file_path(fs::absolute(fname));
+        const std::string path_str = file_path.string();
         
-        output_file << source_str;
-        output_file.close();
+       
+        return WriteAndAddShaderSource(fname, source_str, impl->Stage);
+    }
 
-        return file_hash;
+    VkShaderStageFlagBits ShaderGenerator::GetStage() const {
+        return impl->Stage;
     }
 
 

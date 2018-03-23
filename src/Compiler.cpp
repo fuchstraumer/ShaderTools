@@ -14,8 +14,8 @@ namespace fs = std::experimental::filesystem;
 
 namespace st {
 
-    extern std::unordered_map<uint32_t, std::string> shaderFiles;
-    extern std::unordered_map<uint32_t, std::vector<uint32_t>> shaderBinaries;
+    extern std::unordered_map<Shader, std::string> shaderFiles;
+    extern std::unordered_map<Shader, std::vector<uint32_t>> shaderBinaries;
       
     static const std::map<std::string, VkShaderStageFlagBits> extension_stage_map {
         { ".vert", VK_SHADER_STAGE_VERTEX_BIT },
@@ -33,23 +33,14 @@ namespace st {
 
         ShaderCompilerImpl() = default;
         ~ShaderCompilerImpl() = default;
-        ShaderCompilerImpl(ShaderCompilerImpl&& other) noexcept;
-        ShaderCompilerImpl& operator=(ShaderCompilerImpl&& other) noexcept;
+        ShaderCompilerImpl(ShaderCompilerImpl&& other) noexcept = default;
+        ShaderCompilerImpl& operator=(ShaderCompilerImpl&& other) noexcept = default;
 
-        static std::string preferredShaderDirectory;
-        static bool saveCompiledBinaries;
-        std::map<std::experimental::filesystem::path, std::vector<uint32_t>> compiledShaders;
-
-        uint32_t compile(const char* path_to_src, const VkShaderStageFlagBits stage);
-        uint32_t compile(const char* name, const char* source_ptr, const size_t src_len, const VkShaderStageFlagBits stage);
+        Shader compile(const char* path_to_src, const VkShaderStageFlagBits stage);
+        Shader compile(const char* name, const char* source_ptr, const size_t src_len, const VkShaderStageFlagBits stage);
         VkShaderStageFlagBits getStage(const char* path) const;
-        void saveShaderToFile(const std::experimental::filesystem::path& source_path);
-        void saveBinary(const std::experimental::filesystem::path& source_path, const std::experimental::filesystem::path& path_to_save_to);
         bool shaderSourceNewerThanBinary(const std::experimental::filesystem::path& source, const std::experimental::filesystem::path& binary);
     };
-
-    std::string ShaderCompilerImpl::preferredShaderDirectory = std::string("./");
-    bool ShaderCompilerImpl::saveCompiledBinaries = false;
 
     ShaderCompiler::ShaderCompiler() : impl(std::make_unique<ShaderCompilerImpl>()) {}
 
@@ -57,23 +48,16 @@ namespace st {
 
     ShaderCompiler::ShaderCompiler(ShaderCompiler&& other) noexcept : impl(std::move(other.impl)) {}
 
-    ShaderCompilerImpl::ShaderCompilerImpl(ShaderCompilerImpl&& other) noexcept : compiledShaders(std::move(other.compiledShaders)) {}
-
     ShaderCompiler& ShaderCompiler::operator=(ShaderCompiler&& other) noexcept {
         impl = std::move(other.impl);
         return *this;
     }
 
-    ShaderCompilerImpl& ShaderCompilerImpl::operator=(ShaderCompilerImpl&& other) noexcept {
-        compiledShaders = std::move(other.compiledShaders);
-        return *this;
-    }
-
-    uint32_t ShaderCompiler::Compile(const char* path_to_source_str, const VkShaderStageFlagBits stage) {
+    Shader ShaderCompiler::Compile(const char* path_to_source_str, const VkShaderStageFlagBits stage) {
         return impl->compile(path_to_source_str, stage);
     }
 
-    uint32_t ShaderCompiler::Compile(const char* name, const char* src, const size_t len, const VkShaderStageFlagBits stage) {
+    Shader ShaderCompiler::Compile(const char* name, const char* src, const size_t len, const VkShaderStageFlagBits stage) {
         return impl->compile(name, src, len, stage);
     }
 
@@ -81,19 +65,17 @@ namespace st {
         return impl->getStage(path_to_source);
     }
 
-    bool ShaderCompiler::HasShader(const char* binary_path) const {
-        const fs::path absolute_path = fs::absolute(fs::path(binary_path));
-        return impl->compiledShaders.count(absolute_path) != 0;
+    bool ShaderCompiler::HasShader(const Shader& shader) const {
+        return shaderBinaries.count(shader) != 0;
     }
 
-    void ShaderCompiler::GetBinary(const char* binary_path, uint32_t* binary_size, uint32_t* binary_src) const {
-        if (!HasShader(binary_path)) {
-            *binary_size = std::numeric_limits<uint32_t>::max();
+    void ShaderCompiler::GetBinary(const Shader& shader, uint32_t* binary_size, uint32_t* binary_src) const {
+        if (!HasShader(shader)) {
+            *binary_size = 0;
             std::cerr << "Requested binary does not exist.";
         }
         else {
-            const fs::path absolute_path = fs::absolute(fs::path(binary_path));
-            const auto& binary = impl->compiledShaders.at(absolute_path);
+            const auto& binary = shaderBinaries.at(shader);
             *binary_size = static_cast<uint32_t>(binary.size());
             if (binary_src != nullptr) {
                 std::copy(binary.cbegin(), binary.cend(), binary_src);
@@ -104,10 +86,10 @@ namespace st {
     }
 
     void ShaderCompiler::AddBinary(const char* name, const uint32_t sz, const uint32_t* binary_data, const VkShaderStageFlagBits stage) {
-        WriteAndAddShaderBinary(name, std::vector<uint32_t>{ binary_data, binary_data + sz }, stage)
+        WriteAndAddShaderBinary(name, std::vector<uint32_t>{ binary_data, binary_data + sz }, stage);
     }
 
-    uint32_t ShaderCompilerImpl::compile(const char* name, const char* src_str, const size_t src_len, const VkShaderStageFlagBits stage) {
+    Shader ShaderCompilerImpl::compile(const char* name, const char* src_str, const size_t src_len, const VkShaderStageFlagBits stage) {
 
         shaderc::Compiler compiler;
         shaderc::CompileOptions options;
@@ -145,7 +127,7 @@ namespace st {
         }
 
         const std::string source_string{ src_str, src_str + src_len };
-        uint32_t source_hash = WriteAndAddShaderSource(std::string(name), source_string, stage);
+        Shader shader_handle = WriteAndAddShaderSource(std::string(name), source_string, stage);
         
         shaderc::SpvCompilationResult result = compiler.CompileGlslToSpv(source_string, shader_stage, nullptr);
         if (result.GetCompilationStatus() != shaderc_compilation_status_success) {
@@ -156,14 +138,14 @@ namespace st {
         }
 
         WriteAndAddShaderBinary(name, std::vector<uint32_t>{ result.begin(), result.end() }, stage);
-        return source_hash;
+        return shader_handle;
     }
 
-    uint32_t ShaderCompilerImpl::compile(const char* path_to_source_str, VkShaderStageFlagBits stage) {
+    Shader ShaderCompilerImpl::compile(const char* path_to_source_str, VkShaderStageFlagBits stage) {
         fs::path path_to_source(path_to_source_str);
-        if (compiledShaders.count(path_to_source) != 0) {
-            std::cerr << "Shader at given path has already been compiled...\n";
-            return false;
+        Shader shader_handle(path_to_source_str, stage);
+        if (shaderBinaries.count(shader_handle) != 0) {      
+            return shader_handle;
         }
 
         // First check to verify the path given exists.
@@ -217,7 +199,7 @@ namespace st {
         }
         const std::string source_code((std::istreambuf_iterator<char>(input_file)), (std::istreambuf_iterator<char>()));
         const std::string file_name = path_to_source.filename().string();
-        const uint32_t source_hash = WriteAndAddShaderSource(file_name, source_code, stage);
+        Shader source_hash = WriteAndAddShaderSource(file_name, source_code, stage);
 
         shaderc::SpvCompilationResult result = compiler.CompileGlslToSpv(source_code, shader_stage, file_name.c_str());
         if (result.GetCompilationStatus() != shaderc_compilation_status_success) {
@@ -240,46 +222,6 @@ namespace st {
             throw std::runtime_error("Could not infer shader file's stage based on extension!");
         }
         return (*iter).second;
-    }
-
-    void ShaderCompilerImpl::saveShaderToFile(const fs::path& source_path) {
-
-        if (fs::exists(fs::path(preferredShaderDirectory))) {
-            bool success = fs::create_directories(fs::path(preferredShaderDirectory));
-            if (!success) {
-                throw std::runtime_error("Failed to create directory to save shaders into.");
-            }
-        }
-        // check for existing binary and check for version parity
-        fs::path binary_path = source_path.filename();
-        binary_path.replace_extension(source_path.extension().string() + std::string(".spv"));
-        
-        if (fs::exists(binary_path)) {
-            // Binary exists already, check if we need to re-save what we have 
-            // loaded in the executable right now
-            if (shaderSourceNewerThanBinary(source_path, binary_path)) {
-                saveBinary(source_path, binary_path);
-                return;
-            } 
-            else {
-                // shader source and binary vaguely the same version-wise
-                return;
-            }
-        }
-        else {
-            saveBinary(source_path, binary_path);
-            return;
-        }
-    }
-
-    void ShaderCompilerImpl::saveBinary(const fs::path& source, const fs::path& dest) {
-
-        const auto& binary_src = compiledShaders.at(fs::absolute(source));
-
-        std::ofstream outfile(dest, std::ofstream::binary);
-        outfile.write(reinterpret_cast<const char*>(binary_src.data()), sizeof(uint32_t) * binary_src.size());
-        outfile.close();
-
     }
 
     bool ShaderCompilerImpl::shaderSourceNewerThanBinary(const std::experimental::filesystem::path& source, const std::experimental::filesystem::path& binary) {

@@ -2,7 +2,7 @@
 #ifndef SG_SHADER_HPP
 #define SG_SHADER_HPP
 #include "CommonInclude.hpp"
-
+#include "Shader.hpp"
 namespace st {
     class ShaderGeneratorImpl;
 
@@ -19,7 +19,7 @@ namespace st {
         void AddBody(const char* path_to_src, const size_t num_includes = 0, const char* const* paths = nullptr);
         void AddIncludePath(const char* path_to_include);
         void GetFullSource(size_t* len, char* dest) const;
-        uint32_t SaveCurrentToFile(const char* fname) const;
+        Shader SaveCurrentToFile(const char* fname) const;
 
         VkShaderStageFlagBits GetStage() const;
         static const char* const BasePath;
