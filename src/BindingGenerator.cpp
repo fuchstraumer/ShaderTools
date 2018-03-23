@@ -6,6 +6,7 @@
 #include <filesystem>
 #include <unordered_map>
 #define SCL_SECURE_NO_WARNINGS
+
 namespace st {
 
     class BindingGeneratorImpl {

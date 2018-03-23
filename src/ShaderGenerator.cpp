@@ -13,8 +13,10 @@
 #include <set>
 #include <cassert>
 #include <sstream>
+#include <unordered_map>
 
 namespace fs = std::experimental::filesystem;
+extern std::unordered_map<uint32_t, std::string> shaderFiles;
 
 namespace st {
 
@@ -518,17 +520,25 @@ namespace st {
         
     }
 
-    void ShaderGenerator::SaveCurrentToFile(const char* fname) const {
+    uint32_t ShaderGenerator::SaveCurrentToFile(const char* fname) const {
+        
         const std::string source_str = impl->getFullSource();
         std::ofstream output_file(fname);
-
         if (!output_file.is_open()) {
             throw std::runtime_error("Could not open file to write completed plaintext shader to!");
         }
 
+        fs::path file_path(fname);
+        const uint32_t file_hash = static_cast<uint32_t>(std::hash<std::string>()(fs::absolute(fname).string()));
+        auto inserted = shaderFiles.emplace(file_hash, source_str);
+        if (!inserted.second) {
+            throw std::runtime_error("Couldn't add generated shader to shaderFiles map!");
+        }
+        
         output_file << source_str;
-
         output_file.close();
+
+        return file_hash;
     }
 
 

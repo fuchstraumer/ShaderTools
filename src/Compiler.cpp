@@ -1,17 +1,29 @@
 #include "Compiler.hpp"
-#include <fstream>
-#include <sstream>
-#include <iostream>
 #include <mutex>
 #include <string>
 #include <map>
 #include <vector>
 #include <filesystem>
+#include <iostream>
+#include <unordered_map>
 #include <shaderc/shaderc.hpp>
+#include "FilesystemUtils.hpp"
 #define SCL_SECURE_NO_WARNINGS
 namespace fs = std::experimental::filesystem;
 
 namespace st {
+
+    extern std::unordered_map<uint32_t, std::string> shaderFiles;
+    extern std::unordered_map<uint32_t, std::vector<uint32_t>> shaderBinaries;
+      
+    static const std::map<std::string, VkShaderStageFlags> extension_stage_map {
+        { ".vert", VK_SHADER_STAGE_VERTEX_BIT },
+        { ".frag", VK_SHADER_STAGE_FRAGMENT_BIT },
+        { ".geom", VK_SHADER_STAGE_GEOMETRY_BIT },
+        { ".teval", VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT },
+        { ".tcntl", VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT },
+        { ".comp", VK_SHADER_STAGE_COMPUTE_BIT }
+    };
 
     class ShaderCompilerImpl {
         ShaderCompilerImpl(const ShaderCompilerImpl&) = delete;
@@ -27,8 +39,8 @@ namespace st {
         static bool saveCompiledBinaries;
         std::map<std::experimental::filesystem::path, std::vector<uint32_t>> compiledShaders;
 
-        bool compile(const char* path_to_src, const VkShaderStageFlags stage);
-        bool compile(const char* source_ptr, const size_t src_len, const VkShaderStageFlags stage);
+        uint32_t compile(const char* path_to_src, const VkShaderStageFlags stage);
+        uint32_t compile(const char* name, const char* source_ptr, const size_t src_len, const VkShaderStageFlags stage);
         VkShaderStageFlags getStage(const char* path) const;
         void saveShaderToFile(const std::experimental::filesystem::path& source_path);
         void saveBinary(const std::experimental::filesystem::path& source_path, const std::experimental::filesystem::path& path_to_save_to);
@@ -37,15 +49,6 @@ namespace st {
 
     std::string ShaderCompilerImpl::preferredShaderDirectory = std::string("./");
     bool ShaderCompilerImpl::saveCompiledBinaries = false;
-    
-    static const std::map<std::string, VkShaderStageFlags> extension_stage_map {
-        { ".vert", VK_SHADER_STAGE_VERTEX_BIT },
-        { ".frag", VK_SHADER_STAGE_FRAGMENT_BIT },
-        { ".geom", VK_SHADER_STAGE_GEOMETRY_BIT },
-        { ".teval", VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT },
-        { ".tcntl", VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT },
-        { ".comp", VK_SHADER_STAGE_COMPUTE_BIT }
-    };
 
     ShaderCompiler::ShaderCompiler() : impl(std::make_unique<ShaderCompilerImpl>()) {}
 
@@ -65,12 +68,12 @@ namespace st {
         return *this;
     }
 
-    bool ShaderCompiler::Compile(const char* path_to_source_str, const VkShaderStageFlags stage) {
+    uint32_t ShaderCompiler::Compile(const char* path_to_source_str, const VkShaderStageFlags stage) {
         return impl->compile(path_to_source_str, stage);
     }
 
-    bool ShaderCompiler::Compile(const char* src, const size_t len, const VkShaderStageFlags stage) {
-        return impl->compile(src, len, stage);
+    uint32_t ShaderCompiler::Compile(const char* name, const char* src, const size_t len, const VkShaderStageFlags stage) {
+        return impl->compile(name, src, len, stage);
     }
 
     VkShaderStageFlags ShaderCompiler::GetShaderStage(const char* path_to_source) const {
@@ -99,14 +102,8 @@ namespace st {
 
     }
 
-    void ShaderCompiler::AddBinary(const char* path, const uint32_t sz, const uint32_t* binary_data) {
-        const fs::path absolute_path = fs::absolute(fs::path(path));
-        static std::mutex insertion_mutex;
-        std::lock_guard<std::mutex> insertion_guard(insertion_mutex);
-        auto inserted = impl->compiledShaders.emplace(absolute_path, std::move(std::vector<uint32_t>{ binary_data, binary_data + sz }));
-        if (!inserted.second) {
-            throw std::runtime_error("Tried to insert already-stored shader binary!");
-        }
+    void ShaderCompiler::AddBinary(const char* name, const uint32_t sz, const uint32_t* binary_data, const VkShaderStageFlags stage) {
+        WriteAndAddShaderBinary(name, std::vector<uint32_t>{ binary_data, binary_data + sz }, stage)
     }
 
     const char * ShaderCompiler::GetPreferredDirectory() {
@@ -117,7 +114,7 @@ namespace st {
         ShaderCompilerImpl::preferredShaderDirectory = std::string(directory);
     }
 
-    bool ShaderCompilerImpl::compile(const char* src_str, const size_t src_len, const VkShaderStageFlags stage) {
+    uint32_t ShaderCompilerImpl::compile(const char* name, const char* src_str, const size_t src_len, const VkShaderStageFlags stage) {
 
         shaderc::Compiler compiler;
         shaderc::CompileOptions options;
@@ -155,6 +152,8 @@ namespace st {
         }
 
         const std::string source_string{ src_str, src_str + src_len };
+        uint32_t source_hash = WriteAndAddShaderSource(std::string(name), source_string, stage);
+        
         shaderc::SpvCompilationResult result = compiler.CompileGlslToSpv(source_string, shader_stage, nullptr);
         if (result.GetCompilationStatus() != shaderc_compilation_status_success) {
             const std::string err_msg = result.GetErrorMessage();
@@ -163,16 +162,11 @@ namespace st {
             throw std::runtime_error(except_msg.c_str());
         }
 
-        static std::mutex insertion_mutex;
-        std::lock_guard<std::mutex> insertion_guard(insertion_mutex);
-        auto inserted = compiledShaders.insert(std::make_pair(fs::current_path() / fs::path(std::to_string(compiledShaders.size())), std::vector<uint32_t>{ result.begin(), result.end() }));
-        if (!inserted.second) {
-            throw std::runtime_error("Failed to insert shader into compiled shader map!");
-        }
-        return true;
+        WriteAndAddShaderBinary(name, std::vector<uint32_t>{ result.begin(), result.end() }, stage);
+        return source_hash;
     }
 
-    bool ShaderCompilerImpl::compile(const char* path_to_source_str, VkShaderStageFlags stage) {
+    uint32_t ShaderCompilerImpl::compile(const char* path_to_source_str, VkShaderStageFlags stage) {
         fs::path path_to_source(path_to_source_str);
         if (compiledShaders.count(path_to_source) != 0) {
             std::cerr << "Shader at given path has already been compiled...\n";
@@ -230,6 +224,7 @@ namespace st {
         }
         const std::string source_code((std::istreambuf_iterator<char>(input_file)), (std::istreambuf_iterator<char>()));
         const std::string file_name = path_to_source.filename().string();
+        const uint32_t source_hash = WriteAndAddShaderSource(file_name, source_code, stage);
 
         shaderc::SpvCompilationResult result = compiler.CompileGlslToSpv(source_code, shader_stage, file_name.c_str());
         if (result.GetCompilationStatus() != shaderc_compilation_status_success) {
@@ -239,13 +234,8 @@ namespace st {
             throw std::runtime_error(except_msg.c_str());
         }
 
-        static std::mutex insertion_mutex;
-        std::lock_guard<std::mutex> insertion_guard(insertion_mutex);
-        auto inserted = compiledShaders.insert(std::make_pair(fs::absolute(path_to_source), std::vector<uint32_t>{ result.begin(), result.end() }));
-        if (!inserted.second) {
-            throw std::runtime_error("Failed to insert shader into compiled shader map!");
-        }
-        return true;
+        WriteAndAddShaderBinary(file_name, std::vector<uint32_t>{ result.cbegin(), result.cend() }, stage);
+        return source_hash;
     }
 
     VkShaderStageFlags ShaderCompilerImpl::getStage(const char* path_to_source) const {
