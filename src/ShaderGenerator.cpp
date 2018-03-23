@@ -98,7 +98,7 @@ namespace st {
     class ShaderGeneratorImpl {
     public:
 
-        ShaderGeneratorImpl(const VkShaderStageFlags& stage);
+        ShaderGeneratorImpl(const VkShaderStageFlagBits& stage);
         ~ShaderGeneratorImpl();
 
         ShaderGeneratorImpl(ShaderGeneratorImpl&& other) noexcept;
@@ -119,7 +119,7 @@ namespace st {
         void addIncludePath(const char* include_path);
 
         bool collated = false;
-        VkShaderStageFlags Stage = VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM;
+        VkShaderStageFlagBits Stage = VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM;
         std::multiset<shaderFragment> fragments;
         std::map<fs::path, std::string> fileContents;
         std::map<std::string, std::string> resourceBlocks;
@@ -127,7 +127,7 @@ namespace st {
         std::vector<fs::path> includes;
     };
 
-    ShaderGeneratorImpl::ShaderGeneratorImpl(const VkShaderStageFlags& stage) : Stage(stage) {
+    ShaderGeneratorImpl::ShaderGeneratorImpl(const VkShaderStageFlagBits& stage) : Stage(stage) {
         fs::path preamble(std::string(ShaderGenerator::BasePath) + "builtins/preamble450.glsl");
         addPreamble(preamble);
         if (Stage == VK_SHADER_STAGE_VERTEX_BIT) {
@@ -481,7 +481,7 @@ namespace st {
         fragments.emplace(shaderFragment{ fragment_type::Main, body_str });
     }
 
-    ShaderGenerator::ShaderGenerator(const VkShaderStageFlags& stage) : impl(std::make_unique<ShaderGeneratorImpl>(stage)) {}
+    ShaderGenerator::ShaderGenerator(const VkShaderStageFlagBits& stage) : impl(std::make_unique<ShaderGeneratorImpl>(stage)) {}
 
     ShaderGenerator::~ShaderGenerator() {}
 

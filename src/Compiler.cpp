@@ -6,6 +6,7 @@
 #include <filesystem>
 #include <iostream>
 #include <unordered_map>
+#include <fstream>
 #include <shaderc/shaderc.hpp>
 #include "FilesystemUtils.hpp"
 #define SCL_SECURE_NO_WARNINGS
@@ -16,7 +17,7 @@ namespace st {
     extern std::unordered_map<uint32_t, std::string> shaderFiles;
     extern std::unordered_map<uint32_t, std::vector<uint32_t>> shaderBinaries;
       
-    static const std::map<std::string, VkShaderStageFlags> extension_stage_map {
+    static const std::map<std::string, VkShaderStageFlagBits> extension_stage_map {
         { ".vert", VK_SHADER_STAGE_VERTEX_BIT },
         { ".frag", VK_SHADER_STAGE_FRAGMENT_BIT },
         { ".geom", VK_SHADER_STAGE_GEOMETRY_BIT },
@@ -39,9 +40,9 @@ namespace st {
         static bool saveCompiledBinaries;
         std::map<std::experimental::filesystem::path, std::vector<uint32_t>> compiledShaders;
 
-        uint32_t compile(const char* path_to_src, const VkShaderStageFlags stage);
-        uint32_t compile(const char* name, const char* source_ptr, const size_t src_len, const VkShaderStageFlags stage);
-        VkShaderStageFlags getStage(const char* path) const;
+        uint32_t compile(const char* path_to_src, const VkShaderStageFlagBits stage);
+        uint32_t compile(const char* name, const char* source_ptr, const size_t src_len, const VkShaderStageFlagBits stage);
+        VkShaderStageFlagBits getStage(const char* path) const;
         void saveShaderToFile(const std::experimental::filesystem::path& source_path);
         void saveBinary(const std::experimental::filesystem::path& source_path, const std::experimental::filesystem::path& path_to_save_to);
         bool shaderSourceNewerThanBinary(const std::experimental::filesystem::path& source, const std::experimental::filesystem::path& binary);
@@ -68,11 +69,11 @@ namespace st {
         return *this;
     }
 
-    uint32_t ShaderCompiler::Compile(const char* path_to_source_str, const VkShaderStageFlags stage) {
+    uint32_t ShaderCompiler::Compile(const char* path_to_source_str, const VkShaderStageFlagBits stage) {
         return impl->compile(path_to_source_str, stage);
     }
 
-    uint32_t ShaderCompiler::Compile(const char* name, const char* src, const size_t len, const VkShaderStageFlags stage) {
+    uint32_t ShaderCompiler::Compile(const char* name, const char* src, const size_t len, const VkShaderStageFlagBits stage) {
         return impl->compile(name, src, len, stage);
     }
 
@@ -102,19 +103,11 @@ namespace st {
 
     }
 
-    void ShaderCompiler::AddBinary(const char* name, const uint32_t sz, const uint32_t* binary_data, const VkShaderStageFlags stage) {
+    void ShaderCompiler::AddBinary(const char* name, const uint32_t sz, const uint32_t* binary_data, const VkShaderStageFlagBits stage) {
         WriteAndAddShaderBinary(name, std::vector<uint32_t>{ binary_data, binary_data + sz }, stage)
     }
 
-    const char * ShaderCompiler::GetPreferredDirectory() {
-        return ShaderCompilerImpl::preferredShaderDirectory.c_str();
-    }
-
-    void ShaderCompiler::SetPreferredDirectory(const char * directory) {
-        ShaderCompilerImpl::preferredShaderDirectory = std::string(directory);
-    }
-
-    uint32_t ShaderCompilerImpl::compile(const char* name, const char* src_str, const size_t src_len, const VkShaderStageFlags stage) {
+    uint32_t ShaderCompilerImpl::compile(const char* name, const char* src_str, const size_t src_len, const VkShaderStageFlagBits stage) {
 
         shaderc::Compiler compiler;
         shaderc::CompileOptions options;
@@ -166,7 +159,7 @@ namespace st {
         return source_hash;
     }
 
-    uint32_t ShaderCompilerImpl::compile(const char* path_to_source_str, VkShaderStageFlags stage) {
+    uint32_t ShaderCompilerImpl::compile(const char* path_to_source_str, VkShaderStageFlagBits stage) {
         fs::path path_to_source(path_to_source_str);
         if (compiledShaders.count(path_to_source) != 0) {
             std::cerr << "Shader at given path has already been compiled...\n";
@@ -238,7 +231,7 @@ namespace st {
         return source_hash;
     }
 
-    VkShaderStageFlags ShaderCompilerImpl::getStage(const char* path_to_source) const {
+    VkShaderStageFlagBits ShaderCompilerImpl::getStage(const char* path_to_source) const {
         // We weren't given a stage, try to infer it from the file.
         const std::string stage_ext = fs::path(path_to_source).extension().string();
         auto iter = extension_stage_map.find(stage_ext);

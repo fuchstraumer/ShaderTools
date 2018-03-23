@@ -10,7 +10,7 @@ namespace st {
         ShaderGenerator(const ShaderGenerator&) = delete;
         ShaderGenerator& operator=(const ShaderGenerator&) = delete;
     public:
-        ShaderGenerator(const VkShaderStageFlags& stage = VK_SHADER_STAGE_VERTEX_BIT);
+        ShaderGenerator(const VkShaderStageFlagBits& stage = VK_SHADER_STAGE_VERTEX_BIT);
         ~ShaderGenerator();
         ShaderGenerator(ShaderGenerator&& other) noexcept;
         ShaderGenerator& operator=(ShaderGenerator&& other) noexcept;
@@ -21,7 +21,7 @@ namespace st {
         void GetFullSource(size_t* len, char* dest) const;
         uint32_t SaveCurrentToFile(const char* fname) const;
 
-        VkShaderStageFlags GetStage() const;
+        VkShaderStageFlagBits GetStage() const;
         static const char* const BasePath;
         static const char* const LibPath;
     private:

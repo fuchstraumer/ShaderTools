@@ -7,11 +7,11 @@ namespace st {
 
     namespace fs = std::experimental::filesystem;
 
-    std::unordered_map<uint32_t, std::string> shaderFiles = std::unordered_map<uint32_t, std::string>{ };
-    std::unordered_map<uint32_t, std::vector<uint32_t>> shaderBinaries = std::unordered_map<uint32_t, std::vector<uint32_t>>{ };
+    std::unordered_map<Shader, std::string> shaderFiles = std::unordered_map<Shader, std::string>{ };
+    std::unordered_map<Shader, std::vector<uint32_t>> shaderBinaries = std::unordered_map<Shader, std::vector<uint32_t>>{ };
     
     
-    static const std::map<VkShaderStageFlags, std::string> stage_extension_map {
+    static const std::map<VkShaderStageFlagBits, std::string> stage_extension_map {
         { VK_SHADER_STAGE_VERTEX_BIT, ".vert" },
         { VK_SHADER_STAGE_FRAGMENT_BIT, ".frag" },
         { VK_SHADER_STAGE_GEOMETRY_BIT, ".geom" },
@@ -20,10 +20,10 @@ namespace st {
         { VK_SHADER_STAGE_COMPUTE_BIT, ".comp" }
     };
 
-    ShaderHandle WriteAndAddShaderSource(const std::string file_name, const std::string& file_contents, const VkShaderStageFlags stage) {
+    Shader WriteAndAddShaderSource(const std::string file_name, const std::string& file_contents, const VkShaderStageFlagBits stage) {
         const std::string output_name = file_name + stage_extension_map.at(stage);
         const fs::path output_path = fs::temp_directory_path() / fs::path(file_name);
-        const uint32_t output_hash = GetPathHash(output_path);
+        
         std::ofstream output_stream(output_path);
 
         if (!output_stream.is_open()) {
@@ -32,7 +32,8 @@ namespace st {
 
         static std::mutex insertion_mutex;
         std::lock_guard<std::mutex> insertion_guard{ insertion_mutex };
-        auto inserted = shaderFiles.emplace(output_hash, file_contents);
+        auto c_str_tmp = output_path.string();
+        auto inserted = shaderFiles.emplace(Shader{ c_str_tmp.c_str(), stage }, file_contents);
 
         output_stream << file_contents;
         output_stream.close();
@@ -40,7 +41,7 @@ namespace st {
         return ShaderHandle{ GetPathHash(output_path), stage };
     }
     
-    void WriteAndAddShaderBinary(const std::string base_name, const std::vector<uint32_t>& file_contents, const VkShaderStageFlags stage) {
+    void WriteAndAddShaderBinary(const std::string base_name, const std::vector<uint32_t>& file_contents, const VkShaderStageFlagBits stage) {
         
         std::string output_name = base_name + stage_extension_map.at(stage);
         const fs::path output_path = fs::temp_directory_path() / fs::path(output_name);
