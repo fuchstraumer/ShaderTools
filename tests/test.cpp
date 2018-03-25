@@ -20,16 +20,13 @@ int main(int argc, char* argv[]) {
     ShaderCompiler compiler;
     BindingGenerator parser;
     for(const auto& path : args) {
-        if (!compiler.Compile(path.c_str())) {
-            std::cerr << "Shader compiliation failed.\n";
-            throw std::runtime_error("Failed to compile shader.");
-        }
-        else {
+        Shader handle = compiler.Compile(path.c_str());
+        {
             uint32_t size = 0;
-            compiler.GetBinary(path.c_str(), &size, nullptr);
+            compiler.GetBinary(handle, &size, nullptr);
             std::vector<uint32_t> binary(size);
-            compiler.GetBinary(path.c_str(), &size, binary.data());
-            parser.ParseBinary(size, binary.data(), compiler.GetShaderStage(path.c_str()));
+            compiler.GetBinary(handle, &size, binary.data());
+            parser.ParseBinary(handle);
         }
     }
     parser.CollateBindings();

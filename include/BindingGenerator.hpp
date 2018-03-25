@@ -2,6 +2,7 @@
 #ifndef SHADER_TOOLS_BINDING_GENERATOR_HPP
 #define SHADER_TOOLS_BINDING_GENERATOR_HPP
 #include "CommonInclude.hpp"
+#include "Shader.hpp"
 
 namespace st {
     class BindingGeneratorImpl;
@@ -17,6 +18,7 @@ namespace st {
         BindingGenerator& operator=(BindingGenerator&& other) noexcept;
 
         void ParseBinary(const char* binary_location, const VkShaderStageFlags stage);
+        void ParseBinary(const Shader& shader);
         void ParseBinary(const uint32_t binary_size, const uint32_t* binary, const VkShaderStageFlags stage);
         void CollateBindings();
 

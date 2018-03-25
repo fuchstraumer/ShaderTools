@@ -6,7 +6,11 @@
 #include <filesystem>
 #include <unordered_map>
 #define SCL_SECURE_NO_WARNINGS
+
 namespace st {
+
+    extern std::unordered_map<Shader, std::string> shaderFiles;
+    extern std::unordered_map<Shader, std::vector<uint32_t>> shaderBinaries;
 
     class BindingGeneratorImpl {
         BindingGeneratorImpl(const BindingGeneratorImpl&) = delete;
@@ -19,7 +23,7 @@ namespace st {
         BindingGeneratorImpl& operator=(BindingGeneratorImpl&& other) noexcept;
 
         void parseBinary(const uint32_t binary_sz, const uint32_t* binary, const VkShaderStageFlags stage);
-        void parseBinary(const char* fname, const VkShaderStageFlags stage);
+        void parseBinary(const Shader& shader_handle);
         void parseImpl(const std::vector<uint32_t>& binary_data, const VkShaderStageFlags stage);
         void collateBindings();
         std::unordered_multimap<VkShaderStageFlags, DescriptorSetInfo> descriptorSets;
@@ -316,35 +320,20 @@ namespace st {
         impl = std::make_unique<BindingGeneratorImpl>();
     }
 
-    void BindingGenerator::ParseBinary(const char* binary_fname, const VkShaderStageFlags stage) {
-        impl->parseBinary(binary_fname, stage);
+    void BindingGenerator::ParseBinary(const Shader & shader) {
+        impl->parseBinary(shader);
     }
     
     void BindingGenerator::ParseBinary(const uint32_t binary_size, const uint32_t* binary, const VkShaderStageFlags stage) {
         impl->parseBinary(binary_size, binary, stage);
     }
 
-    void BindingGeneratorImpl::parseBinary(const char* fname, const VkShaderStageFlags stage) {
-        std::ifstream input_binary(fname, std::ios::binary | std::ios::in | std::ios::ate);
-        
-        if (!input_binary.is_open()) {
-            throw std::runtime_error("Could not open binary shader file!");
+    void BindingGeneratorImpl::parseBinary(const Shader& shader_handle) {
+        if (shaderBinaries.count(shader_handle) == 0) {
+            throw std::runtime_error("Attempted to parse binary that does not exist in current program!");
         }
 
-        std::vector<uint32_t> loaded_binary;
-        {
-            std::vector<char> input_buff;
-            size_t code_size = static_cast<size_t>(input_binary.tellg());
-            input_buff.resize(code_size);
-            input_binary.seekg(0, std::ios::beg);
-            input_binary.read(input_buff.data(), code_size);
-            input_binary.close();
-
-            loaded_binary.resize(input_buff.size() / sizeof(uint32_t) + 1);
-            memcpy(loaded_binary.data(), input_buff.data(), input_buff.size());
-        }
-
-        parseImpl(loaded_binary, stage);
+        parseImpl(shaderBinaries.at(shader_handle), shader_handle.GetStage());
     }
 
     void BindingGeneratorImpl::parseBinary(const uint32_t sz, const uint32_t* src, const VkShaderStageFlags stage) {
