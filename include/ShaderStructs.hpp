@@ -2,7 +2,7 @@
 #ifndef SHADER_TOOLS_STRUCTS_HPP
 #define SHADER_TOOLS_STRUCTS_HPP
 #include "CommonInclude.hpp"
-#include "spirv_cross.hpp"
+#include "spirv-cross/spirv_cross.hpp"
 #include "nlohmann/include/nlohmann/json.hpp"
 #include "metastuff/include/Meta.h"
 #include <vector>
