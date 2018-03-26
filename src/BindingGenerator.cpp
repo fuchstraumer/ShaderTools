@@ -82,6 +82,19 @@ namespace st {
         }
     }
 
+    void BindingGenerator::GetVertexAttributes(uint32_t * num_attrs, VkVertexInputAttributeDescription * attrs) const {
+        const auto& input_attrs = impl->inputAttributes.at(VK_SHADER_STAGE_VERTEX_BIT);
+        *num_attrs = input_attrs.size();
+        if (attrs != nullptr) {
+            std::vector<VkVertexInputAttributeDescription> actual_attrs;
+            for (const auto& input_attr : input_attrs) {
+                actual_attrs.emplace_back((VkVertexInputAttributeDescription)input_attr);
+            }
+
+            std::copy(actual_attrs.cbegin(), actual_attrs.cend(), attrs);
+        }
+    }
+
     constexpr static std::array<VkShaderStageFlags, 6> possible_stages{
         VK_SHADER_STAGE_VERTEX_BIT,
         VK_SHADER_STAGE_FRAGMENT_BIT,
