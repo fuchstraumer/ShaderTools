@@ -16,7 +16,8 @@ namespace st {
 
     extern std::unordered_map<Shader, std::string> shaderFiles;
     extern std::unordered_map<Shader, std::vector<uint32_t>> shaderBinaries;
-      
+    extern std::unordered_multimap<Shader, fs::path> shaderPaths;
+
     static const std::map<std::string, VkShaderStageFlagBits> extension_stage_map {
         { ".vert", VK_SHADER_STAGE_VERTEX_BIT },
         { ".frag", VK_SHADER_STAGE_FRAGMENT_BIT },
@@ -38,8 +39,8 @@ namespace st {
 
         Shader compile(const char* path_to_src, const VkShaderStageFlagBits stage);
         Shader compile(const char* name, const char* source_ptr, const size_t src_len, const VkShaderStageFlagBits stage);
+
         VkShaderStageFlagBits getStage(const char* path) const;
-        bool shaderSourceNewerThanBinary(const std::experimental::filesystem::path& source, const std::experimental::filesystem::path& binary);
     };
 
     ShaderCompiler::ShaderCompiler() : impl(std::make_unique<ShaderCompilerImpl>()) {}

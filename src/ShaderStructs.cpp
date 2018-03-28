@@ -429,7 +429,7 @@ namespace st {
     }
 
     VertexAttributeInfo::operator VkVertexInputAttributeDescription() const noexcept {
-        return VkVertexInputAttributeDescription{ Location, Binding, FormatFromSPIRType(Type), Offset };
+        return VkVertexInputAttributeDescription{ Location, 0, FormatFromSPIRType(Type), Offset };
     }
 
     void StageAttributes::SetStageWithStr(std::string str) {

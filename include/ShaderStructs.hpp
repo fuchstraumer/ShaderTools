@@ -39,7 +39,7 @@ namespace st {
 
     struct DescriptorSetInfo {
         uint32_t Index = std::numeric_limits<uint32_t>::max();
-        std::vector<DescriptorObject> Members = std::vector<DescriptorObject>();
+        std::map<uint32_t, DescriptorObject> Members = std::map<uint32_t, DescriptorObject>{};
     };
 
     struct PushConstantInfo {
@@ -62,13 +62,12 @@ namespace st {
         void SetTypeWithStr(std::string str);
         explicit operator VkVertexInputAttributeDescription() const noexcept;
         uint32_t Location;
-        uint32_t Binding;
         uint32_t Offset;
     };
 
     struct StageAttributes {
-        std::vector<VertexAttributeInfo> InputAttributes;
-        std::vector<VertexAttributeInfo> OutputAttributes;
+        std::map<uint32_t, VertexAttributeInfo> InputAttributes;
+        std::map<uint32_t, VertexAttributeInfo> OutputAttributes;
         VkShaderStageFlags Stage;
         void SetStageWithStr(std::string str);
         std::string GetStageStr() const;
@@ -79,6 +78,66 @@ namespace st {
     template<typename T>
     void from_json(const nlohmann::json& j, T& obj);
 
+}
+
+template<typename T> 
+inline std::string CastToString(const T& value);
+
+template<>
+inline std::string CastToString(const uint32_t& value) {
+    return std::to_string(value);
+}
+
+namespace meta {
+
+    template<typename Class, typename = std::enable_if_t<meta::isRegistered<Class>()>>
+    nlohmann::json serialize(const Class& obj);
+
+    template<typename Class, typename = std::enable_if_t<!meta::isRegistered<Class>()>, typename = void>
+    nlohmann::json serialize(const Class& obj);
+
+    template<typename Class>
+    nlohmann::json serialize_basic(const Class& obj);
+
+    template<typename Class>
+    nlohmann::json serialize_basic(const Class& obj);
+
+    template<typename Key, typename Value>
+    nlohmann::json serialize_basic(const std::map<Key, Value>& _map);
+
+    template<typename T>
+    nlohmann::json serialize_basic(const std::vector<T>& _vec);
+
+    template<typename Key, typename Value>
+    nlohmann::json serialize_basic(const std::unordered_map<Key, Value>& _map);
+
+}
+
+
+template<typename T>
+void to_json(nlohmann::json& j, const T& obj);
+template<typename T>
+void from_json(const nlohmann::json& j, T& obj);
+
+
+template<typename T>
+inline void st::to_json(nlohmann::json& j, const T& obj) {
+    j = meta::serialize(obj);
+}
+
+template<typename T>
+inline void st::from_json(const nlohmann::json& j, T& obj) {
+    meta::deserialize(obj, j);
+}
+
+template<typename T>
+inline void to_json(nlohmann::json& j, const T& obj) {
+    j = meta::serialize(obj);
+}
+
+template<typename T>
+inline void from_json(const nlohmann::json& j, T& obj) {
+    meta::deserialize(obj, j);
 }
 
 namespace meta {
@@ -98,8 +157,6 @@ namespace meta {
         using namespace st;
         return members(
             member("Name", &DescriptorObject::Name),
-            member("Binding", &DescriptorObject::Binding),
-            member("ParentSet", &DescriptorObject::ParentSet),
             member("Type", &DescriptorObject::GetType, &DescriptorObject::SetType),
             member("Stages", &DescriptorObject::Stages),
             member("Members", &DescriptorObject::Members)
@@ -110,7 +167,6 @@ namespace meta {
     inline auto registerMembers<st::DescriptorSetInfo>() {
         using namespace st;
         return members(
-            member("Index", &DescriptorSetInfo::Index),
             member("Objects", &DescriptorSetInfo::Members)
         );
     }
@@ -130,8 +186,6 @@ namespace meta {
         using namespace st;
         return members(
             member("Name", &VertexAttributeInfo::Name),
-            member("Location", &VertexAttributeInfo::Location),
-            member("Binding", &VertexAttributeInfo::Binding),
             member("Offset", &VertexAttributeInfo::Offset),
             member("Type", &VertexAttributeInfo::GetTypeStr, &VertexAttributeInfo::SetTypeWithStr)
         );
@@ -147,7 +201,7 @@ namespace meta {
         );
     }
 
-    template<typename Class, typename = std::enable_if_t<meta::isRegistered<Class>()>>
+    template<typename Class, typename>
     nlohmann::json serialize(const Class& obj) {
         nlohmann::json result;
         meta::doForAllMembers<Class>([&obj, &result](auto & member) {
@@ -163,11 +217,18 @@ namespace meta {
         return result;
     }
 
-    template<typename Class, typename = std::enable_if_t<!meta::isRegistered<Class>()>, typename = void>
-    nlohmann::json serialize(const Class& obj);
+    template<typename Class, typename, typename>
+    nlohmann::json serialize(const Class& obj) {
+        return serialize_basic(obj);
+    }
+
+    template<typename Class>
+    nlohmann::json serialize_basic(const Class& obj) {
+        return nlohmann::json(obj);
+    }
 
     template<typename T>
-    nlohmann::json serialize(const std::vector<T>& _obj) {
+    nlohmann::json serialize_basic(const std::vector<T>& _obj) {
         nlohmann::json result;
         size_t i = 0;
         for(auto& elem : _obj) {
@@ -177,28 +238,26 @@ namespace meta {
         return result;
     }
 
-    template<typename T0, typename T1>
-    nlohmann::json serialize(const std::pair<T0, T1>& pair) {
-        nlohmann::json result;
-        result[0] = pair.first;
-        result[1] = pair.second;
-        return result;
+    template<typename Key, typename Value>
+    nlohmann::json serialize_basic(const std::unordered_map<Key, Value>& _map)
+    {
+        return nlohmann::json();
     }
 
     template<typename Key, typename Value>
-    nlohmann::json serialize(std::map<Key, Value>& _map) {
+    nlohmann::json serialize_basic(const std::map<Key, Value>& _map) {
         nlohmann::json result;
         for (auto& entry : _map) {
-            result.push_back(entry);
+            result.emplace(CastToString(entry.first), entry.second);
         }
         return result;
     }
 
     template<typename Key, typename Value>
-    nlohmann::json deserialize(std::unordered_map<Key, Value>& _map) {
+    nlohmann::json deserialize(const std::unordered_map<Key, Value>& _map) {
         nlohmann::json result;
         for (auto& entry : _map) {
-            result.push_back(entry);
+            result.emplace(entry.first, entry.second);
         }
         return result;
     }
@@ -251,15 +310,6 @@ namespace meta {
 
 }
 
-template<typename T>
-inline void st::to_json(nlohmann::json& j, const T& obj) {
-    j = meta::serialize(obj);
-}
-
-template<typename T>
-inline void st::from_json(const nlohmann::json& j, T& obj) {
-    meta::deserialize(obj, j);
-}
 
 
 #endif //!SHADER_TOOLS_STRUCTS_HPP

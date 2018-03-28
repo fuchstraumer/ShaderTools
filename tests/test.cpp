@@ -21,13 +21,7 @@ int main(int argc, char* argv[]) {
     BindingGenerator parser;
     for(const auto& path : args) {
         Shader handle = compiler.Compile(path.c_str());
-        {
-            uint32_t size = 0;
-            compiler.GetBinary(handle, &size, nullptr);
-            std::vector<uint32_t> binary(size);
-            compiler.GetBinary(handle, &size, binary.data());
-            parser.ParseBinary(handle);
-        }
+        parser.ParseBinary(handle);        
     }
     parser.CollateBindings();
     parser.SaveToJSON("out.json");

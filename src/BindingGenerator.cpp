@@ -5,6 +5,7 @@
 #include <fstream>
 #include <filesystem>
 #include <unordered_map>
+#include <map>
 #define SCL_SECURE_NO_WARNINGS
 
 namespace st {
@@ -27,10 +28,12 @@ namespace st {
         void parseImpl(const std::vector<uint32_t>& binary_data, const VkShaderStageFlags stage);
         void collateBindings();
         std::unordered_multimap<VkShaderStageFlags, DescriptorSetInfo> descriptorSets;
-        std::vector<DescriptorSetInfo> sortedSets;
+        std::map<uint32_t, DescriptorSetInfo> sortedSets;
         std::unordered_map<VkShaderStageFlags, PushConstantInfo> pushConstants;
-        std::unordered_map<VkShaderStageFlags, std::vector<VertexAttributeInfo>> inputAttributes;
-        std::unordered_map<VkShaderStageFlags, std::vector<VertexAttributeInfo>> outputAttributes;
+        std::unordered_map<VkShaderStageFlags, std::map<uint32_t, VertexAttributeInfo>> inputAttributes;
+        std::unordered_map<VkShaderStageFlags, std::map<uint32_t, VertexAttributeInfo>> outputAttributes;
+
+        decltype(sortedSets)::iterator findSetWithIdx(const uint32_t idx);
     };
 
     BindingGenerator::BindingGenerator() : impl(std::make_unique<BindingGeneratorImpl>()) {}
@@ -54,45 +57,12 @@ namespace st {
         return *this;
     }
 
+    decltype(BindingGeneratorImpl::sortedSets)::iterator BindingGeneratorImpl::findSetWithIdx(const uint32_t idx) {
+        return sortedSets.find(idx);
+    }
+
     uint32_t BindingGenerator::GetNumSets() const noexcept {
         return static_cast<uint32_t>(impl->sortedSets.size());
-    }
-
-    void BindingGenerator::GetLayoutBindings(const uint32_t& idx, uint32_t* num_bindings, VkDescriptorSetLayoutBinding* bindings) const {
-        
-        auto& set = impl->sortedSets[idx];
-        *num_bindings = static_cast<uint32_t>(set.Members.size());
-        if (bindings != nullptr) {
-            std::vector<VkDescriptorSetLayoutBinding> result;
-            for (auto& member : set.Members) {
-                result.push_back((VkDescriptorSetLayoutBinding)member);
-            }
-            std::copy(result.cbegin(), result.cend(), bindings);
-        }
-    }
-
-    void BindingGenerator::GetPushConstantRanges(uint32_t * num_ranges, VkPushConstantRange * results) const {
-        std::vector<VkPushConstantRange> ranges;
-        for (auto& entry : impl->pushConstants) {
-            ranges.push_back((VkPushConstantRange)entry.second);
-        }
-        *num_ranges = static_cast<uint32_t>(ranges.size());
-        if (results != nullptr) {
-            std::copy(ranges.cbegin(), ranges.cend(), results);
-        }
-    }
-
-    void BindingGenerator::GetVertexAttributes(uint32_t * num_attrs, VkVertexInputAttributeDescription * attrs) const {
-        const auto& input_attrs = impl->inputAttributes.at(VK_SHADER_STAGE_VERTEX_BIT);
-        *num_attrs = input_attrs.size();
-        if (attrs != nullptr) {
-            std::vector<VkVertexInputAttributeDescription> actual_attrs;
-            for (const auto& input_attr : input_attrs) {
-                actual_attrs.emplace_back((VkVertexInputAttributeDescription)input_attr);
-            }
-
-            std::copy(actual_attrs.cbegin(), actual_attrs.cend(), attrs);
-        }
     }
 
     constexpr static std::array<VkShaderStageFlags, 6> possible_stages{
@@ -104,100 +74,36 @@ namespace st {
         VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT
     };
 
-    void BindingGenerator::SaveToJSON(const char* output_name) {
-
-        if (impl->sortedSets.empty()) {
-            CollateBindings();
-        }
-
-        namespace fs = std::experimental::filesystem;
-        fs::path output_path(output_name);
-        if (!output_path.has_extension()) {
-            output_path.replace_extension(".json");
-        }
-        else if (output_path.extension().string() != std::string(".json")) {
-            output_path.replace_extension(".json");
-        }
-
-        std::ofstream output_file(output_path.string());
-        if (!output_file.is_open()) {
-            throw std::runtime_error("Couldn't open JSON output file!");
-        }
-
-        nlohmann::json out;
-        output_file << std::setw(4);
-        out = impl->sortedSets;
-        
-        std::vector<StageAttributes> collected_attr;
-        
-        for (size_t i = 0; i < possible_stages.size(); ++i) {
-            StageAttributes stage_attr;
-            stage_attr.Stage = possible_stages[i];
-            if (impl->inputAttributes.count(possible_stages[i]) != 0) {
-                stage_attr.InputAttributes = impl->inputAttributes.at(possible_stages[i]);
-            }
-            if (impl->outputAttributes.count(possible_stages[i]) != 0) {
-                stage_attr.OutputAttributes = impl->outputAttributes.at(possible_stages[i]);
-            }
-
-            if ((!stage_attr.InputAttributes.empty()) || (!stage_attr.OutputAttributes.empty())) {
-                collected_attr.push_back(stage_attr);
-            }
-        }
-
-        out.push_back(collected_attr);
-
-        output_file << out;
-        output_file.close();
-
-    }
-
-    void BindingGenerator::LoadFromJSON(const char* input) {
-
-        std::ifstream input_file(input);
-        if (!input_file.is_open()) {
-            throw std::domain_error("BindingGenerator failed to open input file for reading!");
-        }
-
-        nlohmann::json j;
-        input_file >> j;
-        for (auto& entry : j) {
-            impl->sortedSets.push_back(entry);
-        }
-        input_file.close();
-    }
-
-    std::vector<VertexAttributeInfo> parseVertAttrs(const spirv_cross::CompilerGLSL& cmplr, const std::vector<spirv_cross::Resource>& rsrcs) {
-        std::vector<VertexAttributeInfo> attributes;
+    std::map<uint32_t, VertexAttributeInfo> parseVertAttrs(const spirv_cross::CompilerGLSL& cmplr, const std::vector<spirv_cross::Resource>& rsrcs) {
+        std::map<uint32_t, VertexAttributeInfo> attributes;
         uint32_t idx = 0;
         uint32_t running_offset = 0;
         for (const auto& attr : rsrcs) {
             VertexAttributeInfo attr_info;
             attr_info.Name = cmplr.get_name(attr.id);
             attr_info.Location = cmplr.get_decoration(attr.id, spv::DecorationLocation);
-            attr_info.Binding = cmplr.get_decoration(attr.id, spv::DecorationBinding);
             attr_info.Offset = running_offset;
             attr_info.Type = cmplr.get_type(attr.type_id);
             running_offset += attr_info.Type.vecsize * attr_info.Type.width;
-            attributes.push_back(std::move(attr_info));
+            attributes.emplace(attr_info.Location, std::move(attr_info));
             ++idx;
         }
         return attributes;
     }
 
-    std::vector<VertexAttributeInfo> parseInputAttributes(const spirv_cross::CompilerGLSL& cmplr) {
+    std::map<uint32_t, VertexAttributeInfo> parseInputAttributes(const spirv_cross::CompilerGLSL& cmplr) {
         using namespace spirv_cross;
         const auto rsrcs = cmplr.get_shader_resources();
         return parseVertAttrs(cmplr, rsrcs.stage_inputs);
     }
 
-    std::vector<VertexAttributeInfo> parseOutputAttributes(const spirv_cross::CompilerGLSL& cmplr) {
+    std::map<uint32_t, VertexAttributeInfo> parseOutputAttributes(const spirv_cross::CompilerGLSL& cmplr) {
         using namespace spirv_cross;
         const auto rsrcs = cmplr.get_shader_resources();
         return parseVertAttrs(cmplr, rsrcs.stage_outputs);
     }
     
-    void parseUniformBuffers(DescriptorSetInfo& info, const spirv_cross::CompilerGLSL& cmplr, const VkShaderStageFlags& stage) {
+    void parseUniformBuffers(std::multimap<uint32_t, DescriptorObject>& info, const spirv_cross::CompilerGLSL& cmplr, const VkShaderStageFlags& stage) {
         using namespace spirv_cross;
         const auto rsrcs = cmplr.get_shader_resources();
         for(const auto& ubuff : rsrcs.uniform_buffers) {
@@ -215,11 +121,11 @@ namespace st {
                 obj.Members.push_back(std::move(member));
             }
             obj.Type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            info.Members.push_back(std::move(obj));
+            info.emplace(obj.ParentSet, obj);
         }
     }
 
-    void parseStorageBuffers(DescriptorSetInfo& info, const spirv_cross::CompilerGLSL& cmplr, const VkShaderStageFlags& stage) {
+    void parseStorageBuffers(std::multimap<uint32_t, DescriptorObject>& info, const spirv_cross::CompilerGLSL& cmplr, const VkShaderStageFlags& stage) {
         using namespace spirv_cross;
         const auto rsrcs = cmplr.get_shader_resources();
         for(const auto& sbuff : rsrcs.storage_buffers) {
@@ -237,11 +143,11 @@ namespace st {
                 obj.Members.push_back(sdo);
             }
             obj.Type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-            info.Members.push_back(std::move(obj));
+            info.emplace(obj.ParentSet, std::move(obj));
         }
     }
 
-    void parseInputAttachments(DescriptorSetInfo& info, const spirv_cross::CompilerGLSL& cmplr, const VkShaderStageFlags& stage) {
+    void parseInputAttachments(std::multimap<uint32_t, DescriptorObject>& info, const spirv_cross::CompilerGLSL& cmplr, const VkShaderStageFlags& stage) {
         using namespace spirv_cross;
         const auto rsrcs = cmplr.get_shader_resources();
         for(const auto& ubuff : rsrcs.subpass_inputs) {
@@ -251,11 +157,11 @@ namespace st {
             obj.ParentSet = cmplr.get_decoration(ubuff.id, spv::DecorationDescriptorSet);
             obj.Name = cmplr.get_name(ubuff.id);
             obj.Type = VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
-            info.Members.push_back(std::move(obj));
+            info.emplace(obj.ParentSet, std::move(obj));
         }
     }
 
-    void parseStorageImages(DescriptorSetInfo& info, const spirv_cross::CompilerGLSL& cmplr, const VkShaderStageFlags& stage) {
+    void parseStorageImages(std::multimap<uint32_t, DescriptorObject>& info, const spirv_cross::CompilerGLSL& cmplr, const VkShaderStageFlags& stage) {
         using namespace spirv_cross;
         const auto rsrcs = cmplr.get_shader_resources();
         for(const auto& ubuff : rsrcs.storage_images) {
@@ -265,11 +171,11 @@ namespace st {
             obj.ParentSet = cmplr.get_decoration(ubuff.id, spv::DecorationDescriptorSet);
             obj.Name = cmplr.get_name(ubuff.id);
             obj.Type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-            info.Members.push_back(std::move(obj));
+            info.emplace(obj.ParentSet, std::move(obj));
         }
     }
 
-    void parseCombinedSampledImages(DescriptorSetInfo& info, const spirv_cross::CompilerGLSL& cmplr, const VkShaderStageFlags& stage) {
+    void parseCombinedSampledImages(std::multimap<uint32_t, DescriptorObject>& info, const spirv_cross::CompilerGLSL& cmplr, const VkShaderStageFlags& stage) {
         using namespace spirv_cross;
         const auto rsrcs = cmplr.get_shader_resources();
         for(const auto& ubuff : rsrcs.sampled_images) {
@@ -279,11 +185,11 @@ namespace st {
             obj.ParentSet = cmplr.get_decoration(ubuff.id, spv::DecorationDescriptorSet);
             obj.Name = cmplr.get_name(ubuff.id);
             obj.Type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            info.Members.push_back(std::move(obj));
+            info.emplace(obj.ParentSet, std::move(obj));
         }
     }
 
-    void parseSeparableSampledImages(DescriptorSetInfo& info, const spirv_cross::CompilerGLSL& cmplr, const VkShaderStageFlags& stage) {
+    void parseSeparableSampledImages(std::multimap<uint32_t, DescriptorObject>& info, const spirv_cross::CompilerGLSL& cmplr, const VkShaderStageFlags& stage) {
         using namespace spirv_cross;
         const auto rsrcs = cmplr.get_shader_resources();
         for(const auto& ubuff : rsrcs.separate_images) {
@@ -293,11 +199,11 @@ namespace st {
             obj.ParentSet = cmplr.get_decoration(ubuff.id, spv::DecorationDescriptorSet);
             obj.Name = cmplr.get_name(ubuff.id);
             obj.Type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
-            info.Members.push_back(std::move(obj));
+            info.emplace(obj.ParentSet, std::move(obj));
         }
     }
 
-    void parseSeparableSamplers(DescriptorSetInfo& info, const spirv_cross::CompilerGLSL& cmplr, const VkShaderStageFlags& stage) {
+    void parseSeparableSamplers(std::multimap<uint32_t, DescriptorObject>& info, const spirv_cross::CompilerGLSL& cmplr, const VkShaderStageFlags& stage) {
         using namespace spirv_cross;
         const auto rsrcs = cmplr.get_shader_resources();
         for(const auto& ubuff : rsrcs.separate_samplers) {
@@ -307,7 +213,7 @@ namespace st {
             obj.ParentSet = cmplr.get_decoration(ubuff.id, spv::DecorationDescriptorSet);
             obj.Name = cmplr.get_name(ubuff.id);
             obj.Type = VK_DESCRIPTOR_TYPE_SAMPLER;
-            info.Members.push_back(std::move(obj));
+            info.emplace(obj.ParentSet, std::move(obj));
         }
     }
 
@@ -357,29 +263,18 @@ namespace st {
     void BindingGeneratorImpl::parseImpl(const std::vector<uint32_t>& binary_data, const VkShaderStageFlags stage) {
         using namespace spirv_cross;
         CompilerGLSL glsl(binary_data);
-        DescriptorSetInfo info;
-        if (!descriptorSets.empty()) {
-            info.Index = static_cast<uint32_t>(descriptorSets.size() - 1);
-        }
-        else {
-            info.Index = 0;
-        }
-        parseUniformBuffers(info, glsl, stage);
-        parseStorageBuffers(info, glsl, stage);
-        parseInputAttachments(info, glsl, stage);
-        parseStorageImages(info, glsl, stage);
-        parseCombinedSampledImages(info, glsl, stage);
-        parseSeparableSampledImages(info, glsl, stage);
-        parseSeparableSamplers(info, glsl, stage);
-        descriptorSets.insert(std::make_pair(stage, std::move(info)));
-        {
 
-            const auto rsrcs = glsl.get_shader_resources();
-            if (!rsrcs.push_constant_buffers.empty()) {
-                PushConstantInfo push_constant = parsePushConstants(glsl, stage);
-                auto inserted = pushConstants.insert(std::make_pair(stage, std::move(push_constant)));
-            }
-        }
+        std::multimap<uint32_t, DescriptorObject> objects;
+        parseUniformBuffers(objects, glsl, stage);
+        parseStorageBuffers(objects, glsl, stage);
+        parseInputAttachments(objects, glsl, stage);
+        parseStorageImages(objects, glsl, stage);
+        parseCombinedSampledImages(objects, glsl, stage);
+        parseSeparableSampledImages(objects, glsl, stage);
+        parseSeparableSamplers(objects, glsl, stage);
+
+
+
         {
             inputAttributes.emplace(stage, parseInputAttributes(glsl));
             outputAttributes.emplace(stage, parseOutputAttributes(glsl));
@@ -391,65 +286,40 @@ namespace st {
     }
 
     void BindingGeneratorImpl::collateBindings() {
-        /*  Now, we need to check the descriptor sets in all the active stages we added and
-        find all descriptor sets - and their component objects - that are used in multiple
-        stages. We will then group these further by VK_DESCRIPTOR_TYPE, and use them to start
-        filling out entries in our VkDescriptorSetLayoutBinding object.
-        */
 
         if (!sortedSets.empty()) {
-            // Clear these, as we have to resort 
-            // from the raw imported/parsed data 
             sortedSets.clear();
         }
 
         for (const auto& entry : descriptorSets) {
             for (const auto& obj : entry.second.Members) {
-                const auto& set_idx = obj.ParentSet;
-                if (set_idx + 1 > sortedSets.size()) {
-                    sortedSets.resize(set_idx + 1);
-                }
+                const auto& set_idx = obj.second.ParentSet;
 
                 // Check to see if set at index has been created yet.
-                if (sortedSets[set_idx].Index == std::numeric_limits<uint32_t>::max()) {
-                    sortedSets[set_idx].Index = set_idx;
+                auto iter = findSetWithIdx(set_idx);
+                if (iter == sortedSets.end()) {
+                    sortedSets.emplace(set_idx, DescriptorSetInfo{ set_idx });
                 }
 
-                const auto& binding_idx = obj.Binding;
-                auto& set = sortedSets[set_idx];
-                if (binding_idx + 1 > set.Members.size()) {
-                    set.Members.resize(binding_idx + 1);
-                    set.Members[binding_idx] = obj;
-                }
-                else if (set.Members[binding_idx].Type == VK_DESCRIPTOR_TYPE_MAX_ENUM) {
-                    set.Members[binding_idx] = obj;
-                }
-                else if (set.Members[binding_idx].Name.empty()) {
-                    set.Members[binding_idx] = obj;
+                DescriptorSetInfo& set = sortedSets.at(set_idx);
+                const auto& binding_idx = obj.second.Binding;
+                if (set.Members.count(binding_idx) != 0) {
+                    set.Members.at(binding_idx).Stages |= obj.second.Stages;
                 }
                 else {
-                    // Already exists.
-                    if (set.Members[binding_idx].Binding == obj.Binding) {
-                        if (set.Members[binding_idx].Type != obj.Type) {
-                            throw std::domain_error("Two descriptors objects in the same set and at the same binding location have differing types!");
-                        }
-                        else {
-                            // OR stage flags together and move on.
-                            set.Members[binding_idx].Stages |= obj.Stages;
-                        }
-                    }
+                    set.Members[binding_idx] = obj.second;
                 }
+
             }
         }
 
-
         for (auto& set : sortedSets) {
             size_t curr_idx = 0;
-            for (auto& member : set.Members) {
-                if (member.Name.empty()) {
-                    member.Name = std::string("OPTIMIZED_OUT");
-                    member.Type = VK_DESCRIPTOR_TYPE_RANGE_SIZE;
-                    member.Binding = static_cast<uint32_t>(curr_idx);
+            for (auto& member : set.second.Members) {
+                if (member.second.Name.empty()) {
+                    member.second.Name = std::string("OPTIMIZED_OUT");
+                    member.second.Type = VK_DESCRIPTOR_TYPE_RANGE_SIZE;
+                    member.second.Binding = static_cast<uint32_t>(curr_idx);
                 }
                 ++curr_idx;
             }
@@ -457,5 +327,95 @@ namespace st {
 
     }
 
+    void BindingGenerator::GetLayoutBindings(const uint32_t& idx, uint32_t* num_bindings, VkDescriptorSetLayoutBinding* bindings) const {
+
+        auto iter = impl->sortedSets.find(idx);
+        if (iter == impl->sortedSets.cend()) {
+            *num_bindings = 0;
+        }
+
+        const auto& set = iter->second;
+
+        *num_bindings = static_cast<uint32_t>(set.Members.size());
+        if (bindings != nullptr) {
+            std::vector<VkDescriptorSetLayoutBinding> result;
+            for (auto& member : set.Members) {
+                result.push_back((VkDescriptorSetLayoutBinding)member.second);
+            }
+            std::copy(result.cbegin(), result.cend(), bindings);
+        }
+    }
+
+    void BindingGenerator::GetPushConstantRanges(uint32_t * num_ranges, VkPushConstantRange * results) const {
+        std::vector<VkPushConstantRange> ranges;
+        for (auto& entry : impl->pushConstants) {
+            ranges.push_back((VkPushConstantRange)entry.second);
+        }
+        *num_ranges = static_cast<uint32_t>(ranges.size());
+        if (results != nullptr) {
+            std::copy(ranges.cbegin(), ranges.cend(), results);
+        }
+    }
+
+    void BindingGenerator::GetVertexAttributes(uint32_t * num_attrs, VkVertexInputAttributeDescription * attrs) const {
+        const auto& input_attrs = impl->inputAttributes.at(VK_SHADER_STAGE_VERTEX_BIT);
+        *num_attrs = input_attrs.size();
+        if (attrs != nullptr) {
+            std::vector<VkVertexInputAttributeDescription> actual_attrs;
+            for (const auto& input_attr : input_attrs) {
+                actual_attrs.emplace_back((VkVertexInputAttributeDescription)input_attr.second);
+            }
+
+            std::copy(actual_attrs.cbegin(), actual_attrs.cend(), attrs);
+        }
+    }
+
+    void BindingGenerator::SaveToJSON(const char* output_name) {
+
+        if (impl->sortedSets.empty()) {
+            CollateBindings();
+        }
+
+        namespace fs = std::experimental::filesystem;
+        fs::path output_path(output_name);
+        if (!output_path.has_extension()) {
+            output_path.replace_extension(".json");
+        }
+        else if (output_path.extension().string() != std::string(".json")) {
+            output_path.replace_extension(".json");
+        }
+
+        std::ofstream output_file(output_path.string());
+        if (!output_file.is_open()) {
+            throw std::runtime_error("Couldn't open JSON output file!");
+        }
+
+        nlohmann::json out;
+        output_file << std::setw(4);
+        out = impl->sortedSets;
+
+        std::vector<StageAttributes> collected_attr;
+
+        for (size_t i = 0; i < possible_stages.size(); ++i) {
+            StageAttributes stage_attr;
+            stage_attr.Stage = possible_stages[i];
+            if (impl->inputAttributes.count(possible_stages[i]) != 0) {
+                stage_attr.InputAttributes = impl->inputAttributes.at(possible_stages[i]);
+            }
+            if (impl->outputAttributes.count(possible_stages[i]) != 0) {
+                stage_attr.OutputAttributes = impl->outputAttributes.at(possible_stages[i]);
+            }
+
+            if ((!stage_attr.InputAttributes.empty()) || (!stage_attr.OutputAttributes.empty())) {
+                collected_attr.push_back(stage_attr);
+            }
+        }
+        
+        nlohmann::json vertex_attrs = collected_attr;
+
+        output_file << nlohmann::json{ out, vertex_attrs };
+        output_file.close();
+
+    }
 
 }

@@ -22,6 +22,7 @@ namespace fs = std::experimental::filesystem;
 
 namespace st {
     extern std::unordered_map<Shader, std::string> shaderFiles;
+    extern std::unordered_multimap<Shader, fs::path> shaderPaths;
 
     const char* const ShaderGenerator::BasePath = "../examples/fragments/";
     const char* const ShaderGenerator::LibPath = "../examples/fragments/include";
