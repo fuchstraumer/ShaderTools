@@ -224,19 +224,5 @@ namespace st {
         return (*iter).second;
     }
 
-    bool ShaderCompilerImpl::shaderSourceNewerThanBinary(const std::experimental::filesystem::path& source, const std::experimental::filesystem::path& binary) {
-        const fs::file_time_type source_mod_time(fs::last_write_time(source));
-        if (source_mod_time == fs::file_time_type::min()) {
-            throw std::runtime_error("File write time for a source shader file is invalid - suggests invalid path passed to checker method!");
-        }
-        const fs::file_time_type binary_mod_time(fs::last_write_time(binary));
-        if (binary_mod_time == fs::file_time_type::min()) {
-            return true;
-        }
-        else {
-            // don't check equals, as they could be equal (very nearly, at least)
-            return binary_mod_time < source_mod_time;
-        }
-    }
 
 }

@@ -19,6 +19,7 @@ namespace st {
 
         Shader Compile(const char* name, const char* file_src, const size_t len, const VkShaderStageFlagBits stage);
         Shader Compile(const char* path_to_source, const VkShaderStageFlagBits stage = VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM);
+
         VkShaderStageFlags GetShaderStage(const char* path_to_source) const;
         bool HasShader(const Shader& shader_handle) const;
         void GetBinary(const Shader& shader_handle, uint32_t* binary_size, uint32_t* binary = nullptr) const;

@@ -7,9 +7,10 @@ namespace st {
 
     namespace fs = std::experimental::filesystem;
 
+    fs::path OutputPath = fs::temp_directory_path();
     std::unordered_map<Shader, std::string> shaderFiles = std::unordered_map<Shader, std::string>{ };
     std::unordered_map<Shader, std::vector<uint32_t>> shaderBinaries = std::unordered_map<Shader, std::vector<uint32_t>>{ };
-    
+    std::unordered_multimap<Shader, fs::path> shaderPaths = std::unordered_multimap<Shader, fs::path>{};
     
     static const std::map<VkShaderStageFlagBits, std::string> stage_extension_map {
         { VK_SHADER_STAGE_VERTEX_BIT, ".vert" },
@@ -38,16 +39,21 @@ namespace st {
         if (!output_stream.is_open()) {
             throw std::runtime_error("Failed to open output stream for writing shader source file!");
         }
+        output_stream << file_contents;
+        output_stream.close();
 
         static std::mutex insertion_mutex;
         std::lock_guard<std::mutex> insertion_guard{ insertion_mutex };
         auto c_str_tmp = output_path.string();
         auto inserted = shaderFiles.emplace(Shader{ c_str_tmp.c_str(), stage }, file_contents);
+        if (!inserted.second) {
+            throw std::runtime_error("Failed to insert Shader + shader file contents into a map.");
+        }
 
-        output_stream << file_contents;
-        output_stream.close();
+        Shader result{ c_str_tmp.c_str(), stage };
+        shaderPaths.emplace(result, output_path);
 
-        return Shader{ c_str_tmp.c_str(), stage };
+        return result;
     }
     
     void WriteAndAddShaderBinary(const std::string base_name, const std::vector<uint32_t>& file_contents, const VkShaderStageFlagBits stage) {
@@ -60,8 +66,8 @@ namespace st {
 
         const fs::path output_path = fs::temp_directory_path() / fs::path(output_name);
         output_name += std::string(".spv"); // Don't want exact same name for actual save: just same hash uint32_t val
-        std::ofstream output_stream(output_name, std::ios::binary);
 
+        std::ofstream output_stream(output_name, std::ios::binary);
         if (!output_stream.is_open()) {
             throw std::runtime_error("Could not open output stream for writing shader binary file!");
         }
@@ -70,12 +76,59 @@ namespace st {
             output_stream << val;
         }
 
+        output_stream.close();
+
         static std::mutex insertion_mutex;
         std::lock_guard<std::mutex> insertion_guard{ insertion_mutex };
         auto c_str_tmp = output_path.string();
         auto inserted = shaderBinaries.emplace(Shader{ c_str_tmp.c_str(), stage }, file_contents);
-        output_stream.close();
         
     }
 
+    bool ShaderSourceNewerThanBinary(const Shader& handle) {
+        if (shaderPaths.count(handle) == 0) {
+            return true;
+        }
+
+        const auto& range = shaderPaths.equal_range(handle);
+        fs::path source_path, binary_path;
+
+        for (auto iter = range.first; iter != range.second; ++iter) {
+            if (iter->second.extension().string() == std::string{ ".spv" }) {
+                binary_path = iter->second;
+            }
+            else {
+                source_path = iter->second;
+            }
+        }
+
+        const fs::file_time_type source_mod_time(fs::last_write_time(source_path));
+        if (source_mod_time == fs::file_time_type::min()) {
+            throw std::runtime_error("File write time for a source shader file is invalid - suggests invalid path passed to checker method!");
+        }
+
+        const fs::file_time_type binary_mod_time(fs::last_write_time(binary_path));
+        if (binary_mod_time == fs::file_time_type::min()) {
+            return true;
+        }
+        else {
+            // don't check equals, as they could be equal (very nearly, at least)
+            return binary_mod_time < source_mod_time;
+        }
+    }
+
+    std::string GetOutputDirectory() {
+        return OutputPath.string();
+    }
+
+    void SetOutputDirectory(const std::string& output_dir) {
+        fs::path new_output_path(output_dir);
+
+        if (fs::exists(new_output_path)) {
+            OutputPath = fs::absolute(new_output_path);
+        }
+        else {
+            throw std::domain_error("Passed invalid path to SetOutputDirectory");
+        }
+    }
 }
