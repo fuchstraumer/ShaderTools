@@ -6,6 +6,7 @@
 #include <filesystem>
 #include <unordered_map>
 #include <map>
+#include <set>
 #define SCL_SECURE_NO_WARNINGS
 
 namespace st {
@@ -24,9 +25,10 @@ namespace st {
         BindingGeneratorImpl& operator=(BindingGeneratorImpl&& other) noexcept;
 
         void parseBinary(const uint32_t binary_sz, const uint32_t* binary, const VkShaderStageFlags stage);
+        void collateSets(std::multimap<uint32_t, DescriptorObject> sets);
         void parseBinary(const Shader& shader_handle);
         void parseImpl(const std::vector<uint32_t>& binary_data, const VkShaderStageFlags stage);
-        void collateBindings();
+
         std::unordered_multimap<VkShaderStageFlags, DescriptorSetInfo> descriptorSets;
         std::map<uint32_t, DescriptorSetInfo> sortedSets;
         std::unordered_map<VkShaderStageFlags, PushConstantInfo> pushConstants;
@@ -74,7 +76,7 @@ namespace st {
         VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT
     };
 
-    std::map<uint32_t, VertexAttributeInfo> parseVertAttrs(const spirv_cross::CompilerGLSL& cmplr, const std::vector<spirv_cross::Resource>& rsrcs) {
+    std::map<uint32_t, VertexAttributeInfo> parseVertAttrs(const spirv_cross::Compiler& cmplr, const std::vector<spirv_cross::Resource>& rsrcs) {
         std::map<uint32_t, VertexAttributeInfo> attributes;
         uint32_t idx = 0;
         uint32_t running_offset = 0;
@@ -91,19 +93,19 @@ namespace st {
         return attributes;
     }
 
-    std::map<uint32_t, VertexAttributeInfo> parseInputAttributes(const spirv_cross::CompilerGLSL& cmplr) {
+    std::map<uint32_t, VertexAttributeInfo> parseInputAttributes(const spirv_cross::Compiler& cmplr) {
         using namespace spirv_cross;
         const auto rsrcs = cmplr.get_shader_resources();
         return parseVertAttrs(cmplr, rsrcs.stage_inputs);
     }
 
-    std::map<uint32_t, VertexAttributeInfo> parseOutputAttributes(const spirv_cross::CompilerGLSL& cmplr) {
+    std::map<uint32_t, VertexAttributeInfo> parseOutputAttributes(const spirv_cross::Compiler& cmplr) {
         using namespace spirv_cross;
         const auto rsrcs = cmplr.get_shader_resources();
         return parseVertAttrs(cmplr, rsrcs.stage_outputs);
     }
     
-    void parseUniformBuffers(std::multimap<uint32_t, DescriptorObject>& info, const spirv_cross::CompilerGLSL& cmplr, const VkShaderStageFlags& stage) {
+    void parseUniformBuffers(std::multimap<uint32_t, DescriptorObject>& info, const spirv_cross::Compiler& cmplr, const VkShaderStageFlags& stage) {
         using namespace spirv_cross;
         const auto rsrcs = cmplr.get_shader_resources();
         for(const auto& ubuff : rsrcs.uniform_buffers) {
@@ -125,7 +127,7 @@ namespace st {
         }
     }
 
-    void parseStorageBuffers(std::multimap<uint32_t, DescriptorObject>& info, const spirv_cross::CompilerGLSL& cmplr, const VkShaderStageFlags& stage) {
+    void parseStorageBuffers(std::multimap<uint32_t, DescriptorObject>& info, const spirv_cross::Compiler& cmplr, const VkShaderStageFlags& stage) {
         using namespace spirv_cross;
         const auto rsrcs = cmplr.get_shader_resources();
         for(const auto& sbuff : rsrcs.storage_buffers) {
@@ -147,7 +149,7 @@ namespace st {
         }
     }
 
-    void parseInputAttachments(std::multimap<uint32_t, DescriptorObject>& info, const spirv_cross::CompilerGLSL& cmplr, const VkShaderStageFlags& stage) {
+    void parseInputAttachments(std::multimap<uint32_t, DescriptorObject>& info, const spirv_cross::Compiler& cmplr, const VkShaderStageFlags& stage) {
         using namespace spirv_cross;
         const auto rsrcs = cmplr.get_shader_resources();
         for(const auto& ubuff : rsrcs.subpass_inputs) {
@@ -161,7 +163,7 @@ namespace st {
         }
     }
 
-    void parseStorageImages(std::multimap<uint32_t, DescriptorObject>& info, const spirv_cross::CompilerGLSL& cmplr, const VkShaderStageFlags& stage) {
+    void parseStorageImages(std::multimap<uint32_t, DescriptorObject>& info, const spirv_cross::Compiler& cmplr, const VkShaderStageFlags& stage) {
         using namespace spirv_cross;
         const auto rsrcs = cmplr.get_shader_resources();
         for(const auto& ubuff : rsrcs.storage_images) {
@@ -175,7 +177,7 @@ namespace st {
         }
     }
 
-    void parseCombinedSampledImages(std::multimap<uint32_t, DescriptorObject>& info, const spirv_cross::CompilerGLSL& cmplr, const VkShaderStageFlags& stage) {
+    void parseCombinedSampledImages(std::multimap<uint32_t, DescriptorObject>& info, const spirv_cross::Compiler& cmplr, const VkShaderStageFlags& stage) {
         using namespace spirv_cross;
         const auto rsrcs = cmplr.get_shader_resources();
         for(const auto& ubuff : rsrcs.sampled_images) {
@@ -189,7 +191,7 @@ namespace st {
         }
     }
 
-    void parseSeparableSampledImages(std::multimap<uint32_t, DescriptorObject>& info, const spirv_cross::CompilerGLSL& cmplr, const VkShaderStageFlags& stage) {
+    void parseSeparableSampledImages(std::multimap<uint32_t, DescriptorObject>& info, const spirv_cross::Compiler& cmplr, const VkShaderStageFlags& stage) {
         using namespace spirv_cross;
         const auto rsrcs = cmplr.get_shader_resources();
         for(const auto& ubuff : rsrcs.separate_images) {
@@ -203,7 +205,7 @@ namespace st {
         }
     }
 
-    void parseSeparableSamplers(std::multimap<uint32_t, DescriptorObject>& info, const spirv_cross::CompilerGLSL& cmplr, const VkShaderStageFlags& stage) {
+    void parseSeparableSamplers(std::multimap<uint32_t, DescriptorObject>& info, const spirv_cross::Compiler& cmplr, const VkShaderStageFlags& stage) {
         using namespace spirv_cross;
         const auto rsrcs = cmplr.get_shader_resources();
         for(const auto& ubuff : rsrcs.separate_samplers) {
@@ -217,7 +219,7 @@ namespace st {
         }
     }
 
-    PushConstantInfo parsePushConstants(const spirv_cross::CompilerGLSL& cmplr, const VkShaderStageFlags& stage) {
+    PushConstantInfo parsePushConstants(const spirv_cross::Compiler& cmplr, const VkShaderStageFlags& stage) {
         const auto push_constants = cmplr.get_shader_resources();
         const auto& pconstant = push_constants.push_constant_buffers.front();
         auto ranges = cmplr.get_active_buffer_ranges(pconstant.id);
@@ -260,71 +262,61 @@ namespace st {
         parseImpl(binary, stage);
     }
 
-    void BindingGeneratorImpl::parseImpl(const std::vector<uint32_t>& binary_data, const VkShaderStageFlags stage) {
-        using namespace spirv_cross;
-        CompilerGLSL glsl(binary_data);
-
-        std::multimap<uint32_t, DescriptorObject> objects;
-        parseUniformBuffers(objects, glsl, stage);
-        parseStorageBuffers(objects, glsl, stage);
-        parseInputAttachments(objects, glsl, stage);
-        parseStorageImages(objects, glsl, stage);
-        parseCombinedSampledImages(objects, glsl, stage);
-        parseSeparableSampledImages(objects, glsl, stage);
-        parseSeparableSamplers(objects, glsl, stage);
-
-
-
-        {
-            inputAttributes.emplace(stage, parseInputAttributes(glsl));
-            outputAttributes.emplace(stage, parseOutputAttributes(glsl));
-        }
-    }
-
-    void BindingGenerator::CollateBindings() {
-        impl->collateBindings();
-    }
-
-    void BindingGeneratorImpl::collateBindings() {
-
-        if (!sortedSets.empty()) {
-            sortedSets.clear();
+    void BindingGeneratorImpl::collateSets(std::multimap<uint32_t, DescriptorObject> sets) {
+        std::set<uint32_t> unique_keys;
+        for (auto iter = sets.begin(); iter != sets.end(); ++iter) {
+            unique_keys.insert(iter->first);
         }
 
-        for (const auto& entry : descriptorSets) {
-            for (const auto& obj : entry.second.Members) {
-                const auto& set_idx = obj.second.ParentSet;
+        for (auto& unique_set : unique_keys) {
+            if (sortedSets.count(unique_set) == 0) {
+                sortedSets.emplace(unique_set, DescriptorSetInfo{ unique_set });
+            }
 
-                // Check to see if set at index has been created yet.
-                auto iter = findSetWithIdx(set_idx);
-                if (iter == sortedSets.end()) {
-                    sortedSets.emplace(set_idx, DescriptorSetInfo{ set_idx });
-                }
-
-                DescriptorSetInfo& set = sortedSets.at(set_idx);
-                const auto& binding_idx = obj.second.Binding;
-                if (set.Members.count(binding_idx) != 0) {
-                    set.Members.at(binding_idx).Stages |= obj.second.Stages;
+            DescriptorSetInfo& curr_set = sortedSets.at(unique_set);
+            auto obj_range = sets.equal_range(unique_set);
+            for (auto iter = obj_range.first; iter != obj_range.second; ++iter) {
+                const uint32_t& binding_idx = iter->second.Binding;
+                if (curr_set.Members.count(binding_idx) != 0) {
+                    curr_set.Members.at(binding_idx).Stages |= iter->second.Stages;
                 }
                 else {
-                    set.Members[binding_idx] = obj.second;
+                    curr_set.Members[binding_idx] = iter->second;
                 }
+            }
+        }
+    }
 
+    void BindingGeneratorImpl::parseImpl(const std::vector<uint32_t>& binary_data, const VkShaderStageFlags stage) {
+        using namespace spirv_cross;
+        Compiler glsl(binary_data);
+
+        std::multimap<uint32_t, DescriptorObject> sets;
+        parseUniformBuffers(sets, glsl, stage);
+        parseStorageBuffers(sets, glsl, stage);
+        parseInputAttachments(sets, glsl, stage);
+        parseStorageImages(sets, glsl, stage);
+        parseCombinedSampledImages(sets, glsl, stage);
+        parseSeparableSampledImages(sets, glsl, stage);
+        parseSeparableSamplers(sets, glsl, stage);
+        collateSets(std::move(sets));
+        
+        const auto& rsrcs = glsl.get_shader_resources();
+        if (!rsrcs.push_constant_buffers.empty()) {
+            auto iter = pushConstants.emplace(stage, parsePushConstants(glsl, stage));
+            if (pushConstants.size() > 1) {
+                uint32_t offset = 0;
+                for (const auto& push_block : pushConstants) {
+                    for (const auto& push_member : push_block.second.Members) {
+                        offset += push_member.Size;
+                    }
+                }
+                iter.first->second.Offset = offset;
             }
         }
 
-        for (auto& set : sortedSets) {
-            size_t curr_idx = 0;
-            for (auto& member : set.second.Members) {
-                if (member.second.Name.empty()) {
-                    member.second.Name = std::string("OPTIMIZED_OUT");
-                    member.second.Type = VK_DESCRIPTOR_TYPE_RANGE_SIZE;
-                    member.second.Binding = static_cast<uint32_t>(curr_idx);
-                }
-                ++curr_idx;
-            }
-        }
-
+        inputAttributes.emplace(stage, parseInputAttributes(glsl));
+        outputAttributes.emplace(stage, parseOutputAttributes(glsl));
     }
 
     void BindingGenerator::GetLayoutBindings(const uint32_t& idx, uint32_t* num_bindings, VkDescriptorSetLayoutBinding* bindings) const {
@@ -372,10 +364,6 @@ namespace st {
 
     void BindingGenerator::SaveToJSON(const char* output_name) {
 
-        if (impl->sortedSets.empty()) {
-            CollateBindings();
-        }
-
         namespace fs = std::experimental::filesystem;
         fs::path output_path(output_name);
         if (!output_path.has_extension()) {
@@ -412,8 +400,15 @@ namespace st {
         }
         
         nlohmann::json vertex_attrs = collected_attr;
+        if (!impl->pushConstants.empty()) {
+            nlohmann::json push_blocks = impl->pushConstants;
+            output_file << nlohmann::json{ out, vertex_attrs, push_blocks };
+        }
+        else {
+            output_file << nlohmann::json{ out, vertex_attrs };
+        }
 
-        output_file << nlohmann::json{ out, vertex_attrs };
+        
         output_file.close();
 
     }

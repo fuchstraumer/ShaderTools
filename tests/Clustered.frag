@@ -10,6 +10,12 @@ layout (constant_id =  4) const uint TileWidth = 64;
 layout (constant_id =  5) const uint TileHeight = 64;
 layout (constant_id =  6) const uint TileCountZ = 256;
 
+layout (push_constant) uniform pc {
+    vec4 dummyColor;
+    vec4 ambientContrib;
+    vec4 cameraPos;
+} push_block;
+
 layout (location = 0) in vec4 vPosition;
 layout (location = 1) in vec4 vNormal;
 layout (location = 2) in vec4 vTangent;
@@ -104,12 +110,12 @@ float GeometrySmith(vec3 n, vec3 v, vec3 l, float roughness) {
 
 void main() {
 
-    vec3 normal_sample = texture(normalMap, vUV).rgb * vec3(2.0f) - vec3(1.0f);
-    vec3 world_normal = mat3(UBO.normal) * normal_sample;
+    vec3 normal_sample = texture(normalMap, vUV).rgb * vec3(2.0f) - vec3(1.0f) * push_block.cameraPos.xyz;
+    vec3 world_normal = mat3(UBO.normal) * normal_sample * push_block.ambientContrib.xyz;
 
     const float metallic = texture(metallicMap, vUV).r;
     const float roughness = texture(roughnessMap, vUV).r;
-    const vec3 albedo = texture(diffuseMap, vUV).rgb;
+    const vec3 albedo = texture(diffuseMap, vUV).rgb * push_block.dummyColor.xyz;
     const float ao = 1.0f;
 
     vec3 view_dir = normalize(UBO.viewPosition.xyz - vPosition.xyz);

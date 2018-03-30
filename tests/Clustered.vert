@@ -26,10 +26,15 @@ layout (set = 1, binding = 0) uniform _ubo {
     uint numLights;
 } UBO;
 
+layout (push_constant) uniform pc {
+    mat4 dataMatrix;
+    vec4 dummyVec;
+} push_block;
+
 void main() {
-    vPosition = UBO.model * vec4(position, 1.0f);
+    vPosition = UBO.model * push_block.dataMatrix * vec4(position, 1.0f);
     vNormal = UBO.normal * vec4(normal, 1.0f);
     vTangent = UBO.normal * vec4(tangent, 1.0f);
     vUV = uv;
-    gl_Position = UBO.projectionClip * UBO.view * vPosition;
+    gl_Position = UBO.projectionClip * UBO.view * vPosition + push_block.dummyVec;
 }

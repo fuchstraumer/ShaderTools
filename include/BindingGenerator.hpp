@@ -20,7 +20,6 @@ namespace st {
         void ParseBinary(const char* binary_location, const VkShaderStageFlags stage);
         void ParseBinary(const Shader& shader);
         void ParseBinary(const uint32_t binary_size, const uint32_t* binary, const VkShaderStageFlags stage);
-        void CollateBindings();
 
         uint32_t GetNumSets() const noexcept;
         void GetLayoutBindings(const uint32_t& set_index, uint32_t* num_bindings, VkDescriptorSetLayoutBinding* bindings) const;

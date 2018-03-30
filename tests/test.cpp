@@ -23,6 +23,5 @@ int main(int argc, char* argv[]) {
         Shader handle = compiler.Compile(path.c_str());
         parser.ParseBinary(handle);        
     }
-    parser.CollateBindings();
     parser.SaveToJSON("out.json");
 }
