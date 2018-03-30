@@ -7,7 +7,7 @@
 #include <unordered_map>
 #include <map>
 #include <set>
-#define SCL_SECURE_NO_WARNINGS
+#define _SCL_SECURE_NO_WARNINGS
 
 namespace st {
 
@@ -351,7 +351,7 @@ namespace st {
 
     void BindingGenerator::GetVertexAttributes(uint32_t * num_attrs, VkVertexInputAttributeDescription * attrs) const {
         const auto& input_attrs = impl->inputAttributes.at(VK_SHADER_STAGE_VERTEX_BIT);
-        *num_attrs = input_attrs.size();
+        *num_attrs = static_cast<uint32_t>(input_attrs.size());
         if (attrs != nullptr) {
             std::vector<VkVertexInputAttributeDescription> actual_attrs;
             for (const auto& input_attr : input_attrs) {
