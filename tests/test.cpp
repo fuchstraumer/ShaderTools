@@ -3,15 +3,9 @@
 #include <vector>
 #include "Compiler.hpp"
 #include "BindingGenerator.hpp"
+#include <experimental/filesystem>
 
-static const std::map<std::string, VkShaderStageFlags> extension_stage_map {
-    { ".vert", VK_SHADER_STAGE_VERTEX_BIT },
-    { ".frag", VK_SHADER_STAGE_FRAGMENT_BIT },
-    { ".geom", VK_SHADER_STAGE_GEOMETRY_BIT },
-    { ".teval", VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT },
-    { ".tcntl", VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT },
-    { ".comp", VK_SHADER_STAGE_COMPUTE_BIT }
-};
+namespace fs = std::experimental::filesystem;
 
 int main(int argc, char* argv[]) {
     const std::vector<std::string> args(argv + 1, argv + argc);
@@ -21,6 +15,9 @@ int main(int argc, char* argv[]) {
     BindingGenerator parser;
     for(const auto& path : args) {
         Shader handle = compiler.Compile(path.c_str());
+        fs::path shader_path(path);
+        const std::string fname = std::string("compiled_") + shader_path.filename().string();
+        compiler.SaveBinaryBackToText(handle, fname.c_str());
         parser.ParseBinary(handle);        
     }
     parser.SaveToJSON("out.json");

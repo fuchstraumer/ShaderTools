@@ -8,6 +8,7 @@
 #include <unordered_map>
 #include <fstream>
 #include <shaderc/shaderc.hpp>
+#include "spirv_glsl.hpp"
 #include "FilesystemUtils.hpp"
 #define SCL_SECURE_NO_WARNINGS
 namespace fs = std::experimental::filesystem;
@@ -88,6 +89,26 @@ namespace st {
 
     void ShaderCompiler::AddBinary(const char* name, const uint32_t sz, const uint32_t* binary_data, const VkShaderStageFlagBits stage) {
         WriteAndAddShaderBinary(name, std::vector<uint32_t>{ binary_data, binary_data + sz }, stage);
+    }
+
+    void ShaderCompiler::SaveBinaryBackToText(const Shader & shader_to_save, const char * fname) const {
+        if (shaderBinaries.count(shader_to_save) == 0) {
+            return;
+        }
+
+        const auto& binary_data = shaderBinaries.at(shader_to_save);
+        spirv_cross::CompilerGLSL glsl_compiler(binary_data);
+
+        const std::string source = glsl_compiler.compile();
+
+        std::ofstream output_stream(fname);
+
+        if (!output_stream.is_open()) {
+            throw std::runtime_error("Failed to open output stream.");
+        }
+
+        output_stream << source;
+        output_stream.close();
     }
 
     Shader ShaderCompilerImpl::compile(const char* name, const char* src_str, const size_t src_len, const VkShaderStageFlagBits stage) {
