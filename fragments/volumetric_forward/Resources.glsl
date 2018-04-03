@@ -49,6 +49,7 @@ UNIFORM_BUFFER indirect_arguments {
 #pragma END_RESOURCES INDIRECT_ARGS
 
 #pragma BEGIN_RESOURCES SORT_RESOURCES
+
 UNIFORM_BUFFER dispatch_params {
     uvec3 NumThreadGroups;
     uvec3 NumThreads;
@@ -77,13 +78,19 @@ U_IMAGE_BUFFER r32ui PointLightIndexList;
 U_IMAGE_BUFFER r32ui SpotLightIndexList;
 U_IMAGE_BUFFER rg32ui PointLightGrid;
 U_IMAGE_BUFFER rg32ui SpotLightGrid;
+
+
+#pragma END_RESOURCES SORT_RESOURCES
+
+#pragma BEGIN_RESOURCES MERGE_SORT_RESOURCES
+
 U_IMAGE_BUFFER r32ui InputKeys;
 U_IMAGE_BUFFER r32ui InputValues;
 U_IMAGE_BUFFER r32ui OutputKeys;
 U_IMAGE_BUFFER r32ui OutputValues;
 I_IMAGE_BUFFER r32i MergePathPartitions;
 
-#pragma END_RESOURCES SORT_RESOURCES
+#pragma END_RESOURCES MERGE_SORT_RESOURCES
 
 #pragma BEGIN_RESOURCES BVH_RESOURCES
 UNIFORM_BUFFER bvh_params {

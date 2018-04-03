@@ -1,6 +1,6 @@
 #include "Structures.glsl"
 
-#pragma USE_RESOURCES SORT_RESOURCES
+#pragma USE_RESOURCES MERGE_SORT_RESOURCES
 
 $SPC const uint SortAlgorithm = 0;
 
