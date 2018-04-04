@@ -165,6 +165,11 @@ namespace st {
 
     Shader ShaderCompilerImpl::compile(const char* path_to_source_str, VkShaderStageFlagBits stage) {
         fs::path path_to_source(path_to_source_str);
+
+        if (stage == VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM) {
+            stage = getStage(path_to_source_str);
+        }
+
         Shader shader_handle(path_to_source_str, stage);
         if (shaderBinaries.count(shader_handle) != 0) {      
             return shader_handle;
@@ -174,10 +179,6 @@ namespace st {
         if (!fs::exists(path_to_source)) {
             std::cerr << "Given shader source path/file does not exist!\n";
             throw std::runtime_error("Failed to open/find given shader file.");
-        }
-
-        if (stage == VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM) {
-            stage = getStage(path_to_source_str);
         }
 
         shaderc::Compiler compiler;

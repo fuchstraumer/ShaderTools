@@ -1,4 +1,5 @@
 #pragma BEGIN_RESOURCES VOLUMETRIC_FORWARD
+
 UNIFORM_BUFFER cluster_data {
     uvec3 GridDim;
     float ViewNear;
@@ -71,14 +72,6 @@ STORAGE_BUFFER std430 cluster_aabbs {
 STORAGE_BUFFER std430 global_aabb {
     AABB Data[];
 } LightAABBs;
-
-U_IMAGE_BUFFER r32ui PointLightIndexCounter;
-U_IMAGE_BUFFER r32ui SpotLightIndexCounter;
-U_IMAGE_BUFFER r32ui PointLightIndexList;
-U_IMAGE_BUFFER r32ui SpotLightIndexList;
-U_IMAGE_BUFFER rg32ui PointLightGrid;
-U_IMAGE_BUFFER rg32ui SpotLightGrid;
-
 
 #pragma END_RESOURCES SORT_RESOURCES
 
