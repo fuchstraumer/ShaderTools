@@ -2,6 +2,7 @@
 #ifndef SHADER_TOOLS_STRUCTS_HPP
 #define SHADER_TOOLS_STRUCTS_HPP
 #include "CommonInclude.hpp"
+#include "DescriptorStructs.hpp"
 #include "spirv-cross/spirv_cross.hpp"
 #include "nlohmann/include/nlohmann/json.hpp"
 #include "metastuff/include/Meta.h"
@@ -15,40 +16,6 @@ namespace st {
 
     std::string StageFlagToStr(const VkShaderStageFlags& flag);
     VkShaderStageFlags StrToStageFlags(const std::string& str);
-
-    struct ShaderDataObject {
-        std::string Name;
-        uint32_t Size, Offset;
-    };
-
-    struct DescriptorObject {
-        std::string Name;
-        uint32_t Binding, ParentSet;
-        VkShaderStageFlags Stages;
-        VkDescriptorType Type = VK_DESCRIPTOR_TYPE_MAX_ENUM;
-        std::vector<ShaderDataObject> Members;
-
-        bool operator==(const DescriptorObject& other);
-        bool operator<(const DescriptorObject& other);
-
-        explicit operator VkDescriptorSetLayoutBinding() const;
-        std::string GetType() const;
-        void SetType(std::string type_str);
-
-    };
-
-    struct DescriptorSetInfo {
-        uint32_t Index = std::numeric_limits<uint32_t>::max();
-        std::map<uint32_t, DescriptorObject> Members = std::map<uint32_t, DescriptorObject>{};
-    };
-
-    struct PushConstantInfo {
-        VkShaderStageFlags Stages;
-        std::string Name;
-        std::vector<ShaderDataObject> Members;
-        uint32_t Offset;
-        explicit operator VkPushConstantRange() const noexcept;
-    };
         
     std::string TypeToStr(const spirv_cross::SPIRType& stype);
     spirv_cross::SPIRType::BaseType BaseTypeEnumFromStr(const std::string& str);
