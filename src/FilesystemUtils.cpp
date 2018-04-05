@@ -32,7 +32,7 @@ namespace st {
 
     Shader WriteAndAddShaderSource(const std::string file_name, const std::string& file_contents, const VkShaderStageFlagBits stage) {
         const std::string output_name = file_name + stage_extension_map.at(stage);
-        const fs::path output_path = fs::temp_directory_path() / fs::path(file_name);
+        const fs::path output_path = OutputPath / fs::path(output_name);
         
         std::ofstream output_stream(output_path);
 
@@ -64,7 +64,7 @@ namespace st {
             output_name += stage_extension_map.at(stage);
         }
 
-        const fs::path output_path = fs::temp_directory_path() / fs::path(output_name);
+        const fs::path output_path = OutputPath / fs::path(output_name);
         output_name += std::string(".spv"); // Don't want exact same name for actual save: just same hash uint32_t val
 
         std::ofstream output_stream(output_name, std::ios::binary);

@@ -24,8 +24,8 @@ namespace st {
     extern std::unordered_map<Shader, std::string> shaderFiles;
     extern std::unordered_multimap<Shader, fs::path> shaderPaths;
 
-    const char* const ShaderGenerator::BasePath = "../examples/fragments/";
-    const char* const ShaderGenerator::LibPath = "../examples/fragments/include";
+    const char* const ShaderGenerator::BasePath = "../fragments/";
+    const char* const ShaderGenerator::LibPath = "../fragments/include";
 
     static const std::regex vertex_main("#pragma VERT_MAIN_BEGIN\n");
     static const std::regex end_vertex_main("#pragma VERT_MAIN_END\n");
@@ -149,7 +149,6 @@ namespace st {
         fs::path uniforms(std::string(ShaderGenerator::BasePath) + "builtins/globalResources.glsl");
         const auto& uniforms_str = addFragment(uniforms);
         parseResourceBlock(uniforms_str);
-        useResourceBlock("GLOBAL_RESOURCES");
     }
 
     ShaderGeneratorImpl::~ShaderGeneratorImpl() {

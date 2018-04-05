@@ -7,7 +7,7 @@
 #include <iostream>
 #include <unordered_map>
 #include <fstream>
-#include <shaderc/shaderc.hpp>
+#include "shaderc/shaderc.hpp"
 #include "spirv_glsl.hpp"
 #include "FilesystemUtils.hpp"
 #define SCL_SECURE_NO_WARNINGS
@@ -118,7 +118,7 @@ namespace st {
 
         options.SetGenerateDebugInfo();
         options.SetOptimizationLevel(shaderc_optimization_level_size);
-        options.SetTargetEnvironment(shaderc_target_env_vulkan, 1);
+        options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_1);
         options.SetSourceLanguage(shaderc_source_language_glsl);
 
         shaderc_shader_kind shader_stage;
@@ -151,7 +151,7 @@ namespace st {
         const std::string source_string{ src_str, src_str + src_len };
         Shader shader_handle = WriteAndAddShaderSource(std::string(name), source_string, stage);
         
-        shaderc::SpvCompilationResult result = compiler.CompileGlslToSpv(source_string, shader_stage, nullptr);
+        shaderc::SpvCompilationResult result = compiler.CompileGlslToSpv(source_string, shader_stage, name);
         if (result.GetCompilationStatus() != shaderc_compilation_status_success) {
             const std::string err_msg = result.GetErrorMessage();
             std::cerr << "Shader compiliation failed: " << err_msg.c_str() << "\n";
@@ -185,8 +185,8 @@ namespace st {
         shaderc::CompileOptions options;
 
         options.SetGenerateDebugInfo();
-        options.SetOptimizationLevel(shaderc_optimization_level_zero);
-        options.SetTargetEnvironment(shaderc_target_env_vulkan, 1);
+        options.SetOptimizationLevel(shaderc_optimization_level_size);
+        options.SetTargetEnvironment(shaderc_target_env_opengl, 0);
         options.SetSourceLanguage(shaderc_source_language_glsl);
 
         shaderc_shader_kind shader_stage;
