@@ -338,6 +338,26 @@ namespace st {
         }
     }
 
+    void BindingGenerator::GetSetMemberNames(const uint32_t& set_idx, uint32_t* num_names, char** names) const {
+        
+        auto iter = impl->sortedSets.find(set_idx);
+        if (iter == impl->sortedSets.cend()) {
+            *num_names = 0;
+            return;
+        }
+
+        const auto& set = iter->second;
+        *num_names = static_cast<uint32_t>(set.Members.size());
+        if (names != nullptr) {
+            std::vector<std::string> member_names;
+            for (const auto& member : set.Members) {
+                member_names.emplace_back(member.second.Name);
+            }
+            std::copy(member_names.cbegin(), member_names.cend(), names);
+        }
+
+    }
+
     void BindingGenerator::GetPushConstantRanges(uint32_t * num_ranges, VkPushConstantRange * results) const {
         std::vector<VkPushConstantRange> ranges;
         for (auto& entry : impl->pushConstants) {

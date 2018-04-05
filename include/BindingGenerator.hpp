@@ -23,6 +23,7 @@ namespace st {
 
         uint32_t GetNumSets() const noexcept;
         void GetLayoutBindings(const uint32_t& set_index, uint32_t* num_bindings, VkDescriptorSetLayoutBinding* bindings) const;
+        void GetSetMemberNames(const uint32_t& set_index, uint32_t* num_members, char** names) const;
         void GetPushConstantRanges(uint32_t* num_ranges, VkPushConstantRange* ranges) const;
         void GetVertexAttributes(uint32_t* num_attrs, VkVertexInputAttributeDescription* attrs) const;
 
