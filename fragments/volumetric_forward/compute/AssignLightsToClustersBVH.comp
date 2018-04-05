@@ -4,9 +4,10 @@
 
 #pragma USE_RESOURCES VOLUMETRIC_FORWARD
 #pragma USE_RESOURCES SORT_RESOURCES
+#pragma USE_RESOURCES BVH_RESOURCES
 #pragma USE_RESOURCES VOLUMETRIC_FORWARD_LIGHTS
 
-layout (local_size_x = 32, local_size_y = 1, local_size_z = 1)
+layout (local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
 
 $SPC const uint MaxLights = 1024;
 
@@ -50,7 +51,7 @@ void AppendPointLight(uint light_index) {
 }
 
 void PushNode(uint node_index) {
-    int stack_idx = atomicAdd(gs_StackPtr, 1);
+    uint stack_idx = atomicAdd(gs_StackPtr, 1);
     if (stack_idx < 1024) {
         gs_NodeStack[stack_idx] = node_index;
     }
@@ -58,7 +59,7 @@ void PushNode(uint node_index) {
 
 uint PopNode() {
     uint node_idx = 0;
-    int stack_idx = atomicAdd(gs_StackPtr, -1);
+    uint stack_idx = atomicAdd(gs_StackPtr, -1);
     if (stack_idx > 0 && stack_idx < 1024) {
         node_idx = gs_NodeStack[stack_idx - 1];
     }
@@ -67,7 +68,7 @@ uint PopNode() {
 }
 
 // Gets the index of the first node in the current bvh
-uint FirstChild(uint parent_index, uint num_levels) {
+uint GetFirstChild(uint parent_index, uint num_levels) {
     return (num_levels > 0) ? parent_index * 32 + 1 : 0;
 }
 
@@ -86,7 +87,7 @@ void main() {
         gs_SpotLightCount = 0;
         gs_StackPtr = 0;
         gs_ParentIdx = 0;
-        gs_ClusterIndex1D = imageLoad(UniqueClusters, gl_WorkGroupID.x);
+        gs_ClusterIndex1D = imageLoad(UniqueClusters, int(gl_WorkGroupID.x)).r;
         gs_ClusterAABB = ClusterAABBs.Data[gs_ClusterIndex1D];
         PushNode(0); // pushing root node.
     }
@@ -98,11 +99,12 @@ void main() {
         if (IsLeafNode(child_index, BVHParams.PointLightLevels)) {
             uint leaf_index = GetLeafIndex(child_index, BVHParams.PointLightLevels);
             if (leaf_index < LightCounts.NumPointLights) {
-                uint light_index = imageLoad(PointLightIndices, leaf_index);
-                PointLight light = PointLights.Data[light_index];
-                Sphere sphere; sphere.c = light.PositionViewSpace.xyz; sphere.r = light.Range;
+                uint light_index = imageLoad(PointLightIndices, int(leaf_index)).r;
+                Sphere sphere; 
+                sphere.c = PointLights.Data[light_index].PositionViewSpace.xyz; 
+                sphere.r = PointLights.Data[light_index].Range;
 
-                if (light.Enabled && SphereInsideAABB(sphere, gs_ClusterAABB)) {
+                if (PointLights.Data[light_index].Enabled && SphereInsideAABB(sphere, gs_ClusterAABB)) {
                     AppendPointLight(light_index);
                 }
             }
@@ -137,11 +139,12 @@ void main() {
         if (IsLeafNode(child_index, BVHParams.SpotLightLevels)) {
             uint leaf_index = GetLeafIndex(child_index, BVHParams.SpotLightLevels);
             if (leaf_index < LightCounts.NumSpotLights) {
-                uint light_index = imageLoad(SpotLightIndices, leaf_index);
-                SpotLight light = SpotLights.Data[light_index];
-                Sphere sphere; sphere.c = light.PositionViewSpace.xyz; sphere.r = light.Range;
+                uint light_index = imageLoad(SpotLightIndices, int(leaf_index)).r;
+                Sphere sphere; 
+                sphere.c = SpotLights.Data[light_index].PositionViewSpace.xyz; 
+                sphere.r = SpotLights.Data[light_index].Range;
 
-                if (light.Enabled && SphereInsideAABB(sphere, gs_ClusterAABB)) {
+                if (SpotLights.Data[light_index].Enabled && SphereInsideAABB(sphere, gs_ClusterAABB)) {
                     AppendSpotLight(light_index);
                 }
             }
@@ -170,11 +173,11 @@ void main() {
 
     groupMemoryBarrier();
 
-    for (i = gl_LocalInvocationIndex; i < gs_PointLightCount; i += 32) {
+    for (int i = int(gl_LocalInvocationIndex); i < gs_PointLightCount; i += 32) {
         imageStore(PointLightIndexList, int(gs_PointLightStartOffset + i), uvec4(gs_PointLightList[i], 0, 0, 0));
     }
 
-    for (i = gl_LocalInvocationIndex; i < gs_SpotLightCount; i += 32) {
+    for (int i = int(gl_LocalInvocationIndex); i < gs_SpotLightCount; i += 32) {
         imageStore(SpotLightIndexList, int(gs_SpotLightStartOffset + i), uvec4(gs_SpotLightList[i], 0, 0, 0));
     }
 }

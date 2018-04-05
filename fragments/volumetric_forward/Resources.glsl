@@ -13,8 +13,14 @@ U_IMAGE_BUFFER r32ui PointLightIndexList;
 U_IMAGE_BUFFER r32ui SpotLightIndexList;
 U_IMAGE_BUFFER rg32ui PointLightGrid;
 U_IMAGE_BUFFER rg32ui SpotLightGrid;
+U_IMAGE_BUFFER r32ui PointLightIndexCounter;
+U_IMAGE_BUFFER r32ui SpotLightIndexCounter;
 U_IMAGE_BUFFER r32ui UniqueClustersCounter;
 U_IMAGE_BUFFER r32ui UniqueClusters;
+
+STORAGE_BUFFER std430 cluster_aabbs {
+    AABB Data[];
+} ClusterAABBs;
 
 #pragma END_RESOURCES VOLUMETRIC_FORWARD
 
@@ -41,6 +47,7 @@ STORAGE_BUFFER std430 directional_lights {
 #pragma END_RESOURCES VOLUMETRIC_FORWARD_LIGHTS
 
 #pragma BEGIN_RESOURCES INDIRECT_ARGS
+
 UNIFORM_BUFFER indirect_arguments {
     uint NumThreadGroupsX;
     uint NumThreadGroupsY;
@@ -65,13 +72,14 @@ UNIFORM_BUFFER sort_params {
     uint ChunkSize;
 } SortParams;
 
-STORAGE_BUFFER std430 cluster_aabbs {
-    AABB Data[];
-} ClusterAABBs;
-
 STORAGE_BUFFER std430 global_aabb {
     AABB Data[];
 } LightAABBs;
+
+U_IMAGE_BUFFER r32ui PointLightMortonCodes;
+U_IMAGE_BUFFER r32ui PointLightIndices;
+U_IMAGE_BUFFER r32ui SpotLightMortonCodes;
+U_IMAGE_BUFFER r32ui SpotLightIndices;
 
 #pragma END_RESOURCES SORT_RESOURCES
 
@@ -86,6 +94,7 @@ I_IMAGE_BUFFER r32i MergePathPartitions;
 #pragma END_RESOURCES MERGE_SORT_RESOURCES
 
 #pragma BEGIN_RESOURCES BVH_RESOURCES
+
 UNIFORM_BUFFER bvh_params {
     uint PointLightLevels;
     uint SpotLightLevels;
@@ -101,15 +110,6 @@ STORAGE_BUFFER std430 spot_light_bvh {
 } SpotLightBVH;
 
 #pragma END_RESOURCES BVH_RESOURCES
-
-#pragma BEGIN_RESOURCES MORTON_RESOURCES
-
-U_IMAGE_BUFFER r32ui PointLightMortonCodes;
-U_IMAGE_BUFFER r32ui PointLightIndices;
-U_IMAGE_BUFFER r32ui SpotLightMortonCodes;
-U_IMAGE_BUFFER r32ui SpotLightIndices;
-
-#pragma END_RESOURCES MORTON_RESOURCES
 
 #pragma BEGIN_RESOURCES MATERIAL_RESOURCES
 
