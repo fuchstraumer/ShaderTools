@@ -48,7 +48,7 @@ STORAGE_BUFFER std430 directional_lights {
 
 #pragma BEGIN_RESOURCES INDIRECT_ARGS
 
-UNIFORM_BUFFER indirect_arguments {
+STORAGE_BUFFER std430 indirect_arguments {
     uint NumThreadGroupsX;
     uint NumThreadGroupsY;
     uint NumThreadGroupsZ;
