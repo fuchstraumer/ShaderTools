@@ -32,17 +32,7 @@ struct SpotLight
     float Padding;
 };
 
-struct DirectionalLight
-{
-    vec4 Direction;
-    vec4 DirectionViewSpace;
-    vec3 Color;
-    float Intensity;
-    uint Enabled;
-    vec3 Padding;
-};
-
-layout(binding = 4, std430) buffer global_aabb
+layout(set = 0, binding = 4, std430) buffer global_aabb
 {
     AABB Data[];
 } LightAABBs;
@@ -64,52 +54,13 @@ layout(set = 1, binding = 1, std430) buffer spot_lights
     SpotLight Data[];
 } SpotLights;
 
-layout(binding = 5, std140) uniform dispatch_params
-{
-    uvec3 NumThreadGroups;
-    uvec3 NumThreads;
-} DispatchParams;
-
-layout(binding = 6, std140) uniform reduction_params
-{
-    uint NumElements;
-} ReductionParams;
-
-layout(binding = 7, std140) uniform sort_params
-{
-    uint NumElements;
-    uint ChunkSize;
-} SortParams;
-
-layout(set = 1, binding = 2, std430) buffer directional_lights
-{
-    DirectionalLight Data[];
-} DirectionalLights;
-
-layout(binding = 0, r32ui) uniform writeonly uimageBuffer PointLightMortonCodes;
-layout(binding = 1, r32ui) uniform writeonly uimageBuffer PointLightIndices;
-layout(binding = 2, r32ui) uniform writeonly uimageBuffer SpotLightMortonCodes;
-layout(binding = 3, r32ui) uniform writeonly uimageBuffer SpotLightIndices;
+layout(set = 0, binding = 0, r32ui) uniform writeonly uimageBuffer PointLightMortonCodes;
+layout(set = 0, binding = 1, r32ui) uniform writeonly uimageBuffer PointLightIndices;
+layout(set = 0, binding = 2, r32ui) uniform writeonly uimageBuffer SpotLightMortonCodes;
+layout(set = 0, binding = 3, r32ui) uniform writeonly uimageBuffer SpotLightIndices;
 
 shared AABB gs_AABB;
 shared vec4 gs_AABBRange;
-
-uint MortonCode(uvec3 quantized_coord, uint k)
-{
-    uint morton_code = 0u;
-    uint bit_mask = 1u;
-    uint bit_shift = 0u;
-    uint k_bits = uint(1 << int(k));
-    while (bit_mask < k_bits)
-    {
-        morton_code |= ((quantized_coord.x & bit_mask) << (bit_shift + 0u));
-        morton_code |= ((quantized_coord.y & bit_mask) << (bit_shift + 1u));
-        morton_code |= ((quantized_coord.z & bit_mask) << (bit_shift + 2u));
-        bit_mask = bit_mask << uint(1);
-        bit_shift += 2u;
-    }
-    return morton_code;
-}
 
 void main()
 {
@@ -120,22 +71,49 @@ void main()
         gs_AABBRange = vec4(1.0) / (gs_AABB.Max - gs_AABB.Min);
     }
     groupMemoryBarrier();
-    uint thread_idx = gl_GlobalInvocationID.x;
-    if (thread_idx < LightCounts.NumPointLights)
+    if (gl_GlobalInvocationID.x < LightCounts.NumPointLights)
     {
-        uvec4 quantized = uvec4(((PointLights.Data[thread_idx].PositionViewSpace - gs_AABB.Min) * gs_AABBRange) * 1023.0);
-        uvec3 param = quantized.xyz;
-        uint param_1 = 10u;
-        imageStore(PointLightMortonCodes, int(thread_idx), uvec4(MortonCode(param, param_1), 0u, 0u, 0u));
-        imageStore(PointLightIndices, int(thread_idx), uvec4(thread_idx, 0u, 0u, 0u));
+        vec4 _133 = PointLights.Data[gl_GlobalInvocationID.x].PositionViewSpace;
+        vec4 _135 = gs_AABB.Min;
+        vec4 _137 = gs_AABBRange;
+        uvec4 _141 = uvec4(((_133 - _135) * _137) * 1023.0);
+        int _147 = int(gl_GlobalInvocationID.x);
+        uint _324;
+        _324 = 0u;
+        for (uint _323 = 1u, _328 = 0u; _323 < uint(1024); )
+        {
+            uint _236 = _328 + 0u;
+            uint _245 = _328 + 1u;
+            uint _254 = _328 + 2u;
+            _328 = _254;
+            _324 = ((_324 | ((_141.x & _323) << _236)) | ((_141.y & _323) << _245)) | ((_141.z & _323) << _254);
+            _323 = _323 << uint(1);
+            continue;
+        }
+        imageStore(PointLightMortonCodes, _147, uvec4(_324, 0u, 0u, 0u));
+        imageStore(PointLightIndices, _147, uvec4(gl_GlobalInvocationID.x, 0u, 0u, 0u));
     }
-    if (thread_idx < LightCounts.NumSpotLights)
+    if (gl_GlobalInvocationID.x < LightCounts.NumSpotLights)
     {
-        uvec4 quantized_1 = uvec4(((SpotLights.Data[thread_idx].PositionViewSpace - gs_AABB.Min) * gs_AABBRange) * 1023.0);
-        uvec3 param_2 = quantized_1.xyz;
-        uint param_3 = 10u;
-        imageStore(SpotLightMortonCodes, int(thread_idx), uvec4(MortonCode(param_2, param_3), 0u, 0u, 0u));
-        imageStore(SpotLightIndices, int(thread_idx), uvec4(thread_idx, 0u, 0u, 0u));
+        vec4 _175 = SpotLights.Data[gl_GlobalInvocationID.x].PositionViewSpace;
+        vec4 _177 = gs_AABB.Min;
+        vec4 _179 = gs_AABBRange;
+        uvec4 _182 = uvec4(((_175 - _177) * _179) * 1023.0);
+        int _186 = int(gl_GlobalInvocationID.x);
+        uint _326;
+        _326 = 0u;
+        for (uint _325 = 1u, _327 = 0u; _325 < uint(1024); )
+        {
+            uint _284 = _327 + 0u;
+            uint _293 = _327 + 1u;
+            uint _302 = _327 + 2u;
+            _327 = _302;
+            _326 = ((_326 | ((_182.x & _325) << _284)) | ((_182.y & _325) << _293)) | ((_182.z & _325) << _302);
+            _325 = _325 << uint(1);
+            continue;
+        }
+        imageStore(SpotLightMortonCodes, _186, uvec4(_326, 0u, 0u, 0u));
+        imageStore(SpotLightIndices, _186, uvec4(gl_GlobalInvocationID.x, 0u, 0u, 0u));
     }
 }
 

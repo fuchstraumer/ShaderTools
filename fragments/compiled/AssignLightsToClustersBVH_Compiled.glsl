@@ -1,6 +1,8 @@
 #version 450
 layout(local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
 
+layout(constant_id = 0) const uint MaxLights = 1024u;
+
 struct Sphere
 {
     vec3 c;
@@ -48,7 +50,7 @@ struct DirectionalLight
     vec3 Padding;
 };
 
-layout(binding = 9, std430) buffer cluster_aabbs
+layout(set = 0, binding = 9, std430) buffer cluster_aabbs
 {
     AABB Data[];
 } ClusterAABBs;
@@ -87,7 +89,7 @@ layout(set = 2, binding = 1, std430) buffer spot_light_bvh
     AABB Data[];
 } SpotLightBVH;
 
-layout(binding = 10, std140) uniform cluster_data
+layout(set = 0, binding = 10, std140) uniform cluster_data
 {
     uvec3 GridDim;
     float ViewNear;
@@ -123,24 +125,24 @@ layout(set = 3, binding = 2, std430) buffer directional_lights
     DirectionalLight Data[];
 } DirectionalLights;
 
-layout(binding = 8, r32ui) uniform readonly uimageBuffer UniqueClusters;
+layout(set = 0, binding = 8, r32ui) uniform readonly uimageBuffer UniqueClusters;
 layout(set = 1, binding = 1, r32ui) uniform readonly uimageBuffer PointLightIndices;
 layout(set = 1, binding = 3, r32ui) uniform readonly uimageBuffer SpotLightIndices;
-layout(binding = 5, r32ui) uniform uimageBuffer PointLightIndexCounter;
-layout(binding = 3, rg32ui) uniform writeonly uimageBuffer PointLightGrid;
-layout(binding = 6, r32ui) uniform uimageBuffer SpotLightIndexCounter;
-layout(binding = 4, rg32ui) uniform writeonly uimageBuffer SpotLightGrid;
-layout(binding = 1, r32ui) uniform writeonly uimageBuffer PointLightIndexList;
-layout(binding = 2, r32ui) uniform writeonly uimageBuffer SpotLightIndexList;
-layout(binding = 0, r8ui) uniform readonly writeonly uimageBuffer ClusterFlags;
-layout(binding = 7, r32ui) uniform readonly writeonly uimageBuffer UniqueClustersCounter;
+layout(set = 0, binding = 5, r32ui) uniform uimageBuffer PointLightIndexCounter;
+layout(set = 0, binding = 3, rg32ui) uniform writeonly uimageBuffer PointLightGrid;
+layout(set = 0, binding = 6, r32ui) uniform uimageBuffer SpotLightIndexCounter;
+layout(set = 0, binding = 4, rg32ui) uniform writeonly uimageBuffer SpotLightGrid;
+layout(set = 0, binding = 1, r32ui) uniform writeonly uimageBuffer PointLightIndexList;
+layout(set = 0, binding = 2, r32ui) uniform writeonly uimageBuffer SpotLightIndexList;
+layout(set = 0, binding = 0, r8ui) uniform readonly writeonly uimageBuffer ClusterFlags;
+layout(set = 0, binding = 7, r32ui) uniform readonly writeonly uimageBuffer UniqueClustersCounter;
 layout(set = 1, binding = 0, r32ui) uniform readonly writeonly uimageBuffer PointLightMortonCodes;
 layout(set = 1, binding = 2, r32ui) uniform readonly writeonly uimageBuffer SpotLightMortonCodes;
 
 shared uint gs_SpotLightCount;
-shared uint gs_SpotLightList[1024u];
+shared uint gs_SpotLightList[MaxLights];
 shared uint gs_PointLightCount;
-shared uint gs_PointLightList[1024u];
+shared uint gs_PointLightList[MaxLights];
 shared uint gs_StackPtr;
 shared uint gs_NodeStack[1024];
 shared uint gs_ParentIdx;
@@ -232,7 +234,7 @@ void AppendPointLight(uint light_index)
 {
     uint _176 = atomicAdd(gs_PointLightCount, 1u);
     uint idx = _176;
-    if (idx < 1024u)
+    if (idx < MaxLights)
     {
         gs_PointLightList[idx] = light_index;
     }
@@ -261,7 +263,7 @@ void AppendSpotLight(uint light_index)
 {
     uint _162 = atomicAdd(gs_SpotLightCount, 1u);
     uint idx = _162;
-    if (idx < 1024u)
+    if (idx < MaxLights)
     {
         gs_SpotLightList[idx] = light_index;
     }

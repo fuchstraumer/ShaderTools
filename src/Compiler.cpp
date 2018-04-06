@@ -95,6 +95,7 @@ namespace st {
         using namespace shaderc;
         Compiler cmplr;
         CompileOptions options;
+        options.SetGenerateDebugInfo();
         options.SetOptimizationLevel(shaderc_optimization_level_performance);
         options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_1);
         options.SetSourceLanguage(shaderc_source_language_glsl);
@@ -153,17 +154,34 @@ namespace st {
 
         const auto& binary_data = shaderBinaries.at(shader_to_save);
         spirv_cross::CompilerGLSL glsl_compiler(binary_data);
+        spirv_cross::CompilerGLSL::Options opts;
+        opts.vulkan_semantics = true;
+        opts.separate_shader_objects = true;
+        glsl_compiler.set_options(opts);
+        try {
+            const std::string source = glsl_compiler.compile();
+            std::ofstream output_stream(fname);
 
-        const std::string source = glsl_compiler.compile();
+            if (!output_stream.is_open()) {
+                throw std::runtime_error("Failed to open output stream.");
+            }
 
-        std::ofstream output_stream(fname);
-
-        if (!output_stream.is_open()) {
-            throw std::runtime_error("Failed to open output stream.");
+            output_stream << source;
+            output_stream.close();
         }
+        catch (const spirv_cross::CompilerError& e) {
+            std::cerr << "Failed to fully parse SPIR-V back to GLSL - outputting partial source thus far.\n";
+            const std::string partial_src = glsl_compiler.get_partial_source();
+            std::ofstream output_stream(fname);
 
-        output_stream << source;
-        output_stream.close();
+            if (!output_stream.is_open()) {
+                throw std::runtime_error("Failed to open output stream.");
+            }
+
+            output_stream << partial_src;
+            output_stream.close();
+        }
+        
     }
 
     Shader ShaderCompilerImpl::compile(const char* name, const char* src_str, const size_t src_len, const VkShaderStageFlagBits stage) {
@@ -206,7 +224,7 @@ namespace st {
         const std::string source_string{ src_str, src_str + src_len };
         Shader shader_handle = WriteAndAddShaderSource(std::string(name), source_string, stage);
         
-        shaderc::SpvCompilationResult result = compiler.CompileGlslToSpv(source_string, shader_stage, name);
+        shaderc::SpvCompilationResult result = compiler.CompileGlslToSpv(source_string, shader_stage, name, options);
         if (result.GetCompilationStatus() != shaderc_compilation_status_success) {
             const std::string err_msg = result.GetErrorMessage();
             std::cerr << "Shader compiliation failed: " << err_msg.c_str() << "\n";
@@ -240,7 +258,7 @@ namespace st {
         shaderc::CompileOptions options;
 
         options.SetGenerateDebugInfo();
-        options.SetOptimizationLevel(shaderc_optimization_level_size);
+        options.SetOptimizationLevel(shaderc_optimization_level_performance);
         options.SetTargetEnvironment(shaderc_target_env_opengl, 0);
         options.SetSourceLanguage(shaderc_source_language_glsl);
 

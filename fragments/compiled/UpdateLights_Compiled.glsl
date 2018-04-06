@@ -48,7 +48,7 @@ layout(set = 1, binding = 0, std430) buffer point_lights
     PointLight Data[];
 } PointLights;
 
-layout(binding = 4, std140) uniform mvp_matrix_ubo
+layout(set = 0, binding = 4, std140) uniform mvp_matrix_ubo
 {
     mat4 Model;
     mat4 View;
@@ -66,46 +66,24 @@ layout(set = 1, binding = 2, std430) buffer directional_lights
     DirectionalLight Data[];
 } DirectionalLights;
 
-layout(binding = 5, std140) uniform misc_data_ubo
-{
-    vec4 viewPosition;
-    vec2 mousePosition;
-    vec2 windowSize;
-    vec2 depthRange;
-    uint frame;
-} globals;
-
-layout(binding = 6, std140) uniform lighting_data_ubo
-{
-    float Exposure;
-    float Gamma;
-    uint NumLights;
-} lighting_data;
-
-layout(binding = 0) uniform sampler2D LinearRepeatSampler;
-layout(binding = 1) uniform sampler2D LinearClampSampler;
-layout(binding = 2) uniform sampler2D AnisotropicRepeatSampler;
-layout(binding = 3) uniform sampler2D AnisotropicClampSampler;
-
 void main()
 {
-    uint curr_idx = gl_GlobalInvocationID.x;
-    if (curr_idx < LightCounts.NumPointLights)
+    if (gl_GlobalInvocationID.x < LightCounts.NumPointLights)
     {
-        PointLights.Data[curr_idx].Position = matrices.Model * PointLights.Data[curr_idx].Position;
-        PointLights.Data[curr_idx].PositionViewSpace = matrices.View * vec4(PointLights.Data[curr_idx].Position.xyz, 1.0);
+        PointLights.Data[gl_GlobalInvocationID.x].Position = matrices.Model * PointLights.Data[gl_GlobalInvocationID.x].Position;
+        PointLights.Data[gl_GlobalInvocationID.x].PositionViewSpace = matrices.View * vec4(PointLights.Data[gl_GlobalInvocationID.x].Position.xyz, 1.0);
     }
-    if (curr_idx < LightCounts.NumSpotLights)
+    if (gl_GlobalInvocationID.x < LightCounts.NumSpotLights)
     {
-        SpotLights.Data[curr_idx].Position = matrices.Model * SpotLights.Data[curr_idx].Position;
-        SpotLights.Data[curr_idx].PositionViewSpace = matrices.View * vec4(SpotLights.Data[curr_idx].Position.xyz, 1.0);
-        SpotLights.Data[curr_idx].Direction = matrices.Model * SpotLights.Data[curr_idx].Direction;
-        SpotLights.Data[curr_idx].DirectionViewSpace = normalize(matrices.View * vec4(SpotLights.Data[curr_idx].Direction.xyz, 0.0));
+        SpotLights.Data[gl_GlobalInvocationID.x].Position = matrices.Model * SpotLights.Data[gl_GlobalInvocationID.x].Position;
+        SpotLights.Data[gl_GlobalInvocationID.x].PositionViewSpace = matrices.View * vec4(SpotLights.Data[gl_GlobalInvocationID.x].Position.xyz, 1.0);
+        SpotLights.Data[gl_GlobalInvocationID.x].Direction = matrices.Model * SpotLights.Data[gl_GlobalInvocationID.x].Direction;
+        SpotLights.Data[gl_GlobalInvocationID.x].DirectionViewSpace = normalize(matrices.View * vec4(SpotLights.Data[gl_GlobalInvocationID.x].Direction.xyz, 0.0));
     }
-    if (curr_idx < LightCounts.NumDirectionalLights)
+    if (gl_GlobalInvocationID.x < LightCounts.NumDirectionalLights)
     {
-        DirectionalLights.Data[curr_idx].Direction = matrices.Model * DirectionalLights.Data[curr_idx].Direction;
-        DirectionalLights.Data[curr_idx].DirectionViewSpace = normalize(matrices.View * vec4(DirectionalLights.Data[curr_idx].Direction.xyz, 0.0));
+        DirectionalLights.Data[gl_GlobalInvocationID.x].Direction = matrices.Model * DirectionalLights.Data[gl_GlobalInvocationID.x].Direction;
+        DirectionalLights.Data[gl_GlobalInvocationID.x].DirectionViewSpace = normalize(matrices.View * vec4(DirectionalLights.Data[gl_GlobalInvocationID.x].Direction.xyz, 0.0));
     }
 }
 
