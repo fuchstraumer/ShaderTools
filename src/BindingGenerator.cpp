@@ -349,13 +349,40 @@ namespace st {
         const auto& set = iter->second;
         *num_names = static_cast<uint32_t>(set.Members.size());
         if (names != nullptr) {
-            std::vector<std::string> member_names;
-            for (const auto& member : set.Members) {
-                member_names.emplace_back(member.second.Name);
+            std::vector<char*> member_names(set.Members.size());
+            for (size_t i = 0; i < set.Members.size(); ++i) {
+                member_names[i] = strdup(set.Members.at(i).Name.c_str());
             }
             std::copy(member_names.cbegin(), member_names.cend(), names);
         }
 
+    }
+
+    void BindingGenerator::GetSetNameBindingPairs(const uint32_t & set_idx, uint32_t * num_bindings, char ** names, VkDescriptorSetLayoutBinding * bindings_ptr) const {
+        auto iter = impl->sortedSets.find(set_idx);
+        if (iter == impl->sortedSets.cend()) {
+            *num_bindings = 0;
+            return;
+        }
+
+        const auto& set = iter->second;
+        *num_bindings = static_cast<uint32_t>(set.Members.size());
+        if (names != nullptr && bindings_ptr != nullptr) {
+            std::vector<char*> member_names(set.Members.size());
+            std::vector<VkDescriptorSetLayoutBinding> bindings(set.Members.size());
+            for (size_t i = 0; i < set.Members.size(); ++i) {
+                member_names[i] = strdup(set.Members.at(i).Name.c_str());
+                bindings[i] = (VkDescriptorSetLayoutBinding)set.Members.at(i);
+            }
+            std::copy(member_names.cbegin(), member_names.cend(), names);
+            std::copy(bindings.cbegin(), bindings.cend(), bindings_ptr);
+        }
+    }
+
+    void BindingGenerator::FreeRetrievedSetMemberNames(const uint32_t num_names, char** names_to_free) const {
+        for (uint32_t i = 0; i < num_names; ++i) {
+            free(names_to_free[i]);
+        }
     }
 
     void BindingGenerator::GetPushConstantRanges(uint32_t * num_ranges, VkPushConstantRange * results) const {
@@ -370,6 +397,10 @@ namespace st {
     }
 
     void BindingGenerator::GetVertexAttributes(uint32_t * num_attrs, VkVertexInputAttributeDescription * attrs) const {
+        if (impl->inputAttributes.count(VK_SHADER_STAGE_VERTEX_BIT) == 0) {
+            *num_attrs = 0;
+            return;
+        }
         const auto& input_attrs = impl->inputAttributes.at(VK_SHADER_STAGE_VERTEX_BIT);
         *num_attrs = static_cast<uint32_t>(input_attrs.size());
         if (attrs != nullptr) {

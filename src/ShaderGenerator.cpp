@@ -24,8 +24,8 @@ namespace st {
     extern std::unordered_map<Shader, std::string> shaderFiles;
     extern std::unordered_multimap<Shader, fs::path> shaderPaths;
 
-    const char* const ShaderGenerator::BasePath = "../fragments/";
-    const char* const ShaderGenerator::LibPath = "../fragments/include";
+    std::string BasePath = "../fragments/";
+    std::string LibPath = "../fragments/include";
 
     static const std::regex vertex_main("#pragma VERT_MAIN_BEGIN\n");
     static const std::regex end_vertex_main("#pragma VERT_MAIN_END\n");
@@ -132,21 +132,21 @@ namespace st {
     };
 
     ShaderGeneratorImpl::ShaderGeneratorImpl(const VkShaderStageFlagBits& stage) : Stage(stage) {
-        fs::path preamble(std::string(ShaderGenerator::BasePath) + "builtins/preamble450.glsl");
+        fs::path preamble(std::string(BasePath) + "builtins/preamble450.glsl");
         addPreamble(preamble);
         if (Stage == VK_SHADER_STAGE_VERTEX_BIT) {
-            fs::path vertex_interface_base(std::string(ShaderGenerator::BasePath) + "builtins/vertexInterface.glsl");
+            fs::path vertex_interface_base(std::string(BasePath) + "builtins/vertexInterface.glsl");
             const auto& interface_str = addFragment(vertex_interface_base);
             parseInterfaceBlock(interface_str);
             addPerVertex();
         }
         else if (Stage == VK_SHADER_STAGE_FRAGMENT_BIT) {
-            fs::path fragment_interface_base(std::string(ShaderGenerator::BasePath) + "builtins/fragmentInterface.glsl");
+            fs::path fragment_interface_base(std::string(BasePath) + "builtins/fragmentInterface.glsl");
             const auto& interface_str = addFragment(fragment_interface_base);
             parseInterfaceBlock(interface_str);
         }
 
-        fs::path uniforms(std::string(ShaderGenerator::BasePath) + "builtins/globalResources.glsl");
+        fs::path uniforms(std::string(BasePath) + "builtins/globalResources.glsl");
         const auto& uniforms_str = addFragment(uniforms);
         parseResourceBlock(uniforms_str);
     }
@@ -264,7 +264,7 @@ namespace st {
         fs::path include_path;
         if (!local) {
             // Include from our "library"
-            include_path = fs::path(std::string(ShaderGenerator::LibPath + str));
+            include_path = fs::path(std::string(LibPath + str));
 
             if (!fs::exists(include_path)) {
                 throw std::runtime_error("Failed to find desired include in library includes.");
@@ -540,6 +540,10 @@ namespace st {
 
     VkShaderStageFlagBits ShaderGenerator::GetStage() const {
         return impl->Stage;
+    }
+
+    void ShaderGenerator::SetBasePath(const char * new_base_path) {
+        BasePath = std::string(new_base_path);
     }
 
 

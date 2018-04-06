@@ -26,7 +26,7 @@ void CompiliationTest() {
 }
 
 void GenerationTest() {
-    const std::string fname{ "UpdateClusterIndirectArgs" };
+    const std::string fname{ "MergeSort" };
     std::string ComputeShaderTest{ "../fragments/volumetric_forward/compute/" };
     ComputeShaderTest += fname + ".comp";
     using namespace st;
