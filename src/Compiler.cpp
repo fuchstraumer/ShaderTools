@@ -91,6 +91,61 @@ namespace st {
         WriteAndAddShaderBinary(name, std::vector<uint32_t>{ binary_data, binary_data + sz }, stage);
     }
 
+    void ShaderCompiler::SaveShaderToAssemblyText(const Shader& shader_to_compile, const char* fname, const char* shader_name) {
+        using namespace shaderc;
+        Compiler cmplr;
+        CompileOptions options;
+        options.SetOptimizationLevel(shaderc_optimization_level_performance);
+        options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_1);
+        options.SetSourceLanguage(shaderc_source_language_glsl);
+
+        shaderc_shader_kind shader_stage;
+        switch (shader_to_compile.GetStage()) {
+        case VK_SHADER_STAGE_VERTEX_BIT:
+            shader_stage = shaderc_glsl_vertex_shader;
+            break;
+        case VK_SHADER_STAGE_FRAGMENT_BIT:
+            shader_stage = shaderc_glsl_fragment_shader;
+            break;
+            // MoltenVK cannot yet use the geometry or tesselation shaders.
+#ifndef __APPLE__ 
+        case VK_SHADER_STAGE_GEOMETRY_BIT:
+            shader_stage = shaderc_glsl_default_geometry_shader;
+            break;
+        case VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT:
+            shader_stage = shaderc_glsl_tess_control_shader;
+            break;
+        case VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT:
+            shader_stage = shaderc_glsl_tess_evaluation_shader;
+            break;
+#endif 
+        case VK_SHADER_STAGE_COMPUTE_BIT:
+            shader_stage = shaderc_glsl_compute_shader;
+            break;
+        default:
+            throw std::domain_error("Invalid shader stage bitfield, or shader stage not supported on current platform!");
+        }
+
+        const auto& shader_src = shaderFiles.at(shader_to_compile);
+        shaderc::AssemblyCompilationResult result = cmplr.CompileGlslToSpvAssembly(shader_src, shader_stage, shader_name, options);
+
+        if (result.GetCompilationStatus() != shaderc_compilation_status_success) {
+            std::cerr << result.GetErrorMessage();
+            throw std::runtime_error("Failed to compile shader to SPIR-V assembly.");
+        }
+
+        const std::string assembly_str{ result.cbegin(), result.cend() };
+
+        std::ofstream output_stream(fname);
+        if (!output_stream.is_open()) {
+            std::cerr << "Failed to open output stream for saving SPIR-V Assembly.";
+            throw std::runtime_error("Failed to open output stream.");
+        }
+
+        output_stream << assembly_str;
+        output_stream.flush(); output_stream.close();
+    }
+
     void ShaderCompiler::SaveBinaryBackToText(const Shader & shader_to_save, const char * fname) const {
         if (shaderBinaries.count(shader_to_save) == 0) {
             return;
@@ -117,7 +172,7 @@ namespace st {
         shaderc::CompileOptions options;
 
         options.SetGenerateDebugInfo();
-        options.SetOptimizationLevel(shaderc_optimization_level_size);
+        options.SetOptimizationLevel(shaderc_optimization_level_performance);
         options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_1);
         options.SetSourceLanguage(shaderc_source_language_glsl);
 
