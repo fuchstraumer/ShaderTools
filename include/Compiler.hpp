@@ -25,6 +25,8 @@ namespace st {
         void GetBinary(const Shader& shader_handle, uint32_t* binary_size, uint32_t* binary = nullptr) const;
         void AddBinary(const char* path, const uint32_t binary_size, const uint32_t* binary_src, const VkShaderStageFlagBits stage);
 
+        void SaveShaderToAssemblyText(const Shader & shader_to_compile, const char * fname, const char* shader_name = "invalid_name");
+
         void SaveBinaryBackToText(const Shader& shader_to_save, const char* fname) const;
        
     private:
