@@ -19,7 +19,7 @@ namespace st {
         VkShaderStageFlags Stages;
         VkDescriptorType Type = VK_DESCRIPTOR_TYPE_MAX_ENUM;
         std::vector<ShaderDataObject> Members;
-
+        VkFormat Format = VK_FORMAT_UNDEFINED;
         bool operator==(const DescriptorObject& other);
         bool operator<(const DescriptorObject& other);
 

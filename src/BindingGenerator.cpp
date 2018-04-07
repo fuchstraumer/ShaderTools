@@ -168,6 +168,8 @@ namespace st {
         const auto rsrcs = cmplr.get_shader_resources();
         for(const auto& ubuff : rsrcs.storage_images) {
             DescriptorObject obj;
+            auto type = cmplr.get_type(ubuff.type_id);
+            obj.Format = FormatFromSPIRType(type);
             obj.Stages = stage;
             obj.Binding = cmplr.get_decoration(ubuff.id, spv::DecorationBinding);
             obj.ParentSet = cmplr.get_decoration(ubuff.id, spv::DecorationDescriptorSet);
@@ -376,6 +378,24 @@ namespace st {
             }
             std::copy(member_names.cbegin(), member_names.cend(), names);
             std::copy(bindings.cbegin(), bindings.cend(), bindings_ptr);
+        }
+    }
+
+    void BindingGenerator::GetFormats(const uint32_t & set_idx, uint32_t * num_bindings, VkFormat * formats) const {
+        auto iter = impl->sortedSets.find(set_idx);
+        if (iter == impl->sortedSets.cend()) {
+            *num_bindings = 0;
+            return;
+        }
+
+        const auto& set = iter->second;
+        *num_bindings = static_cast<uint32_t>(set.Members.size());
+        if (formats != nullptr) {
+            std::vector<VkFormat> results;
+            for (size_t i = 0; i < set.Members.size(); ++i) {
+                results.emplace_back(set.Members.at(i).Format);
+            }
+            std::copy(results.cbegin(), results.cend(), formats);
         }
     }
 

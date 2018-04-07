@@ -164,7 +164,43 @@ namespace st {
 
     VkFormat FormatFromSPIRType(const spirv_cross::SPIRType & type) {
         using namespace spirv_cross;
-        if (type.vecsize == 1) {
+        if (type.basetype == SPIRType::Image) {
+            switch (type.image.format) {
+            case spv::ImageFormatRgba32f:
+                return VK_FORMAT_R32G32B32A32_SFLOAT;
+            case spv::ImageFormatRgba16f:
+                return VK_FORMAT_R16G16B16A16_SFLOAT;
+            case spv::ImageFormatR32f:
+                return VK_FORMAT_R32_SFLOAT;
+            case spv::ImageFormatRg32f:
+                return VK_FORMAT_R32G32_SFLOAT;
+            case spv::ImageFormatR16f:
+                return VK_FORMAT_R16_SFLOAT;
+            case spv::ImageFormatRgba32i:
+                return VK_FORMAT_R32G32B32A32_SINT;
+            case spv::ImageFormatRgba32ui:
+                return VK_FORMAT_R32G32B32A32_UINT;
+            case spv::ImageFormatRgba8i:
+                return VK_FORMAT_R8G8B8A8_SINT;
+            case spv::ImageFormatRgba8ui:
+                return VK_FORMAT_R8G8B8A8_UINT;
+            case spv::ImageFormatRgba8:
+                return VK_FORMAT_R8G8B8A8_UNORM;
+            case spv::ImageFormatRgba8Snorm:
+                return VK_FORMAT_R8G8B8A8_SNORM;
+            case spv::ImageFormatR32i:
+                return VK_FORMAT_R32_SINT;
+            case spv::ImageFormatR32ui:
+                return VK_FORMAT_R32_UINT;
+            case spv::ImageFormatRg32i:
+                return VK_FORMAT_R32G32_SINT;
+            case spv::ImageFormatRg32ui:
+                return VK_FORMAT_R32G32_UINT;
+            default:
+                throw std::runtime_error("Failed to match SPV image type to VkFormat enum.");
+            }
+        }
+        else if (type.vecsize == 1) {
             if (type.width == 8) {
                 switch (type.basetype) {
                 case SPIRType::Int:
