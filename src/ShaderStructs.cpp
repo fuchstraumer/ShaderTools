@@ -164,7 +164,11 @@ namespace st {
 
     VkFormat FormatFromSPIRType(const spirv_cross::SPIRType & type) {
         using namespace spirv_cross;
-        if (type.basetype == SPIRType::Image) {
+        if (type.basetype == SPIRType::Struct || type.basetype == SPIRType::Sampler) {
+            // no real format info for structs to be extracted
+            return VK_FORMAT_UNDEFINED;
+        }
+        else if (type.basetype == SPIRType::Image || type.basetype == SPIRType::SampledImage) {
             switch (type.image.format) {
             case spv::ImageFormatRgba32f:
                 return VK_FORMAT_R32G32B32A32_SFLOAT;
@@ -406,6 +410,25 @@ namespace st {
         }
         else {
             throw std::domain_error("Vector size in vertex input attributes isn't supported for parsing from SPIRType->VkFormat");
+        }
+    }
+
+    DescriptorObject::storage_class StorageClassFromSPIRType(const spirv_cross::SPIRType & type) {
+        using namespace spirv_cross;
+        if (type.basetype == SPIRType::SampledImage || type.basetype == SPIRType::Sampler || type.basetype == SPIRType::Struct || type.basetype == SPIRType::AtomicCounter) {
+            return DescriptorObject::storage_class::Read;
+        }
+        else {
+            switch (type.image.access) {
+            case spv::AccessQualifier::AccessQualifierReadOnly:
+                return DescriptorObject::storage_class::Read;
+            case spv::AccessQualifier::AccessQualifierWriteOnly:
+                return DescriptorObject::storage_class::Write;
+            case spv::AccessQualifier::AccessQualifierReadWrite:
+                return DescriptorObject::storage_class::ReadWrite;
+            default:
+                throw std::domain_error("SPIRType somehow has invalid access qualifier enum value!");
+            }
         }
     }
 
