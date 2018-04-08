@@ -6,7 +6,7 @@
 namespace st {
     class ShaderGeneratorImpl;
 
-    class ST_API ShaderGenerator { 
+    class ShaderGenerator { 
         ShaderGenerator(const ShaderGenerator&) = delete;
         ShaderGenerator& operator=(const ShaderGenerator&) = delete;
     public:

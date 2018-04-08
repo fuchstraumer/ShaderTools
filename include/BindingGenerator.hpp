@@ -3,11 +3,12 @@
 #define SHADER_TOOLS_BINDING_GENERATOR_HPP
 #include "CommonInclude.hpp"
 #include "Shader.hpp"
+#include "DescriptorStructs.hpp"
 
 namespace st {
     class BindingGeneratorImpl;
 
-    class ST_API BindingGenerator {
+    class BindingGenerator {
         BindingGenerator(const BindingGenerator&) = delete;
         BindingGenerator& operator=(const BindingGenerator&) = delete;
     public:

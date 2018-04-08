@@ -7,7 +7,7 @@ namespace st {
 
     class ShaderCompilerImpl;
 
-    class ST_API ShaderCompiler {
+    class ShaderCompiler {
         ShaderCompiler(const ShaderCompiler&) = delete;
         ShaderCompiler& operator=(const ShaderCompiler&) = delete;
     public:
