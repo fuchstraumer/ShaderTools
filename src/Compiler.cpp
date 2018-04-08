@@ -39,7 +39,7 @@ namespace st {
         ShaderCompilerImpl& operator=(ShaderCompilerImpl&& other) noexcept = default;
 
         Shader compile(const char* path_to_src, const VkShaderStageFlagBits stage);
-        Shader compile(const char* name, const char* source_ptr, const size_t src_len, const VkShaderStageFlagBits stage);
+        Shader compile(const std::string& name, const std::string& src, const VkShaderStageFlagBits stage);
 
         VkShaderStageFlagBits getStage(const char* path) const;
     };
@@ -59,8 +59,8 @@ namespace st {
         return impl->compile(path_to_source_str, stage);
     }
 
-    Shader ShaderCompiler::Compile(const char* name, const char* src, const size_t len, const VkShaderStageFlagBits stage) {
-        return impl->compile(name, src, len, stage);
+    Shader ShaderCompiler::Compile(const std::string& name, const std::string& src, const VkShaderStageFlagBits stage) {
+        return impl->compile(name, src, stage);
     }
 
     VkShaderStageFlags ShaderCompiler::GetShaderStage(const char* path_to_source) const {
@@ -71,24 +71,19 @@ namespace st {
         return shaderBinaries.count(shader) != 0;
     }
 
-    void ShaderCompiler::GetBinary(const Shader& shader, uint32_t* binary_size, uint32_t* binary_src) const {
+    std::vector<uint32_t> ShaderCompiler::GetBinary(const Shader& shader) const {
         if (!HasShader(shader)) {
-            *binary_size = 0;
-            std::cerr << "Requested binary does not exist.";
+            std::cerr << "Requested binary does not exist.\n";
+            return std::vector<uint32_t>();
         }
         else {
-            const auto& binary = shaderBinaries.at(shader);
-            *binary_size = static_cast<uint32_t>(binary.size());
-            if (binary_src != nullptr) {
-                std::copy(binary.cbegin(), binary.cend(), binary_src);
-                return;
-            }
+            return shaderBinaries.at(shader);
         }
 
     }
 
-    void ShaderCompiler::AddBinary(const char* name, const uint32_t sz, const uint32_t* binary_data, const VkShaderStageFlagBits stage) {
-        WriteAndAddShaderBinary(name, std::vector<uint32_t>{ binary_data, binary_data + sz }, stage);
+    void ShaderCompiler::AddBinary(const char* name, const std::vector<uint32_t>& binary_data, const VkShaderStageFlagBits stage) {
+        WriteAndAddShaderBinary(name, binary_data, stage);
     }
 
     void ShaderCompiler::SaveShaderToAssemblyText(const Shader& shader_to_compile, const char* fname, const char* shader_name) {
@@ -157,7 +152,7 @@ namespace st {
         spirv_cross::CompilerGLSL::Options opts;
         opts.vulkan_semantics = true;
         opts.separate_shader_objects = true;
-        glsl_compiler.set_options(opts);
+        glsl_compiler.set_common_options(opts);
         try {
             const std::string source = glsl_compiler.compile();
             std::ofstream output_stream(fname);
@@ -171,6 +166,7 @@ namespace st {
         }
         catch (const spirv_cross::CompilerError& e) {
             std::cerr << "Failed to fully parse SPIR-V back to GLSL - outputting partial source thus far.\n";
+            std::cerr << e.what() << "\n";
             const std::string partial_src = glsl_compiler.get_partial_source();
             std::ofstream output_stream(fname);
 
@@ -184,7 +180,7 @@ namespace st {
         
     }
 
-    Shader ShaderCompilerImpl::compile(const char* name, const char* src_str, const size_t src_len, const VkShaderStageFlagBits stage) {
+    Shader ShaderCompilerImpl::compile(const std::string& name, const std::string& src, const VkShaderStageFlagBits stage) {
 
         shaderc::Compiler compiler;
         shaderc::CompileOptions options;
@@ -221,10 +217,9 @@ namespace st {
             throw std::domain_error("Invalid shader stage bitfield, or shader stage not supported on current platform!");
         }
 
-        const std::string source_string{ src_str, src_str + src_len };
-        Shader shader_handle = WriteAndAddShaderSource(std::string(name), source_string, stage);
+        Shader shader_handle = WriteAndAddShaderSource(name, src, stage);
         
-        shaderc::SpvCompilationResult result = compiler.CompileGlslToSpv(source_string, shader_stage, name, options);
+        shaderc::SpvCompilationResult result = compiler.CompileGlslToSpv(src, shader_stage, name.c_str(), options);
         if (result.GetCompilationStatus() != shaderc_compilation_status_success) {
             const std::string err_msg = result.GetErrorMessage();
             std::cerr << "Shader compiliation failed: " << err_msg.c_str() << "\n";
@@ -259,7 +254,7 @@ namespace st {
 
         options.SetGenerateDebugInfo();
         options.SetOptimizationLevel(shaderc_optimization_level_performance);
-        options.SetTargetEnvironment(shaderc_target_env_opengl, 0);
+        options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_1);
         options.SetSourceLanguage(shaderc_source_language_glsl);
 
         shaderc_shader_kind shader_stage;
@@ -297,7 +292,7 @@ namespace st {
         const std::string file_name = path_to_source.filename().string();
         Shader source_hash = WriteAndAddShaderSource(file_name, source_code, stage);
 
-        shaderc::SpvCompilationResult result = compiler.CompileGlslToSpv(source_code, shader_stage, file_name.c_str());
+        shaderc::SpvCompilationResult result = compiler.CompileGlslToSpv(source_code, shader_stage, file_name.c_str(), options);
         if (result.GetCompilationStatus() != shaderc_compilation_status_success) {
             const std::string err_msg = result.GetErrorMessage();
             std::cerr << "Shader compiliation failed: " << err_msg.c_str() << "\n";
