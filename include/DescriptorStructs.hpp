@@ -8,26 +8,33 @@
 
 namespace st {
 
-    struct ShaderDataObject {
+    struct ShaderResourceSubObject {
         std::string Name;
-        uint32_t Size, Offset;
+        uint32_t Size;
+        uint32_t Offset;
     };
 
-    struct DescriptorObject {
+    struct ShaderResource {
         std::string Name{ "" };
         uint32_t Binding{ std::numeric_limits<uint32_t>::max() };
         uint32_t ParentSet{ std::numeric_limits<uint32_t>::max() };
         VkShaderStageFlags Stages{ VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM };
         VkDescriptorType Type{ VK_DESCRIPTOR_TYPE_MAX_ENUM };
-        std::vector<ShaderDataObject> Members;
+        std::vector<ShaderResourceSubObject> Members;
         VkFormat Format{ VK_FORMAT_UNDEFINED };
         enum class storage_class {
             Read,
             Write,
             ReadWrite
         } StorageClass{ storage_class::Read };
-        bool operator==(const DescriptorObject& other);
-        bool operator<(const DescriptorObject& other);
+        enum class size_class {
+            Absolute,
+            SwapchainRelative,
+            ViewportRelative
+        } SizeClass{ size_class::Absolute };
+        
+        bool operator==(const ShaderResource& other);
+        bool operator<(const ShaderResource& other);
         explicit operator VkDescriptorSetLayoutBinding() const;
         std::string GetType() const;
         void SetType(std::string type_str);
@@ -53,13 +60,13 @@ namespace st {
 
     struct DescriptorSetInfo {
         uint32_t Index = std::numeric_limits<uint32_t>::max();
-        std::map<uint32_t, DescriptorObject> Members = std::map<uint32_t, DescriptorObject>{};
+        std::map<uint32_t, ShaderResource> Members = std::map<uint32_t, DescriptorObject>{};
     };
 
     struct PushConstantInfo {
         VkShaderStageFlags Stages;
         std::string Name;
-        std::vector<ShaderDataObject> Members;
+        std::vector<ShaderResourceSubObject> Members;
         uint32_t Offset;
         explicit operator VkPushConstantRange() const noexcept;
     };
