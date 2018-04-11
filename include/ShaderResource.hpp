@@ -13,13 +13,13 @@ namespace st {
             Read,
             Write,
             ReadWrite
-        } StorageClass{ storage_class::Read };
+        };
         
         enum class size_class {
             Absolute,
             SwapchainRelative,
             ViewportRelative
-        } SizeClass{ size_class::Absolute };
+        };
         
         bool operator==(const ShaderResource& other);
         bool operator<(const ShaderResource& other);
@@ -36,7 +36,9 @@ namespace st {
 
     private:
 
-        std::string Name{ "" };
+        std::string name{ "" };
+        size_class sizeClass{ size_class::Absolute };
+        storage_class storageClass{ storage_class::Read };
         uint32_t binding{ std::numeric_limits<uint32_t>::max() };
         uint32_t parentSet{ std::numeric_limits<uint32_t>::max() };
         VkShaderStageFlags stages{ VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM };

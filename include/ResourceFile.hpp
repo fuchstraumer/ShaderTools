@@ -2,6 +2,7 @@
 #ifndef ST_RESOURCE_FILE_HPP
 #define ST_RESOURCE_FILE_HPP
 #include "CommonInclude.hpp"
+#include "sol.hpp"
 
 namespace st {
 
@@ -16,10 +17,12 @@ namespace st {
 
     class ResourceFile {
     public:
-        ResourceFile(const char* fname);
+        ResourceFile(const char* fname, sol::state& lstate);
         
         engine_environment_callbacks_t RetrievalCallbacks;
     private:
+        sol::environment luaEnvironment;
+        sol::state& lState;
     };
 
 }
