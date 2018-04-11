@@ -23,3 +23,6 @@
 [submodule "third_party/luajit"]
 	path = third_party/luajit
 	url = https://github.com/LuaDist/luajit
+[submodule "third_party/sol2"]
+	path = third_party/sol2
+	url = https://github.com/ThePhD/sol2
