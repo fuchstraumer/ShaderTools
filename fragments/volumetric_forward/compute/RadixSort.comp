@@ -1,7 +1,7 @@
 #include "Structures.glsl"
 
 #pragma USE_RESOURCES SORT_RESOURCES
-#pragma USE_RESOURCES MORTON_RESOURCES
+#pragma USE_RESOURCES MERGE_SORT_RESOURCES
 
 const uint NUM_THREADS = 256;
 const uint INT_MAX = 0xffffffff;
@@ -55,7 +55,7 @@ void main() {
 
         groupMemoryBarrier();
 
-        gs_D[gl_LocalInvocationIndex] = (gs_E[gl_LocalInvocationIndex] == 1) ? (gs_F[gl_LocalInvocationIndex] : gl_LocalInvocationIndex - gs_F[gl_LocalInvocationIndex] + gs_TotalFalses);
+        gs_D[gl_LocalInvocationIndex] = (gs_E[gl_LocalInvocationIndex] == 1) ? gs_F[gl_LocalInvocationIndex] : (gl_LocalInvocationIndex - gs_F[gl_LocalInvocationIndex] + gs_TotalFalses);
         uint key = gs_Keys[gl_LocalInvocationIndex];
         uint value = gs_Keys[gl_LocalInvocationIndex];
 

@@ -4,10 +4,10 @@
 #pragma USE_RESOURCES VOLUMETRIC_FORWARD
 #pragma USE_RESOURCES INDIRECT_ARGS
 
-layout(local_size_x = 1, local_size_y = 1, local_size_z  = 1)
+layout(local_size_x = 1, local_size_y = 1, local_size_z  = 1) in;
 
 void main() {
-    uint count = atomicCounter(UniqueClustersCounter);
+    uint count = imageAtomicAdd(UniqueClustersCounter, 0, 1);
     IndirectArgs.NumThreadGroupsX = count;
     IndirectArgs.NumThreadGroupsY = 1;
     IndirectArgs.NumThreadGroupsZ = 1;

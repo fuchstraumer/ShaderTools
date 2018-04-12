@@ -5,7 +5,7 @@
 
 namespace st {
 
-    struct ST_API Shader {
+    struct Shader {
         Shader(const char* shader_path, const VkShaderStageFlagBits stages);
         uint64_t ID;
         VkShaderStageFlagBits GetStage() const noexcept;

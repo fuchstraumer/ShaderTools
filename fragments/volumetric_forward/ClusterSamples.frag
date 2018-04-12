@@ -1,5 +1,7 @@
 #include "ComputeFunctions.glsl"
 
+#pragma USE_RESOURCES VOLUMETRIC_FORWARD
+
 void main() {
     vec4 vpos = matrices.View * vPosition;
     uvec3 cluster_index_3d = ComputeClusterIndex3D(gl_FragCoord.xy, vpos.z);

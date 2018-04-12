@@ -8,6 +8,7 @@ layout(early_fragment_tests) in;
 #pragma USE_RESOURCES VOLUMETRIC_FORWARD_LIGHTS
 #pragma USE_RESOURCES MATERIAL_RESOURCES
 
+
 LightingResult GetLighting(uint cluster_index_1d, Material material, vec4 eyePos, vec4 P, vec4 N) {
     LightingResult result;
 
@@ -57,7 +58,7 @@ LightingResult GetLighting(uint cluster_index_1d, Material material, vec4 eyePos
 void main() {
 
     vec4 ambient = Material.ambient;
-    if (material.Ambient) {
+    if (TextureFlags.Ambient) {
         vec4 ambient_sample = texture(sampler2D(ambientMap, AnisotropicRepeatSampler), vUV);
         if (any(ambient.rgb)) {
             ambient *= ambient_sample;

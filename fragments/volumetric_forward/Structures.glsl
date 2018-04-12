@@ -81,3 +81,13 @@ struct LightingResult {
     vec3 Diffuse;
     vec3 Specular;
 };
+
+struct SurfaceOutput {
+    vec3 Albedo;
+    vec3 Normal; // Tangent-space normal
+    vec3 Emission;
+    float Metallic;
+    float Smoothness;
+    float Occlusion;
+    float Alpha;
+};

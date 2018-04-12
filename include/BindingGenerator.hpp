@@ -3,11 +3,12 @@
 #define SHADER_TOOLS_BINDING_GENERATOR_HPP
 #include "CommonInclude.hpp"
 #include "Shader.hpp"
+#include "DescriptorStructs.hpp"
 
 namespace st {
     class BindingGeneratorImpl;
 
-    class ST_API BindingGenerator {
+    class BindingGenerator {
         BindingGenerator(const BindingGenerator&) = delete;
         BindingGenerator& operator=(const BindingGenerator&) = delete;
     public:
@@ -17,20 +18,16 @@ namespace st {
         BindingGenerator(BindingGenerator&& other) noexcept;
         BindingGenerator& operator=(BindingGenerator&& other) noexcept;
 
-        void ParseBinary(const char* binary_location, const VkShaderStageFlags stage);
         void ParseBinary(const Shader& shader);
-        void ParseBinary(const uint32_t binary_size, const uint32_t* binary, const VkShaderStageFlags stage);
-        void CollateBindings();
+        void ParseBinary(const std::vector<uint32_t>& shader_binary, const VkShaderStageFlags stage);
 
         uint32_t GetNumSets() const noexcept;
-        void GetLayoutBindings(const uint32_t& set_index, uint32_t* num_bindings, VkDescriptorSetLayoutBinding* bindings) const;
-        void GetPushConstantRanges(uint32_t* num_ranges, VkPushConstantRange* ranges) const;
-        void GetVertexAttributes(uint32_t* num_attrs, VkVertexInputAttributeDescription* attrs) const;
-
-        void SaveToJSON(const char* output_name);
-        void LoadFromJSON(const char* input_name);
-
+        std::map<uint32_t, ShaderResource> GetDescriptorSetObjects(const uint32_t& set_idx) const;
+        std::map<std::string, VkDescriptorSetLayoutBinding> GetSetNameBindingPairs(const uint32_t& set_idx) const;
+        std::vector<VkPushConstantRange> GetPushConstantRanges() const;
+        std::vector<VkVertexInputAttributeDescription> GetVertexAttributes() const;
         void Clear();
+
     private:
         std::unique_ptr<BindingGeneratorImpl> impl;
     };

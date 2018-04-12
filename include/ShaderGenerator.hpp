@@ -6,7 +6,7 @@
 namespace st {
     class ShaderGeneratorImpl;
 
-    class ST_API ShaderGenerator { 
+    class ShaderGenerator { 
         ShaderGenerator(const ShaderGenerator&) = delete;
         ShaderGenerator& operator=(const ShaderGenerator&) = delete;
     public:
@@ -22,8 +22,8 @@ namespace st {
         Shader SaveCurrentToFile(const char* fname) const;
 
         VkShaderStageFlagBits GetStage() const;
-        static const char* const BasePath;
-        static const char* const LibPath;
+        static void SetBasePath(const char* new_base_path);
+        static const char* GetBasePath();
     private:
         std::unique_ptr<ShaderGeneratorImpl> impl;
     };
