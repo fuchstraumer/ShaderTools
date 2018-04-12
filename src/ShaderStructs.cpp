@@ -426,6 +426,9 @@ namespace st {
                 return DescriptorObject::storage_class::Write;
             case spv::AccessQualifier::AccessQualifierReadWrite:
                 return DescriptorObject::storage_class::ReadWrite;
+            case spv::AccessQualifier::AccessQualifierMax:
+                // Usually happens for storage images.
+                return DescriptorObject::storage_class::ReadWrite;
             default:
                 throw std::domain_error("SPIRType somehow has invalid access qualifier enum value!");
             }

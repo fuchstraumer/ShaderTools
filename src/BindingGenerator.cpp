@@ -256,8 +256,8 @@ namespace st {
 
         const auto& set = iter->second;
         std::map<std::string, VkDescriptorSetLayoutBinding> results;
-        for (uint32_t i = 0; i < set.Members.size(); ++i) {
-            results.emplace(set.Members.at(i).Name, (VkDescriptorSetLayoutBinding)set.Members.at(i));
+        for (auto& set : set.Members) {
+            results.emplace(set.second.Name, (VkDescriptorSetLayoutBinding)set.second);
         }
         
         return results;

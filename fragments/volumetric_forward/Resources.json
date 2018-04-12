@@ -1,0 +1,227 @@
+{
+    "volumetric-forward" : {
+        "ClusterData" : {
+            "Type" : "UniformBuffer",
+            "Members" : {
+                "GridDim" : "uvec3",
+                "ViewNear" : "float",
+                "ScreenSize" : "uvec2",
+                "Near" : "float",
+                "LogGridDimY" : "float"
+            }
+        },
+        "ClusterFlags" : {
+            "Type" : "UImageBuffer",
+            "Format" : "r8ui",
+            "SizeScript" : "VolumetricForward.lua",
+            "SizeScriptFunction" : "get_num_clusters"
+        },
+        "PointLightIndexList" : {
+            "Type" : "UImageBuffer",
+            "Format" : "r32ui",
+            "SizeScript" : "VolumetricForward.lua",
+            "SizeScriptFunction" : "light_index_list_size"
+        },
+        "SpotLightIndexList" : {
+            "Type" : "UImageBuffer",
+            "Format" : "r32ui",
+            "SizeScript" : "VolumetricForward.lua",
+            "SizeScriptFunction" : "light_index_list_size"
+        },
+        "PointLightGrid" : {
+            "Type" : "UImageBuffer",
+            "Format" : "rg32ui",
+            "SizeScript" : "VolumetricForward.lua",
+            "SizeScriptFunction" : "light_grid_size"
+        },
+        "SpotLightGrid" : {
+            "Type" : "UImageBuffer",
+            "Format" : "rg32ui",
+            "SizeScript" : "VolumetricForward.lua",
+            "SizeScriptFunction" : "light_grid_size"
+        },
+        "PointLightIndexCounter" : {
+            "Type" : "UImageBuffer",
+            "Format" : "r32ui",
+            "Dimensions" : [ 1, 1, 1 ]
+        },
+        "SpotLightIndexCounter" : {
+            "Type" : "UImageBuffer",
+            "Format" : "r32ui",
+            "Dimensions" : [ 1, 1, 1 ]
+        },
+        "UniqueClusters" : {
+            "Type" : "UImageBuffer",
+            "Format" : "r32ui",
+            "SizeScript" : "VolumetricForward.lua",
+            "SizeScriptFunction" : "get_num_clusters"
+        },
+        "UniqueClustersCounter" : {
+            "Type" : "UImageBuffer",
+            "Format" : "r32ui",
+            "Dimensions" : [ 1, 1, 1 ]
+        },
+        "ClusterAABBs" : {
+            "Type" : "StorageBuffer",
+            "Members" : {
+                "Data" : {
+                    "Type" : "Array",
+                    "SizeScript" : "VolumetricForward.lua",
+                    "SizeScriptFunction" : "get_num_clusters",
+                    "DataType" : "AABB"
+                }
+            }
+        }
+    },
+    "volumetric_forward_lights" : {
+        "LightCounts" : {
+            "Type" : "UniformBuffer",
+            "Members" : {
+                "NumPointLights" : "uint",
+                "NumSpotLights" : "uint",
+                "NumDirectionalLights" : "uint"
+            }
+        },
+        "PointLights" : {
+            "Type" : "StorageBuffer",
+            "Members" : {
+                "Data" : {
+                    "Type" : "Array",
+                    "SizeScript" : "VolumetricForward.lua",
+                    "SizeScriptFunction" : "get_num_point_lights",
+                    "DataType" : "PointLight"
+                }
+            }
+        },
+        "SpotLights" : {
+            "Type" : "StorageBuffer",
+            "Members" : {
+                "Data" : {
+                    "Type" : "Array",
+                    "SizeScript" : "VolumetricForward.lua",
+                    "SizeScriptFunction" : "get_num_spot_lights",
+                    "DataType" : "SpotLight"
+                }
+            }
+        },
+        "DirectionalLights" : {
+            "Type" : "StorageBuffer",
+            "Members" : {
+                "Data" : { 
+                    "Type" : "Array",
+                    "SizeScript" : "VolumetricForward.lua",
+                    "SizeScriptFunction" : "get_num_directional_lights",
+                    "DataType" : "DirectionalLight"
+                }
+            }
+        }
+    },
+    "indirect-args" : {
+        "IndirectArgs" : {
+            "Type" : "StorageBuffer",
+            "Members" : {
+                "NumThreadGroupsX" : "uint",
+                "NumThreadGroupsY" : "uint",
+                "NumThreadGroupsZ" : "uint"
+            }
+        }
+    },
+    "sort-resources" : {
+        "DispatchParams" : {
+            "Type" : "UniformBuffer",
+            "Members" : {
+                "NumThreadGroups" : "uvec3",
+                "NumThreads" : "uvec3"
+            }
+        },
+        "ReductionParams" : {
+            "Type" : "UniformBuffer",
+            "Members" : {
+                "NumElements" : "uint"
+            }
+        },
+        "SortParams" : {
+            "Type" : "UniformBuffer",
+            "Members" : {
+                "NumElements" : "uint",
+                "ChunkSize" : "uint"
+            }
+        },
+        "LightAABBs" : {
+            "Type" : "StorageBuffer",
+            "Members" : {
+                "Data" : {
+                    "Type" : "Array",
+                    "Length" : "512",
+                    "DataType" : "AABB"
+                }
+            }
+        },
+        "PointLightMortonCodes" : {
+            "Type" : "UImageBuffer",
+            "Format" : "r32ui",
+            "SizeScript" : "VolumetricForward.lua",
+            "SizeScriptFunction" : "get_num_point_lights"
+        },
+        "SpotLightMortonCodes" : {
+            "Type" : "UImageBuffer",
+            "Format" : "r32ui",
+            "SizeScript" : "VolumetricForward.lua",
+            "SizeScriptFunction" : "get_num_spot_lights"
+        },
+        "PointLightIndices" : {
+            "Type" : "UImageBuffer",
+            "Format" : "r32ui",
+            "SizeScript" : "VolumetricForward.lua",
+            "SizeScriptFunction" : "get_num_point_lights"
+        },
+        "SpotLightIndices" : {
+            "Type" : "UImageBuffer",
+            "Format" : "r32ui",
+            "SizeScript" : "VolumetricForward.lua",
+            "SizeScriptFunction" : "get_num_spot_lights"
+        }
+    },
+    "merge-sort-resources" : {
+        "InputKeys" : {
+            "Type" : "UImageBuffer",
+            "Format" : "r32ui"
+        },
+        "InputValues" : {
+            "Type" : "UImageBuffer",
+            "Format" : "r32ui"
+        }
+    },
+    "bvh-resources" : {
+        "BVHParams" : {
+            "Type" : "UniformBuffer",
+            "Members" : {
+                "PointLightLevels" : "uint",
+                "SpotLightLevels" : "uint",
+                "ChildLevel" : "uint"
+            }
+        },
+        "PointLightBVH" : {
+            "Type" : "StorageBuffer",
+            "Members" : {
+                "Data" : {
+                    "Type" : "Array",
+                    "DataType" : "AABB",
+                    "SizeScript": "VolumetricForward.lua",
+                    "SizeScriptFunction" : "get_num_point_lights"
+                }
+            }
+        },
+        "SpotLightBVH" : {
+            "Type" : "StorageBuffer",
+            "Members" : {
+                "Data" : {
+                    "Type" : "Array",
+                    "DataType" : "AABB",
+                    "SizeScript" : "VolumetricForward.lua",
+                    "SizeScriptFunction" : "get_num_spot_lights"
+                }
+            }
+        }
+    }
+}
