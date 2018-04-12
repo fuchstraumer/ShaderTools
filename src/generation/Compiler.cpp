@@ -1,4 +1,4 @@
-#include "Compiler.hpp"
+#include "generation/Compiler.hpp"
 #include <mutex>
 #include <string>
 #include <map>
@@ -9,7 +9,7 @@
 #include <fstream>
 #include "shaderc/shaderc.hpp"
 #include "spirv_glsl.hpp"
-#include "FilesystemUtils.hpp"
+#include "../util/FilesystemUtils.hpp"
 #define SCL_SECURE_NO_WARNINGS
 namespace fs = std::experimental::filesystem;
 

@@ -1,4 +1,4 @@
-#include "DescriptorStructs.hpp"
+#include "parser/DescriptorStructs.hpp"
 
 namespace st {
 
@@ -413,27 +413,6 @@ namespace st {
         }
     }
 
-    DescriptorObject::storage_class StorageClassFromSPIRType(const spirv_cross::SPIRType & type) {
-        using namespace spirv_cross;
-        if (type.basetype == SPIRType::SampledImage || type.basetype == SPIRType::Sampler || type.basetype == SPIRType::Struct || type.basetype == SPIRType::AtomicCounter) {
-            return DescriptorObject::storage_class::Read;
-        }
-        else {
-            switch (type.image.access) {
-            case spv::AccessQualifier::AccessQualifierReadOnly:
-                return DescriptorObject::storage_class::Read;
-            case spv::AccessQualifier::AccessQualifierWriteOnly:
-                return DescriptorObject::storage_class::Write;
-            case spv::AccessQualifier::AccessQualifierReadWrite:
-                return DescriptorObject::storage_class::ReadWrite;
-            case spv::AccessQualifier::AccessQualifierMax:
-                // Usually happens for storage images.
-                return DescriptorObject::storage_class::ReadWrite;
-            default:
-                throw std::domain_error("SPIRType somehow has invalid access qualifier enum value!");
-            }
-        }
-    }
 
     std::string VertexAttributeInfo::GetTypeStr() const {
         return TypeToStr(Type);
@@ -526,42 +505,6 @@ namespace st {
         else {
             throw std::domain_error("Invalid string passed to string-to-enum method!");
         }
-    }
-
-    bool ShaderResource::operator==(const ShaderResource & other) {
-        return (Name == other.Name) && (Binding == other.Binding) &&
-            (ParentSet == other.ParentSet) && (Stages == other.Stages);
-    }
-
-    bool ShaderResource::operator<(const ShaderResource & other) {
-        // Sort by parent set first, then binding loc within those sets.
-        if (ParentSet != other.ParentSet) {
-            return ParentSet < other.ParentSet;
-        }
-        else {
-            return Binding < other.Binding;
-        }
-    }
-
-    ShaderResource::operator VkDescriptorSetLayoutBinding() const {
-        if (Type != VK_DESCRIPTOR_TYPE_MAX_ENUM && Type != VK_DESCRIPTOR_TYPE_RANGE_SIZE) {
-            return VkDescriptorSetLayoutBinding{
-                Binding, Type, 1, Stages, nullptr
-            };
-        }
-        else {
-            return VkDescriptorSetLayoutBinding{
-                Binding, Type, 0, Stages, nullptr
-            };
-        }
-    }
-
-    std::string ShaderResource::GetType() const {
-        return GetTypeString(Type);
-    }
-
-    void ShaderResource::SetType(std::string type_str) {
-        Type = GetTypeFromString(type_str);
     }
 
     PushConstantInfo::operator VkPushConstantRange() const noexcept {

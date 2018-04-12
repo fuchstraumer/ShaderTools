@@ -1,8 +1,8 @@
 #pragma once
 #ifndef SHADER_TOOLS_COMPILER_HPP
 #define SHADER_TOOLS_COMPILER_HPP
-#include "CommonInclude.hpp"
-#include "Shader.hpp"
+#include "common/CommonInclude.hpp"
+#include "common/Shader.hpp"
 namespace st {
 
     class ShaderCompilerImpl;

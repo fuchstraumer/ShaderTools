@@ -1,8 +1,8 @@
 #pragma once
 #ifndef SG_SHADER_HPP
 #define SG_SHADER_HPP
-#include "CommonInclude.hpp"
-#include "Shader.hpp"
+#include "common/CommonInclude.hpp"
+#include "common/Shader.hpp"
 namespace st {
     class ShaderGeneratorImpl;
 

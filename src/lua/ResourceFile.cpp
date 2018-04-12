@@ -1,5 +1,5 @@
-#include "ResourceFile.hpp"
-#include "ShaderResource.hpp"
+#include "lua/ResourceFile.hpp"
+#include "parser/ShaderResource.hpp"
 #include <unordered_map>
 namespace st {
 

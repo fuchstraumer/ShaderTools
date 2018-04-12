@@ -1,5 +1,5 @@
-#include "BindingGenerator.hpp"
-#include "ShaderStructs.hpp"
+#include "parser/BindingGenerator.hpp"
+#include "parser/DescriptorStructs.hpp"
 #include "spirv-cross/spirv_cross.hpp"
 #include "spirv-cross/spirv_glsl.hpp"
 #include <array>
@@ -11,6 +11,11 @@
 #define _SCL_SECURE_NO_WARNINGS
 
 namespace st {
+
+    struct DescriptorSetInfo {
+        uint32_t Binding;
+        std::map<uint32_t, ShaderResource> Members;
+    };
 
     extern std::unordered_map<Shader, std::string> shaderFiles;
     extern std::unordered_map<Shader, std::vector<uint32_t>> shaderBinaries;
@@ -133,18 +138,18 @@ namespace st {
         
         for (const auto& rsrc : resources) {
             ShaderResource obj;
-            obj.Binding = cmplr.get_decoration(rsrc.id, spv::DecorationBinding);
-            obj.ParentSet = cmplr.get_decoration(rsrc.id, spv::DecorationDescriptorSet);
-            obj.Name = cmplr.get_name(rsrc.id);
+            obj.SetBinding(cmplr.get_decoration(rsrc.id, spv::DecorationBinding));
+            obj.SetParentSet(cmplr.get_decoration(rsrc.id, spv::DecorationDescriptorSet));
+            obj.SetName(cmplr.get_name(rsrc.id));
             if (parsing_buffer_type(type_being_parsed)) {
-                obj.Members = extract_buffer_members(rsrc, cmplr);
+                obj.SetMembers(extract_buffer_members(rsrc, cmplr));
             }
-            obj.Type = type_being_parsed;
+            obj.SetType(type_being_parsed);
             auto spir_type = cmplr.get_type(rsrc.type_id);
-            obj.StorageClass = StorageClassFromSPIRType(spir_type);
-            obj.Format = FormatFromSPIRType(spir_type);
-            obj.Stages = stage;
-            info.emplace(obj.ParentSet, obj);
+            obj.SetStorageClass(StorageClassFromSPIRType(spir_type));
+            obj.SetFormat(FormatFromSPIRType(spir_type));
+            obj.SetStages(stage);
+            info.emplace(obj.GetParentSet(), obj);
         }
 
     }
@@ -205,9 +210,9 @@ namespace st {
             DescriptorSetInfo& curr_set = sortedSets.at(unique_set);
             auto obj_range = sets.equal_range(unique_set);
             for (auto iter = obj_range.first; iter != obj_range.second; ++iter) {
-                const uint32_t& binding_idx = iter->second.Binding;
+                const uint32_t& binding_idx = iter->second.GetBinding();
                 if (curr_set.Members.count(binding_idx) != 0) {
-                    curr_set.Members.at(binding_idx).Stages |= iter->second.Stages;
+                    curr_set.Members.at(binding_idx).SetStages(curr_set.Members.at(binding_idx).GetStages() | iter->second.GetStages());
                 }
                 else {
                     curr_set.Members[binding_idx] = iter->second;
@@ -257,7 +262,7 @@ namespace st {
         const auto& set = iter->second;
         std::map<std::string, VkDescriptorSetLayoutBinding> results;
         for (auto& set : set.Members) {
-            results.emplace(set.second.Name, (VkDescriptorSetLayoutBinding)set.second);
+            results.emplace(set.second.GetName(), (VkDescriptorSetLayoutBinding)set.second);
         }
         
         return results;

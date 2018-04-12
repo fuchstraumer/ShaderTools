@@ -1,7 +1,7 @@
 #pragma once
 #ifndef SHADER_TOOLS_DESCRIPTOR_STRUCTS_HPP
 #define SHADER_TOOLS_DESCRIPTOR_STRUCTS_HPP
-#include "CommonInclude.hpp"
+#include "common/CommonInclude.hpp"
 #include "spirv-cross/spirv_cross.hpp"
 #include <string>
 #include <vector>

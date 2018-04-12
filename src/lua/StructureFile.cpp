@@ -1,46 +1,8 @@
-#include "StructureFile.hpp"
-#include "nlohmann/json.hpp"
+#include "lua/StructureFile.hpp"
 #include <fstream>
 #include <iostream>
 
 namespace st {
-
-    StructureFile::StructureFile(const char* fname) {
-        std::ifstream input_stream(fname);
-        if (!input_stream.is_open()) {
-            std::cerr << "Failed to open input structures JSON file.\n";
-            throw std::runtime_error("Failed to open input Structure file!");
-        }
-        std::string source_file{ std::istreambuf_iterator<char>(input_stream), std::istreambuf_iterator<char>() };
-        parse(std::move(source_file));
-    }
-
-    size_t StructureFile::GetStructureSize(const std::string& str) const {
-        auto iter = structureSizes.find(str);
-        if (iter == structureSizes.cend()) {
-            std::cerr << "Failed to find size of requested structure.";
-            return std::numeric_limits<size_t>::max();
-        }
-        else {
-            return iter->second;
-        }
-    }
-
-    void StructureFile::parse(std::string src) {
-        using namespace nlohmann;
-        json j = src;
-
-        for (auto iter = j.cbegin(); iter != j.cend(); ++iter) {
-            const std::string struct_name = iter.key();
-            structuresMap.emplace(struct_name, std::unordered_set<struct_member_t>());
-            for (auto members_iter = iter->cbegin(); iter != iter->cend(); ++iter) {
-                const std::string member_name = members_iter.key();
-                structuresMap.at(struct_name).emplace(members_iter.key(), *members_iter);
-            }
-        }
-
-        calculateSizes();
-    }
 
     typedef unsigned int uint;
 

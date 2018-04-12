@@ -1,7 +1,7 @@
 #pragma once
 #ifndef ST_RESOURCE_FILE_HPP
 #define ST_RESOURCE_FILE_HPP
-#include "CommonInclude.hpp"
+#include "common/CommonInclude.hpp"
 #include "sol.hpp"
 
 namespace st {

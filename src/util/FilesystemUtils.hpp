@@ -1,8 +1,8 @@
 #pragma once
-#include "CommonInclude.hpp"
+#include "common/CommonInclude.hpp"
 #include <string>
 #include <experimental/filesystem>
-#include "Shader.hpp"
+#include "common/Shader.hpp"
 
 namespace st {
 

@@ -1,4 +1,4 @@
-#include "ShaderGenerator.hpp"
+#include "generation/ShaderGenerator.hpp"
 
 #include <string>
 #include <algorithm>
@@ -15,7 +15,7 @@
 #include <sstream>
 #include <unordered_map>
 
-#include "FilesystemUtils.hpp"
+#include "../util/FilesystemUtils.hpp"
 
 namespace fs = std::experimental::filesystem;
 

@@ -1,9 +1,10 @@
 #pragma once
 #ifndef SHADER_TOOLS_BINDING_GENERATOR_HPP
 #define SHADER_TOOLS_BINDING_GENERATOR_HPP
-#include "CommonInclude.hpp"
-#include "Shader.hpp"
+#include "common/CommonInclude.hpp"
+#include "common/Shader.hpp"
 #include "DescriptorStructs.hpp"
+#include "ShaderResource.hpp"
 
 namespace st {
     class BindingGeneratorImpl;
