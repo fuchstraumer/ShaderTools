@@ -48,6 +48,8 @@ namespace st {
 
     };
 
+    DescriptorObject::storage_class StorageClassFromSPIRType(const spirv_cross::SPIRType & type);
+
 }
 
 #endif //!ST_SHADER_RESOURCE_HPP

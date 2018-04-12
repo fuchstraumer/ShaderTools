@@ -15,12 +15,44 @@ namespace st {
         fov_y_callback_t GetFOVY;
     };
 
+    struct UniformBuffer {
+        std::vector<std::string> MemberTypes;
+    };
+
+    struct StorageBuffer {
+        std::string ElementType;
+        size_t NumElements;
+    };
+
+    struct StorageImage {
+        enum class data_format {
+            Unsigned,
+            Signed,
+            Float,
+            Invalid 
+        } DataFormat{ data_format::Invalid };
+        size_t Size;
+    };
+
+    struct Texture {
+        std::string Name;
+        enum class texture_type {
+            e1D,
+            e2D,
+            e3D,
+            e1D_Array,
+            e2D_Array,
+            eCubeMap
+        } TextureType{ texture_type::e2D };
+    }
+
     class ResourceFile {
     public:
         ResourceFile(const char* fname, sol::state& lstate);
         
         engine_environment_callbacks_t RetrievalCallbacks;
     private:
+    
         sol::environment luaEnvironment;
         sol::state& lState;
     };
