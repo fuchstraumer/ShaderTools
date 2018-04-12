@@ -16,7 +16,6 @@
 [submodule "third_party/nlohmann"]
 	path = third_party/nlohmann
 	url = https://github.com/nlohmann/json
-
 [submodule "third_party/spirv-headers"]
 	path = third_party/spirv-headers
 	url = https://github.com/KhronosGroup/SPIRV-Headers
