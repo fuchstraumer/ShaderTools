@@ -22,7 +22,7 @@ namespace st {
         void ParseBinary(const std::vector<uint32_t>& shader_binary, const VkShaderStageFlags stage);
 
         uint32_t GetNumSets() const noexcept;
-        std::map<uint32_t, DescriptorObject> GetDescriptorSetObjects(const uint32_t& set_idx) const;
+        std::map<uint32_t, ShaderResource> GetDescriptorSetObjects(const uint32_t& set_idx) const;
         std::map<std::string, VkDescriptorSetLayoutBinding> GetSetNameBindingPairs(const uint32_t& set_idx) const;
         std::vector<VkPushConstantRange> GetPushConstantRanges() const;
         std::vector<VkVertexInputAttributeDescription> GetVertexAttributes() const;

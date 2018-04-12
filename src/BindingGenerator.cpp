@@ -26,7 +26,7 @@ namespace st {
         BindingGeneratorImpl& operator=(BindingGeneratorImpl&& other) noexcept;
 
         void parseBinary(const std::vector<uint32_t>& binary_data, const VkShaderStageFlags stage);
-        void collateSets(std::multimap<uint32_t, DescriptorObject> sets);
+        void collateSets(std::multimap<uint32_t, ShaderResource> sets);
         void parseBinary(const Shader& shader_handle);
         void parseImpl(const std::vector<uint32_t>& binary_data, const VkShaderStageFlags stage);
 
@@ -69,7 +69,7 @@ namespace st {
         return static_cast<uint32_t>(impl->sortedSets.size());
     }
 
-    std::map<uint32_t, DescriptorObject> BindingGenerator::GetDescriptorSetObjects(const uint32_t & set_idx) const {
+    std::map<uint32_t, ShaderResource> BindingGenerator::GetDescriptorSetObjects(const uint32_t & set_idx) const {
         return impl->sortedSets.at(set_idx).Members;
     }
 
@@ -111,18 +111,18 @@ namespace st {
         return parseVertAttrs(cmplr, rsrcs.stage_outputs);
     }
 
-    void ParseResource(std::multimap<uint32_t, DescriptorObject>& info, spirv_cross::Compiler& cmplr, const VkShaderStageFlags& stage, const VkDescriptorType& type_being_parsed, const std::vector<spirv_cross::Resource>& resources) {
+    void ParseResource(std::multimap<uint32_t, ShaderResource>& info, spirv_cross::Compiler& cmplr, const VkShaderStageFlags& stage, const VkDescriptorType& type_being_parsed, const std::vector<spirv_cross::Resource>& resources) {
         
         auto parsing_buffer_type = [](const VkDescriptorType& type) {
             return (type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER) || (type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC) ||
                 (type == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER) || (type == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC);
         };
 
-        auto extract_buffer_members = [](const spirv_cross::Resource& rsrc, const spirv_cross::Compiler& cmplr)->std::vector<ShaderDataObject> {
-            std::vector<ShaderDataObject> results;
+        auto extract_buffer_members = [](const spirv_cross::Resource& rsrc, const spirv_cross::Compiler& cmplr)->std::vector<ShaderResourceSubObject> {
+            std::vector<ShaderResourceSubObject> results;
             auto ranges = cmplr.get_active_buffer_ranges(rsrc.id);
             for (auto& range : ranges) {
-                ShaderDataObject member;
+                ShaderResourceSubObject member;
                 member.Name = cmplr.get_member_name(rsrc.base_type_id, range.index);
                 member.Size = static_cast<uint32_t>(range.range);
                 member.Offset = static_cast<uint32_t>(range.offset);
@@ -132,7 +132,7 @@ namespace st {
         };
         
         for (const auto& rsrc : resources) {
-            DescriptorObject obj;
+            ShaderResource obj;
             obj.Binding = cmplr.get_decoration(rsrc.id, spv::DecorationBinding);
             obj.ParentSet = cmplr.get_decoration(rsrc.id, spv::DecorationDescriptorSet);
             obj.Name = cmplr.get_name(rsrc.id);
@@ -157,7 +157,7 @@ namespace st {
         result.Stages = stage;
         result.Name = cmplr.get_name(pconstant.id);
         for(auto& range : ranges) {
-            ShaderDataObject member;
+            ShaderResourceSubObject member;
             member.Name = cmplr.get_member_name(pconstant.base_type_id, range.index);
             member.Size = static_cast<uint32_t>(range.range);
             member.Offset = static_cast<uint32_t>(range.offset);
@@ -191,7 +191,7 @@ namespace st {
         parseImpl(binary_data, stage);
     }
 
-    void BindingGeneratorImpl::collateSets(std::multimap<uint32_t, DescriptorObject> sets) {
+    void BindingGeneratorImpl::collateSets(std::multimap<uint32_t, ShaderResource> sets) {
         std::set<uint32_t> unique_keys;
         for (auto iter = sets.begin(); iter != sets.end(); ++iter) {
             unique_keys.insert(iter->first);
@@ -220,7 +220,7 @@ namespace st {
         using namespace spirv_cross;
         Compiler glsl(binary_data);
 
-        std::multimap<uint32_t, DescriptorObject> sets;
+        std::multimap<uint32_t, ShaderResource> sets;
         const auto& resources = glsl.get_shader_resources();
         ParseResource(sets, glsl, stage, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, resources.uniform_buffers);
         ParseResource(sets, glsl, stage, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, resources.storage_buffers);

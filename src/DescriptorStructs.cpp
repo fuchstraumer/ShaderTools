@@ -75,12 +75,12 @@ namespace st {
         }
     }
 
-    bool DescriptorObject::operator==(const DescriptorObject & other) {
+    bool ShaderResource::operator==(const ShaderResource & other) {
         return (Name == other.Name) && (Binding == other.Binding) &&
             (ParentSet == other.ParentSet) && (Stages == other.Stages);
     }
 
-    bool DescriptorObject::operator<(const DescriptorObject & other) {
+    bool ShaderResource::operator<(const ShaderResource & other) {
         // Sort by parent set first, then binding loc within those sets.
         if (ParentSet != other.ParentSet) {
             return ParentSet < other.ParentSet;
@@ -90,7 +90,7 @@ namespace st {
         }
     }
 
-    DescriptorObject::operator VkDescriptorSetLayoutBinding() const {
+    ShaderResource::operator VkDescriptorSetLayoutBinding() const {
         if (Type != VK_DESCRIPTOR_TYPE_MAX_ENUM && Type != VK_DESCRIPTOR_TYPE_RANGE_SIZE) {
             return VkDescriptorSetLayoutBinding{
                 Binding, Type, 1, Stages, nullptr
@@ -103,11 +103,11 @@ namespace st {
         }
     }
 
-    std::string DescriptorObject::GetType() const {
+    std::string ShaderResource::GetType() const {
         return GetTypeString(Type);
     }
 
-    void DescriptorObject::SetType(std::string type_str) {
+    void ShaderResource::SetType(std::string type_str) {
         Type = GetTypeFromString(type_str);
     }
 
