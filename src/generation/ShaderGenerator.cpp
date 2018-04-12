@@ -68,7 +68,7 @@ namespace st {
         InputAttribute,
         OutputAttribute,
         glPerVertex,
-        SpecializationConstant,
+        SpecConstant,
         IncludedFragment,
         UniformResource,
         PushConstantItem,
@@ -253,7 +253,7 @@ namespace st {
                     break;
                 }
                 const std::string prefix("layout (constant_id = " + std::to_string(ShaderResources.LastConstantIndex++) + ") ");
-                fragments.insert(shaderFragment{fragment_type::SpecializationConstant, std::string(prefix + match[1].str())});
+                fragments.insert(shaderFragment{fragment_type::SpecConstant, std::string(prefix + match[1].str())});
                 local_str.erase(local_str.cbegin(), local_str.cbegin() + match[0].length());
             }
         }       
@@ -385,7 +385,7 @@ namespace st {
             }
             else if (std::regex_search(block_str, match, specialization_constant)) {
                 const std::string prefix("layout (constant_index = " + std::to_string(ShaderResources.LastConstantIndex++) + ") ");
-                fragments.emplace(shaderFragment{ fragment_type::SpecializationConstant, std::string(prefix + match[1].str()) });
+                fragments.emplace(shaderFragment{ fragment_type::SpecConstant, std::string(prefix + match[1].str()) });
                 trim_match(match);
             }
             else if (std::regex_search(block_str, match, sampler2d_resource)) {
@@ -445,7 +445,7 @@ namespace st {
             std::smatch match;
             if (std::regex_search(body_str, match, specialization_constant)) {
                 const std::string prefix("layout (constant_id = " + std::to_string(ShaderResources.LastConstantIndex++) + ") ");
-                fragments.emplace(shaderFragment{ fragment_type::SpecializationConstant, std::string(prefix + match[1].str()) });
+                fragments.emplace(shaderFragment{ fragment_type::SpecConstant, std::string(prefix + match[1].str()) });
                 body_str.erase(body_str.begin() + match.position(), body_str.begin() + match.position() + match.length());
             }
             else {

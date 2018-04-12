@@ -1,7 +1,7 @@
 #pragma once
 #ifndef ST_STRUCTURE_FILE_HPP
 #define ST_STRUCTURE_FILE_HPP
-#include "CommonInclude.hpp"
+#include "common/CommonInclude.hpp"
 #include <unordered_map>
 #include <unordered_set>
 namespace st {

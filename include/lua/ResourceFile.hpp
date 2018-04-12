@@ -2,17 +2,16 @@
 #ifndef ST_RESOURCE_FILE_HPP
 #define ST_RESOURCE_FILE_HPP
 #include "common/CommonInclude.hpp"
-#include "sol.hpp"
-
+#include "LuaEnvironment.hpp"
+#include <functional>
 namespace st {
 
     struct engine_environment_callbacks_t {
-        using screen_size_callback_t = std::add_pointer<void(int*,int*)>::type;
-        using z_near_far_callback_t = std::add_pointer<void(float*,float*)>::type;
-        using fov_y_callback_t = std::add_pointer<void(float*)>::type;
-        screen_size_callback_t GetScreenSize;
-        z_near_far_callback_t GetZPlanes;
-        fov_y_callback_t GetFOVY;
+        std::function<int()> GetScreenSizeX;
+        std::function<int()> GetScreenSizeY;
+        std::function<double()> GetZNear;
+        std::function<double()> GZFar;
+        std::function<double()> GetFOVY;
     };
 
     struct UniformBuffer {
@@ -44,17 +43,15 @@ namespace st {
             e2D_Array,
             eCubeMap
         } TextureType{ texture_type::e2D };
-    }
+    };
 
     class ResourceFile {
     public:
-        ResourceFile(const char* fname, sol::state& lstate);
+        ResourceFile(const char* fname, LuaEnvironment* _env);
         
         engine_environment_callbacks_t RetrievalCallbacks;
     private:
-    
-        sol::environment luaEnvironment;
-        sol::state& lState;
+        LuaEnvironment * env;
     };
 
 }

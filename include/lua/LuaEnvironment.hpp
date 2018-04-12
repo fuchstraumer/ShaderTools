@@ -1,9 +1,11 @@
 #pragma once
 #ifndef ST_LUA_ENVIRONMENT_HPP
 #define ST_LUA_ENVIRONMENT_HPP
-#include "sol.hpp"
-#include "mango/math/geometry.hpp"
+#include "common/CommonInclude.hpp"
+
 namespace st {
+
+    class LuaEnvironmentImpl;
 
     class LuaEnvironment {
     public:
@@ -11,14 +13,8 @@ namespace st {
         LuaEnvironment();
         ~LuaEnvironment();
 
-        sol::state& GetState();
-        sol::environment& GetEnvironment();
-
     private:
-
-        sol::state luaState;
-        sol::environment environment;
-
+        std::unique_ptr<LuaEnvironmentImpl> impl;
     };
 
 }
