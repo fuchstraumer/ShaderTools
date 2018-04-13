@@ -7,7 +7,7 @@ function get_cluster_dimensions()
     cluster_y = math.ceil(GetWindowY() / ClusterGridBlockSize);
     s_d = 2.0 * math.tan(math.rad(GetFieldOfViewY()) * 0.50) / cluster_y;
     log_dim_y = 1.0 / math.log(1.0 + s_d);
-    log_depth = math.log(GetZNear() / GetZFar());
+    log_depth = math.abs(math.log(GetZNear() / GetZFar()));
     cluster_z = math.floor(log_depth * log_dim_y);
     return cluster_x, cluster_y, cluster_z;
 end
@@ -57,7 +57,7 @@ function get_num_light_aabbs()
 end
 
 Resources = {
-    volumetric-forward = {
+    VolumetricForward = {
         ClusterData = {
             Type = "UniformBuffer",
             Members = {
@@ -69,52 +69,52 @@ Resources = {
             }
         },
         ClusterFlags = {
-            Type = "UImageBuffer",
+            Type = "StorageImage",
             Format = "r8ui",
             Size = get_num_clusters()
         },
         PointLightIndexList = {
-            Type = "UImageBuffer",
+            Type = "StorageImage",
             Format = "r32ui",
             Size = light_index_list_size()
         },
         SpotLightIndexList = {
-            Type = "UImageBuffer",
+            Type = "StorageImage",
             Format = "r32ui",
             Size = light_index_list_size()
         },
         PointLightGrid = {
-            Type = "UImageBuffer",
+            Type = "StorageImage",
             Format = "rg32ui",
             Size = light_grid_size()
         },
         SpotLightGrid = {
-            Type = "UImageBuffer",
+            Type = "StorageImage",
             Format = "rg32ui",
             Size = light_grid_size()
         },
         PointLightIndexCounter = {
-            Type = "UImageBuffer",
+            Type = "StorageImage",
             Format = "r32ui",
             Size = 1
         },
         SpotLightIndexCounter = {
-            Type = "UImageBuffer",
+            Type = "StorageImage",
             Format = "r32ui",
             Size = 1
         },
         UniqueClustersCounter = {
-            Type = "UImageBuffer",
+            Type = "StorageImage",
             Format = "r32ui",
             Size = 1
-        }
+        },
         UniqueClusters = {
-            Type = "UImageBuffer",
+            Type = "StorageImage",
             Format = "r32ui",
             Size = get_num_clusters()
         }
     },
-    volumetric-forward-lights = {
+    VolumetricForwardLights = {
         LightCounts = {
             Type = "UniformBuffer",
             Members = {
@@ -125,21 +125,21 @@ Resources = {
         },
         PointLights = {
             Type = "StorageBuffer",
-            MemberType = "PointLight",
-            Size = get_num_point_lights()
+            ElementType = "PointLight",
+            NumElements = get_num_point_lights()
         },
         SpotLights = {
             Type = "StorageBuffer",
-            MemberType = "SpotLight",
-            Size = get_num_spot_lights()
+            ElementType = "SpotLight",
+            NumElements = get_num_spot_lights()
         },
         DirectionalLights = {
             Type = "StorageBuffer",
-            MemberType = "DirectionalLight",
-            Size = get_num_directional_lights()
+            ElementType = "DirectionalLight",
+            NumElements = get_num_directional_lights()
         }
     },
-    indirect-args = {
+    IndirectArgsSet = {
         IndirectArgs = {
             Type = "UniformBuffer",
             Members = {
@@ -149,7 +149,7 @@ Resources = {
             }
         }       
     },
-    sort-resources = {
+    SortResources = {
         DispatchParams = {
             Type = "UniformBuffer",
             Members = {
@@ -176,27 +176,27 @@ Resources = {
             NumElements = get_num_light_aabbs()
         },
         PointLightMortonCodes = {
-            Type = "UImageBuffer",
+            Type = "StorageImage",
             Format = "r32ui",
             Size = get_num_point_lights()
         },
         SpotLightMortonCodes = {
-            Type = "UImageBuffer",
+            Type = "StorageImage",
             Format = "r32ui",
             Size = get_num_spot_lights()
         },
         PointLightIndices = {
-            Type = "UImageBuffer",
+            Type = "StorageImage",
             Format = "r32ui",
             Size = get_num_point_lights()
         },
         SpotLightIndices = {
-            Type = "UImageBuffer",
+            Type = "StorageImage",
             Format = "r32ui",
             Size = get_num_spot_lights()
         }
     },
-    bvh-resources = {
+    BVHResources = {
         BVHParams = {
             Type = "UniformBuffer",
             Members = {
