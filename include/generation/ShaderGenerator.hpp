@@ -4,7 +4,17 @@
 #include "common/CommonInclude.hpp"
 #include "common/Shader.hpp"
 namespace st {
+
     class ShaderGeneratorImpl;
+
+    struct engine_environment_callbacks_t {
+        std::add_pointer<int()>::type GetScreenSizeX{ nullptr };
+        std::add_pointer<int()>::type GetScreenSizeY{ nullptr };
+        std::add_pointer<double()>::type GetZNear{ nullptr };
+        std::add_pointer<double()>::type GetZFar{ nullptr };
+        std::add_pointer<double()>::type GetFOVY{ nullptr };
+    };
+    static engine_environment_callbacks_t RetrievalCallbacks;
 
     class ShaderGenerator { 
         ShaderGenerator(const ShaderGenerator&) = delete;
