@@ -3,19 +3,12 @@
 #define ST_RESOURCE_FILE_HPP
 #include "common/CommonInclude.hpp"
 #include "LuaEnvironment.hpp"
-#include <functional>
+#include <variant>
 namespace st {
 
-    struct engine_environment_callbacks_t {
-        std::function<int()> GetScreenSizeX;
-        std::function<int()> GetScreenSizeY;
-        std::function<double()> GetZNear;
-        std::function<double()> GZFar;
-        std::function<double()> GetFOVY;
-    };
 
     struct UniformBuffer {
-        std::vector<std::string> MemberTypes;
+        std::vector<std::pair<std::string, std::string>> MemberTypes;
     };
 
     struct StorageBuffer {
@@ -24,12 +17,7 @@ namespace st {
     };
 
     struct StorageImage {
-        enum class data_format {
-            Unsigned,
-            Signed,
-            Float,
-            Invalid 
-        } DataFormat{ data_format::Invalid };
+        std::string Format;
         size_t Size;
     };
 
@@ -45,13 +33,23 @@ namespace st {
         } TextureType{ texture_type::e2D };
     };
 
+    using lua_resource_t = std::variant<
+        UniformBuffer,
+        StorageBuffer,
+        StorageImage,
+        Texture
+    >;
+
+    using set_resource_map_t = std::unordered_map<std::string, lua_resource_t>;
+
     class ResourceFile {
     public:
-        ResourceFile(const char* fname, LuaEnvironment* _env);
-        
-        engine_environment_callbacks_t RetrievalCallbacks;
+        ResourceFile(LuaEnvironment* _env, const char* fname);
+
     private:
         LuaEnvironment * env;
+        std::unordered_map<std::string, set_resource_map_t> setResources;
+        void parseResources();
     };
 
 }

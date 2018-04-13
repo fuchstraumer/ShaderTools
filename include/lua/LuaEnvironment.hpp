@@ -2,10 +2,11 @@
 #ifndef ST_LUA_ENVIRONMENT_HPP
 #define ST_LUA_ENVIRONMENT_HPP
 #include "common/CommonInclude.hpp"
+#include "lua.hpp"
+#include "LuaBridge/LuaBridge.h"
+#include <unordered_map>
 
 namespace st {
-
-    class LuaEnvironmentImpl;
 
     class LuaEnvironment {
     public:
@@ -13,8 +14,15 @@ namespace st {
         LuaEnvironment();
         ~LuaEnvironment();
 
+        void Execute(const char* fname);
+
+        bool HasVariable(const std::string& var_name);
+        std::unordered_map<std::string, luabridge::LuaRef> GetTableMap(const luabridge::LuaRef& table);
+
+        lua_State* GetState();
+
     private:
-        std::unique_ptr<LuaEnvironmentImpl> impl;
+        lua_State * state{ nullptr };
     };
 
 }
