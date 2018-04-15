@@ -23,6 +23,10 @@ namespace st {
         parseResources();
     }
 
+    const set_resource_map_t& ResourceFile::GetResources(const std::string & block_name) const {
+        return setResources.at(block_name);
+    }
+
     void ResourceFile::parseResources() {
         using namespace luabridge;
 

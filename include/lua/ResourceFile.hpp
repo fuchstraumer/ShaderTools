@@ -4,6 +4,7 @@
 #include "common/CommonInclude.hpp"
 #include "LuaEnvironment.hpp"
 #include <variant>
+#include <map>
 namespace st {
 
 
@@ -22,7 +23,6 @@ namespace st {
     };
 
     struct Texture {
-        std::string Name;
         enum class texture_type {
             e1D,
             e2D,
@@ -40,11 +40,13 @@ namespace st {
         Texture
     >;
 
-    using set_resource_map_t = std::unordered_map<std::string, lua_resource_t>;
+    using set_resource_map_t = std::map<std::string, lua_resource_t>;
 
     class ResourceFile {
     public:
+
         ResourceFile(LuaEnvironment* _env, const char* fname);
+        const set_resource_map_t& GetResources(const std::string& block_name) const;
 
     private:
         LuaEnvironment * env;
