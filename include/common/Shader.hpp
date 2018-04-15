@@ -5,22 +5,13 @@
 
 namespace st {
 
-    class ShaderCompiler;
-
-
-    class Shader {
-    public:
-
-        Shader(const char* shader_name, const VkShaderStageFlagBits stages);
-
-        void addBody(const char* fname);
-        void addBody(const std::string& source);
-        VkShaderStageFlagBits getStage() const noexcept;
-        void compile();
-
+    struct Shader {
+        Shader(const char* shader_path, const VkShaderStageFlagBits stages);
         uint64_t ID;
-        std::string sourceCode{ "" };
-        std::vector<uint32_t> binaryData;
+        VkShaderStageFlagBits GetStage() const noexcept;
+        bool operator==(const Shader& other) const noexcept {
+            return ID == other.ID;
+        }
     };
 
 }
