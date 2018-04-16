@@ -6,7 +6,7 @@
 #include "lua/LuaEnvironment.hpp"
 #include "lua/ResourceFile.hpp"
 #include "../util/ShaderFileTracker.hpp"
-#include "../util/Delegate.hpp"
+#include "util/Delegate.hpp"
 #include <unordered_set>
 
 namespace st {

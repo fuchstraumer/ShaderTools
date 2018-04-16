@@ -14,16 +14,15 @@ namespace st {
             .addFunction("GetZNear", ShaderGroup::RetrievalCallbacks.GetZNear)
             .addFunction("GetZFar", ShaderGroup::RetrievalCallbacks.GetZFar)
             .addFunction("GetFieldOfViewY", ShaderGroup::RetrievalCallbacks.GetFOVY);
-  
     }
 
     const set_resource_map_t& ResourceFile::GetResources(const std::string & block_name) const {
         return setResources.at(block_name);
     }
 
-    void ResourceFile::Execute(const std::string& fname)  {
+    void ResourceFile::Execute(const char* fname)  {
 
-        if (luaL_dofile(env->GetState(), fname.c_str())) {
+        if (luaL_dofile(env->GetState(), fname)) {
             std::string err = lua_tostring(env->GetState(), -1);
             throw std::logic_error(err.c_str());
         }

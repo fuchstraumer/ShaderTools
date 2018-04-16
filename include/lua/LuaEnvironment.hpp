@@ -16,6 +16,8 @@ namespace st {
 
         void Execute(const char* fname);
 
+        static LuaEnvironment& GetCurrentLuaEnvironment();
+
         bool HasVariable(const std::string& var_name);
         std::unordered_map<std::string, luabridge::LuaRef> GetTableMap(const luabridge::LuaRef& table);
 
@@ -25,7 +27,6 @@ namespace st {
         lua_State * state{ nullptr };
     };
 
-    LuaEnvironment* GetCurrentLuaEnvironment();
 
 }
 

@@ -50,7 +50,7 @@ namespace st {
     public:
 
         ResourceFile(LuaEnvironment* _env);
-        void Execute(const std::string& fname);
+        void Execute(const char* fname);
         const bool& IsReady() const noexcept;
         const set_resource_map_t& GetResources(const std::string& block_name) const;
 
