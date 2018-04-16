@@ -59,31 +59,12 @@ namespace st {
         return impl->compile(path_to_source_str, stage);
     }
 
-    Shader ShaderCompiler::Compile(const std::string& name, const std::string& src, const VkShaderStageFlagBits stage) {
-        return impl->compile(name, src, stage);
-    }
-
     VkShaderStageFlags ShaderCompiler::GetShaderStage(const char* path_to_source) const {
         return impl->getStage(path_to_source);
     }
 
     bool ShaderCompiler::HasShader(const Shader& shader) const {
         return shaderBinaries.count(shader) != 0;
-    }
-
-    std::vector<uint32_t> ShaderCompiler::GetBinary(const Shader& shader) const {
-        if (!HasShader(shader)) {
-            std::cerr << "Requested binary does not exist.\n";
-            return std::vector<uint32_t>();
-        }
-        else {
-            return shaderBinaries.at(shader);
-        }
-
-    }
-
-    void ShaderCompiler::AddBinary(const char* name, const std::vector<uint32_t>& binary_data, const VkShaderStageFlagBits stage) {
-        WriteAndAddShaderBinary(name, binary_data, stage);
     }
 
     void ShaderCompiler::SaveShaderToAssemblyText(const Shader& shader_to_compile, const char* fname, const char* shader_name) {
