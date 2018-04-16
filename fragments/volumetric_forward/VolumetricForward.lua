@@ -179,7 +179,7 @@ Resources = {
             Type = "StorageImage",
             Format = "r32ui",
             Size = get_num_point_lights()
-        },
+        }
         SpotLightMortonCodes = {
             Type = "StorageImage",
             Format = "r32ui",
