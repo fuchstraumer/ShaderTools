@@ -2,6 +2,7 @@
 #include <vector>
 #include <chrono>
 #include "common/ShaderGroup.hpp"
+#include "util/FileObserver.hpp"
 #include <conio.h>
 #include <thread>
 
@@ -53,6 +54,9 @@ int main(int argc, char* argv[]) {
     };
 
     while (!exit) {
+        limit_frame();
+        auto& obs = FileObserver::GetFileObserver();
+        obs.Update();
     }
     std::cerr << "Tests complete.";
 }

@@ -88,7 +88,7 @@ namespace st {
             else {
                 
                 try {
-                    auto iter = ResourceScripts.emplace(absolute_file_path, std::make_unique<ResourceFile>(LuaEnvironment::GetCurrentLuaEnvironment()));
+                    auto iter = ResourceScripts.emplace(absolute_file_path, std::make_unique<ResourceFile>(&LuaEnvironment::GetCurrentLuaEnvironment()));
 
                     if (!iter.second) {
                         std::cerr << "Failed to create a new resource script at path " << absolute_file_path.c_str() << " !\n";
@@ -105,10 +105,8 @@ namespace st {
                     std::cerr << "Failed to create ResourceFile using given script: check console for script errors and try again.\n";
                     std::cerr << e.what();
                     ResourceFile* ptr = ResourceScripts.at(absolute_file_path).get();
-
-                    auto delegate_fn = delegate_t<void(const char*)>::create<ResourceFile, &ResourceFile::Execute>(ptr);
                     auto& observer = FileObserver::GetFileObserver();
-                    observer.WatchFile(absolute_file_path.c_str(), delegate_fn);
+                    observer.WatchFile(absolute_file_path.c_str(), std::move(watch_event_t::create<ResourceFile, &ResourceFile::Execute>(ptr)));
                     return false;
                 }
             }

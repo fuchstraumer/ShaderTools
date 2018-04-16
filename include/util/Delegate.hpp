@@ -92,7 +92,7 @@ namespace st {
         }
 
         template<typename LambdaFunc>
-        delegate_t(const LambdaFunc& func) {
+        explicit delegate_t(const LambdaFunc& func) {
             assign((void*)(&func), lambda_stub<LambdaFunc>);
         }
 
@@ -150,7 +150,7 @@ namespace st {
 
     private:
 
-        delegate_t(void* obj, typename base_delegate_t<Result(Args...)>::func_stub_t stub) {
+        explicit delegate_t(void* obj, typename base_delegate_t<Result(Args...)>::func_stub_t stub) {
             this->invocation.object = obj;
             this->invocation.stub = stub;
         }
