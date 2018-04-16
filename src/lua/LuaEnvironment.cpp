@@ -2,6 +2,8 @@
 using namespace luabridge;
 namespace st {
 
+    static std::unique_ptr<LuaEnvironment> dllEnvironment = std::make_unique<LuaEnvironment>();
+
     LuaEnvironment::LuaEnvironment() : state(luaL_newstate()) {
         luaL_openlibs(state);
     }
@@ -40,6 +42,10 @@ namespace st {
 
     lua_State * LuaEnvironment::GetState() {
         return state;
+    }
+
+    LuaEnvironment * GetCurrentLuaEnvironment() {
+        return dllEnvironment.get();
     }
 
 }

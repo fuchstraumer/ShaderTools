@@ -6,15 +6,8 @@
 namespace st {
 
     class ShaderGeneratorImpl;
+    class ResourceFile;
 
-    struct engine_environment_callbacks_t {
-        std::add_pointer<int()>::type GetScreenSizeX{ nullptr };
-        std::add_pointer<int()>::type GetScreenSizeY{ nullptr };
-        std::add_pointer<double()>::type GetZNear{ nullptr };
-        std::add_pointer<double()>::type GetZFar{ nullptr };
-        std::add_pointer<double()>::type GetFOVY{ nullptr };
-    };
-    static engine_environment_callbacks_t RetrievalCallbacks;
 
     class ShaderGenerator { 
         ShaderGenerator(const ShaderGenerator&) = delete;
@@ -25,7 +18,7 @@ namespace st {
         ShaderGenerator(ShaderGenerator&& other) noexcept;
         ShaderGenerator& operator=(ShaderGenerator&& other) noexcept;
 
-        void AddResources(const char* path_to_resource_file);
+        void AddResources(ResourceFile* rsrc_file);
         void AddBody(const char* path_to_src, const size_t num_includes = 0, const char* const* paths = nullptr);
         void AddIncludePath(const char* path_to_include);
         void GetFullSource(size_t* len, char* dest) const;

@@ -3,10 +3,12 @@
 #define ST_RESOURCE_FILE_HPP
 #include "common/CommonInclude.hpp"
 #include "LuaEnvironment.hpp"
+#include <vector>
+#include <string>
+#include <unordered_map>
 #include <variant>
 #include <map>
 namespace st {
-
 
     struct UniformBuffer {
         std::vector<std::pair<std::string, std::string>> MemberTypes;
@@ -43,12 +45,17 @@ namespace st {
     using set_resource_map_t = std::map<std::string, lua_resource_t>;
 
     class ResourceFile {
+        ResourceFile(const ResourceFile&) = delete;
+        ResourceFile& operator=(const ResourceFile&) = delete;
     public:
 
-        ResourceFile(LuaEnvironment* _env, const char* fname);
+        ResourceFile(LuaEnvironment* _env);
+        void Execute(const std::string& fname);
+        const bool& IsReady() const noexcept;
         const set_resource_map_t& GetResources(const std::string& block_name) const;
 
     private:
+        bool ready{ false };
         LuaEnvironment * env;
         std::unordered_map<std::string, set_resource_map_t> setResources;
         void parseResources();

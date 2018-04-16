@@ -26,8 +26,6 @@ namespace st {
     extern std::unordered_map<Shader, std::string> shaderFiles;
     extern std::unordered_multimap<Shader, fs::path> shaderPaths;
 
-    engine_environment_callbacks_t RetrievalCallbacks = engine_environment_callbacks_t{};
-
     std::string BasePath = "../fragments/";
     std::string LibPath = "../fragments/include";
 
@@ -132,8 +130,7 @@ namespace st {
         std::map<fs::path, std::string> fileContents;
         std::map<std::string, std::string> resourceBlocks;
         shader_resources_t ShaderResources;
-        std::unique_ptr<ResourceFile> luaResources;
-        std::unique_ptr<LuaEnvironment> luaEnv;
+        ResourceFile* luaResources;
         std::vector<fs::path> includes;
     };
 
@@ -499,11 +496,6 @@ namespace st {
     ShaderGenerator& ShaderGenerator::operator=(ShaderGenerator&& other) noexcept {
         impl = std::move(other.impl);
         return *this;
-    }
-
-    void ShaderGenerator::AddResources(const char* path_to_resource_file) {
-        impl->luaEnv = std::make_unique<LuaEnvironment>();
-        impl->luaResources = std::make_unique<ResourceFile>(impl->luaEnv.get(), path_to_resource_file);
     }
 
     void ShaderGenerator::AddBody(const char* path, const size_t num_includes, const char* const* paths) {

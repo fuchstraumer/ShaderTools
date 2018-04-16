@@ -25,6 +25,8 @@ namespace st {
         lua_State * state{ nullptr };
     };
 
+    LuaEnvironment* GetCurrentLuaEnvironment();
+
 }
 
 #endif //!ST_LUA_ENVIRONMENT_HPP

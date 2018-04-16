@@ -2,34 +2,44 @@
 #include "parser/ShaderResource.hpp"
 #include "luabridge/LuaBridge.h"
 #include "generation/ShaderGenerator.hpp"
+#include "common/ShaderGroup.hpp"
 #include <iostream>
 namespace st {
 
-    ResourceFile::ResourceFile(LuaEnvironment* _env, const char* fname) : env(_env) {
+    ResourceFile::ResourceFile(LuaEnvironment* _env) : env(_env) {
         using namespace luabridge;
         getGlobalNamespace(_env->GetState())
-            .addFunction("GetWindowX", RetrievalCallbacks.GetScreenSizeX)
-            .addFunction("GetWindowY", RetrievalCallbacks.GetScreenSizeY)
-            .addFunction("GetZNear", RetrievalCallbacks.GetZNear)
-            .addFunction("GetZFar", RetrievalCallbacks.GetZFar)
-            .addFunction("GetFieldOfViewY", RetrievalCallbacks.GetFOVY);
-        
-        if (luaL_dofile(_env->GetState(), fname)) {
-            std::string err = lua_tostring(_env->GetState(), -1);
-            std::cerr << err;
-            throw std::runtime_error(err.c_str());
-        }
-
-        parseResources();
+            .addFunction("GetWindowX", ShaderGroup::RetrievalCallbacks.GetScreenSizeX)
+            .addFunction("GetWindowY", ShaderGroup::RetrievalCallbacks.GetScreenSizeY)
+            .addFunction("GetZNear", ShaderGroup::RetrievalCallbacks.GetZNear)
+            .addFunction("GetZFar", ShaderGroup::RetrievalCallbacks.GetZFar)
+            .addFunction("GetFieldOfViewY", ShaderGroup::RetrievalCallbacks.GetFOVY);
+  
     }
 
     const set_resource_map_t& ResourceFile::GetResources(const std::string & block_name) const {
         return setResources.at(block_name);
     }
 
+    void ResourceFile::Execute(const std::string& fname)  {
+
+        if (luaL_dofile(env->GetState(), fname.c_str())) {
+            std::string err = lua_tostring(env->GetState(), -1);
+            throw std::logic_error(err.c_str());
+        }
+
+        parseResources();
+        ready = true;
+
+    }
+
+    const bool & ResourceFile::IsReady() const noexcept {
+        return ready;
+    }
+
     void ResourceFile::parseResources() {
         using namespace luabridge;
-
+        
         LuaRef set_table = getGlobal(env->GetState(), "Resources");
         auto resource_sets = env->GetTableMap(set_table);
 

@@ -4,27 +4,38 @@
 #include "CommonInclude.hpp"
 #include "Shader.hpp"
 
-
 namespace st {
 
     class ShaderGroupImpl;
 
+
+    struct engine_environment_callbacks_t {
+        std::add_pointer<int()>::type GetScreenSizeX{ nullptr };
+        std::add_pointer<int()>::type GetScreenSizeY{ nullptr };
+        std::add_pointer<double()>::type GetZNear{ nullptr };
+        std::add_pointer<double()>::type GetZFar{ nullptr };
+        std::add_pointer<double()>::type GetFOVY{ nullptr };
+    };
+
+
     /*  Designed to be used to group shaders into the groups that they are used in
         when bound to a pipeline, to simplify a few key things.
     */
-    class ShaderGroup {
+    class ST_API ShaderGroup {
         ShaderGroup(const ShaderGroup&) = delete;
         ShaderGroup& operator=(const ShaderGroup&) = delete;
     public:
 
-        ShaderGroup();
+        ShaderGroup(const char* group_name, const char* resource_file_path);
         ~ShaderGroup();
         ShaderGroup(ShaderGroup&& other) noexcept;
         ShaderGroup& operator=(ShaderGroup&& other) noexcept;
 
+        Shader RegisterShader(const char* shader_name, const VkShaderStageFlagBits& flags);
+        void RegisterShader(const Shader& handle);
 
-        void AddShader(const char* fname, VkShaderStageFlagBits stage = VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM);
-        void AddShader(const char* shader_name, const char* src_str, const uint32_t src_str_len, const VkShaderStageFlagBits stage);
+        void AddShaderBody(const Shader& handle, const char* body_src_file);
+
 
         void GetVertexAttributes(uint32_t num_bindings, VkVertexInputAttributeDescription* bindings) const;
         void GetSetLayoutBindings(const uint32_t set_idx, uint32_t* num_bindings, VkDescriptorSetLayoutBinding* bindings) const;
@@ -43,6 +54,7 @@ namespace st {
             uint32_t NumNames{ 0 };
         };
 
+        static engine_environment_callbacks_t RetrievalCallbacks;
         shader_resource_names_t GetSetResourceNames(const uint32_t set_idx) const;
 
         size_t GetMemoryReqForResource(const char* rsrc_name);
