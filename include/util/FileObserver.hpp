@@ -27,6 +27,7 @@ namespace st {
 
         void WatchFile(const char* fname, watch_event_t callback_fn);
         void Unwatch(const char* fname);
+        void TouchFile(const char* fname);
 
         void Update();
 

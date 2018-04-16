@@ -1,4 +1,4 @@
-#include "FileObserver.hpp"
+#include "util/FileObserver.hpp"
 #include <vector>
 #include <experimental/filesystem>
 #include <thread>
@@ -116,6 +116,18 @@ namespace st {
         }
     }
 
+    void FileObserverImpl::touch(const char * fname) {
+        const fs::path file_path = fs::absolute(fs::path(fname));
+        auto iter = std::find_if(items.begin(), items.end(), [file_path](const std::unique_ptr<ObserverItem>& item) {
+            return item->Path == file_path;
+        });
+
+        if (iter != items.end()) {
+            std::lock_guard<std::recursive_mutex> touchGuard(guardMutex);
+            (*iter)->Timestamp = fs::file_time_type(std::chrono::system_clock::now());
+        }
+    }
+
     void FileObserverImpl::start() {
         if (!watchThread->joinable()) {
             endThread = false;
@@ -211,4 +223,8 @@ namespace st {
         impl->update();
     }
     
+    void FileObserver::TouchFile(const char* fname) {
+        impl->touch(fname);
+    }
+
 }
