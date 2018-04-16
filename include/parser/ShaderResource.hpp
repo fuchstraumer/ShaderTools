@@ -27,13 +27,10 @@ namespace st {
 
         std::string GetName() const;
         const uint32_t& GetBinding() const noexcept;
-        const uint32_t& GetParentSet() const noexcept;
         const VkShaderStageFlags& GetStages() const noexcept;
         const VkDescriptorType& GetType() const noexcept;
         const std::vector<ShaderResourceSubObject>& GetMembers() const noexcept;
 
-        void SetBinding(uint32_t _binding);
-        void SetParentSet(uint32_t parent_set);
         void SetStages(VkShaderStageFlags stages);
         void SetType(VkDescriptorType _type);
         void SetSizeClass(size_class _size_class);
@@ -41,14 +38,14 @@ namespace st {
         void SetName(std::string name);
         void SetMembers(std::vector<ShaderResourceSubObject> _members);
         void SetFormat(VkFormat fmt);
+        void SetBinding(uint32_t binding);
 
     private:
 
+        uint32_t binding{ 0 };
         std::string name{ "" };
         size_class sizeClass{ size_class::Absolute };
         storage_class storageClass{ storage_class::Read };
-        uint32_t binding{ std::numeric_limits<uint32_t>::max() };
-        uint32_t parentSet{ std::numeric_limits<uint32_t>::max() };
         VkShaderStageFlags stages{ VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM };
         VkDescriptorType type{ VK_DESCRIPTOR_TYPE_MAX_ENUM };
         std::vector<ShaderResourceSubObject> members;
