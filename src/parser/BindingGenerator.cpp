@@ -74,10 +74,6 @@ namespace st {
         return static_cast<uint32_t>(impl->sortedSets.size());
     }
 
-    std::map<uint32_t, ShaderResource> BindingGenerator::GetDescriptorSetObjects(const uint32_t & set_idx) const {
-        return impl->sortedSets.at(set_idx).Members;
-    }
-
     constexpr static std::array<VkShaderStageFlags, 6> possible_stages{
         VK_SHADER_STAGE_VERTEX_BIT,
         VK_SHADER_STAGE_FRAGMENT_BIT,
@@ -139,17 +135,16 @@ namespace st {
         for (const auto& rsrc : resources) {
             ShaderResource obj;
             obj.SetBinding(cmplr.get_decoration(rsrc.id, spv::DecorationBinding));
-            obj.SetParentSet(cmplr.get_decoration(rsrc.id, spv::DecorationDescriptorSet));
             obj.SetName(cmplr.get_name(rsrc.id));
             if (parsing_buffer_type(type_being_parsed)) {
                 obj.SetMembers(extract_buffer_members(rsrc, cmplr));
             }
             obj.SetType(type_being_parsed);
             auto spir_type = cmplr.get_type(rsrc.type_id);
-            obj.SetStorageClass(StorageClassFromSPIRType(spir_type));
+            //obj.SetStorageClass(StorageClassFromSPIRType(spir_type));
             obj.SetFormat(FormatFromSPIRType(spir_type));
             obj.SetStages(stage);
-            info.emplace(obj.GetParentSet(), obj);
+            info.emplace(cmplr.get_decoration(rsrc.id, spv::DecorationDescriptorSet), obj);
         }
 
     }
@@ -178,10 +173,6 @@ namespace st {
 
     void BindingGenerator::ParseBinary(const Shader & shader) {
         impl->parseBinary(shader);
-    }
-    
-    void BindingGenerator::ParseBinary(const std::vector<uint32_t>& binary_data, const VkShaderStageFlags stage) {
-        impl->parseBinary(binary_data, stage);
     }
 
     void BindingGeneratorImpl::parseBinary(const Shader& shader_handle) {
@@ -251,43 +242,6 @@ namespace st {
 
         inputAttributes.emplace(stage, parseInputAttributes(glsl));
         outputAttributes.emplace(stage, parseOutputAttributes(glsl));
-    }
-
-    std::map<std::string, VkDescriptorSetLayoutBinding> BindingGenerator::GetSetNameBindingPairs(const uint32_t & set_idx) const {
-        auto iter = impl->sortedSets.find(set_idx);
-        if (iter == impl->sortedSets.cend()) {
-            return std::map<std::string, VkDescriptorSetLayoutBinding>();
-        }
-
-        const auto& set = iter->second;
-        std::map<std::string, VkDescriptorSetLayoutBinding> results;
-        for (auto& set : set.Members) {
-            results.emplace(set.second.GetName(), (VkDescriptorSetLayoutBinding)set.second);
-        }
-        
-        return results;
-    }
-
-    std::vector<VkPushConstantRange> BindingGenerator::GetPushConstantRanges() const {
-        std::vector<VkPushConstantRange> ranges;
-        for (auto& entry : impl->pushConstants) {
-            ranges.push_back((VkPushConstantRange)entry.second);
-        }
-        return ranges;
-    }
-
-    std::vector<VkVertexInputAttributeDescription> BindingGenerator::GetVertexAttributes() const {
-        if (impl->inputAttributes.count(VK_SHADER_STAGE_VERTEX_BIT) == 0) {
-            return std::vector<VkVertexInputAttributeDescription>();
-        }
-        const auto& input_attrs = impl->inputAttributes.at(VK_SHADER_STAGE_VERTEX_BIT);
-        
-        std::vector<VkVertexInputAttributeDescription> actual_attrs;
-        for (const auto& input_attr : input_attrs) {
-            actual_attrs.emplace_back((VkVertexInputAttributeDescription)input_attr.second);
-        }
-        
-        return actual_attrs;
     }
 
 }
