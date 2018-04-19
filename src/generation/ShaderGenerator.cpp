@@ -358,23 +358,23 @@ namespace st {
     std::string ShaderGeneratorImpl::getUniformBufferResourceString(const size_t& active_set, const UniformBuffer& buffer, const std::string& name) {
         const std::string prefix = getResourcePrefix(active_set, "");
         const std::string alt_name = std::string{ "_" } + name + std::string{ "_" };
-        std::string result = prefix + std::string{ " uniform " } + name + std::string{ " {\n" };
+        std::string result = prefix + std::string{ "uniform " } + alt_name + std::string{ " {\n" };
         for (const auto& member : buffer.MemberTypes) {
             result += std::string{ "    " };
             result += member.second;
             result += std::string{ " " } +member.first;
             result += std::string{ ";\n" };
         }
-        result += std::string{ "} " } + name + std::string{ ";\n" };
+        result += std::string{ "} " } + name + std::string{ ";\n\n" };
         return result;
     }
 
     std::string ShaderGeneratorImpl::getStorageBufferResourceString(const size_t& active_set, const StorageBuffer& buffer, const std::string& name) {
         const std::string prefix = getResourcePrefix(active_set, "std430");
-        const std::string alt_name = std::string{ " buffer " } + std::string{ "_" } + name + std::string{ "_" };
+        const std::string alt_name = std::string{ "buffer " } + std::string{ "_" } + name + std::string{ "_" };
         std::string result = prefix + alt_name + std::string{ " {\n" };
         result += std::string{ "    " } + buffer.ElementType + std::string{ " Data[];\n" };
-        result += std::string{ "} " } + name + std::string{ ";\n" };
+        result += std::string{ "} " } + name + std::string{ ";\n\n" };
         return result;
     }
 
@@ -397,7 +397,7 @@ namespace st {
 
         const std::string prefix = getResourcePrefix(active_set, image.Format);
         const std::string buffer_type = get_storage_buffer_subtype(image.Format);
-        return prefix + std::string{ " " } + buffer_type + std::string{ " " } +name + std::string{ ";\n" };
+        return prefix + std::string{ "uniform " } + buffer_type + std::string{ " " } +name + std::string{ ";\n" };
     }
 
 #ifndef NDEBUG
@@ -411,12 +411,11 @@ namespace st {
         if (!ShaderResources.DescriptorBindings.empty()) {
             active_set = ShaderResources.DescriptorBindings.crbegin()->first + 1;
         }
-        std::string block_str = resourceBlocks.at(block_name);
 
-        fragments.emplace(shaderFragment{ fragment_type::ResourceBlock, std::string("// Resource block:") + block_name + std::string("\n") });
+        fragments.emplace(shaderFragment{ fragment_type::ResourceBlock, std::string("// Resource block: ") + block_name + std::string("\n") });
 
         auto& resource_block = luaResources->GetResources(block_name);
-        std::string resource_block_string{ "\n" };
+        std::string resource_block_string{ "" };
 
         for (auto& resource : resource_block) {
             const auto& resource_name = resource.first;
@@ -437,9 +436,11 @@ namespace st {
 
         }
 
+        resource_block_string += std::string{ "// End resource block\n\n" };
+
         if (SAVE_BLOCKS_TO_FILE) {
             std::string block_file_name = block_name + std::string{ ".glsl" };
-            std::ofstream block_stream(block_name);
+            std::ofstream block_stream(block_file_name);
             if (!block_stream.is_open()) {
                 throw std::runtime_error("failed to open stream!");
             }
