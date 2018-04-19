@@ -26,17 +26,14 @@ namespace st {
         ShaderGroup& operator=(const ShaderGroup&) = delete;
     public:
 
-        ShaderGroup(const char* group_name, const char* resource_file_path);
+        ShaderGroup(const char* group_name, const char* resource_file_path, const size_t num_includes = 0, const char* const* paths = nullptr);
         ~ShaderGroup();
         ShaderGroup(ShaderGroup&& other) noexcept;
         ShaderGroup& operator=(ShaderGroup&& other) noexcept;
 
-        Shader RegisterShader(const char* shader_name, const VkShaderStageFlagBits& flags);
-        void RegisterShader(const Shader& handle);
-
-        void AddShaderBody(const Shader& handle, const char* body_src_file);
-
-
+        Shader AddShader(const char* shader_name, const char* body_src_file_path, const VkShaderStageFlagBits& flags);
+        
+        void GetShaderBinary(const Shader& handle, size_t* binary_size, uint32_t* dest_binary_ptr) const;
         void GetVertexAttributes(uint32_t num_bindings, VkVertexInputAttributeDescription* bindings) const;
         void GetSetLayoutBindings(const uint32_t set_idx, uint32_t* num_bindings, VkDescriptorSetLayoutBinding* bindings) const;
         

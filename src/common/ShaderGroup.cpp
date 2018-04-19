@@ -19,14 +19,12 @@ namespace st {
         ShaderGroupImpl& operator=(const ShaderGroupImpl& other) = delete;
     public:
 
-        ShaderGroupImpl(const std::string& group_name);
+        ShaderGroupImpl(const std::string& group_name, size_t num_includes, const char* const* include_paths);
         ~ShaderGroupImpl();
 
-        void addShaderBody(const Shader& handle, std::string src_str);
-        void buildShader(const Shader& handle);
+        void addShader(const Shader& handle, std::string src_str_path);
 
-        void resourceScriptValid();
-
+        std::vector<const char*> includePaths;
         std::unordered_set<st::Shader> stHandles{};
         std::unique_ptr<ShaderGenerator> generator{ nullptr };
         std::unique_ptr<ShaderCompiler> compiler{ nullptr };
@@ -35,23 +33,20 @@ namespace st {
         const std::string groupName;
     };
 
-    ShaderGroupImpl::ShaderGroupImpl(const std::string& group_name) : groupName(group_name), compiler(std::make_unique<ShaderCompiler>()), generator(std::make_unique<ShaderGenerator>()),
-        bindingGenerator(std::make_unique<BindingGenerator>()) { }
+    ShaderGroupImpl::ShaderGroupImpl(const std::string& group_name, size_t num_includes, const char* const* include_paths) : groupName(group_name), compiler(std::make_unique<ShaderCompiler>()), 
+        bindingGenerator(std::make_unique<BindingGenerator>()) {
+        for (size_t i = 0; i < num_includes; ++i) {
+            includePaths.emplace_back(include_paths[i]);
+        }
+    }
 
     ShaderGroupImpl::~ShaderGroupImpl() { }
 
-    void ShaderGroupImpl::addShaderBody(const Shader& handle, std::string src_str_path) {
-
-    }
-
-    void ShaderGroupImpl::buildShader(const Shader & handle)
-    {
-    }
-
-    void ShaderGroupImpl::resourceScriptValid() {
-        for (const auto& shader : stHandles) {
-            buildShader(shader);
+    void ShaderGroupImpl::addShader(const Shader& handle, std::string src_str_path) {
+        if (generator != nullptr) {
+            generator = std::make_unique<ShaderGenerator>(handle.GetStage());
         }
+
     }
 
     ShaderGroup::shader_resource_names_t::shader_resource_names_t() {}
@@ -79,35 +74,39 @@ namespace st {
         return shader_resource_names_t{};
     }
 
-    ShaderGroup::ShaderGroup(const char * group_name, const char * resource_file_path) : impl(std::make_unique<ShaderGroupImpl>(group_name)){
+    ShaderGroup::ShaderGroup(const char * group_name, const char * resource_file_path, const size_t num_includes, const char* const* paths) : impl(std::make_unique<ShaderGroupImpl>(group_name, num_includes, paths)){
         const std::string file_path{ resource_file_path };
         if (!FileTracker.FindResourceScript(file_path, impl->rsrcFile)) {
             throw std::runtime_error("Failed to execute resource script: check error log.");
         }
     }
 
-    ShaderGroup::~ShaderGroup()
-    {
-    }
+    ShaderGroup::~ShaderGroup() {}
 
-    Shader ShaderGroup::RegisterShader(const char * shader_name, const VkShaderStageFlagBits & flags) {
-        auto iter = impl->stHandles.emplace(Shader(shader_name, flags));
-        if (!iter.second) {
-            throw std::runtime_error("Couldn't add Shader handle to ShaderGroup's map!");
-        }
-        return *iter.first;
-    }
-
-    void ShaderGroup::RegisterShader(const Shader & handle) {
+    Shader ShaderGroup::AddShader(const char * shader_name, const char * body_src_file_path, const VkShaderStageFlagBits & flags) {
+        Shader handle(shader_name, flags);
         auto iter = impl->stHandles.emplace(handle);
         if (!iter.second) {
-            throw std::runtime_error("Couldn't add Shader handle to ShaderGroup's map!");
+            throw std::runtime_error("Could not add shader to ShaderGroup, failed to emplace into handles set: might already exist!");
+        }
+        impl->addShaderBody(handle, body_src_file_path);
+    }
+
+    void ShaderGroup::GetShaderBinary(const Shader & handle, size_t * binary_size, uint32_t * dest_binary_ptr) const {
+        auto iter = impl->stHandles.find(handle);
+        std::vector<uint32_t> binary_vec;
+        if (iter == impl->stHandles.cend()) {
+            *binary_size = 0;
+        }
+        else if (FileTracker.FindShaderBinary(handle, binary_vec)) {
+            *binary_size = binary_vec.size();
+            if (dest_binary_ptr != nullptr) {
+                std::copy(binary_vec.begin(), binary_vec.end(), dest_binary_ptr);
+            }
+        }
+        else {
+            *binary_size = 0;
         }
     }
-
-    void ShaderGroup::AddShaderBody(const Shader & handle, const char * shader_body_src_file) {
-        impl->addShaderBody(handle, shader_body_src_file);
-    }
-
 
 }
