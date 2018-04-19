@@ -24,6 +24,7 @@ namespace st {
 
         void addShader(const Shader& handle, std::string src_str_path);
 
+
         std::vector<const char*> includePaths;
         std::unordered_set<st::Shader> stHandles{};
         std::unique_ptr<ShaderGenerator> generator{ nullptr };
@@ -43,10 +44,22 @@ namespace st {
     ShaderGroupImpl::~ShaderGroupImpl() { }
 
     void ShaderGroupImpl::addShader(const Shader& handle, std::string src_str_path) {
-        if (generator != nullptr) {
-            generator = std::make_unique<ShaderGenerator>(handle.GetStage());
-        }
+        generator = std::make_unique<ShaderGenerator>(handle.GetStage());
+       
 
+        generator->Generate(handle, src_str_path.c_str(), includePaths.size(), includePaths.data());
+        size_t completed_src_size = 0;
+        generator->GetFullSource(&completed_src_size, nullptr);
+        std::string completed_src_str; completed_src_str.resize(completed_src_size);
+        generator->GetFullSource(&completed_src_size, completed_src_str.data());
+
+        const std::string& name = FileTracker.ShaderNames.at(handle);
+        compiler->Compile(handle, name.c_str(), completed_src_str.c_str(), completed_src_size);
+
+        bindingGenerator->ParseBinary(handle);
+
+        // Need to reset generator to neutral state each time.
+        generator.reset();
     }
 
     ShaderGroup::shader_resource_names_t::shader_resource_names_t() {}
@@ -85,11 +98,12 @@ namespace st {
 
     Shader ShaderGroup::AddShader(const char * shader_name, const char * body_src_file_path, const VkShaderStageFlagBits & flags) {
         Shader handle(shader_name, flags);
+        FileTracker.ShaderNames.emplace(handle, shader_name);
         auto iter = impl->stHandles.emplace(handle);
         if (!iter.second) {
             throw std::runtime_error("Could not add shader to ShaderGroup, failed to emplace into handles set: might already exist!");
         }
-        impl->addShaderBody(handle, body_src_file_path);
+        impl->addShader(handle, body_src_file_path);
     }
 
     void ShaderGroup::GetShaderBinary(const Shader & handle, size_t * binary_size, uint32_t * dest_binary_ptr) const {
