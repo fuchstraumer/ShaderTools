@@ -31,7 +31,7 @@ ADD_LIBRARY(ShaderTools STATIC ${COMMON} ${UTIL} ${GENERATION} ${PARSER} ${LUA})
 SET_PROPERTY(TARGET ShaderTools PROPERTY CXX_STANDARD 17)
 TARGET_COMPILE_DEFINITIONS(ShaderTools PRIVATE -DSHADERTOOLS_BUILD_DLL)
 TARGET_LINK_LIBRARIES(ShaderTools shaderc spirv-cross-core spirv-cross-glsl spirv-cross-cpp)
-TARGET_LINK_LIBRARIES(ShaderTools liblua mango libfswatch)
+TARGET_LINK_LIBRARIES(ShaderTools liblua)
 TARGET_INCLUDE_DIRECTORIES(ShaderTools PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/third_party/" "${CMAKE_CURRENT_SOURCE_DIR}/include" "${Vulkan_INCLUDE_DIRS}")
 TARGET_INCLUDE_DIRECTORIES(ShaderTools PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/ext/include" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/luajit/src"
     "${CMAKE_CURRENT_SOURCE_DIR}/third_party/luabridge/Source")
@@ -45,7 +45,7 @@ OPTION(BUILD_TESTS "Build some test executables for shader parsing and compiliat
 IF(BUILD_TESTS)
     ADD_EXECUTABLE(ParseTest0 "${CMAKE_CURRENT_SOURCE_DIR}/tests/test.cpp")
     ADD_DEPENDENCIES(ParseTest0 ShaderTools)
-    TARGET_LINK_LIBRARIES(ParseTest0 ShaderTools libfswatch)
+    TARGET_LINK_LIBRARIES(ParseTest0 ShaderTools)
     TARGET_INCLUDE_DIRECTORIES(ParseTest0 PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/luajit/src"
     "${CMAKE_CURRENT_SOURCE_DIR}/third_party/luabridge/Source")
 ENDIF()
