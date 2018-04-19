@@ -585,5 +585,9 @@ namespace st {
         BasePath = std::string(new_base_path);
     }
 
+    const char * ShaderGenerator::GetBasePath() {
+        return BasePath.c_str();
+    }
+
 
 }

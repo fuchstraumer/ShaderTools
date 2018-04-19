@@ -8,17 +8,17 @@
 #include <unordered_map>
 #include <map>
 #include <set>
+#include "../util/ShaderFileTracker.hpp"
 #define _SCL_SECURE_NO_WARNINGS
 
 namespace st {
+
+    extern ShaderFileTracker FileTracker;
 
     struct DescriptorSetInfo {
         uint32_t Binding;
         std::map<uint32_t, ShaderResource> Members;
     };
-
-    extern std::unordered_map<Shader, std::string> shaderFiles;
-    extern std::unordered_map<Shader, std::vector<uint32_t>> shaderBinaries;
 
     class BindingGeneratorImpl {
         BindingGeneratorImpl(const BindingGeneratorImpl&) = delete;
@@ -176,11 +176,12 @@ namespace st {
     }
 
     void BindingGeneratorImpl::parseBinary(const Shader& shader_handle) {
-        if (shaderBinaries.count(shader_handle) == 0) {
+        std::vector<uint32_t> binary_vec;
+        if (!FileTracker.FindShaderBinary(shader_handle, binary_vec)) {
             throw std::runtime_error("Attempted to parse binary that does not exist in current program!");
         }
 
-        parseImpl(shaderBinaries.at(shader_handle), shader_handle.GetStage());
+        parseImpl(binary_vec, shader_handle.GetStage());
     }
 
     void BindingGeneratorImpl::parseBinary(const std::vector<uint32_t>& binary_data, const VkShaderStageFlags stage) {
