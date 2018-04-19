@@ -1,9 +1,7 @@
 #include <iostream>
 #include <vector>
-#include <chrono>
 #include "common/ShaderGroup.hpp"
-#include <conio.h>
-#include <thread>
+#include <array>
 
 int screen_x() {
     return 1920;
@@ -34,7 +32,9 @@ int main(int argc, char* argv[]) {
     ShaderGroup::RetrievalCallbacks.GetZFar = &z_far;
     ShaderGroup::RetrievalCallbacks.GetFOVY = &fov_y;
 
-    ShaderGroup group("VolumetricForward", "../fragments/volumetric_forward/VolumetricForward.lua");
+    const std::array<const char*, 1> include_paths{ "../fragments/volumetric_forward/" };
+    ShaderGroup group("VolumetricForward", "../fragments/volumetric_forward/VolumetricForward.lua", 1, include_paths.data());
+    auto handle = group.AddShader("AssignLightsToClustersBVH", "../fragments/volumetric_forward/compute/AssignLightsToClustersBVH.comp", VK_SHADER_STAGE_COMPUTE_BIT);
 
     std::cerr << "Tests complete.";
 }

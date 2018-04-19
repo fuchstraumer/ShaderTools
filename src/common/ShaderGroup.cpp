@@ -8,10 +8,10 @@
 #include "../util/ShaderFileTracker.hpp"
 #include "util/Delegate.hpp"
 #include <unordered_set>
-
+#include <experimental/filesystem>
 namespace st {
 
-    static ShaderFileTracker FileTracker;
+    ShaderFileTracker FileTracker;
     engine_environment_callbacks_t ShaderGroup::RetrievalCallbacks = engine_environment_callbacks_t{};
 
     class ShaderGroupImpl {
@@ -30,7 +30,7 @@ namespace st {
         std::unique_ptr<ShaderGenerator> generator{ nullptr };
         std::unique_ptr<ShaderCompiler> compiler{ nullptr };
         std::unique_ptr<BindingGenerator> bindingGenerator{ nullptr };
-        const ResourceFile* rsrcFile{ nullptr };
+        ResourceFile* rsrcFile{ nullptr };
         const std::string groupName;
     };
 
@@ -46,7 +46,7 @@ namespace st {
     void ShaderGroupImpl::addShader(const Shader& handle, std::string src_str_path) {
         generator = std::make_unique<ShaderGenerator>(handle.GetStage());
        
-
+        generator->SetResourceFile(rsrcFile);
         generator->Generate(handle, src_str_path.c_str(), includePaths.size(), includePaths.data());
         size_t completed_src_size = 0;
         generator->GetFullSource(&completed_src_size, nullptr);
@@ -92,6 +92,10 @@ namespace st {
         if (!FileTracker.FindResourceScript(file_path, impl->rsrcFile)) {
             throw std::runtime_error("Failed to execute resource script: check error log.");
         }
+        else {
+            namespace fs = std::experimental::filesystem;
+            impl->rsrcFile = FileTracker.ResourceScripts.at(fs::path(fs::absolute(fs::path(file_path))).string()).get();
+        }
     }
 
     ShaderGroup::~ShaderGroup() {}
@@ -104,6 +108,7 @@ namespace st {
             throw std::runtime_error("Could not add shader to ShaderGroup, failed to emplace into handles set: might already exist!");
         }
         impl->addShader(handle, body_src_file_path);
+        return handle;
     }
 
     void ShaderGroup::GetShaderBinary(const Shader & handle, size_t * binary_size, uint32_t * dest_binary_ptr) const {

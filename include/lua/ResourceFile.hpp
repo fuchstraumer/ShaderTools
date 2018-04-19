@@ -33,6 +33,10 @@ namespace st {
             e2D_Array,
             eCubeMap
         } TextureType{ texture_type::e2D };
+        enum class size_class {
+            SwapchainRelative,
+            Absolute
+        };
     };
 
     using lua_resource_t = std::variant<
@@ -56,7 +60,7 @@ namespace st {
 
     private:
         bool ready{ false };
-        LuaEnvironment * env;
+        LuaEnvironment* env{ nullptr };
         std::unordered_map<std::string, set_resource_map_t> setResources;
         void parseResources();
     };
