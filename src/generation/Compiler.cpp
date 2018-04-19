@@ -100,10 +100,14 @@ namespace st {
         }
     }
 
-    void dump_bad_source_to_file(const std::string& name, const std::string& src) {
+    void dump_bad_source_to_file(const std::string& name, const std::string& src, const std::string err_text) {
         const std::string output_name = name + std::string{ "_failed_compile.glsl" };
         std::ofstream output_stream(output_name);
         output_stream << src;
+        output_stream.flush(); output_stream.close();
+        const std::string err_msg_output = name + std::string{ "_compiliation_errors.txt" };
+        output_stream.open(err_msg_output);
+        output_stream << err_text;
         output_stream.flush(); output_stream.close();
     }
 
@@ -119,7 +123,7 @@ namespace st {
             const std::string err_msg = result.GetErrorMessage();
             std::cerr << "Shader compiliation failed: " << err_msg.c_str() << "\n";
 #ifndef NDEBUG
-            dump_bad_source_to_file(name, src);
+            dump_bad_source_to_file(name, src, err_msg);
 #endif
             const std::string except_msg = std::string("Failed to compile shader: ") + err_msg + std::string("\n");
             throw std::runtime_error(except_msg.c_str());
