@@ -17,7 +17,7 @@
 
 #include "lua/ResourceFile.hpp"
 #include "../util/FilesystemUtils.hpp"
-
+#include "../util/ShaderFileTracker.hpp"
 namespace fs = std::experimental::filesystem;
 
 
@@ -25,6 +25,7 @@ namespace st {
 
     extern std::unordered_map<Shader, std::string> shaderFiles;
     extern std::unordered_multimap<Shader, fs::path> shaderPaths;
+    extern ShaderFileTracker FileTracker;
 
     std::string BasePath = "../fragments/";
     std::string LibPath = "../fragments/include";
@@ -74,8 +75,6 @@ namespace st {
         IncludedFragment,
         ResourceBlock,
         PushConstantItem,
-        LightingModel,
-        FreeFunction,
         Main,
         Invalid
     };
@@ -110,18 +109,27 @@ namespace st {
         ShaderGeneratorImpl(ShaderGeneratorImpl&& other) noexcept;
         ShaderGeneratorImpl& operator=(ShaderGeneratorImpl&& other) noexcept;
 
-        void addBody(const fs::path& path_to_body);
         const std::string& addFragment(const fs::path& path_to_source);
+        std::string getFullSource() const;
+        void addPerVertex();
+        void addIncludePath(const char* include_path);
         void addPreamble(const fs::path& str);
         void parseInterfaceBlock(const std::string& str);
         void parseConstantBlock(const std::string& str);
         void parseInclude(const std::string& str, bool local);
+
+        size_t getBinding(size_t & active_set);
+        std::string getResourcePrefix(size_t active_set, const std::string & image_format);
+        std::string getUniformBufferResourceString(const size_t& active_set, const UniformBuffer & buffer, const std::string & name);
+        std::string getStorageBufferResourceString(const size_t & active_set, const StorageBuffer & buffer, const std::string & name);
+        std::string getStorageImageResourceString(const size_t & active_set, const StorageImage & buffer, const std::string & name);
         void useResourceBlock(const std::string& block_name);
-        void addPerVertex();
-        std::string getFullSource() const;
 
-
-        void addIncludePath(const char* include_path);
+        std::string fetchBodyStr(const Shader & handle, const std::string & path_to_source);
+        void processBodyStrSpecializationConstants(std::string & body_src_str);
+        void processBodyStrIncludes(std::string & body_src_str);
+        void processBodyStrResourceBlocks(std::string & body_str);
+        void addBody(const Shader& handle, const std::string& path_to_src);
 
         bool collated = false;
         VkShaderStageFlagBits Stage = VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM;
@@ -301,61 +309,58 @@ namespace st {
 
     }
 
-    void ShaderGeneratorImpl::useResourceBlock(const std::string & block_name) {
-        size_t active_set = 0;
-        if (!ShaderResources.DescriptorBindings.empty()) {
-            active_set = ShaderResources.DescriptorBindings.crbegin()->first + 1;
+    size_t ShaderGeneratorImpl::getBinding(size_t& active_set) {
+        if (ShaderResources.DescriptorBindings.count(active_set) == 0) {
+            ShaderResources.DescriptorBindings.insert({ active_set, 0 });
+            return 0;
         }
-        std::string block_str = resourceBlocks.at(block_name);
+        else {
+            const auto& iter = ShaderResources.DescriptorBindings.equal_range(active_set);
+            auto minmax = std::minmax_element(iter.first, iter.second);
+            ShaderResources.DescriptorBindings.insert({ active_set, (*minmax.second).second + 1 });
+            return (*minmax.second).second + 1;
+        }
+    }
 
-        fragments.emplace(shaderFragment{ fragment_type::ResourceBlock, std::string("// Resource block:") + block_name + std::string("\n") });
-
-        auto get_binding = [&]()->size_t {
-            if (ShaderResources.DescriptorBindings.count(active_set) == 0) {
-                ShaderResources.DescriptorBindings.insert({ active_set, 0 });
-                return 0;
-            }
-            else {
-                const auto& iter = ShaderResources.DescriptorBindings.equal_range(active_set);
-                auto minmax = std::minmax_element(iter.first, iter.second);
-                ShaderResources.DescriptorBindings.insert({ active_set, (*minmax.second).second + 1 });
-                return (*minmax.second).second + 1;
-            }
+    std::string ShaderGeneratorImpl::getResourcePrefix(size_t active_set, const std::string& format_specifier) {
+        std::string prefix{
+            std::string{ "layout (set = " } + std::to_string(active_set) + std::string{ ", binding = " } + std::to_string(getBinding(active_set))
         };
 
-        auto get_prefix = [&](const std::string& image_type)->std::string {
-            std::string prefix("layout (set = " + std::to_string(active_set) + ", binding = " + std::to_string(get_binding()));
-            if (!image_type.empty()) {
-                prefix += std::string(", " + image_type + ") ");
-            }
-            else {
-                prefix += std::string(") ");
-            }
-            return prefix;
-        };
+        if (!format_specifier.empty()) {
+            prefix += std::string(", " + format_specifier + ") ");
+        }
+        else {
+            prefix += std::string(") ");
+        }
 
-        auto uniform_buffer_string = [&](const UniformBuffer& buffer, const std::string& name)->std::string {
-            const std::string prefix = get_prefix("");
-            const std::string alt_name = std::string{ "_" } +name + std::string{ "_" };
-            std::string result = prefix + std::string{ " uniform " } +name + std::string{ " {\n" };
-            for (const auto& member : buffer.MemberTypes) {
-                result += std::string{ "    " };
-                result += member.second;
-                result += std::string{ " " } + member.first;
-                result += std::string{ ";\n" };
-            }
-            result += std::string{ "} " } +name + std::string{ ";\n" };
-            return result;
-        };
+        return prefix;
+    }
 
-        auto storage_buffer_string = [&](const StorageBuffer& buffer, const std::string& name)->std::string {
-            const std::string prefix = get_prefix("std430");
-            const std::string alt_name = std::string{" buffer "} + std::string{ "_" } +name + std::string{ "_" };
-            std::string result = prefix + alt_name + std::string{ " {\n" };
-            result += std::string{ "    " } + buffer.ElementType + std::string{ " Data[];\n" };
-            result += std::string{ "} " } +name + std::string{ ";\n" };
-            return result;
-        };
+    std::string ShaderGeneratorImpl::getUniformBufferResourceString(const size_t& active_set, const UniformBuffer& buffer, const std::string& name) {
+        const std::string prefix = getResourcePrefix(active_set, "");
+        const std::string alt_name = std::string{ "_" } + name + std::string{ "_" };
+        std::string result = prefix + std::string{ " uniform " } + name + std::string{ " {\n" };
+        for (const auto& member : buffer.MemberTypes) {
+            result += std::string{ "    " };
+            result += member.second;
+            result += std::string{ " " } +member.first;
+            result += std::string{ ";\n" };
+        }
+        result += std::string{ "} " } + name + std::string{ ";\n" };
+        return result;
+    }
+
+    std::string ShaderGeneratorImpl::getStorageBufferResourceString(const size_t& active_set, const StorageBuffer& buffer, const std::string& name) {
+        const std::string prefix = getResourcePrefix(active_set, "std430");
+        const std::string alt_name = std::string{ " buffer " } + std::string{ "_" } + name + std::string{ "_" };
+        std::string result = prefix + alt_name + std::string{ " {\n" };
+        result += std::string{ "    " } + buffer.ElementType + std::string{ " Data[];\n" };
+        result += std::string{ "} " } + name + std::string{ ";\n" };
+        return result;
+    }
+
+    std::string ShaderGeneratorImpl::getStorageImageResourceString(const size_t& active_set, const StorageImage& image, const std::string& name) {
 
         auto get_storage_buffer_subtype = [&](const std::string& image_format)->std::string {
             if (image_format.back() == 'f') {
@@ -372,11 +377,19 @@ namespace st {
             }
         };
 
-        auto storage_image_string = [&](const StorageImage& image, const std::string& name)->std::string {
-            const std::string prefix = get_prefix(image.Format);
-            const std::string buffer_type = get_storage_buffer_subtype(image.Format);
-            return prefix + std::string{ " " } + buffer_type + std::string{ " " } + name + std::string{ ";\n" };
-        };
+        const std::string prefix = getResourcePrefix(active_set, image.Format);
+        const std::string buffer_type = get_storage_buffer_subtype(image.Format);
+        return prefix + std::string{ " " } + buffer_type + std::string{ " " } +name + std::string{ ";\n" };
+    }
+
+    void ShaderGeneratorImpl::useResourceBlock(const std::string & block_name) {
+        size_t active_set = 0;
+        if (!ShaderResources.DescriptorBindings.empty()) {
+            active_set = ShaderResources.DescriptorBindings.crbegin()->first + 1;
+        }
+        std::string block_str = resourceBlocks.at(block_name);
+
+        fragments.emplace(shaderFragment{ fragment_type::ResourceBlock, std::string("// Resource block:") + block_name + std::string("\n") });
 
         auto& resource_block = luaResources->GetResources(block_name);
         std::string resource_block_string{ "\n" };
@@ -386,13 +399,13 @@ namespace st {
             const auto& resource_item = resource.second;
             
             if (std::holds_alternative<UniformBuffer>(resource_item)) {
-                resource_block_string += uniform_buffer_string(std::get<UniformBuffer>(resource_item), resource_name);
+                resource_block_string += getUniformBufferResourceString(active_set, std::get<UniformBuffer>(resource_item), resource_name);
             }
             else if (std::holds_alternative<StorageBuffer>(resource_item)) {
-                resource_block_string += storage_buffer_string(std::get<StorageBuffer>(resource_item), resource_name);
+                resource_block_string += getStorageBufferResourceString(active_set, std::get<StorageBuffer>(resource_item), resource_name);
             }
             else if (std::holds_alternative<StorageImage>(resource_item)) {
-                resource_block_string += storage_image_string(std::get<StorageImage>(resource_item), resource_name);
+                resource_block_string += getStorageImageResourceString(active_set, std::get<StorageImage>(resource_item), resource_name);
             }
             else {
                 throw std::domain_error("Encountered currently unsupported resource type.");
@@ -412,42 +425,58 @@ namespace st {
 
     }
 
-    void ShaderGeneratorImpl::addBody(const fs::path& path_to_body) {
-        std::ifstream body_file(path_to_body);
-        if (!body_file.is_open()) {
-            throw std::runtime_error("Failed to open given file that was being used as body of the shader!");
-        }
-        std::string body_str{ std::istreambuf_iterator<char>(body_file), std::istreambuf_iterator<char>() };
+    std::string ShaderGeneratorImpl::fetchBodyStr(const Shader& handle, const std::string& path_to_source) {
+        std::string body_str;
 
+        if (!FileTracker.FindShaderBody(handle, body_str)) {
+            if (!FileTracker.AddShaderBodyPath(handle, path_to_source)) {
+                throw std::runtime_error("Failed to find or add (then load) a shader body source string!");
+            }
+            else {
+                FileTracker.FindShaderBody(handle, body_str);
+            }
+        }
+
+        assert(!body_str.empty());
+        return body_str;
+    }
+
+    void ShaderGeneratorImpl::processBodyStrSpecializationConstants(std::string& body_src_str) {
         bool spc_found = true;
         while (spc_found) {
             std::smatch match;
-            if (std::regex_search(body_str, match, specialization_constant)) {
+            if (std::regex_search(body_src_str, match, specialization_constant)) {
                 const std::string prefix("layout (constant_id = " + std::to_string(ShaderResources.LastConstantIndex++) + ") ");
                 fragments.emplace(shaderFragment{ fragment_type::SpecConstant, std::string(prefix + match[1].str()) });
-                body_str.erase(body_str.begin() + match.position(), body_str.begin() + match.position() + match.length());
+                body_src_str.erase(body_src_str.begin() + match.position(), body_src_str.begin() + match.position() + match.length());
             }
             else {
                 spc_found = false;
             }
         }
+    }
+
+    void ShaderGeneratorImpl::processBodyStrIncludes(std::string& body_src_str) {
 
         bool include_found = true;
         while (include_found) {
             std::smatch match;
-            if (std::regex_search(body_str, match, include_local)) {
+            if (std::regex_search(body_src_str, match, include_local)) {
                 parseInclude(match[1].str(), true);
-                body_str.erase(body_str.begin() + match.position(), body_str.begin() + match.position() + match.length());
+                body_src_str.erase(body_src_str.begin() + match.position(), body_src_str.begin() + match.position() + match.length());
             }
-            else if (std::regex_search(body_str, match, include_library)) {
+            else if (std::regex_search(body_src_str, match, include_library)) {
                 parseInclude(match[1].str(), false);
-                body_str.erase(body_str.begin() + match.position(), body_str.begin() + match.position() + match.length());
+                body_src_str.erase(body_src_str.begin() + match.position(), body_src_str.begin() + match.position() + match.length());
             }
             else {
                 include_found = false;
             }
         }
 
+    }
+
+    void ShaderGeneratorImpl::processBodyStrResourceBlocks(std::string& body_str) {
         bool block_found = true;
         while (block_found) {
             std::smatch match;
@@ -459,7 +488,13 @@ namespace st {
                 block_found = false;
             }
         }
+    }
 
+    void ShaderGeneratorImpl::addBody(const Shader& handle, const std::string& path_to_source) {
+        std::string body_str{ fetchBodyStr(handle, path_to_source) };
+        processBodyStrSpecializationConstants(body_str);
+        processBodyStrIncludes(body_str);
+        processBodyStrResourceBlocks(body_str);
         fragments.emplace(shaderFragment{ fragment_type::Main, body_str });
     }
 
@@ -474,12 +509,16 @@ namespace st {
         return *this;
     }
 
-    void ShaderGenerator::AddBody(const char* path, const size_t num_includes, const char* const* paths) {
+    void ShaderGenerator::SetResourceFile(ResourceFile * rsrc_file) {
+        impl->luaResources = rsrc_file;
+    }
+
+    void ShaderGenerator::AddBody(const Shader& handle, const char* path, const size_t num_includes, const char* const* paths) {
         for (size_t i = 0; i < num_includes; ++i) {
             assert(paths);
             impl->addIncludePath(paths[i]);
         }
-        impl->addBody(path);
+        impl->addBody(handle, path);
     }
 
     void ShaderGenerator::AddIncludePath(const char * path_to_include) {

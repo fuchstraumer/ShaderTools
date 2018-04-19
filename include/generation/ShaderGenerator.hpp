@@ -8,8 +8,7 @@ namespace st {
     class ShaderGeneratorImpl;
     class ResourceFile;
 
-
-    class ShaderGenerator { 
+    class ST_API ShaderGenerator { 
         ShaderGenerator(const ShaderGenerator&) = delete;
         ShaderGenerator& operator=(const ShaderGenerator&) = delete;
     public:
@@ -18,8 +17,8 @@ namespace st {
         ShaderGenerator(ShaderGenerator&& other) noexcept;
         ShaderGenerator& operator=(ShaderGenerator&& other) noexcept;
 
-        void AddResources(ResourceFile* rsrc_file);
-        void AddBody(const char* path_to_src, const size_t num_includes = 0, const char* const* paths = nullptr);
+        void SetResourceFile(ResourceFile* rsrc_file);
+        void AddBody(const Shader& handle, const char* path_to_src, const size_t num_includes = 0, const char* const* paths = nullptr);
         void AddIncludePath(const char* path_to_include);
         void GetFullSource(size_t* len, char* dest) const;
         Shader SaveCurrentToFile(const char* fname) const;
