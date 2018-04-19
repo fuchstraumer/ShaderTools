@@ -10,23 +10,13 @@
 #include "shaderc/shaderc.hpp"
 #include "spirv_glsl.hpp"
 #include "../util/FilesystemUtils.hpp"
+#include "../util/ShaderFileTracker.hpp"
 #define SCL_SECURE_NO_WARNINGS
 namespace fs = std::experimental::filesystem;
 
 namespace st {
 
-    extern std::unordered_map<Shader, std::string> shaderFiles;
-    extern std::unordered_map<Shader, std::vector<uint32_t>> shaderBinaries;
-    extern std::unordered_multimap<Shader, fs::path> shaderPaths;
-
-    static const std::map<std::string, VkShaderStageFlagBits> extension_stage_map {
-        { ".vert", VK_SHADER_STAGE_VERTEX_BIT },
-        { ".frag", VK_SHADER_STAGE_FRAGMENT_BIT },
-        { ".geom", VK_SHADER_STAGE_GEOMETRY_BIT },
-        { ".teval", VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT },
-        { ".tcntl", VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT },
-        { ".comp", VK_SHADER_STAGE_COMPUTE_BIT }
-    };
+    extern ShaderFileTracker FileTracker;
 
     class ShaderCompilerImpl {
         ShaderCompilerImpl(const ShaderCompilerImpl&) = delete;
@@ -38,10 +28,11 @@ namespace st {
         ShaderCompilerImpl(ShaderCompilerImpl&& other) noexcept = default;
         ShaderCompilerImpl& operator=(ShaderCompilerImpl&& other) noexcept = default;
 
-        Shader compile(const char* path_to_src, const VkShaderStageFlagBits stage);
-        Shader compile(const std::string& name, const std::string& src, const VkShaderStageFlagBits stage);
+        shaderc::CompileOptions getCompilerOptions() const;
+        shaderc_shader_kind getShaderKind(const VkShaderStageFlagBits & flags) const;
+        void compile(const Shader& handle, const char* path_to_src);
+        void compile(const Shader& handle, const std::string& name, const std::string& src);
 
-        VkShaderStageFlagBits getStage(const char* path) const;
     };
 
     ShaderCompiler::ShaderCompiler() : impl(std::make_unique<ShaderCompilerImpl>()) {}
@@ -55,150 +46,65 @@ namespace st {
         return *this;
     }
 
-    Shader ShaderCompiler::Compile(const char* path_to_source_str, const VkShaderStageFlagBits stage) {
-        return impl->compile(path_to_source_str, stage);
+    void ShaderCompiler::Compile(const Shader& handle, const char * shader_name, const char * src_str, const size_t src_len) {
+        impl->compile(handle, shader_name, std::string{ src_str, src_str + src_len });
     }
 
-    VkShaderStageFlags ShaderCompiler::GetShaderStage(const char* path_to_source) const {
-        return impl->getStage(path_to_source);
+    void ShaderCompiler::Compile(const Shader& handle, const char* path_to_source_str) {
+        impl->compile(handle, path_to_source_str);
     }
 
-    bool ShaderCompiler::HasShader(const Shader& shader) const {
-        return shaderBinaries.count(shader) != 0;
-    }
+    void ShaderCompiler::GetBinary(const Shader & shader_handle, size_t * binary_sz, uint32_t * binary_dest_ptr) const {
+        std::vector<uint32_t> binary_vec;
+        if (FileTracker.FindShaderBinary(shader_handle, binary_vec)) {
+            *binary_sz = binary_vec.size();
+            if (binary_dest_ptr != nullptr) {
+                std::copy(binary_vec.begin(), binary_vec.end(), binary_dest_ptr);
+            }
+        }
+        else {
+            *binary_sz = 0;
+        }
+    } 
 
-    void ShaderCompiler::SaveShaderToAssemblyText(const Shader& shader_to_compile, const char* fname, const char* shader_name) {
-        using namespace shaderc;
-        Compiler cmplr;
-        CompileOptions options;
+    shaderc::CompileOptions ShaderCompilerImpl::getCompilerOptions() const {
+        shaderc::CompileOptions options;
+#ifndef NDEBUG
         options.SetGenerateDebugInfo();
+#endif
         options.SetOptimizationLevel(shaderc_optimization_level_performance);
         options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_1);
         options.SetSourceLanguage(shaderc_source_language_glsl);
+    }
 
-        shaderc_shader_kind shader_stage;
-        switch (shader_to_compile.GetStage()) {
+    shaderc_shader_kind ShaderCompilerImpl::getShaderKind(const VkShaderStageFlagBits& flags) const {
+        switch (flags) {
         case VK_SHADER_STAGE_VERTEX_BIT:
-            shader_stage = shaderc_glsl_vertex_shader;
-            break;
+            return shaderc_glsl_vertex_shader;
         case VK_SHADER_STAGE_FRAGMENT_BIT:
-            shader_stage = shaderc_glsl_fragment_shader;
-            break;
+            return shaderc_glsl_fragment_shader;
             // MoltenVK cannot yet use the geometry or tesselation shaders.
 #ifndef __APPLE__ 
         case VK_SHADER_STAGE_GEOMETRY_BIT:
-            shader_stage = shaderc_glsl_default_geometry_shader;
-            break;
+            return shaderc_glsl_default_geometry_shader;
         case VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT:
-            shader_stage = shaderc_glsl_tess_control_shader;
-            break;
+            return shaderc_glsl_tess_control_shader;
         case VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT:
-            shader_stage = shaderc_glsl_tess_evaluation_shader;
-            break;
+            return shaderc_glsl_tess_evaluation_shader;
 #endif 
         case VK_SHADER_STAGE_COMPUTE_BIT:
-            shader_stage = shaderc_glsl_compute_shader;
-            break;
+            return shaderc_glsl_compute_shader;
         default:
             throw std::domain_error("Invalid shader stage bitfield, or shader stage not supported on current platform!");
         }
-
-        const auto& shader_src = shaderFiles.at(shader_to_compile);
-        shaderc::AssemblyCompilationResult result = cmplr.CompileGlslToSpvAssembly(shader_src, shader_stage, shader_name, options);
-
-        if (result.GetCompilationStatus() != shaderc_compilation_status_success) {
-            std::cerr << result.GetErrorMessage();
-            throw std::runtime_error("Failed to compile shader to SPIR-V assembly.");
-        }
-
-        const std::string assembly_str{ result.cbegin(), result.cend() };
-
-        std::ofstream output_stream(fname);
-        if (!output_stream.is_open()) {
-            std::cerr << "Failed to open output stream for saving SPIR-V Assembly.";
-            throw std::runtime_error("Failed to open output stream.");
-        }
-
-        output_stream << assembly_str;
-        output_stream.flush(); output_stream.close();
     }
 
-    void ShaderCompiler::SaveBinaryBackToText(const Shader & shader_to_save, const char * fname) const {
-        if (shaderBinaries.count(shader_to_save) == 0) {
-            return;
-        }
-
-        const auto& binary_data = shaderBinaries.at(shader_to_save);
-        spirv_cross::CompilerGLSL glsl_compiler(binary_data);
-        spirv_cross::CompilerGLSL::Options opts;
-        opts.vulkan_semantics = true;
-        opts.separate_shader_objects = true;
-        glsl_compiler.set_common_options(opts);
-        try {
-            const std::string source = glsl_compiler.compile();
-            std::ofstream output_stream(fname);
-
-            if (!output_stream.is_open()) {
-                throw std::runtime_error("Failed to open output stream.");
-            }
-
-            output_stream << source;
-            output_stream.close();
-        }
-        catch (const spirv_cross::CompilerError& e) {
-            std::cerr << "Failed to fully parse SPIR-V back to GLSL - outputting partial source thus far.\n";
-            std::cerr << e.what() << "\n";
-            const std::string partial_src = glsl_compiler.get_partial_source();
-            std::ofstream output_stream(fname);
-
-            if (!output_stream.is_open()) {
-                throw std::runtime_error("Failed to open output stream.");
-            }
-
-            output_stream << partial_src;
-            output_stream.close();
-        }
-        
-    }
-
-    Shader ShaderCompilerImpl::compile(const std::string& name, const std::string& src, const VkShaderStageFlagBits stage) {
+    void ShaderCompilerImpl::compile(const Shader& handle, const std::string& name, const std::string& src) {
 
         shaderc::Compiler compiler;
-        shaderc::CompileOptions options;
 
-        options.SetGenerateDebugInfo();
-        options.SetOptimizationLevel(shaderc_optimization_level_performance);
-        options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_1);
-        options.SetSourceLanguage(shaderc_source_language_glsl);
-
-        shaderc_shader_kind shader_stage;
-        switch (stage) {
-        case VK_SHADER_STAGE_VERTEX_BIT:
-            shader_stage = shaderc_glsl_vertex_shader;
-            break;
-        case VK_SHADER_STAGE_FRAGMENT_BIT:
-            shader_stage = shaderc_glsl_fragment_shader;
-            break;
-            // MoltenVK cannot yet use the geometry or tesselation shaders.
-#ifndef __APPLE__ 
-        case VK_SHADER_STAGE_GEOMETRY_BIT:
-            shader_stage = shaderc_glsl_default_geometry_shader;
-            break;
-        case VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT:
-            shader_stage = shaderc_glsl_tess_control_shader;
-            break;
-        case VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT:
-            shader_stage = shaderc_glsl_tess_evaluation_shader;
-            break;
-#endif 
-        case VK_SHADER_STAGE_COMPUTE_BIT:
-            shader_stage = shaderc_glsl_compute_shader;
-            break;
-        default:
-            throw std::domain_error("Invalid shader stage bitfield, or shader stage not supported on current platform!");
-        }
-
-        Shader shader_handle = WriteAndAddShaderSource(name, src, stage);
+        const auto options = getCompilerOptions();
+        const auto shader_stage = getShaderKind(handle.GetStage());
         
         shaderc::SpvCompilationResult result = compiler.CompileGlslToSpv(src, shader_stage, name.c_str(), options);
         if (result.GetCompilationStatus() != shaderc_compilation_status_success) {
@@ -208,21 +114,11 @@ namespace st {
             throw std::runtime_error(except_msg.c_str());
         }
 
-        WriteAndAddShaderBinary(name, std::vector<uint32_t>{ result.begin(), result.end() }, stage);
-        return shader_handle;
+        FileTracker.Binaries.emplace(handle, std::vector<uint32_t>{result.begin(), result.end()});
     }
 
-    Shader ShaderCompilerImpl::compile(const char* path_to_source_str, VkShaderStageFlagBits stage) {
+    void ShaderCompilerImpl::compile(const Shader& handle, const char* path_to_source_str) {
         fs::path path_to_source(path_to_source_str);
-
-        if (stage == VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM) {
-            stage = getStage(path_to_source_str);
-        }
-
-        Shader shader_handle(path_to_source_str, stage);
-        if (shaderBinaries.count(shader_handle) != 0) {      
-            return shader_handle;
-        }
 
         // First check to verify the path given exists.
         if (!fs::exists(path_to_source)) {
@@ -231,39 +127,8 @@ namespace st {
         }
 
         shaderc::Compiler compiler;
-        shaderc::CompileOptions options;
-
-        options.SetGenerateDebugInfo();
-        options.SetOptimizationLevel(shaderc_optimization_level_performance);
-        options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_1);
-        options.SetSourceLanguage(shaderc_source_language_glsl);
-
-        shaderc_shader_kind shader_stage;
-        switch (stage) {
-        case VK_SHADER_STAGE_VERTEX_BIT:
-            shader_stage = shaderc_glsl_vertex_shader;
-            break;
-        case VK_SHADER_STAGE_FRAGMENT_BIT:
-            shader_stage = shaderc_glsl_fragment_shader;
-            break;
-            // MoltenVK cannot yet use the geometry or tesselation shaders.
-#ifndef __APPLE__ 
-        case VK_SHADER_STAGE_GEOMETRY_BIT:
-            shader_stage = shaderc_glsl_default_geometry_shader;
-            break;
-        case VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT:
-            shader_stage = shaderc_glsl_tess_control_shader;
-            break;
-        case VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT:
-            shader_stage = shaderc_glsl_tess_evaluation_shader;
-            break;
-#endif 
-        case VK_SHADER_STAGE_COMPUTE_BIT:
-            shader_stage = shaderc_glsl_compute_shader;
-            break;
-        default:
-            throw std::domain_error("Invalid shader stage bitfield, or shader stage not supported on current platform!");
-        }
+        const auto options = getCompilerOptions();
+        const auto shader_stage = getShaderKind(handle.GetStage());
 
         std::ifstream input_file(path_to_source);
         if (!input_file.is_open()) {
@@ -271,7 +136,6 @@ namespace st {
         }
         const std::string source_code((std::istreambuf_iterator<char>(input_file)), (std::istreambuf_iterator<char>()));
         const std::string file_name = path_to_source.filename().string();
-        Shader source_hash = WriteAndAddShaderSource(file_name, source_code, stage);
 
         shaderc::SpvCompilationResult result = compiler.CompileGlslToSpv(source_code, shader_stage, file_name.c_str(), options);
         if (result.GetCompilationStatus() != shaderc_compilation_status_success) {
@@ -281,19 +145,7 @@ namespace st {
             throw std::runtime_error(except_msg.c_str());
         }
 
-        WriteAndAddShaderBinary(file_name, std::vector<uint32_t>{ result.cbegin(), result.cend() }, stage);
-        return source_hash;
-    }
-
-    VkShaderStageFlagBits ShaderCompilerImpl::getStage(const char* path_to_source) const {
-        // We weren't given a stage, try to infer it from the file.
-        const std::string stage_ext = fs::path(path_to_source).extension().string();
-        auto iter = extension_stage_map.find(stage_ext);
-        if (iter == extension_stage_map.end()) {
-            std::cerr << "Failed to infer a shader's stage flag from it's extension.\n";
-            throw std::runtime_error("Could not infer shader file's stage based on extension!");
-        }
-        return (*iter).second;
+        FileTracker.Binaries.emplace(handle, std::vector<uint32_t>{ result.cbegin(), result.cend() });
     }
 
 
