@@ -68,6 +68,11 @@ Resources = {
                 LogGridDimY = "float"
             }
         },
+        ClusterAABBs = {
+            Type = "StorageBuffer",
+            ElementType = "AABB",
+            NumElements = get_num_clusters()
+        },
         ClusterFlags = {
             Type = "StorageImage",
             Format = "r8ui",
@@ -118,9 +123,9 @@ Resources = {
         LightCounts = {
             Type = "UniformBuffer",
             Members = {
-                PointLightCount = "uint",
-                SpotLightCount = "uint",
-                DirectionalLightCount = "uint"
+                NumPointLights = "uint",
+                NumSpotLights = "uint",
+                NumDirectionalLights = "uint"
             }
         },
         PointLights = {
