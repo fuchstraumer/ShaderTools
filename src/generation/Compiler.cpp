@@ -75,6 +75,7 @@ namespace st {
         options.SetOptimizationLevel(shaderc_optimization_level_performance);
         options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_1);
         options.SetSourceLanguage(shaderc_source_language_glsl);
+        return options;
     }
 
     shaderc_shader_kind ShaderCompilerImpl::getShaderKind(const VkShaderStageFlagBits& flags) const {
@@ -99,6 +100,13 @@ namespace st {
         }
     }
 
+    void dump_bad_source_to_file(const std::string& name, const std::string& src) {
+        const std::string output_name = name + std::string{ "_failed_compile.glsl" };
+        std::ofstream output_stream(output_name);
+        output_stream << src;
+        output_stream.flush(); output_stream.close();
+    }
+
     void ShaderCompilerImpl::compile(const Shader& handle, const std::string& name, const std::string& src) {
 
         shaderc::Compiler compiler;
@@ -110,6 +118,9 @@ namespace st {
         if (result.GetCompilationStatus() != shaderc_compilation_status_success) {
             const std::string err_msg = result.GetErrorMessage();
             std::cerr << "Shader compiliation failed: " << err_msg.c_str() << "\n";
+#ifndef NDEBUG
+            dump_bad_source_to_file(name, src);
+#endif
             const std::string except_msg = std::string("Failed to compile shader: ") + err_msg + std::string("\n");
             throw std::runtime_error(except_msg.c_str());
         }
