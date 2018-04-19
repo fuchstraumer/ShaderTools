@@ -14,19 +14,19 @@ namespace st {
     }
 
     bool ShaderFileTracker::FindShaderBody(const Shader & handle, std::string & dest_str) {
-        if (Sources.count(handle) != 0) {
-            dest_str = Sources.at(handle);
+        if (ShaderBodies.count(handle) != 0) {
+            dest_str = ShaderBodies.at(handle);
             return true;
         }
-        else if (SourcePaths.count(handle) != 0) {
+        else if (BodyPaths.count(handle) != 0) {
             // Load source string into memory
-            std::ifstream input_file(SourcePaths.at(handle));
+            std::ifstream input_file(BodyPaths.at(handle));
             if (!input_file.is_open()) {
                 std::cerr << "Path to source of shader existed in program map, but source file itself could not be opened!\n";
                 throw std::runtime_error("Failed to open shader source file.");
             }
 
-            auto iter = Sources.emplace(handle, std::string{ std::istreambuf_iterator<char>(input_file), std::istreambuf_iterator<char>() });
+            auto iter = ShaderBodies.emplace(handle, std::string{ std::istreambuf_iterator<char>(input_file), std::istreambuf_iterator<char>() });
             if (!iter.second) {
                 std::cerr << "Failed to add read shader source file to programs source string map!\n";
                 throw std::runtime_error("Could not add source file string to program map!");
@@ -41,7 +41,7 @@ namespace st {
     }
 
     bool ShaderFileTracker::AddShaderBodyPath(const Shader & handle, const std::string & shader_body_path) {
-        if (SourcePaths.count(handle) != 0) {
+        if (BodyPaths.count(handle) != 0) {
             // Already had this path registered. Shouldn't really reach this point.
             return true;
         }
@@ -52,7 +52,7 @@ namespace st {
                 throw std::runtime_error("Failed to open given file: invalid path.");
             }
 
-            SourcePaths.emplace(handle, fs::absolute(source_body_path));
+            BodyPaths.emplace(handle, fs::absolute(source_body_path));
 
             std::ifstream input_stream(source_body_path);
             if (!input_stream.is_open()) {
@@ -60,7 +60,7 @@ namespace st {
                 throw std::runtime_error("Failed to open input stream for given shader body path.");
             }
 
-            Sources.emplace(handle, std::string{ std::istreambuf_iterator<char>(input_stream), std::istreambuf_iterator<char>() });
+            ShaderBodies.emplace(handle, std::string{ std::istreambuf_iterator<char>(input_stream), std::istreambuf_iterator<char>() });
         }
         return false;
     }
