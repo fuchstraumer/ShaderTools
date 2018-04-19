@@ -9,7 +9,6 @@
 #include <map>
 #include <set>
 #include "../util/ShaderFileTracker.hpp"
-#define _SCL_SECURE_NO_WARNINGS
 
 namespace st {
 
