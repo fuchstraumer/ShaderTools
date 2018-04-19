@@ -72,7 +72,7 @@ namespace st {
         glPerVertex,
         SpecConstant,
         IncludedFragment,
-        UniformResource,
+        ResourceBlock,
         PushConstantItem,
         LightingModel,
         FreeFunction,
@@ -116,7 +116,6 @@ namespace st {
         void parseInterfaceBlock(const std::string& str);
         void parseConstantBlock(const std::string& str);
         void parseInclude(const std::string& str, bool local);
-        void parseResourceBlock(const std::string & str);
         void useResourceBlock(const std::string& block_name);
         void addPerVertex();
         std::string getFullSource() const;
@@ -149,9 +148,6 @@ namespace st {
             parseInterfaceBlock(interface_str);
         }
 
-        fs::path uniforms(std::string(BasePath) + "builtins/globalResources.glsl");
-        const auto& uniforms_str = addFragment(uniforms);
-        parseResourceBlock(uniforms_str);
     }
 
     ShaderGeneratorImpl::~ShaderGeneratorImpl() {
@@ -305,31 +301,6 @@ namespace st {
 
     }
 
-    void ShaderGeneratorImpl::parseResourceBlock(const std::string& str) {
-        std::smatch match;
-        std::string local_str{ str.cbegin(), str.cend() };
-
-        while (!local_str.empty()) {
-            if (std::regex_search(local_str, match, begin_set_resources)) {
-                std::smatch end_match;
-                if (!std::regex_search(local_str, end_match, end_set_resources)) {
-                    throw std::runtime_error("Found an unclosed resource block!");
-                }
-                else {
-                    if (match[1] != end_match[1]) {
-                        throw std::runtime_error("Name's of descriptor resource block were not uniform, between the opening and closing of the block!");
-                    }
-                    resourceBlocks.emplace(match[1], std::string{ local_str.cbegin() + match.position() + match.length(), local_str.cbegin() + end_match.position() });
-                    local_str.erase(local_str.cbegin() + match.position(), local_str.cbegin() + end_match.position() + end_match.length() + 1);
-                }
-            }
-
-            if (match.empty()) {
-                break;
-            }
-        }
-    }
-
     void ShaderGeneratorImpl::useResourceBlock(const std::string & block_name) {
         size_t active_set = 0;
         if (!ShaderResources.DescriptorBindings.empty()) {
@@ -337,7 +308,7 @@ namespace st {
         }
         std::string block_str = resourceBlocks.at(block_name);
 
-        fragments.emplace(shaderFragment{ fragment_type::UniformResource, std::string("// Resource block:") + block_name + std::string("\n") });
+        fragments.emplace(shaderFragment{ fragment_type::ResourceBlock, std::string("// Resource block:") + block_name + std::string("\n") });
 
         auto get_binding = [&]()->size_t {
             if (ShaderResources.DescriptorBindings.count(active_set) == 0) {
@@ -363,77 +334,82 @@ namespace st {
             return prefix;
         };
 
-        auto trim_match = [&block_str](const std::smatch& match) {
-            block_str.erase(block_str.cbegin() + match.position(), block_str.cbegin() + match.position() + match.length());
+        auto uniform_buffer_string = [&](const UniformBuffer& buffer, const std::string& name)->std::string {
+            const std::string prefix = get_prefix("");
+            const std::string alt_name = std::string{ "_" } +name + std::string{ "_" };
+            std::string result = prefix + std::string{ " uniform " } +name + std::string{ " {\n" };
+            for (const auto& member : buffer.MemberTypes) {
+                result += std::string{ "    " };
+                result += member.second;
+                result += std::string{ " " } + member.first;
+                result += std::string{ ";\n" };
+            }
+            result += std::string{ "} " } +name + std::string{ ";\n" };
+            return result;
         };
 
-        while (!block_str.empty()) {
+        auto storage_buffer_string = [&](const StorageBuffer& buffer, const std::string& name)->std::string {
+            const std::string prefix = get_prefix("std430");
+            const std::string alt_name = std::string{" buffer "} + std::string{ "_" } +name + std::string{ "_" };
+            std::string result = prefix + alt_name + std::string{ " {\n" };
+            result += std::string{ "    " } + buffer.ElementType + std::string{ " Data[];\n" };
+            result += std::string{ "} " } +name + std::string{ ";\n" };
+            return result;
+        };
 
-            std::smatch match;
+        auto get_storage_buffer_subtype = [&](const std::string& image_format)->std::string {
+            if (image_format.back() == 'f') {
+                return std::string("imageBuffer");
+            }
+            else {
+                std::string last_two = image_format.substr(image_format.size() - 2, 2);
+                if (last_two == "ui") {
+                    return std::string("uimageBuffer");
+                }
+                else {
+                    return std::string("iimageBuffer");
+                }
+            }
+        };
+
+        auto storage_image_string = [&](const StorageImage& image, const std::string& name)->std::string {
+            const std::string prefix = get_prefix(image.Format);
+            const std::string buffer_type = get_storage_buffer_subtype(image.Format);
+            return prefix + std::string{ " " } + buffer_type + std::string{ " " } + name + std::string{ ";\n" };
+        };
+
+        auto& resource_block = luaResources->GetResources(block_name);
+        std::string resource_block_string{ "\n" };
+
+        for (auto& resource : resource_block) {
+            const auto& resource_name = resource.first;
+            const auto& resource_item = resource.second;
             
-            if (std::regex_search(block_str, match, texture2d_resource)) {
-                std::string texture_name = get_prefix(std::string()) + std::string("texture2D ") + match[1].str();
-                fragments.emplace(shaderFragment{ fragment_type::UniformResource, std::move(texture_name) });
-                trim_match(match);
+            if (std::holds_alternative<UniformBuffer>(resource_item)) {
+                resource_block_string += uniform_buffer_string(std::get<UniformBuffer>(resource_item), resource_name);
             }
-            else if (std::regex_search(block_str, match, i_image_buffer_resource)) {
-                std::string image_buffer = get_prefix(match[1].str()) + std::string("uniform iimageBuffer ") + match[2].str();
-                fragments.emplace(shaderFragment{ fragment_type::UniformResource, std::move(image_buffer) });
-                trim_match(match);
+            else if (std::holds_alternative<StorageBuffer>(resource_item)) {
+                resource_block_string += storage_buffer_string(std::get<StorageBuffer>(resource_item), resource_name);
             }
-            else if (std::regex_search(block_str, match, u_image_buffer_resource)) {
-                std::string u_image_buffer = get_prefix(match[1].str()) + std::string("uniform uimageBuffer ") + match[2].str();
-                fragments.emplace(shaderFragment{ fragment_type::UniformResource, std::move(u_image_buffer) });
-                trim_match(match);
+            else if (std::holds_alternative<StorageImage>(resource_item)) {
+                resource_block_string += storage_image_string(std::get<StorageImage>(resource_item), resource_name);
             }
-            else if (std::regex_search(block_str, match, specialization_constant)) {
-                const std::string prefix("layout (constant_index = " + std::to_string(ShaderResources.LastConstantIndex++) + ") ");
-                fragments.emplace(shaderFragment{ fragment_type::SpecConstant, std::string(prefix + match[1].str()) });
-                trim_match(match);
-            }
-            else if (std::regex_search(block_str, match, sampler2d_resource)) {
-                const std::string prefix = get_prefix(std::string()) + std::string("uniform sampler2D ") + match[1].str();
-                fragments.emplace(shaderFragment{ fragment_type::UniformResource, std::move(prefix) });
-                trim_match(match);
-            }
-            else if (std::regex_search(block_str, match, storage_buffer_resource)) {
-                const std::smatch begin = match;
-                if (!std::regex_search(block_str.cbegin() + begin.position(), block_str.cend(), match, end_uniform_resource)) {
-                    throw std::runtime_error("Did not find close of a storage buffer object!");
-                }
-                std::string uniform_buffer_open = get_prefix(begin[1].str()) + std::string("buffer ") + begin[2].str();
-                uniform_buffer_open.insert(uniform_buffer_open.end(), block_str.cbegin() + begin.position() + begin.length(), block_str.cbegin() + begin.position() + match.position() + match.length());
-                fragments.emplace(shaderFragment{ fragment_type::UniformResource, std::move(uniform_buffer_open) });
-                block_str.erase(block_str.cbegin() + begin.position(), block_str.cbegin() + begin.position() + match.position() + match.length());
-            }
-            else if (std::regex_search(block_str, match, sampler_buffer_resource)) {
-                const std::smatch begin = match;
-                if (!std::regex_search(block_str.cbegin() + match.position(), block_str.cend(), match, end_uniform_resource)) {
-                    throw std::runtime_error("Could not find closing end of a texel buffer object!");
-                }
-                std::string texel_buffer_open = get_prefix(std::string()) + std::string("uniform samplerBuffer ") + begin[1].str();
-                texel_buffer_open.insert(texel_buffer_open.end(), block_str.cbegin() + begin.position() + begin.length(), block_str.cbegin() + begin.position() + match.position() + match.length());
-                fragments.emplace(shaderFragment{ fragment_type::UniformResource, std::move(texel_buffer_open) });
-                block_str.erase(block_str.cbegin() + begin.position(), block_str.cbegin() + match.position() + match.length());
-            }
-            else if (std::regex_search(block_str, match, uniform_resource)) {
-                const std::smatch begin = match;
-                if (!std::regex_search(block_str.cbegin() + match.position(), block_str.cend(), match, end_uniform_resource)) {
-                    throw std::runtime_error("Couldn't find closing end of a uniform block");
-                }
-                std::string uniform_buffer_open = get_prefix(std::string()) + std::string("uniform ") + begin[1].str();
-                uniform_buffer_open.insert(uniform_buffer_open.end(), block_str.cbegin() + begin.position() + begin.length(), block_str.cbegin() + begin.position() + match.position() + match.length());
-                fragments.emplace(shaderFragment{ fragment_type::UniformResource, std::move(uniform_buffer_open) });
-                block_str.erase(block_str.cbegin() + begin.position(), block_str.cbegin() + match.position() + match.length());
-            }
-            
-            if (match.empty()) {
-                break;
+            else {
+                throw std::domain_error("Encountered currently unsupported resource type.");
             }
 
         }
 
-        fragments.emplace(shaderFragment{ fragment_type::UniformResource, std::string("// End resource block:") + block_name + std::string("\n\n") });
+        std::string block_file_name = block_name + std::string{ ".glsl" };
+        std::ofstream block_stream(block_name);
+        if (!block_stream.is_open()) {
+            throw std::runtime_error("failed to open stream!");
+        }
+        block_stream << resource_block_string;
+        block_stream.flush(); block_stream.close();
+         
+        fragments.emplace(shaderFragment{ fragment_type::ResourceBlock, resource_block_string });
+
     }
 
     void ShaderGeneratorImpl::addBody(const fs::path& path_to_body) {

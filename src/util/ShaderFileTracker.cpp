@@ -2,8 +2,7 @@
 #include <iostream>
 #include <fstream>
 #include <experimental/filesystem>
-#include "util/FileObserver.hpp"
-
+namespace fs = std::experimental::filesystem;
 namespace st {
 
     ShaderFileTracker::ShaderFileTracker()
@@ -14,7 +13,7 @@ namespace st {
     {
     }
 
-    bool ShaderFileTracker::FindShaderSource(const Shader & handle, std::string & dest_str) {
+    bool ShaderFileTracker::FindShaderBody(const Shader & handle, std::string & dest_str) {
         if (Sources.count(handle) != 0) {
             dest_str = Sources.at(handle);
             return true;
@@ -39,6 +38,31 @@ namespace st {
         else {
             return false;
         }
+    }
+
+    bool ShaderFileTracker::AddShaderBodyPath(const Shader & handle, const std::string & shader_body_path) {
+        if (SourcePaths.count(handle) != 0) {
+            // Already had this path registered. Shouldn't really reach this point.
+            return true;
+        }
+        else {
+            fs::path source_body_path(shader_body_path);
+            if (!fs::exists(source_body_path)) {
+                std::cerr << "Given path does not exist.";
+                throw std::runtime_error("Failed to open given file: invalid path.");
+            }
+
+            SourcePaths.emplace(handle, fs::absolute(source_body_path));
+
+            std::ifstream input_stream(source_body_path);
+            if (!input_stream.is_open()) {
+                std::cerr << "Given shader body path exists, but opening a file stream for this path failed!";
+                throw std::runtime_error("Failed to open input stream for given shader body path.");
+            }
+
+            Sources.emplace(handle, std::string{ std::istreambuf_iterator<char>(input_stream), std::istreambuf_iterator<char>() });
+        }
+        return false;
     }
 
     bool ShaderFileTracker::FindShaderBinary(const Shader & handle, std::vector<uint32_t>& dest_binary_vector) {
@@ -104,10 +128,7 @@ namespace st {
                     dest_ptr = nullptr;
                     std::cerr << "Failed to create ResourceFile using given script: check console for script errors and try again.\n";
                     std::cerr << e.what();
-                    ResourceFile* ptr = ResourceScripts.at(absolute_file_path).get();
-                    auto& observer = FileObserver::GetFileObserver();
-                    observer.WatchFile(absolute_file_path.c_str(), std::move(watch_event_t::create<ResourceFile, &ResourceFile::Execute>(ptr)));
-                    return false;
+                    throw e;
                 }
             }
         }

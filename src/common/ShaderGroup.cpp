@@ -35,6 +35,11 @@ namespace st {
         const std::string groupName;
     };
 
+    ShaderGroupImpl::ShaderGroupImpl(const std::string& group_name) : groupName(group_name), compiler(std::make_unique<ShaderCompiler>()), generator(std::make_unique<ShaderGenerator>()),
+        bindingGenerator(std::make_unique<BindingGenerator>()) { }
+
+    ShaderGroupImpl::~ShaderGroupImpl() { }
+
     void ShaderGroupImpl::addShaderBody(const Shader& handle, std::string src_str_path) {
 
     }
@@ -71,31 +76,13 @@ namespace st {
     }
 
     ShaderGroup::shader_resource_names_t ShaderGroup::GetSetResourceNames(const uint32_t set_idx) const {
-        /*auto iter = impl->layoutBindings.find(set_idx);
-        if (iter == impl->layoutBindings.end()) { 
-            return shader_resource_names_t{};
-        }
-
-        const auto& set = iter->second;
-        shader_resource_names_t result;
-        result.NumNames = static_cast<uint32_t>(set.size());
-        size_t i = 0;
-
-        for (auto& member : set) {
-            result.Names[i] = strdup(member.first.c_str());
-            ++i;
-        }
-
-        return result;*/
         return shader_resource_names_t{};
     }
 
     ShaderGroup::ShaderGroup(const char * group_name, const char * resource_file_path) : impl(std::make_unique<ShaderGroupImpl>(group_name)){
         const std::string file_path{ resource_file_path };
         if (!FileTracker.FindResourceScript(file_path, impl->rsrcFile)) {
-            // Failed to compile, register this class a watcher.
-            auto watcher_delegate = delegate_t<void()>::create<ShaderGroupImpl, &ShaderGroupImpl::resourceScriptValid>(this->impl.get());
-            //FileTracker.ScriptValidCallbacks[file_path].emplace_back(watcher_delegate);
+            throw std::runtime_error("Failed to execute resource script: check error log.");
         }
     }
 
@@ -122,10 +109,5 @@ namespace st {
         impl->addShaderBody(handle, shader_body_src_file);
     }
 
-    ShaderGroupImpl::ShaderGroupImpl(const std::string& group_name) : groupName(group_name), compiler(std::make_unique<ShaderCompiler>()), bindingGenerator(std::make_unique<BindingGenerator>()) { }
-
-    ShaderGroupImpl::~ShaderGroupImpl()
-    {
-    }
 
 }

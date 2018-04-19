@@ -11,12 +11,11 @@
 #include <experimental/filesystem>
 namespace st {
 
-    class Observer;
-
     struct ShaderFileTracker {
         ShaderFileTracker();
         ~ShaderFileTracker();
-        bool FindShaderSource(const Shader& handle, std::string& dest_str);
+        bool FindShaderBody(const Shader& handle, std::string& dest_str);
+        bool AddShaderBodyPath(const Shader& handle, const std::string& shader_body_path);
         bool FindShaderBinary(const Shader& handle, std::vector<uint32_t>& dest_binary_vector);
         bool FindResourceScript(const std::string& fname, const ResourceFile* dest_ptr);
         bool ShaderSourceNewerThanBinary(const Shader& handle);
@@ -25,11 +24,8 @@ namespace st {
         std::unordered_map<Shader, std::vector<uint32_t>> Binaries;
         std::unordered_map<Shader, std::string> ShaderUsedResourceScript;
         std::unordered_map<std::string, std::unique_ptr<ResourceFile>> ResourceScripts;
-        std::vector<std::unique_ptr<Observer>> ScriptFileObservers;
         std::unordered_map<Shader, std::experimental::filesystem::path> SourcePaths;
         std::unordered_map<Shader, std::experimental::filesystem::path> BinaryPaths;
-        // Only observes source code.
-        std::unordered_map<Shader, std::unique_ptr<Observer>> FileObservers;
 
     private:
         bool attemptExecuteResourceScript(const std::string& full_file_path, const ResourceFile* dest_ptr);
