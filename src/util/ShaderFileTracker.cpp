@@ -60,7 +60,13 @@ namespace st {
                 throw std::runtime_error("Failed to open input stream for given shader body path.");
             }
 
-            ShaderBodies.emplace(handle, std::string{ std::istreambuf_iterator<char>(input_stream), std::istreambuf_iterator<char>() });
+            auto iter = ShaderBodies.emplace(handle, std::string{ std::istreambuf_iterator<char>(input_stream), std::istreambuf_iterator<char>() });
+            if (iter.second) {
+                return true;
+            }
+            else {
+                return false;
+            }
         }
         return false;
     }
