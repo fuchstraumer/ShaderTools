@@ -1,7 +1,7 @@
 #include "Structures.glsl"
 
-#pragma USE_RESOURCES SORT_RESOURCES
-#pragma USE_RESOURCES MERGE_SORT_RESOURCES
+#pragma USE_RESOURCES SortResources
+#pragma USE_RESOURCES MergeSortResources
 
 const uint NUM_THREADS = 256;
 const uint INT_MAX = 0xffffffff;

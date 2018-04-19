@@ -2,8 +2,8 @@
 
 layout(local_size_x = 1024, local_size_y = 1, local_size_z = 1) in;
 
-#pragma USE_RESOURCES SORT_RESOURCES
-#pragma USE_RESOURCES VOLUMETRIC_FORWARD_LIGHTS
+#pragma USE_RESOURCES SortResources
+#pragma USE_RESOURCES VolumetricForwardLights
 shared AABB gs_AABB;
 shared vec4 gs_AABBRange;
 
