@@ -1,25 +1,19 @@
 #include "generation/ShaderGenerator.hpp"
-
 #include <string>
-#include <algorithm>
 #include <regex>
 #include <fstream>
-#include <string_view>
 #include <experimental/filesystem>
 #include <map>
 #include <vector>
-#include <string>
-#include <map>
 #include <set>
 #include <cassert>
 #include <sstream>
 #include <unordered_map>
-
+#include <mutex>
 #include "lua/ResourceFile.hpp"
 #include "../util/FilesystemUtils.hpp"
 #include "../util/ShaderFileTracker.hpp"
 namespace fs = std::experimental::filesystem;
-
 
 namespace st {
 
@@ -129,17 +123,20 @@ namespace st {
         void processBodyStrSpecializationConstants(std::string & body_src_str);
         void processBodyStrIncludes(std::string & body_src_str);
         void processBodyStrResourceBlocks(std::string & body_str);
-        void addBody(const Shader& handle, const std::string& path_to_src);
+        void generate(const Shader& handle, const std::string& path_to_src);
 
-        bool collated = false;
         VkShaderStageFlagBits Stage = VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM;
         std::multiset<shaderFragment> fragments;
-        std::map<fs::path, std::string> fileContents;
+        static std::map<fs::path, std::string> fileContents;
         std::map<std::string, std::string> resourceBlocks;
         shader_resources_t ShaderResources;
         ResourceFile* luaResources;
         std::vector<fs::path> includes;
     };
+
+    
+    static std::mutex fileMutex;
+    std::map<fs::path, std::string> ShaderGeneratorImpl::fileContents = std::map<fs::path, std::string>{};
 
     ShaderGeneratorImpl::ShaderGeneratorImpl(const VkShaderStageFlagBits& stage) : Stage(stage) {
         fs::path preamble(std::string(BasePath) + "builtins/preamble450.glsl");
@@ -167,13 +164,11 @@ namespace st {
     }
 
     ShaderGeneratorImpl::ShaderGeneratorImpl(ShaderGeneratorImpl&& other) noexcept : Stage(std::move(other.Stage)), fragments(std::move(other.fragments)),
-        fileContents(std::move(other.fileContents)), resourceBlocks(std::move(other.resourceBlocks)),
-        ShaderResources(std::move(other.ShaderResources)), includes(std::move(other.includes)) {}
+        resourceBlocks(std::move(other.resourceBlocks)), ShaderResources(std::move(other.ShaderResources)), includes(std::move(other.includes)) {}
 
     ShaderGeneratorImpl& ShaderGeneratorImpl::operator=(ShaderGeneratorImpl&& other) noexcept {
         Stage = std::move(other.Stage);
         fragments = std::move(other.fragments);
-        fileContents = std::move(other.fileContents);
         resourceBlocks = std::move(other.resourceBlocks);
         ShaderResources = std::move(other.ShaderResources);
         includes = std::move(other.includes);
@@ -181,22 +176,45 @@ namespace st {
     }
 
     void ShaderGeneratorImpl::addPreamble(const fs::path& path) {
-        std::ifstream file_stream(path);
-        std::string preamble{ std::istreambuf_iterator<char>(file_stream), std::istreambuf_iterator<char>() };
-        fileContents.emplace(path, preamble);
-        fragments.insert(shaderFragment{ fragment_type::Preamble, preamble });
+        if (fileContents.count(path) == 0) {
+            std::ifstream file_stream(path);
+            if (!file_stream.is_open()) {
+                throw std::runtime_error("Failed to open preamble file at given path.");
+            }
+            std::string preamble{ std::istreambuf_iterator<char>(file_stream), std::istreambuf_iterator<char>() };
+
+            std::lock_guard<std::mutex> emplace_guard(fileMutex);
+            auto fc_iter = fileContents.emplace(fs::absolute(path), preamble);
+            if (!fc_iter.second) {
+                throw std::runtime_error("Failed to emplace preamble (path,source_str) into file contents map.");
+            }
+
+            auto frag_iter = fragments.emplace(shaderFragment{ fragment_type::Preamble, preamble });
+            if (frag_iter == fragments.end()) {
+                throw std::runtime_error("Failed to add preamble to generator's fragments multimap!");
+            }
+
+        }
+        else {
+            auto frag_iter = fragments.emplace(shaderFragment{ fragment_type::Preamble, fileContents.at(fs::absolute(path)) });
+            if (frag_iter == fragments.end()) {
+                throw std::runtime_error("Failed to add preamble to generator's fragments multimap!");
+            }
+        }
     }
 
     const std::string& ShaderGeneratorImpl::addFragment(const fs::path& src_path) {
-        fs::path source_file(src_path);
+        fs::path source_file(fs::absolute(src_path));
 
         if (!fs::exists(source_file)) {
-            throw std::runtime_error("Could not find given shader fragment source file.");
+            const std::string exception_str = std::string("Given shader fragment path \"") + source_file.string() + std::string("\" does not exist!");
+            throw std::runtime_error(exception_str);
         }
 
         std::ifstream file_stream(source_file);
 
         std::string file_content{ std::istreambuf_iterator<char>(file_stream), std::istreambuf_iterator<char>() };
+        std::lock_guard<std::mutex> emplace_guard(fileMutex);
         fileContents.emplace(source_file, std::move(file_content));
         return fileContents.at(source_file);
     }
@@ -382,6 +400,12 @@ namespace st {
         return prefix + std::string{ " " } + buffer_type + std::string{ " " } +name + std::string{ ";\n" };
     }
 
+#ifndef NDEBUG
+    constexpr bool SAVE_BLOCKS_TO_FILE = true;
+#else
+    constexpr bool SAVE_BLOCKS_TO_FILE = false;
+#endif
+
     void ShaderGeneratorImpl::useResourceBlock(const std::string & block_name) {
         size_t active_set = 0;
         if (!ShaderResources.DescriptorBindings.empty()) {
@@ -413,14 +437,16 @@ namespace st {
 
         }
 
-        std::string block_file_name = block_name + std::string{ ".glsl" };
-        std::ofstream block_stream(block_name);
-        if (!block_stream.is_open()) {
-            throw std::runtime_error("failed to open stream!");
+        if (SAVE_BLOCKS_TO_FILE) {
+            std::string block_file_name = block_name + std::string{ ".glsl" };
+            std::ofstream block_stream(block_name);
+            if (!block_stream.is_open()) {
+                throw std::runtime_error("failed to open stream!");
+            }
+            block_stream << resource_block_string;
+            block_stream.flush(); block_stream.close();
         }
-        block_stream << resource_block_string;
-        block_stream.flush(); block_stream.close();
-         
+
         fragments.emplace(shaderFragment{ fragment_type::ResourceBlock, resource_block_string });
 
     }
@@ -490,7 +516,7 @@ namespace st {
         }
     }
 
-    void ShaderGeneratorImpl::addBody(const Shader& handle, const std::string& path_to_source) {
+    void ShaderGeneratorImpl::generate(const Shader& handle, const std::string& path_to_source) {
         std::string body_str{ fetchBodyStr(handle, path_to_source) };
         processBodyStrSpecializationConstants(body_str);
         processBodyStrIncludes(body_str);
@@ -513,12 +539,12 @@ namespace st {
         impl->luaResources = rsrc_file;
     }
 
-    void ShaderGenerator::AddBody(const Shader& handle, const char* path, const size_t num_includes, const char* const* paths) {
+    void ShaderGenerator::Generate(const Shader& handle, const char* path, const size_t num_includes, const char* const* paths) {
         for (size_t i = 0; i < num_includes; ++i) {
             assert(paths);
             impl->addIncludePath(paths[i]);
         }
-        impl->addBody(handle, path);
+        impl->generate(handle, path);
     }
 
     void ShaderGenerator::AddIncludePath(const char * path_to_include) {
