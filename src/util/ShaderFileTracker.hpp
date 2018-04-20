@@ -27,7 +27,7 @@ namespace st {
         std::unordered_map<std::string, std::unique_ptr<ResourceFile>> ResourceScripts;
         std::unordered_map<Shader, std::experimental::filesystem::path> BodyPaths;
         std::unordered_map<Shader, std::experimental::filesystem::path> BinaryPaths;
-
+        std::unordered_multimap<Shader, std::string> usedResourceBlockNames;
     };
 
 }

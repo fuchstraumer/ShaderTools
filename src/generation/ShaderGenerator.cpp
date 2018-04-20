@@ -122,7 +122,7 @@ namespace st {
         std::string fetchBodyStr(const Shader & handle, const std::string & path_to_source);
         void processBodyStrSpecializationConstants(std::string & body_src_str);
         void processBodyStrIncludes(std::string & body_src_str);
-        void processBodyStrResourceBlocks(std::string & body_str);
+        void processBodyStrResourceBlocks(const Shader& handle, std::string & body_str);
         void generate(const Shader& handle, const std::string& path_to_src);
 
         VkShaderStageFlagBits Stage = VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM;
@@ -503,13 +503,14 @@ namespace st {
 
     }
 
-    void ShaderGeneratorImpl::processBodyStrResourceBlocks(std::string& body_str) {
+    void ShaderGeneratorImpl::processBodyStrResourceBlocks(const Shader& handle, std::string& body_str) {
         bool block_found = true;
         while (block_found) {
             std::smatch match;
             if (std::regex_search(body_str, match, use_set_resources)) {
                 useResourceBlock(match[1].str());
                 body_str.erase(body_str.begin() + match.position(), body_str.begin() + match.position() + match.length());
+                FileTracker.usedResourceBlockNames.emplace(handle, match[1].str());
             }
             else {
                 block_found = false;
@@ -521,7 +522,7 @@ namespace st {
         std::string body_str{ fetchBodyStr(handle, path_to_source) };
         processBodyStrSpecializationConstants(body_str);
         processBodyStrIncludes(body_str);
-        processBodyStrResourceBlocks(body_str);
+        processBodyStrResourceBlocks(handle, body_str);
         fragments.emplace(shaderFragment{ fragment_type::Main, body_str });
     }
 

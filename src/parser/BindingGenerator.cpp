@@ -54,15 +54,18 @@ namespace st {
 
         void parseBinary(const std::vector<uint32_t>& binary_data, const VkShaderStageFlags stage);
         void collateSets(std::multimap<uint32_t, ShaderResource> sets);
+        void parseResourceType(const VkShaderStageFlags & stage, const VkDescriptorType & type_being_parsed);
         void parseBinary(const Shader& shader_handle);
         void parseImpl(const std::vector<uint32_t>& binary_data, const VkShaderStageFlags stage);
 
         std::unordered_multimap<VkShaderStageFlags, DescriptorSetInfo> descriptorSets;
         std::map<uint32_t, DescriptorSetInfo> sortedSets;
+        std::multimap<uint32_t, ShaderResource> tempResources;
         std::unordered_map<VkShaderStageFlags, PushConstantInfo> pushConstants;
         std::unordered_map<VkShaderStageFlags, std::map<uint32_t, VertexAttributeInfo>> inputAttributes;
         std::unordered_map<VkShaderStageFlags, std::map<uint32_t, VertexAttributeInfo>> outputAttributes;
         std::map<uint32_t, SpecializationConstant> specializationConstants;
+        std::unique_ptr<spirv_cross::Compiler> recompiler;
 
         decltype(sortedSets)::iterator findSetWithIdx(const uint32_t idx);
     };
@@ -134,7 +137,7 @@ namespace st {
         return parseVertAttrs(cmplr, rsrcs.stage_outputs);
     }
 
-    void ParseResource(std::multimap<uint32_t, ShaderResource>& info, spirv_cross::Compiler& cmplr, const VkShaderStageFlags& stage, const VkDescriptorType& type_being_parsed, const std::vector<spirv_cross::Resource>& resources) {
+    void BindingGeneratorImpl::parseResourceType(const VkShaderStageFlags& stage, const VkDescriptorType& type_being_parsed) {
         
         auto parsing_buffer_type = [](const VkDescriptorType& type) {
             return (type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER) || (type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC) ||
@@ -154,19 +157,48 @@ namespace st {
             return results;
         };
         
+        const auto resources_all = recompiler->get_shader_resources();
+        std::vector<spirv_cross::Resource> resources;
+        switch (type_being_parsed) {
+        case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+            resources = resources_all.uniform_buffers;
+            break;
+        case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+            resources = resources_all.storage_buffers;
+            break;
+        case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+            resources = resources_all.storage_images;
+            break;
+        case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+            resources = resources_all.sampled_images;
+            break;
+        case VK_DESCRIPTOR_TYPE_SAMPLER:
+            resources = resources_all.separate_samplers;
+            break;
+        case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
+            resources = resources_all.separate_images;
+            break;
+        case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
+            resources = resources_all.subpass_inputs;
+            break;
+        default:
+            throw std::runtime_error("Passed invalid resource type.");
+        };
+
         for (const auto& rsrc : resources) {
             ShaderResource obj;
-            obj.SetBinding(cmplr.get_decoration(rsrc.id, spv::DecorationBinding));
-            obj.SetName(cmplr.get_name(rsrc.id));
+            obj.SetBinding(recompiler->get_decoration(rsrc.id, spv::DecorationBinding));
+            obj.SetName(recompiler->get_name(rsrc.id).c_str());
             if (parsing_buffer_type(type_being_parsed)) {
-                obj.SetMembers(extract_buffer_members(rsrc, cmplr));
+                auto members = extract_buffer_members(rsrc, *recompiler);
+                obj.SetMembers(members.size(), members.data());
             }
             obj.SetType(type_being_parsed);
-            auto spir_type = cmplr.get_type(rsrc.type_id);
-            //obj.SetStorageClass(StorageClassFromSPIRType(spir_type));
+            auto spir_type = recompiler->get_type(rsrc.type_id);
+            obj.SetStorageClass(StorageClassFromSPIRType(spir_type));
             obj.SetFormat(FormatFromSPIRType(spir_type));
             obj.SetStages(stage);
-            info.emplace(cmplr.get_decoration(rsrc.id, spv::DecorationDescriptorSet), obj);
+            tempResources.emplace(recompiler->get_decoration(rsrc.id, spv::DecorationDescriptorSet), obj);
         }
 
     }
@@ -237,17 +269,16 @@ namespace st {
 
     void BindingGeneratorImpl::parseImpl(const std::vector<uint32_t>& binary_data, const VkShaderStageFlags stage) {
         using namespace spirv_cross;
-        Compiler glsl(binary_data);
+        recompiler = std::make_unique<Compiler>(binary_data);
 
         std::multimap<uint32_t, ShaderResource> sets;
-        const auto& resources = glsl.get_shader_resources();
-        ParseResource(sets, glsl, stage, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, resources.uniform_buffers);
-        ParseResource(sets, glsl, stage, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, resources.storage_buffers);
-        ParseResource(sets, glsl, stage, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, resources.subpass_inputs);
-        ParseResource(sets, glsl, stage, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, resources.separate_images);
-        ParseResource(sets, glsl, stage, VK_DESCRIPTOR_TYPE_SAMPLER, resources.separate_samplers);
-        ParseResource(sets, glsl, stage, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, resources.sampled_images);
-        ParseResource(sets, glsl, stage, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, resources.storage_images);
+        parseResourceType(stage, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+        parseResourceType(stage, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
+        parseResourceType(stage, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT);
+        parseResourceType(stage, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE);
+        parseResourceType(stage, VK_DESCRIPTOR_TYPE_SAMPLER);
+        parseResourceType(stage, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+        parseResourceType(stage, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
         collateSets(std::move(sets));
         
         if (!resources.push_constant_buffers.empty()) {

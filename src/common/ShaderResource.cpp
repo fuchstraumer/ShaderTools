@@ -5,16 +5,18 @@ namespace st {
     class ShaderResourceImpl {
     public:
 
-        ShaderResourceImpl(const char* parent_set_name);
+        ShaderResourceImpl() = default;
+        ShaderResourceImpl(uint32_t parent, uint32_t binding);
         ~ShaderResourceImpl() {};
         ShaderResourceImpl(const ShaderResourceImpl& other) noexcept;
         ShaderResourceImpl(ShaderResourceImpl&& other) noexcept;
         ShaderResourceImpl& operator=(const ShaderResourceImpl& other) noexcept;
         ShaderResourceImpl& operator=(ShaderResourceImpl&& other) noexcept;
 
-        size_t memoryRequired;
+        size_t memoryRequired{ std::numeric_limits<size_t>::max() };
         std::string parentSetName{ "" };
         uint32_t binding{ 0 };
+        uint32_t parentIdx{ -1 };
         std::string name{ "" };
         size_class sizeClass{ size_class::Absolute };
         storage_class storageClass{ storage_class::Read };
@@ -25,14 +27,15 @@ namespace st {
 
     };
 
-    ShaderResourceImpl::ShaderResourceImpl(const char * parent_set_name) : parentSetName(parent_set_name) {}
+    ShaderResourceImpl::ShaderResourceImpl(uint32_t parent, uint32_t _binding) : parentIdx(std::move(parent)), binding(std::move(_binding)) {}
 
     ShaderResourceImpl::ShaderResourceImpl(const ShaderResourceImpl & other) noexcept : memoryRequired(other.memoryRequired), parentSetName(other.parentSetName), binding(other.binding), 
-        name(other.name), sizeClass(other.sizeClass), storageClass(other.storageClass), stages(other.stages), type(other.type), members(other.members), format(other.format) {}
+        name(other.name), sizeClass(other.sizeClass), storageClass(other.storageClass), stages(other.stages), type(other.type), members(other.members), format(other.format),
+        parentIdx(other.parentIdx) {}
 
     ShaderResourceImpl::ShaderResourceImpl(ShaderResourceImpl && other) noexcept : memoryRequired(std::move(other.memoryRequired)), parentSetName(std::move(other.parentSetName)), binding(std::move(other.binding)),
         name(std::move(other.name)), sizeClass(std::move(other.sizeClass)), storageClass(std::move(other.storageClass)), stages(std::move(other.stages)), type(std::move(other.type)), members(std::move(other.members)),
-        format(std::move(other.format)) {}
+        format(std::move(other.format)), parentIdx(std::move(other.parentIdx)) {}
 
     ShaderResourceImpl & ShaderResourceImpl::operator=(const ShaderResourceImpl & other) noexcept {
         memoryRequired = other.memoryRequired;
@@ -45,6 +48,7 @@ namespace st {
         type = other.type;
         members = other.members;
         format = other.format;
+        parentIdx = other.parentIdx;
         return *this;
     }
 
@@ -59,10 +63,13 @@ namespace st {
         type = std::move(other.type);
         members = std::move(other.members);
         format = std::move(other.format);
+        parentIdx = std::move(other.parentIdx);
         return *this;
     }
 
-    ShaderResource::ShaderResource(const char * parent_set_name) : impl(std::make_unique<ShaderResourceImpl>(parent_set_name)) {}
+    ShaderResource::ShaderResource() : impl(std::make_unique<ShaderResourceImpl>()) {}
+
+    ShaderResource::ShaderResource(uint32_t parent_idx, uint32_t binding_idx) : impl(std::make_unique<ShaderResourceImpl>(parent_idx, binding_idx)) {}
 
     ShaderResource::~ShaderResource() {}
 
@@ -111,6 +118,10 @@ namespace st {
 
     const char* ShaderResource::GetName() const {
         return impl->name.c_str();
+    }
+
+    const uint32_t & ShaderResource::GetParentIdx() const noexcept {
+        return impl->parentIdx;
     }
 
     const uint32_t & ShaderResource::GetBinding() const noexcept {
@@ -162,6 +173,10 @@ namespace st {
 
     void ShaderResource::SetFormat(VkFormat fmt) {
         impl->format = std::move(fmt);
+    }
+
+    void ShaderResource::SetParentIdx(uint32_t parent_idx) {
+        impl->parentIdx = parent_idx;
     }
 
     void ShaderResource::SetBinding(uint32_t binding) {

@@ -23,7 +23,8 @@ namespace st {
     class ST_API ShaderResource {
     public:
 
-        ShaderResource(const char* parent_set_name);
+        ShaderResource();
+        ShaderResource(uint32_t parent_idx, uint32_t binding_idx);
         ~ShaderResource();
         ShaderResource(const ShaderResource& other) noexcept;
         ShaderResource(ShaderResource&& other) noexcept;
@@ -38,6 +39,7 @@ namespace st {
         const size_t& GetAmountOfMemoryRequired() const noexcept;
         const VkFormat& GetFormat() const noexcept;
         const char* GetName() const;
+        const uint32_t& GetParentIdx() const noexcept;
         const uint32_t& GetBinding() const noexcept;
         const VkShaderStageFlags& GetStages() const noexcept;
         const VkDescriptorType& GetType() const noexcept;
@@ -51,6 +53,7 @@ namespace st {
         void SetName(const char* name);
         void SetMembers(const size_t num_members, ShaderResourceSubObject* src_objects);
         void SetFormat(VkFormat fmt);
+        void SetParentIdx(uint32_t parent_idx);
         void SetBinding(uint32_t binding);
 
     private:
