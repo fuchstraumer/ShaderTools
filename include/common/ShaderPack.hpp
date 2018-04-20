@@ -7,6 +7,9 @@ namespace st {
     class ShaderPackImpl;
     class ShaderGroup;
 
+    static void SetCacheDirectory(const char* new_cache_directory);
+    static const char* GetCacheDirectory();
+
     class ST_API ShaderPack {
         ShaderPack(const ShaderPack&) = delete;
         ShaderPack& operator=(const ShaderPack&) = delete;
