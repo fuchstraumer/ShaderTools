@@ -101,6 +101,10 @@ namespace st {
         }
     }
 
+    const size_t & ShaderResource::GetAmountOfMemoryRequired() const noexcept {
+        return impl->memoryRequired;
+    }
+
     const VkFormat& ShaderResource::GetFormat() const noexcept {
         return impl->format;
     }
@@ -126,6 +130,10 @@ namespace st {
         if (objects != nullptr) {
             std::copy(impl->members.cbegin(), impl->members.cend(), objects);
         }
+    }
+
+    void ShaderResource::SetMemoryRequired(size_t amt) {
+        impl->memoryRequired = std::move(amt);
     }
 
     void ShaderResource::SetStages(VkShaderStageFlags stages) {

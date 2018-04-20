@@ -43,6 +43,7 @@ namespace st {
         const VkDescriptorType& GetType() const noexcept;
         void GetMembers(size_t* num_members, ShaderResourceSubObject* dest_objects) const noexcept;
 
+        void SetMemoryRequired(size_t amt);
         void SetStages(VkShaderStageFlags stages);
         void SetType(VkDescriptorType _type);
         void SetSizeClass(size_class _size_class);
