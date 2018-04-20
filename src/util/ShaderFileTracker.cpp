@@ -5,8 +5,10 @@
 namespace fs = std::experimental::filesystem;
 namespace st {
 
-    ShaderFileTracker::ShaderFileTracker()
-    {
+    
+
+    ShaderFileTracker::ShaderFileTracker(const std::string & initial_directory) {
+
     }
 
     ShaderFileTracker::~ShaderFileTracker()

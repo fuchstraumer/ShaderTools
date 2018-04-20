@@ -21,6 +21,8 @@ namespace st {
         void Compile(const Shader& handle, const char* path_to_source);
 
         void GetBinary(const Shader& shader_handle, size_t* binary_sz, uint32_t* binary_dest_ptr) const;
+        void GetAssembly(const Shader& shader_handle, size_t* assembly_size, char* dest_assembly_str) const;
+        void RecompileBinaryToGLSL(const Shader& shader_handle, size_t* recompiled_size, char* dest_glsl_str) const;
 
     private:
         std::unique_ptr<ShaderCompilerImpl> impl;

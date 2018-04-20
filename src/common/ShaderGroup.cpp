@@ -2,7 +2,7 @@
 #include "generation/Compiler.hpp"
 #include "generation/ShaderGenerator.hpp"
 #include "parser/BindingGenerator.hpp"
-#include "parser/ShaderResource.hpp"
+#include "common/ShaderResource.hpp"
 #include "lua/LuaEnvironment.hpp"
 #include "lua/ResourceFile.hpp"
 #include "../util/ShaderFileTracker.hpp"

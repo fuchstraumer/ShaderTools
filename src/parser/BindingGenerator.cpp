@@ -1,5 +1,6 @@
 #include "parser/BindingGenerator.hpp"
 #include "parser/DescriptorStructs.hpp"
+#include "common/ShaderResource.hpp"
 #include "spirv-cross/spirv_cross.hpp"
 #include "spirv-cross/spirv_glsl.hpp"
 #include <array>
@@ -13,6 +14,28 @@
 namespace st {
 
     extern ShaderFileTracker FileTracker;
+
+    storage_class StorageClassFromSPIRType(const spirv_cross::SPIRType & type) {
+        using namespace spirv_cross;
+        if (type.basetype == SPIRType::SampledImage || type.basetype == SPIRType::Sampler || type.basetype == SPIRType::Struct || type.basetype == SPIRType::AtomicCounter) {
+            return storage_class::Read;
+        }
+        else {
+            switch (type.image.access) {
+            case spv::AccessQualifier::AccessQualifierReadOnly:
+                return storage_class::Read;
+            case spv::AccessQualifier::AccessQualifierWriteOnly:
+                return storage_class::Write;
+            case spv::AccessQualifier::AccessQualifierReadWrite:
+                return storage_class::ReadWrite;
+            case spv::AccessQualifier::AccessQualifierMax:
+                // Usually happens for storage images.
+                return storage_class::ReadWrite;
+            default:
+                throw std::domain_error("SPIRType somehow has invalid access qualifier enum value!");
+            }
+        }
+    }
 
     struct DescriptorSetInfo {
         uint32_t Binding;
