@@ -38,8 +38,8 @@ namespace st {
 
     void ResourceFile::parseResources() {
         using namespace luabridge;
-        
-        LuaRef set_table = getGlobal(env->GetState(), "Resources");
+
+        LuaRef set_table(LuaRef::fromStack(env->GetState(), -1));
         auto resource_sets = env->GetTableMap(set_table);
 
         for (auto& entry : resource_sets) {
@@ -76,6 +76,9 @@ namespace st {
             }
         }
 
+        // Should cause stack to be cleaned up after we exit this method, and
+        // the LuaRef object we created is destroyed.
+        lua_settop(env->GetState(), 0);
     }
 
 }
