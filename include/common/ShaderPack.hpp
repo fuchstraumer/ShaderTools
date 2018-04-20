@@ -5,6 +5,7 @@
 namespace st {
 
     class ShaderPackImpl;
+    class ShaderGroup;
 
     class ST_API ShaderPack {
         ShaderPack(const ShaderPack&) = delete;
@@ -14,6 +15,8 @@ namespace st {
         ShaderPack(const char* shader_pack_lua_script_path);
         ~ShaderPack();
 
+        
+        ShaderGroup* GetShaderGroup(const char* name) const;
     private:
         std::unique_ptr<ShaderPackImpl> impl;
     };

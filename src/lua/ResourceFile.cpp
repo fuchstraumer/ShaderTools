@@ -1,6 +1,5 @@
 #include "lua/ResourceFile.hpp"
 #include "parser/ShaderResource.hpp"
-#include "luabridge/LuaBridge.h"
 #include "generation/ShaderGenerator.hpp"
 #include "common/ShaderGroup.hpp"
 #include <iostream>

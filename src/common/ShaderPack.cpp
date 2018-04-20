@@ -1,4 +1,5 @@
 #include "common/ShaderPack.hpp"
+#include "common/ShaderGroup.hpp"
 
 namespace st {
 
