@@ -1,9 +1,16 @@
-#include "parser/ShaderResource.hpp"
+#include "common/ShaderResource.hpp"
 
 namespace st {
 
     class ShaderResourceImpl {
     public:
+
+        ShaderResourceImpl(const char* parent_set_name);
+        ~ShaderResourceImpl() {};
+        ShaderResourceImpl(const ShaderResourceImpl& other) noexcept;
+        ShaderResourceImpl(ShaderResourceImpl&& other) noexcept;
+        ShaderResourceImpl& operator=(const ShaderResourceImpl& other) noexcept;
+        ShaderResourceImpl& operator=(ShaderResourceImpl&& other) noexcept;
 
         size_t memoryRequired;
         std::string parentSetName{ "" };
@@ -15,22 +22,86 @@ namespace st {
         VkDescriptorType type{ VK_DESCRIPTOR_TYPE_MAX_ENUM };
         std::vector<ShaderResourceSubObject> members;
         VkFormat format{ VK_FORMAT_UNDEFINED };
+
     };
 
+    ShaderResourceImpl::ShaderResourceImpl(const char * parent_set_name) : parentSetName(parent_set_name) {}
+
+    ShaderResourceImpl::ShaderResourceImpl(const ShaderResourceImpl & other) noexcept : memoryRequired(other.memoryRequired), parentSetName(other.parentSetName), binding(other.binding), 
+        name(other.name), sizeClass(other.sizeClass), storageClass(other.storageClass), stages(other.stages), type(other.type), members(other.members), format(other.format) {}
+
+    ShaderResourceImpl::ShaderResourceImpl(ShaderResourceImpl && other) noexcept : memoryRequired(std::move(other.memoryRequired)), parentSetName(std::move(other.parentSetName)), binding(std::move(other.binding)),
+        name(std::move(other.name)), sizeClass(std::move(other.sizeClass)), storageClass(std::move(other.storageClass)), stages(std::move(other.stages)), type(std::move(other.type)), members(std::move(other.members)),
+        format(std::move(other.format)) {}
+
+    ShaderResourceImpl & ShaderResourceImpl::operator=(const ShaderResourceImpl & other) noexcept {
+        memoryRequired = other.memoryRequired;
+        parentSetName = other.parentSetName;
+        binding = other.binding;
+        name = other.name;
+        sizeClass = other.sizeClass;
+        storageClass = other.storageClass;
+        stages = other.stages;
+        type = other.type;
+        members = other.members;
+        format = other.format;
+        return *this;
+    }
+
+    ShaderResourceImpl & ShaderResourceImpl::operator=(ShaderResourceImpl && other) noexcept {
+        memoryRequired = std::move(other.memoryRequired);
+        parentSetName = std::move(other.parentSetName);
+        binding = std::move(other.binding);
+        name = std::move(other.name);
+        sizeClass = std::move(other.sizeClass);
+        storageClass = std::move(other.storageClass);
+        stages = std::move(other.stages);
+        type = std::move(other.type);
+        members = std::move(other.members);
+        format = std::move(other.format);
+        return *this;
+    }
+
+    ShaderResource::ShaderResource(const char * parent_set_name) : impl(std::make_unique<ShaderResourceImpl>(parent_set_name)) {}
+
+    ShaderResource::~ShaderResource() {}
+
+    ShaderResource::ShaderResource(const ShaderResource & other) noexcept : impl(std::make_unique<ShaderResourceImpl>(*other.impl)) { }
+
+    ShaderResource::ShaderResource(ShaderResource && other) noexcept : impl(std::move(other.impl)) {}
+
+    ShaderResource & ShaderResource::operator=(const ShaderResource& other) noexcept {
+        impl = std::make_unique<ShaderResourceImpl>(*other.impl);
+        return *this;
+    }
+
+    ShaderResource & ShaderResource::operator=(ShaderResource && other) noexcept {
+        impl = std::move(other.impl);
+        return *this;
+    }
+
+    bool ShaderResource::operator==(const ShaderResource & other) {
+        return impl->binding == other.impl->binding;
+    }
+
+    bool ShaderResource::operator<(const ShaderResource & other) {
+        return impl->binding < other.impl->binding;
+    }
+
     ShaderResource::operator VkDescriptorSetLayoutBinding() const {
-        if (type != VK_DESCRIPTOR_TYPE_MAX_ENUM && type != VK_DESCRIPTOR_TYPE_RANGE_SIZE) {
+        if ((GetType() != VK_DESCRIPTOR_TYPE_MAX_ENUM) && (GetType() != VK_DESCRIPTOR_TYPE_RANGE_SIZE)) {
             return VkDescriptorSetLayoutBinding{
-                0, type, 1, stages, nullptr
+               GetBinding(), GetType(), 1, GetStages(), nullptr
             };
         }
         else {
             return VkDescriptorSetLayoutBinding{
-                0, type, 0, stages, nullptr
+                GetBinding(), GetType(), 0, GetStages(), nullptr
             };
         }
     }
 
-    VkFormat ShaderResource::GetFormat() const noexcept {
+    const VkFormat& ShaderResource::GetFormat() const noexcept {
         return impl->format;
     }
 
@@ -88,5 +159,6 @@ namespace st {
     void ShaderResource::SetBinding(uint32_t binding) {
         impl->binding = std::move(binding);
     }
+
 
 }

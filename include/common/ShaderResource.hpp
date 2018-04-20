@@ -8,23 +8,28 @@ namespace st {
 
     class ShaderResourceImpl;
 
+    enum class storage_class {
+        Read,
+        Write,
+        ReadWrite
+    };
+
+    enum class size_class {
+        Absolute,
+        SwapchainRelative,
+        ViewportRelative
+    };
+
     class ST_API ShaderResource {
     public:
 
-        ShaderResource();
+        ShaderResource(const char* parent_set_name);
         ~ShaderResource();
-        
-        enum class storage_class {
-            Read,
-            Write,
-            ReadWrite
-        };
-        
-        enum class size_class {
-            Absolute,
-            SwapchainRelative,
-            ViewportRelative
-        };
+        ShaderResource(const ShaderResource& other) noexcept;
+        ShaderResource(ShaderResource&& other) noexcept;
+
+        ShaderResource& operator=(const ShaderResource& other) noexcept;
+        ShaderResource& operator=(ShaderResource&& other) noexcept;
         
         bool operator==(const ShaderResource& other);
         bool operator<(const ShaderResource& other);
