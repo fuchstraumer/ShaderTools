@@ -62,29 +62,46 @@ namespace st {
         generator.reset();
     }
 
-    ShaderGroup::shader_resource_names_t::shader_resource_names_t() {}
+    ShaderGroup::dll_retrieved_strings_t::dll_retrieved_strings_t() {}
 
-    ShaderGroup::shader_resource_names_t::~shader_resource_names_t() {
+    ShaderGroup::dll_retrieved_strings_t::~dll_retrieved_strings_t() {
         for (uint32_t i = 0; i < NumNames; ++i) {
-            free(Names[i]);
+            free(Strings[i]);
         }
     }
 
-    ShaderGroup::shader_resource_names_t::shader_resource_names_t(shader_resource_names_t && other) noexcept : NumNames(std::move(other.NumNames)), Names(std::move(other.Names)) {
+    ShaderGroup::dll_retrieved_strings_t::dll_retrieved_strings_t(dll_retrieved_strings_t && other) noexcept : NumNames(std::move(other.NumNames)), Strings(std::move(other.Strings)) {
         other.NumNames = 0;
-        other.Names = nullptr;
+        other.Strings = nullptr;
     }
 
-    ShaderGroup::shader_resource_names_t& ShaderGroup::shader_resource_names_t::operator=(shader_resource_names_t && other) noexcept {
+    ShaderGroup::dll_retrieved_strings_t& ShaderGroup::dll_retrieved_strings_t::operator=(dll_retrieved_strings_t && other) noexcept {
         NumNames = std::move(other.NumNames);
         other.NumNames = 0;
-        Names = std::move(other.Names);
-        other.Names = nullptr;
+        Strings = std::move(other.Strings);
+        other.Strings = nullptr;
         return *this;
     }
 
-    ShaderGroup::shader_resource_names_t ShaderGroup::GetSetResourceNames(const uint32_t set_idx) const {
-        return shader_resource_names_t{};
+    ShaderGroup::dll_retrieved_strings_t ShaderGroup::GetSetResourceNames(const uint32_t set_idx) const {
+        return dll_retrieved_strings_t{};
+    }
+
+    ShaderGroup::dll_retrieved_strings_t ShaderGroup::GetUsedResourceBlocks(const Shader& handle) const {
+        auto iter_pair = FileTracker.usedResourceBlockNames.equal_range(handle);
+        if (std::distance(iter_pair.first, iter_pair.second) == 0) {
+            return dll_retrieved_strings_t{};
+        }
+        else {
+            dll_retrieved_strings_t results{};
+            results.NumNames = std::distance(iter_pair.first, iter_pair.second);
+            size_t idx = 0;
+            for (auto iter = iter_pair.first; iter != iter_pair.second; ++iter) {
+                results.Strings[idx] = strdup(iter->second.c_str());
+                ++idx;
+            }
+            return results;
+        }
     }
 
     ShaderGroup::ShaderGroup(const char * group_name, const char * resource_file_path, const size_t num_includes, const char* const* paths) : impl(std::make_unique<ShaderGroupImpl>(group_name, num_includes, paths)){
