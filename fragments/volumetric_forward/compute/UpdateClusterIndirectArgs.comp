@@ -1,8 +1,8 @@
 
 #include "Structures.glsl"
 
-#pragma USE_RESOURCES VOLUMETRIC_FORWARD
-#pragma USE_RESOURCES INDIRECT_ARGS
+#pragma USE_RESOURCES VolumtericForward
+#pragma USE_RESOURCES IndirectArgs
 
 layout(local_size_x = 1, local_size_y = 1, local_size_z  = 1) in;
 

@@ -2,10 +2,10 @@
 #include "Structures.glsl"
 #include "Functions.glsl"
 
-#pragma USE_RESOURCES VOLUMETRIC_FORWARD
-#pragma USE_RESOURCES SORT_RESOURCES
-#pragma USE_RESOURCES BVH_RESOURCES
-#pragma USE_RESOURCES VOLUMETRIC_FORWARD_LIGHTS
+#pragma USE_RESOURCES VolumetricForward
+#pragma USE_RESOURCES SortResources
+#pragma USE_RESOURCES BVHResources
+#pragma USE_RESOURCES VolumetricForwardLights
 
 layout (local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
 

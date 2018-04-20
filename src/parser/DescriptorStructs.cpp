@@ -1,8 +1,8 @@
-#include "ShaderStructs.hpp"
+#include "parser/DescriptorStructs.hpp"
 
 namespace st {
 
-    std::string StageFlagToStr(const VkShaderStageFlags & flag) {
+     std::string StageFlagToStr(const VkShaderStageFlags & flag) {
         switch (flag) {
         case VK_SHADER_STAGE_VERTEX_BIT:
             return "vertex-shader";
@@ -164,7 +164,11 @@ namespace st {
 
     VkFormat FormatFromSPIRType(const spirv_cross::SPIRType & type) {
         using namespace spirv_cross;
-        if (type.basetype == SPIRType::Image) {
+        if (type.basetype == SPIRType::Struct || type.basetype == SPIRType::Sampler) {
+            // no real format info for structs to be extracted
+            return VK_FORMAT_UNDEFINED;
+        }
+        else if (type.basetype == SPIRType::Image || type.basetype == SPIRType::SampledImage) {
             switch (type.image.format) {
             case spv::ImageFormatRgba32f:
                 return VK_FORMAT_R32G32B32A32_SFLOAT;
@@ -409,6 +413,7 @@ namespace st {
         }
     }
 
+
     std::string VertexAttributeInfo::GetTypeStr() const {
         return TypeToStr(Type);
     }
@@ -428,4 +433,90 @@ namespace st {
     std::string StageAttributes::GetStageStr() const {
         return StageFlagToStr(Stage);
     }
+
+    std::string GetTypeString(const VkDescriptorType & type) {
+        switch (type) {
+        case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+            return std::string("UniformBuffer");
+        case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
+            return std::string("UniformBufferDynamic");
+        case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+            return std::string("StorageBuffer");
+        case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
+            return std::string("StorageBufferDynamic");
+        case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+            return std::string("CombinedImageSampler");
+        case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
+            return std::string("SampledImage");
+        case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+            return std::string("StorageImage");
+        case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
+            return std::string("InputAttachment");
+        case VK_DESCRIPTOR_TYPE_SAMPLER:
+            return std::string("Sampler");
+        case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
+            return std::string("UniformTexelBuffer");
+        case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
+            return std::string("StorageTexelBuffer");
+        case VK_DESCRIPTOR_TYPE_RANGE_SIZE:
+            return std::string("NULL_TYPE");
+        default:
+            throw std::domain_error("Invalid VkDescriptorType enum value passed to enum-to-string method.");
+        }
+    }
+
+    VkDescriptorType GetTypeFromString(const std::string & str) {
+        if (str == std::string("UniformBuffer")) {
+            return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        }
+        else if (str == std::string("UniformBufferDynamic")) {
+            return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+        }
+        else if (str == std::string("StorageBuffer")) {
+            return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+        }
+        else if (str == std::string("StorageBufferDynamic")) {
+            return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
+        }
+        else if (str == std::string("CombinedImageSampler")) {
+            return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        }
+        else if (str == std::string("SampledImage")) {
+            return VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+        }
+        else if (str == std::string("StorageImage")) {
+            return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+        }
+        else if (str == std::string("InputAttachment")) {
+            return VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
+        }
+        else if (str == std::string("Sampler")) {
+            return VK_DESCRIPTOR_TYPE_SAMPLER;
+        }
+        else if (str == std::string("UniformTexelBuffer")) {
+            return VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
+        }
+        else if (str == std::string("StorageTexelBuffer")) {
+            return VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
+        }
+        else if (str == std::string("NULL_TYPE")) {
+            return VK_DESCRIPTOR_TYPE_RANGE_SIZE;
+        }
+        else {
+            throw std::domain_error("Invalid string passed to string-to-enum method!");
+        }
+    }
+
+    PushConstantInfo::operator VkPushConstantRange() const noexcept {
+        VkPushConstantRange result;
+        result.stageFlags = Stages;
+        result.offset = Offset;
+        uint32_t size = 0;
+        for (auto& obj : Members) {
+            size += obj.Size;
+        }
+        result.size = size;
+        return result;
+    }
+
 }

@@ -1,7 +1,7 @@
 layout(local_size_x = 1024) in;
 #include "Structures.glsl"
 
-#pragma USE_RESOURCES VOLUMETRIC_FORWARD
+#pragma USE_RESOURCES VolumetricForward
 
 void main() {
     int idx = int(gl_GlobalInvocationID.x);

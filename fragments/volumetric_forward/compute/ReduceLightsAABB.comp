@@ -1,7 +1,7 @@
 #include "Structures.glsl"
 
-#pragma USE_RESOURCES VOLUMETRIC_FORWARD_LIGHTS
-#pragma USE_RESOURCES SORT_RESOURCES
+#pragma USE_RESOURCES VolumetricForwardLights
+#pragma USE_RESOURCES SortResources
 
 $SPC const uint NumThreads = 512;
 $SPC const uint ReductionType = 0;

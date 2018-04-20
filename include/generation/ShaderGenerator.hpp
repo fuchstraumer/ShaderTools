@@ -1,10 +1,12 @@
 #pragma once
 #ifndef SG_SHADER_HPP
 #define SG_SHADER_HPP
-#include "CommonInclude.hpp"
-#include "Shader.hpp"
+#include "common/CommonInclude.hpp"
+#include "common/Shader.hpp"
 namespace st {
+
     class ShaderGeneratorImpl;
+    class ResourceFile;
 
     class ST_API ShaderGenerator { 
         ShaderGenerator(const ShaderGenerator&) = delete;
@@ -15,8 +17,8 @@ namespace st {
         ShaderGenerator(ShaderGenerator&& other) noexcept;
         ShaderGenerator& operator=(ShaderGenerator&& other) noexcept;
 
-        void AddResources(const char* path_to_resource_file);
-        void AddBody(const char* path_to_src, const size_t num_includes = 0, const char* const* paths = nullptr);
+        void SetResourceFile(ResourceFile* rsrc_file);
+        void Generate(const Shader& handle, const char* path_to_src, const size_t num_includes = 0, const char* const* paths = nullptr);
         void AddIncludePath(const char* path_to_include);
         void GetFullSource(size_t* len, char* dest) const;
         Shader SaveCurrentToFile(const char* fname) const;

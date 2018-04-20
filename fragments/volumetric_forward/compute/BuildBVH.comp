@@ -1,7 +1,7 @@
 #include "Structures.glsl"
-#pragma USE_RESOURCES BVH_RESOURCES
-#pragma USE_RESOURCES SORT_RESOURCES
-#pragma USE_RESOURCES VOLUMETRIC_FORWARD_LIGHTS
+#pragma USE_RESOURCES BVHResources
+#pragma USE_RESOURCES SortResources
+#pragma USE_RESOURCES VolumetricForwardLights
 
 $SPC const uint BuildStage = 0;
 

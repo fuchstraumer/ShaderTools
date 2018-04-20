@@ -16,7 +16,12 @@
 [submodule "third_party/nlohmann"]
 	path = third_party/nlohmann
 	url = https://github.com/nlohmann/json
-
 [submodule "third_party/spirv-headers"]
 	path = third_party/spirv-headers
 	url = https://github.com/KhronosGroup/SPIRV-Headers
+[submodule "third_party/luajit"]
+	path = third_party/luajit
+	url = https://github.com/LuaDist/luajit
+[submodule "third_party/luabridge"]
+	path = third_party/luabridge
+	url = https://github.com/vinniefalco/LuaBridge
