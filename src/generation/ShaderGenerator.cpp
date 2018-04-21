@@ -176,7 +176,7 @@ namespace st {
     }
 
     void ShaderGeneratorImpl::addPreamble(const fs::path& path) {
-        if (fileContents.count(path) == 0) {
+        if (fileContents.count(fs::absolute(path)) == 0) {
             std::ifstream file_stream(path);
             if (!file_stream.is_open()) {
                 throw std::runtime_error("Failed to open preamble file at given path.");
@@ -401,7 +401,7 @@ namespace st {
     }
 
 #ifndef NDEBUG
-    constexpr bool SAVE_BLOCKS_TO_FILE = true;
+    constexpr bool SAVE_BLOCKS_TO_FILE = false;
 #else
     constexpr bool SAVE_BLOCKS_TO_FILE = false;
 #endif
