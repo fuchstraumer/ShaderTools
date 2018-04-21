@@ -56,7 +56,7 @@ function get_num_light_aabbs()
     return 512;
 end
 
-local Resources = {
+Resources = {
     VolumetricForward = {
         ClusterData = {
             Type = "UniformBuffer",

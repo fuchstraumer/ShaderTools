@@ -119,7 +119,7 @@ namespace st {
             else {
                 
                 try {
-                    auto iter = ResourceScripts.emplace(absolute_file_path, std::make_unique<ResourceFile>(&LuaEnvironment::GetCurrentLuaEnvironment()));
+                    auto iter = ResourceScripts.emplace(absolute_file_path, std::make_unique<ResourceFile>());
 
                     if (!iter.second) {
                         std::cerr << "Failed to create a new resource script at path " << absolute_file_path.c_str() << " !\n";

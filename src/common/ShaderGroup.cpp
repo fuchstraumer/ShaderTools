@@ -94,7 +94,7 @@ namespace st {
         }
         else {
             dll_retrieved_strings_t results{};
-            results.NumNames = std::distance(iter_pair.first, iter_pair.second);
+            results.NumNames = static_cast<uint32_t>(std::distance(iter_pair.first, iter_pair.second));
             size_t idx = 0;
             for (auto iter = iter_pair.first; iter != iter_pair.second; ++iter) {
                 results.Strings[idx] = strdup(iter->second.c_str());

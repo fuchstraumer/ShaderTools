@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 #include "common/ShaderGroup.hpp"
+#include "common/ShaderPack.hpp"
 #include <array>
 
 int screen_x() {
@@ -31,10 +32,8 @@ int main(int argc, char* argv[]) {
     ShaderGroup::RetrievalCallbacks.GetZNear = &z_near;
     ShaderGroup::RetrievalCallbacks.GetZFar = &z_far;
     ShaderGroup::RetrievalCallbacks.GetFOVY = &fov_y;
-
-    const std::array<const char*, 1> include_paths{ "../fragments/volumetric_forward/" };
-    ShaderGroup group("VolumetricForward", "../fragments/volumetric_forward/VolumetricForward.lua", 1, include_paths.data());
-    auto handle = group.AddShader("AssignLightsToClustersBVH", "../fragments/volumetric_forward/compute/AssignLightsToClustersBVH.comp", VK_SHADER_STAGE_COMPUTE_BIT);
+    
+    ShaderPack pack("../fragments/volumetric_forward/ShaderPack.lua");
 
     std::cerr << "Tests complete.";
 }
