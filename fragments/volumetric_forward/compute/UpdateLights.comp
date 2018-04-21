@@ -3,26 +3,27 @@
 
 #pragma USE_RESOURCES GlobalResources
 #pragma USE_RESOURCES VolumetricForward
+#pragma USE_RESOURCES VolumetricForwardLights
 
 layout (local_size_x = 1024, local_size_y = 1, local_size_z = 1) in;
 
 void main() {
     uint curr_idx = gl_GlobalInvocationID.x;
     if (curr_idx < LightCounts.NumPointLights) {
-        PointLights.Data[curr_idx].Position = matrices.Model * PointLights.Data[curr_idx].Position;
-        PointLights.Data[curr_idx].PositionViewSpace = matrices.View * vec4(PointLights.Data[curr_idx].Position.xyz, 1.0f);
+        PointLights.Data[curr_idx].Position = matrices.model * PointLights.Data[curr_idx].Position;
+        PointLights.Data[curr_idx].PositionViewSpace = matrices.view * vec4(PointLights.Data[curr_idx].Position.xyz, 1.0f);
     }
 
     if (curr_idx < LightCounts.NumSpotLights) {
-        SpotLights.Data[curr_idx].Position = matrices.Model * SpotLights.Data[curr_idx].Position;
-        SpotLights.Data[curr_idx].PositionViewSpace = matrices.View * vec4(SpotLights.Data[curr_idx].Position.xyz, 1.0f);
-        SpotLights.Data[curr_idx].Direction = matrices.Model * SpotLights.Data[curr_idx].Direction;
-        SpotLights.Data[curr_idx].DirectionViewSpace = normalize(matrices.View * vec4(SpotLights.Data[curr_idx].Direction.xyz, 0.0f));
+        SpotLights.Data[curr_idx].Position = matrices.model * SpotLights.Data[curr_idx].Position;
+        SpotLights.Data[curr_idx].PositionViewSpace = matrices.view * vec4(SpotLights.Data[curr_idx].Position.xyz, 1.0f);
+        SpotLights.Data[curr_idx].Direction = matrices.model * SpotLights.Data[curr_idx].Direction;
+        SpotLights.Data[curr_idx].DirectionViewSpace = normalize(matrices.view * vec4(SpotLights.Data[curr_idx].Direction.xyz, 0.0f));
     }
 
     if (curr_idx < LightCounts.NumDirectionalLights) {
-        DirectionalLights.Data[curr_idx].Direction = matrices.Model * DirectionalLights.Data[curr_idx].Direction;
-        DirectionalLights.Data[curr_idx].DirectionViewSpace = normalize(matrices.View * vec4(DirectionalLights.Data[curr_idx].Direction.xyz, 0.0f));
+        DirectionalLights.Data[curr_idx].Direction = matrices.model * DirectionalLights.Data[curr_idx].Direction;
+        DirectionalLights.Data[curr_idx].DirectionViewSpace = normalize(matrices.view * vec4(DirectionalLights.Data[curr_idx].Direction.xyz, 0.0f));
     }
     
 }
