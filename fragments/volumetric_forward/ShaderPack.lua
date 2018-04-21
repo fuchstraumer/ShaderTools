@@ -2,38 +2,32 @@ PackName = "VolumetricForwardCore"
 ResourceFileName = "vfResources.lua"
 ShaderGroups = {
     AssignLightsToClusters = {
-        Shader = "compute/AssignLightsToClustersBVH.comp"
+        Compute = "compute/AssignLightsToClustersBVH.comp"
     },
     BuildBVH = {
-        Shader = "compute/BuildBVH.comp"
+        Compute = "compute/BuildBVH.comp"
     },
     ComputeMortonCodes = {
-        Shader = "compute/ComputeMortonCodes.comp"
+        Compute = "compute/ComputeMortonCodes.comp"
     },
     FindUniqueClusters = {
-        Shader = "compute/FindUniqueClusters.comp"
+        Compute = "compute/FindUniqueClusters.comp"
     },
     ReduceLights = {
-        Shader = "compute/ReduceLightsAABB.comp"
+        Compute = "compute/ReduceLightsAABB.comp"
     },
     UpdateClusterIndirectArgs = {
-        Shader = "compute/UpdateClusterIndirectArgs.comp"
+        Compute = "compute/UpdateClusterIndirectArgs.comp"
     },
     UpdateLights = {
-        Shader = "compute/UpdateLights.comp"
+        Compute = "compute/UpdateLights.comp"
     },
     DepthPrePass = {
-        NumShaders = 2,
-        Shaders = {
-            "Default.vert",
-            "ClusterSamples.frag"
-        }
+        Vertex = "Default.vert",
+        Fragment = "ClusterSamples.frag"
     },
     DrawPass = {
-        NumShaders = 2,
-        Shaders = {
-            "Default.vert",
-            "Clustered.frag"
-        }
+        Vertex = "Default.vert",
+        Fragment = "Clustered.frag"
     }
 }

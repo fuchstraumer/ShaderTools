@@ -57,6 +57,34 @@ function get_num_light_aabbs()
 end
 
 Resources = {
+    GlobalResources = {
+        matrices = {
+            Type = "UniformBuffer",
+            Members = {
+                model = "mat4",
+                view = "mat4",
+                projection = "mat4",
+                normal = "mat4"
+            }
+        },
+        globals = {
+            Type = "UniformBuffer",
+            Members = {
+                viewPosition = "vec4",
+                mousePosition = "vec2",
+                windowSize = "vec2",
+                depthRange = "vec2",
+                frame = "uint"
+            }
+        },
+        lightingData = {
+            Type = "UniformBuffer",
+            Members = {
+                Exposure = "float",
+                Gamma = "float"
+            }
+        }
+    },
     VolumetricForward = {
         ClusterData = {
             Type = "UniformBuffer",
@@ -146,12 +174,9 @@ Resources = {
     },
     IndirectArgsSet = {
         IndirectArgs = {
-            Type = "UniformBuffer",
-            Members = {
-                NumThreadGroupsX = "uint",
-                NumThreadGroupsY = "uint",
-                NumThreadGroupsZ = "uint"
-            }
+            Type = "StorageBuffer",
+            ElementType = "uint",
+            NumElements = 3
         }       
     },
     SortResources = {
