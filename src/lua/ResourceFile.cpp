@@ -1,4 +1,4 @@
-#include "lua/ResourceFile.hpp"
+#include "ResourceFile.hpp"
 #include "generation/ShaderGenerator.hpp"
 #include "common/ShaderGroup.hpp"
 #include <iostream>
@@ -16,6 +16,10 @@ namespace st {
 
     const set_resource_map_t& ResourceFile::GetResources(const std::string & block_name) const {
         return setResources.at(block_name);
+    }
+
+    const std::unordered_map<std::string, set_resource_map_t>& ResourceFile::GetAllResources() const noexcept {
+        return setResources;
     }
 
     void ResourceFile::Execute(const char* fname)  {

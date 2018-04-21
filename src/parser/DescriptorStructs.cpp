@@ -1,4 +1,4 @@
-#include "parser/DescriptorStructs.hpp"
+#include "DescriptorStructs.hpp"
 
 namespace st {
 

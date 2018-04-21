@@ -1,13 +1,19 @@
 #include "common/ShaderPack.hpp"
 #include "common/ShaderGroup.hpp"
-#include "lua/LuaEnvironment.hpp"
-#include "lua/ResourceFile.hpp"
+#include "../lua/LuaEnvironment.hpp"
+#include "../lua/ResourceFile.hpp"
+#include "common/ShaderResource.hpp"
+#include "../util/ShaderFileTracker.hpp"
 #include <unordered_map>
 #include <map>
 #include <experimental/filesystem>
 #include <array>
+#include <set>
+#include <future>
 
 namespace st {
+
+    extern ShaderFileTracker FileTracker;
 
     struct shader_pack_file_t {
 
@@ -86,7 +92,12 @@ namespace st {
         ShaderPackImpl(const char* shader_pack_file_path);
         void createGroups();
         void createSingleGroup(const std::string& name, const std::map<VkShaderStageFlagBits, std::string>& shader_map);
+        void createResourceGroupData();
 
+        size_t addResources(const std::set<ShaderResource>& resources);
+        size_t findIdxOfSetWithSingleResource(const std::string& resource_name) const;
+
+        std::vector<std::set<ShaderResource>> resources;
         std::unordered_map<std::string, std::unique_ptr<ShaderGroup>> groups;
         std::unique_ptr<shader_pack_file_t> filePack;
         std::experimental::filesystem::path workingDir;
@@ -98,6 +109,7 @@ namespace st {
         workingDir = fs::absolute(workingDir);
         workingDir = workingDir.remove_filename();
         createGroups();
+        createResourceGroupData();
     }
 
     void ShaderPackImpl::createGroups() {
@@ -144,8 +156,34 @@ namespace st {
         }
     }
 
+    void ShaderPackImpl::createResourceGroupData() {
+        const std::string resource_path = std::experimental::filesystem::absolute(std::experimental::filesystem::path(filePack->ResourceFileName)).string();
+        const auto& resource_file = FileTracker.ResourceScripts.at(resource_path);
+        const auto& resources_unparsed = resource_file->GetAllResources();
+
+        for (const auto& resource_map : resources_unparsed) {
+            for (const auto& resource : resource_map.second) {
+                
+            }
+        }
+    }
+
+    size_t ShaderPackImpl::addResources(const std::set<ShaderResource>& resources) {
+        std::vector<std::future<size_t>> futures;
+        return size_t();
+    }
+
     ShaderPack::ShaderPack(const char* fpath) : impl(std::make_unique<ShaderPackImpl>(fpath)) {}
 
     ShaderPack::~ShaderPack() {}
+
+    ShaderGroup * ShaderPack::GetShaderGroup(const char * name) const {
+        if (impl->groups.count(name) != 0) {
+            return impl->groups.at(name).get();
+        }
+        else {
+            return nullptr;
+        }
+    }
 
 }

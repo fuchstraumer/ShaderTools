@@ -1,5 +1,7 @@
-#include "lua/LuaEnvironment.hpp"
+#include "LuaEnvironment.hpp"
+
 using namespace luabridge;
+
 namespace st {
 
     LuaEnvironment::LuaEnvironment() : state(luaL_newstate()) {

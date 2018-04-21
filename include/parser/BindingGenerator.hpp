@@ -3,7 +3,6 @@
 #define SHADER_TOOLS_BINDING_GENERATOR_HPP
 #include "common/CommonInclude.hpp"
 #include "common/Shader.hpp"
-#include "DescriptorStructs.hpp"
 
 namespace st {
     class BindingGeneratorImpl;
@@ -23,6 +22,8 @@ namespace st {
         uint32_t GetNumSets() const noexcept;
         void Clear();
         void GetShaderResources(const size_t set_idx, size_t* num_resources, ShaderResource* resources);
+    protected:
+        BindingGeneratorImpl * GetImpl();
 
     private:
         std::unique_ptr<BindingGeneratorImpl> impl;

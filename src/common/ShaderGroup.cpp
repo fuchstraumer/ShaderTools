@@ -3,8 +3,8 @@
 #include "generation/ShaderGenerator.hpp"
 #include "parser/BindingGenerator.hpp"
 #include "common/ShaderResource.hpp"
-#include "lua/LuaEnvironment.hpp"
-#include "lua/ResourceFile.hpp"
+#include "../lua/LuaEnvironment.hpp"
+#include "../lua/ResourceFile.hpp"
 #include "../util/ShaderFileTracker.hpp"
 #include "util/Delegate.hpp"
 #include <unordered_set>

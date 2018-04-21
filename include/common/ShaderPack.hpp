@@ -18,7 +18,6 @@ namespace st {
         ShaderPack(const char* shader_pack_lua_script_path);
         ~ShaderPack();
 
-        
         ShaderGroup* GetShaderGroup(const char* name) const;
     private:
         std::unique_ptr<ShaderPackImpl> impl;

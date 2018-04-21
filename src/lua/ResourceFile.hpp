@@ -57,6 +57,7 @@ namespace st {
         void Execute(const char* fname);
         const bool& IsReady() const noexcept;
         const set_resource_map_t& GetResources(const std::string& block_name) const;
+        const std::unordered_map<std::string, set_resource_map_t>& GetAllResources() const noexcept;
 
     private:
         bool ready{ false };

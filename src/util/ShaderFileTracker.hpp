@@ -3,7 +3,7 @@
 #define ST_SHADER_FILE_TRACKER_HPP
 #include "common/CommonInclude.hpp"
 #include "common/Shader.hpp"
-#include "lua/ResourceFile.hpp"
+#include "../lua/ResourceFile.hpp"
 
 #include <unordered_map>
 #include <string>

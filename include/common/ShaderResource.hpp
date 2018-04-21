@@ -2,7 +2,7 @@
 #ifndef ST_SHADER_RESOURCE_HPP
 #define ST_SHADER_RESOURCE_HPP
 #include "common/CommonInclude.hpp"
-#include "parser/DescriptorStructs.hpp"
+#include "../parser/DescriptorStructs.hpp"
 
 namespace st {
 
