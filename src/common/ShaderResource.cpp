@@ -16,7 +16,7 @@ namespace st {
         size_t memoryRequired{ std::numeric_limits<size_t>::max() };
         std::string parentSetName{ "" };
         uint32_t binding{ 0 };
-        uint32_t parentIdx{ -1 };
+        uint32_t parentIdx{ std::numeric_limits<uint32_t>::max() };
         std::string name{ "" };
         size_class sizeClass{ size_class::Absolute };
         storage_class storageClass{ storage_class::Read };

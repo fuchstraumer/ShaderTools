@@ -65,7 +65,7 @@ namespace st {
         std::unordered_map<VkShaderStageFlags, std::map<uint32_t, VertexAttributeInfo>> inputAttributes;
         std::unordered_map<VkShaderStageFlags, std::map<uint32_t, VertexAttributeInfo>> outputAttributes;
         std::map<uint32_t, SpecializationConstant> specializationConstants;
-        std::unique_ptr<spirv_cross::Compiler> recompiler;
+        std::unique_ptr<spirv_cross::Compiler> recompiler{ nullptr };
 
         decltype(sortedSets)::iterator findSetWithIdx(const uint32_t idx);
     };
@@ -269,6 +269,7 @@ namespace st {
 
     void BindingGeneratorImpl::parseImpl(const std::vector<uint32_t>& binary_data, const VkShaderStageFlags stage) {
         using namespace spirv_cross;
+        recompiler.reset();
         recompiler = std::make_unique<Compiler>(binary_data);
 
         std::multimap<uint32_t, ShaderResource> sets;
@@ -281,8 +282,9 @@ namespace st {
         parseResourceType(stage, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
         collateSets(std::move(sets));
         
+        auto resources = recompiler->get_shader_resources();
         if (!resources.push_constant_buffers.empty()) {
-            auto iter = pushConstants.emplace(stage, parsePushConstants(glsl, stage));
+            auto iter = pushConstants.emplace(stage, parsePushConstants(*recompiler, stage));
             if (pushConstants.size() > 1) {
                 uint32_t offset = 0;
                 for (const auto& push_block : pushConstants) {
@@ -294,8 +296,8 @@ namespace st {
             }
         }
 
-        inputAttributes.emplace(stage, parseInputAttributes(glsl));
-        outputAttributes.emplace(stage, parseOutputAttributes(glsl));
+        inputAttributes.emplace(stage, parseInputAttributes(*recompiler));
+        outputAttributes.emplace(stage, parseOutputAttributes(*recompiler));
     }
 
 }

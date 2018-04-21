@@ -70,7 +70,6 @@ namespace st {
                 return false;
             }
         }
-        return false;
     }
 
     bool ShaderFileTracker::FindShaderBinary(const Shader & handle, std::vector<uint32_t>& dest_binary_vector) {
@@ -129,7 +128,7 @@ namespace st {
 
                     iter.first->second->Execute(absolute_file_path.c_str());
 
-                    dest_ptr = iter.first->second.get();
+                    dest_ptr = ResourceScripts.at(absolute_file_path).get();
                     return true;
                 }
                 catch (const std::logic_error& e) {
