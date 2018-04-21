@@ -1,13 +1,12 @@
 #include "lua/ResourceFile.hpp"
-#include "parser/ShaderResource.hpp"
 #include "generation/ShaderGenerator.hpp"
 #include "common/ShaderGroup.hpp"
 #include <iostream>
 namespace st {
 
-    ResourceFile::ResourceFile(LuaEnvironment* _env) : env(_env) {
+    ResourceFile::ResourceFile() : environment(std::make_unique<LuaEnvironment>()) {
         using namespace luabridge;
-        getGlobalNamespace(_env->GetState())
+        getGlobalNamespace(environment->GetState())
             .addFunction("GetWindowX", ShaderGroup::RetrievalCallbacks.GetScreenSizeX)
             .addFunction("GetWindowY", ShaderGroup::RetrievalCallbacks.GetScreenSizeY)
             .addFunction("GetZNear", ShaderGroup::RetrievalCallbacks.GetZNear)
@@ -21,8 +20,8 @@ namespace st {
 
     void ResourceFile::Execute(const char* fname)  {
 
-        if (luaL_dofile(env->GetState(), fname)) {
-            std::string err = lua_tostring(env->GetState(), -1);
+        if (luaL_dofile(environment->GetState(), fname)) {
+            std::string err = lua_tostring(environment->GetState(), -1);
             throw std::logic_error(err.c_str());
         }
 
@@ -38,23 +37,23 @@ namespace st {
     void ResourceFile::parseResources() {
         using namespace luabridge;
 
-        LuaRef set_table(LuaRef::fromStack(env->GetState(), -1));
-        auto resource_sets = env->GetTableMap(set_table);
+        LuaRef set_table = getGlobal(environment->GetState(), "Resources");
+        auto resource_sets = environment->GetTableMap(set_table);
 
         for (auto& entry : resource_sets) {
             // Now accessing single "group" of resources
             setResources.emplace(entry.first, set_resource_map_t{});
 
-            auto per_set_resources = env->GetTableMap(entry.second);
+            auto per_set_resources = environment->GetTableMap(entry.second);
             for (auto& set_resource : per_set_resources) {
 
                 // Now accessing/parsing single resource per set
-                auto set_resource_data = env->GetTableMap(set_resource.second);
+                auto set_resource_data = environment->GetTableMap(set_resource.second);
                 std::string type_of_resource = set_resource_data.at("Type");
 
                 if (type_of_resource == "UniformBuffer") {
                     UniformBuffer buff;
-                    auto buffer_resources = env->GetTableMap(set_resource_data.at("Members"));
+                    auto buffer_resources = environment->GetTableMap(set_resource_data.at("Members"));
                     for (auto& rsrc : buffer_resources) {
                         std::string name = rsrc.first;
                         std::string type = rsrc.second;
@@ -74,10 +73,6 @@ namespace st {
                 }
             }
         }
-
-        // Should cause stack to be cleaned up after we exit this method, and
-        // the LuaRef object we created is destroyed.
-        lua_settop(env->GetState(), 0);
     }
 
 }

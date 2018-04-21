@@ -12,11 +12,6 @@ namespace st {
         }
     }
 
-    LuaEnvironment & LuaEnvironment::GetCurrentLuaEnvironment() {
-        static LuaEnvironment environment;
-        return environment;
-    }
-
     bool LuaEnvironment::HasVariable(const std::string & var_name) {
         LuaRef ref = getGlobal(state, var_name.c_str());
         return !ref.isNil();

@@ -53,15 +53,15 @@ namespace st {
         ResourceFile& operator=(const ResourceFile&) = delete;
     public:
 
-        ResourceFile(LuaEnvironment* _env);
+        ResourceFile();
         void Execute(const char* fname);
         const bool& IsReady() const noexcept;
         const set_resource_map_t& GetResources(const std::string& block_name) const;
 
     private:
         bool ready{ false };
-        LuaEnvironment* env{ nullptr };
         std::unordered_map<std::string, set_resource_map_t> setResources;
+        std::unique_ptr<LuaEnvironment> environment;
         void parseResources();
     };
 

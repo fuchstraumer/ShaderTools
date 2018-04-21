@@ -14,17 +14,12 @@ namespace st {
         LuaEnvironment();
         ~LuaEnvironment();
 
-        void Execute(const char* fname);
-
-        static LuaEnvironment& GetCurrentLuaEnvironment();
-
         bool HasVariable(const std::string& var_name);
         std::unordered_map<std::string, luabridge::LuaRef> GetTableMap(const luabridge::LuaRef& table);
-
         lua_State* GetState();
 
     private:
-        lua_State * state{ nullptr };
+        lua_State* state{ nullptr };
     };
 
 
