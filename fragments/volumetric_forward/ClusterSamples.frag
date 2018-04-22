@@ -1,7 +1,7 @@
 layout(early_fragment_tests) in;
 #include "Structures.glsl"
-#pragma USE_RESOURCES VolumetricForward
 #pragma USE_RESOURCES GlobalResources
+#pragma USE_RESOURCES VolumetricForward
 
 uvec3 IdxToCoord(uint idx) {
     uvec3 result;
