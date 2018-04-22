@@ -32,8 +32,8 @@ namespace st {
         ShaderResource& operator=(const ShaderResource& other) noexcept;
         ShaderResource& operator=(ShaderResource&& other) noexcept;
         
-        bool operator==(const ShaderResource& other);
-        bool operator<(const ShaderResource& other);
+        bool operator==(const ShaderResource& other) const noexcept;
+        bool operator<(const ShaderResource& other) const noexcept;
         explicit operator VkDescriptorSetLayoutBinding() const;
         
         const size_t& GetAmountOfMemoryRequired() const noexcept;

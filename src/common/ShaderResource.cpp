@@ -12,12 +12,11 @@ namespace st {
         ShaderResourceImpl(ShaderResourceImpl&& other) noexcept;
         ShaderResourceImpl& operator=(const ShaderResourceImpl& other) noexcept;
         ShaderResourceImpl& operator=(ShaderResourceImpl&& other) noexcept;
-
-        size_t memoryRequired{ std::numeric_limits<size_t>::max() };
-        std::string parentSetName{ "" };
+        std::string name{ "" };
         uint32_t binding{ 0 };
         uint32_t parentIdx{ std::numeric_limits<uint32_t>::max() };
-        std::string name{ "" };
+        size_t memoryRequired{ std::numeric_limits<size_t>::max() };
+        std::string parentSetName{ "" };
         size_class sizeClass{ size_class::Absolute };
         storage_class storageClass{ storage_class::Read };
         VkShaderStageFlags stages{ VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM };
@@ -87,11 +86,11 @@ namespace st {
         return *this;
     }
 
-    bool ShaderResource::operator==(const ShaderResource & other) {
+    bool ShaderResource::operator==(const ShaderResource & other) const noexcept {
         return impl->binding == other.impl->binding;
     }
 
-    bool ShaderResource::operator<(const ShaderResource & other) {
+    bool ShaderResource::operator<(const ShaderResource & other) const noexcept {
         return impl->binding < other.impl->binding;
     }
 
