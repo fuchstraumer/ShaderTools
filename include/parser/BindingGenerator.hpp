@@ -5,6 +5,9 @@
 #include "common/Shader.hpp"
 
 namespace st {
+
+    class ShaderGroup;
+    class ShaderGroupImpl;
     class BindingGeneratorImpl;
     class ShaderResource;
 
@@ -22,6 +25,9 @@ namespace st {
         uint32_t GetNumSets() const noexcept;
         void Clear();
         void GetShaderResources(const size_t set_idx, size_t* num_resources, ShaderResource* resources);
+
+        friend class ShaderGroup;
+        friend class ShaderGroupImpl;
     protected:
         BindingGeneratorImpl * GetImpl();
 

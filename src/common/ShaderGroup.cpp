@@ -55,6 +55,10 @@ namespace st {
 
         const std::string& name = FileTracker.ShaderNames.at(handle);
         compiler->Compile(handle, name.c_str(), completed_src_str.c_str(), completed_src_size);
+        std::string recompiled_src_str; size_t size = 0;
+        compiler->RecompileBinaryToGLSL(handle, &size, nullptr);
+        recompiled_src_str.resize(size);
+        compiler->RecompileBinaryToGLSL(handle, &size, recompiled_src_str.data());
 
         bindingGenerator->ParseBinary(handle);
 
@@ -103,6 +107,14 @@ namespace st {
             }
             return results;
         }
+    }
+
+    size_t ShaderGroup::GetNumSetsRequired() const {
+        return static_cast<size_t>(impl->bindingGenerator->GetNumSets());
+    }
+
+    BindingGeneratorImpl* ShaderGroup::GetBindingGeneratorImpl() {
+        return impl->bindingGenerator->GetImpl();
     }
 
     ShaderGroup::ShaderGroup(const char * group_name, const char * resource_file_path, const size_t num_includes, const char* const* paths) : impl(std::make_unique<ShaderGroupImpl>(group_name, num_includes, paths)){

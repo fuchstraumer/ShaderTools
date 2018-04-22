@@ -7,7 +7,8 @@
 namespace st {
 
     class ShaderGroupImpl;
-
+    class ShaderPackImpl;
+    class BindingGeneratorImpl;
 
     struct engine_environment_callbacks_t {
         std::add_pointer<int()>::type GetScreenSizeX{ nullptr };
@@ -57,7 +58,10 @@ namespace st {
 
         size_t GetMemoryReqForResource(const char* rsrc_name);
         size_t GetNumSetsRequired() const;
-        
+
+    protected:
+        friend class ShaderPackImpl;
+        BindingGeneratorImpl * GetBindingGeneratorImpl();
     private:
         std::unique_ptr<ShaderGroupImpl> impl;
     };
