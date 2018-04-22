@@ -8,11 +8,50 @@ namespace st {
     
 
     ShaderFileTracker::ShaderFileTracker(const std::string & initial_directory) {
+        if (!initial_directory.empty()) {
+            cacheDir = fs::absolute(fs::path(initial_directory));
+        }
+        else {
+            cacheDir = fs::temp_directory_path() / fs::path("ShaderToolsCache");
 
+        }
+        if (!fs::exists(cacheDir)) {
+            if (!fs::create_directories(cacheDir)) {
+                throw std::runtime_error("Failed to create cache directories, lack user permissions...");
+            }
+        }
     }
 
-    ShaderFileTracker::~ShaderFileTracker()
-    {
+    ShaderFileTracker::~ShaderFileTracker() {
+        DumpContentsToCacheDir();
+    }
+
+    void ShaderFileTracker::DumpContentsToCacheDir() {
+
+        auto write_output = [&](const Shader& handle, const std::string& contents, const std::string& extension) {
+            const std::string output_name = ShaderNames.at(handle) + extension;
+            const fs::path output_path = cacheDir / output_name;
+            std::ofstream output_stream(output_path);
+            if (output_stream.is_open()) {
+                output_stream << contents;
+            }
+        };
+
+        for (const auto& handle : ShaderBodies) {
+            write_output(handle.first, handle.second, std::string("Body.glsl"));
+        }
+
+        for (const auto& handle : FullSourceStrings) {
+            write_output(handle.first, handle.second, std::string("Generated.glsl"));
+        }
+
+        for (const auto& handle : AssemblyStrings) {
+            write_output(handle.first, handle.second, std::string(".spvasm"));
+        }
+
+        for (const auto& handle : RecompiledSourcesFromBinaries) {
+            write_output(handle.first, handle.second, std::string("FromBinary.glsl"));
+        }
     }
 
     bool ShaderFileTracker::FindShaderBody(const Shader & handle, std::string & dest_str) {
@@ -143,6 +182,27 @@ namespace st {
             return false;
         }
 
+    }
+
+    bool ShaderFileTracker::FindRecompiledShaderSource(const Shader & handle, std::string & destination_str) {
+        if (RecompiledSourcesFromBinaries.count(handle) != 0) {
+            destination_str = RecompiledSourcesFromBinaries.at(handle);
+            return true;
+        }
+        return false;
+    }
+
+    bool ShaderFileTracker::FindAssemblyString(const Shader & handle, std::string & destination_str) {
+        if (AssemblyStrings.count(handle) != 0) {
+            destination_str = AssemblyStrings.at(handle);
+            return true;
+        }
+        return false;
+    }
+
+    ShaderFileTracker & ShaderFileTracker::GetFileTracker() {
+        static ShaderFileTracker fileTracker;
+        return fileTracker;
     }
 
 }
