@@ -16,8 +16,6 @@ namespace fs = std::experimental::filesystem;
 
 namespace st {
 
-    extern ShaderFileTracker FileTracker;
-
     class ShaderCompilerImpl {
         ShaderCompilerImpl(const ShaderCompilerImpl&) = delete;
         ShaderCompilerImpl& operator=(const ShaderCompilerImpl&) = delete;

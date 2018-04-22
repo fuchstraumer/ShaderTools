@@ -11,7 +11,6 @@
 #include <experimental/filesystem>
 namespace st {
 
-    ShaderFileTracker FileTracker;
     engine_environment_callbacks_t ShaderGroup::RetrievalCallbacks = engine_environment_callbacks_t{};
 
     class ShaderGroupImpl {
@@ -44,6 +43,7 @@ namespace st {
     ShaderGroupImpl::~ShaderGroupImpl() { }
 
     void ShaderGroupImpl::addShader(const Shader& handle, std::string src_str_path) {
+        auto& FileTracker = ShaderFileTracker::GetFileTracker();
         generator = std::make_unique<ShaderGenerator>(handle.GetStage());
        
         generator->SetResourceFile(rsrcFile);
@@ -88,6 +88,7 @@ namespace st {
     }
 
     ShaderGroup::dll_retrieved_strings_t ShaderGroup::GetUsedResourceBlocks(const Shader& handle) const {
+        auto& FileTracker = ShaderFileTracker::GetFileTracker();
         auto iter_pair = FileTracker.usedResourceBlockNames.equal_range(handle);
         if (std::distance(iter_pair.first, iter_pair.second) == 0) {
             return dll_retrieved_strings_t{};
@@ -106,6 +107,7 @@ namespace st {
 
     ShaderGroup::ShaderGroup(const char * group_name, const char * resource_file_path, const size_t num_includes, const char* const* paths) : impl(std::make_unique<ShaderGroupImpl>(group_name, num_includes, paths)){
         const std::string file_path{ resource_file_path };
+        auto& FileTracker = ShaderFileTracker::GetFileTracker();
         if (!FileTracker.FindResourceScript(file_path, impl->rsrcFile)) {
             throw std::runtime_error("Failed to execute resource script: check error log.");
         }
@@ -119,6 +121,7 @@ namespace st {
 
     Shader ShaderGroup::AddShader(const char * shader_name, const char * body_src_file_path, const VkShaderStageFlagBits & flags) {
         Shader handle(shader_name, flags);
+        auto& FileTracker = ShaderFileTracker::GetFileTracker();
         FileTracker.ShaderNames.emplace(handle, shader_name);
         auto iter = impl->stHandles.emplace(handle);
         if (!iter.second) {
@@ -129,6 +132,7 @@ namespace st {
     }
 
     void ShaderGroup::GetShaderBinary(const Shader & handle, size_t * binary_size, uint32_t * dest_binary_ptr) const {
+        auto& FileTracker = ShaderFileTracker::GetFileTracker();
         auto iter = impl->stHandles.find(handle);
         std::vector<uint32_t> binary_vec;
         if (iter == impl->stHandles.cend()) {

@@ -10,7 +10,7 @@
 #include <sstream>
 #include <unordered_map>
 #include <mutex>
-#include "lua/ResourceFile.hpp"
+#include "../lua/ResourceFile.hpp"
 #include "../util/FilesystemUtils.hpp"
 #include "../util/ShaderFileTracker.hpp"
 namespace fs = std::experimental::filesystem;
@@ -19,7 +19,6 @@ namespace st {
 
     extern std::unordered_map<Shader, std::string> shaderFiles;
     extern std::unordered_multimap<Shader, fs::path> shaderPaths;
-    extern ShaderFileTracker FileTracker;
 
     std::string BasePath = "../fragments/";
     std::string LibPath = "../fragments/include";
@@ -454,7 +453,7 @@ namespace st {
 
     std::string ShaderGeneratorImpl::fetchBodyStr(const Shader& handle, const std::string& path_to_source) {
         std::string body_str;
-
+        auto& FileTracker = ShaderFileTracker::GetFileTracker();
         if (!FileTracker.FindShaderBody(handle, body_str)) {
             if (!FileTracker.AddShaderBodyPath(handle, path_to_source)) {
                 throw std::runtime_error("Failed to find or add (then load) a shader body source string!");
@@ -504,6 +503,8 @@ namespace st {
     }
 
     void ShaderGeneratorImpl::processBodyStrResourceBlocks(const Shader& handle, std::string& body_str) {
+
+        auto& FileTracker = ShaderFileTracker::GetFileTracker();
         bool block_found = true;
         while (block_found) {
             std::smatch match;
