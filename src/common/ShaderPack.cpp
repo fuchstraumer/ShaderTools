@@ -4,6 +4,7 @@
 #include "../lua/ResourceFile.hpp"
 #include "common/ShaderResource.hpp"
 #include "../util/ShaderFileTracker.hpp"
+#include "../parser/BindingGeneratorImpl.hpp"
 #include <unordered_map>
 #include <map>
 #include <experimental/filesystem>
@@ -94,13 +95,15 @@ namespace st {
         void createSingleGroup(const std::string& name, const std::map<VkShaderStageFlagBits, std::string>& shader_map);
         void createResourceGroupData();
 
-        size_t addResources(const std::set<ShaderResource>& resources);
+        size_t addResources(const st::DescriptorSetInfo & info);
         size_t findIdxOfSetWithSingleResource(const std::string& resource_name) const;
 
         std::vector<std::set<ShaderResource>> resources;
+        std::unordered_map<std::string, std::vector<size_t>> groupSetIndices;
         std::unordered_map<std::string, std::unique_ptr<ShaderGroup>> groups;
         std::unique_ptr<shader_pack_file_t> filePack;
         std::experimental::filesystem::path workingDir;
+        std::mutex guardMutex;
     };
 
 
@@ -109,7 +112,7 @@ namespace st {
         workingDir = fs::absolute(workingDir);
         workingDir = workingDir.remove_filename();
         createGroups();
-        createResourceGroupData();
+        //createResourceGroupData();
     }
 
     void ShaderPackImpl::createGroups() {
@@ -157,21 +160,72 @@ namespace st {
     }
 
     void ShaderPackImpl::createResourceGroupData() {
-        const std::string resource_path = std::experimental::filesystem::absolute(std::experimental::filesystem::path(filePack->ResourceFileName)).string();
-        const auto& resource_file = FileTracker.ResourceScripts.at(resource_path);
-        const auto& resources_unparsed = resource_file->GetAllResources();
 
-        for (const auto& resource_map : resources_unparsed) {
-            for (const auto& resource : resource_map.second) {
-                
+        for (auto& entry : groups) {
+            auto& shader_group = *entry.second;
+            BindingGeneratorImpl* b_impl = shader_group.GetBindingGeneratorImpl();
+            const size_t num_sets = shader_group.GetNumSetsRequired();
+            std::vector<size_t> set_indices;
+            for (size_t i = 0; i < num_sets; ++i) {
+                const auto& set_resources = b_impl->sortedSets.at(static_cast<uint32_t>(i));
+                set_indices.emplace_back(addResources(set_resources));
             }
+
+
+            groupSetIndices.emplace(entry.first, set_indices);
         }
     }
 
-    size_t ShaderPackImpl::addResources(const std::set<ShaderResource>& resources) {
-        std::vector<std::future<size_t>> futures;
-        return size_t();
+    size_t ShaderPackImpl::findIdxOfSetWithSingleResource(const std::string& resource_name) const {
+        
+        std::vector<bool> search_results;
+        for (const auto& set : resources) {
+            auto find_if_bool = [resource_name](const std::set<ShaderResource>& rsrcs)->bool {
+                auto iter = std::find_if(rsrcs.cbegin(), rsrcs.cend(), [resource_name](const ShaderResource& rsrc) { return rsrc.GetName() == resource_name; });
+                return iter != rsrcs.cend();
+            };
+            search_results.emplace_back(find_if_bool(set));
+        }
+
+        auto iter = std::find(search_results.cbegin(), search_results.cend(), true);
+        if (iter == search_results.cend()) {
+            return std::numeric_limits<size_t>::max();
+        }
+        else {
+            return static_cast<size_t>(std::distance(search_results.cbegin(), iter));
+        }
+
     }
+
+    size_t ShaderPackImpl::addResources(const st::DescriptorSetInfo& info) {
+        std::vector<std::future<size_t>> futures;
+        for (const auto& set : info.Members) {
+            futures.emplace_back(std::async(std::launch::async, &ShaderPackImpl::findIdxOfSetWithSingleResource, this, set.second.GetName()));
+        }
+
+        std::vector<size_t> results;
+        for (auto&& fut : futures) {
+            results.emplace_back(fut.get());
+        }
+
+        auto valid_idx = [](const size_t& idx) { return idx != std::numeric_limits<size_t>::max(); };
+        auto iter = std::find_if(results.cbegin(), results.cend(), valid_idx);
+        if (iter == results.cend()) {
+            resources.emplace_back(std::set<ShaderResource>{});
+            for (const auto& single_resource : info.Members) {
+                resources.back().emplace(single_resource.second);
+            }
+            return resources.size() - 1;
+        }
+        else {
+            const size_t idx = *iter;
+            for (const auto& single_resource : info.Members) {
+                resources[idx].insert(single_resource.second);
+            }
+            return idx;
+        }
+    }
+
 
     ShaderPack::ShaderPack(const char* fpath) : impl(std::make_unique<ShaderPackImpl>(fpath)) {}
 
