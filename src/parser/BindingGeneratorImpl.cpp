@@ -1,9 +1,6 @@
 #include "BindingGeneratorImpl.hpp"
-#include "..\..\include\parser\BindingGenerator.hpp"
 
 namespace st {
-
-    extern ShaderFileTracker FileTracker;
 
     storage_class StorageClassFromSPIRType(const spirv_cross::SPIRType & type) {
         using namespace spirv_cross;
@@ -39,10 +36,6 @@ namespace st {
 
     decltype(BindingGeneratorImpl::sortedSets)::iterator BindingGeneratorImpl::findSetWithIdx(const uint32_t idx) {
         return sortedSets.find(idx);
-    }
-
-    uint32_t BindingGenerator::GetNumSets() const noexcept {
-        return static_cast<uint32_t>(impl->sortedSets.size());
     }
 
     constexpr static std::array<VkShaderStageFlags, 6> possible_stages{
@@ -134,16 +127,18 @@ namespace st {
         for (const auto& rsrc : resources) {
             ShaderResource obj;
             obj.SetBinding(recompiler->get_decoration(rsrc.id, spv::DecorationBinding));
-            obj.SetName(recompiler->get_name(rsrc.id).c_str());
+            obj.SetName(rsrc.name.c_str());
+            auto spir_type = recompiler->get_type(rsrc.type_id);
             if (parsing_buffer_type(type_being_parsed)) {
                 auto members = extract_buffer_members(rsrc, *recompiler);
                 obj.SetMembers(members.size(), members.data());
+                obj.SetMemoryRequired(recompiler->get_declared_struct_size(spir_type));
             }
             obj.SetType(type_being_parsed);
-            auto spir_type = recompiler->get_type(rsrc.type_id);
             obj.SetStorageClass(StorageClassFromSPIRType(spir_type));
             obj.SetFormat(FormatFromSPIRType(spir_type));
             obj.SetStages(stage);
+            
             tempResources.emplace(recompiler->get_decoration(rsrc.id, spv::DecorationDescriptorSet), obj);
         }
 
@@ -166,20 +161,8 @@ namespace st {
         return result;
     }
 
-    void BindingGenerator::Clear() {
-        impl.reset();
-        impl = std::make_unique<BindingGeneratorImpl>();
-    }
-
-    BindingGeneratorImpl * BindingGenerator::GetImpl() {
-        return impl.get();
-    }
-
-    void BindingGenerator::ParseBinary(const Shader & shader) {
-        impl->parseBinary(shader);
-    }
-
     void BindingGeneratorImpl::parseBinary(const Shader& shader_handle) {
+        auto& FileTracker = ShaderFileTracker::GetFileTracker();
         std::vector<uint32_t> binary_vec;
         if (!FileTracker.FindShaderBinary(shader_handle, binary_vec)) {
             throw std::runtime_error("Attempted to parse binary that does not exist in current program!");
@@ -192,9 +175,9 @@ namespace st {
         parseImpl(binary_data, stage);
     }
 
-    void BindingGeneratorImpl::collateSets(std::multimap<uint32_t, ShaderResource> sets) {
+    void BindingGeneratorImpl::collateSets() {
         std::set<uint32_t> unique_keys;
-        for (auto iter = sets.begin(); iter != sets.end(); ++iter) {
+        for (auto iter = tempResources.begin(); iter != tempResources.end(); ++iter) {
             unique_keys.insert(iter->first);
         }
 
@@ -204,7 +187,7 @@ namespace st {
             }
 
             DescriptorSetInfo& curr_set = sortedSets.at(unique_set);
-            auto obj_range = sets.equal_range(unique_set);
+            auto obj_range = tempResources.equal_range(unique_set);
             for (auto iter = obj_range.first; iter != obj_range.second; ++iter) {
                 const uint32_t& binding_idx = iter->second.GetBinding();
                 if (curr_set.Members.count(binding_idx) != 0) {
@@ -221,7 +204,6 @@ namespace st {
         using namespace spirv_cross;
         recompiler = std::make_unique<Compiler>(binary_data);
 
-        std::multimap<uint32_t, ShaderResource> sets;
         parseResourceType(stage, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
         parseResourceType(stage, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
         parseResourceType(stage, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT);
@@ -229,7 +211,7 @@ namespace st {
         parseResourceType(stage, VK_DESCRIPTOR_TYPE_SAMPLER);
         parseResourceType(stage, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
         parseResourceType(stage, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
-        collateSets(std::move(sets));
+        collateSets();
         
         auto resources = recompiler->get_shader_resources();
         if (!resources.push_constant_buffers.empty()) {
