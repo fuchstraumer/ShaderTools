@@ -34,13 +34,11 @@ namespace st {
         
         bool operator==(const ShaderResource& other) const noexcept;
         bool operator<(const ShaderResource& other) const noexcept;
-        explicit operator VkDescriptorSetLayoutBinding() const;
         
         const size_t& GetAmountOfMemoryRequired() const noexcept;
         const VkFormat& GetFormat() const noexcept;
         const char* GetName() const;
-        const uint32_t& GetParentIdx() const noexcept;
-        const uint32_t& GetBinding() const noexcept;
+        const char* ParentGroupName() const;
         const VkShaderStageFlags& GetStages() const noexcept;
         const VkDescriptorType& GetType() const noexcept;
         void GetMembers(size_t* num_members, ShaderResourceSubObject* dest_objects) const noexcept;
@@ -51,10 +49,9 @@ namespace st {
         void SetSizeClass(size_class _size_class);
         void SetStorageClass(storage_class _storage_class);
         void SetName(const char* name);
+        void SetParentGroupName(const char* parent_group_name);
         void SetMembers(const size_t num_members, ShaderResourceSubObject* src_objects);
         void SetFormat(VkFormat fmt);
-        void SetParentIdx(uint32_t parent_idx);
-        void SetBinding(uint32_t binding);
 
     private:
         std::unique_ptr<ShaderResourceImpl> impl;
