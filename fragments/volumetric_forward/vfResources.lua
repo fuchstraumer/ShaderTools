@@ -56,6 +56,19 @@ function get_num_light_aabbs()
     return 512;
 end
 
+ObjectSizes = {
+    PointLight = 64,
+    SpotLight = 96,
+    DirectionalLight = 64,
+    AABB = 32,
+    Plane = 16,
+    Frustum = 64,
+    Sphere = 16,
+    Cone = 32,
+    LightingResult = 48,
+    Material = 128
+}
+
 Resources = {
     GlobalResources = {
         matrices = {
