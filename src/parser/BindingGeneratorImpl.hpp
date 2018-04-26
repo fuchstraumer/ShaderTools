@@ -3,7 +3,7 @@
 #define SHADER_TOOLS_BINDING_GENERATOR_IMPL_HPP
 #include "common/CommonInclude.hpp"
 #include "DescriptorStructs.hpp"
-#include "common/ShaderResource.hpp"
+#include "core/ShaderResource.hpp"
 #include "spirv-cross/spirv_cross.hpp"
 #include "spirv-cross/spirv_glsl.hpp"
 #include <array>

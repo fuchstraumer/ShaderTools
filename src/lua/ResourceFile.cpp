@@ -1,6 +1,6 @@
 #include "ResourceFile.hpp"
 #include "generation/ShaderGenerator.hpp"
-#include "common/ShaderGroup.hpp"
+#include "core/ShaderGroup.hpp"
 #include <iostream>
 namespace st {
 
