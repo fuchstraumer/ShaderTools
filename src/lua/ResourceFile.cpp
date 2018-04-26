@@ -54,9 +54,14 @@ namespace st {
                 // Now accessing/parsing single resource per set
                 auto set_resource_data = environment->GetTableMap(set_resource.second);
                 std::string type_of_resource = set_resource_data.at("Type");
+                ShaderResource s_resource;
+                s_resource.SetParentGroupName(entry.first.c_str());
+                s_resource.SetName(set_resource.first.c_str());
 
                 if (type_of_resource == "UniformBuffer") {
-                    UniformBuffer buff;
+                    s_resource.SetType(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+
+                    std::vector<ShaderResourceSubObject> members;
                     auto buffer_resources = environment->GetTableMap(set_resource_data.at("Members"));
                     for (auto& rsrc : buffer_resources) {
                         std::string name = rsrc.first;
@@ -66,6 +71,7 @@ namespace st {
                     setResources[entry.first].emplace(set_resource.first, std::move(buff));
                 }
                 else if (type_of_resource == "StorageImage") {
+                    s_resource.SetType(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
                     std::string format = set_resource_data.at("Format");
                     size_t size = static_cast<size_t>(int(set_resource_data.at("Size")));
                     setResources[entry.first].emplace(set_resource.first, StorageImage{ format, size });
