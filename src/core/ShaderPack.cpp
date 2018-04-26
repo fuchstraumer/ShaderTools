@@ -1,8 +1,8 @@
-#include "common/ShaderPack.hpp"
-#include "common/ShaderGroup.hpp"
+#include "core/ShaderPack.hpp"
+#include "core/ShaderGroup.hpp"
 #include "../lua/LuaEnvironment.hpp"
 #include "../lua/ResourceFile.hpp"
-#include "common/ShaderResource.hpp"
+#include "core/ShaderResource.hpp"
 #include "../util/ShaderFileTracker.hpp"
 #include "../parser/BindingGeneratorImpl.hpp"
 #include <unordered_map>
@@ -13,8 +13,6 @@
 #include <future>
 
 namespace st {
-
-    extern ShaderFileTracker FileTracker;
 
     struct shader_pack_file_t {
 
@@ -94,9 +92,7 @@ namespace st {
         void createGroups();
         void createSingleGroup(const std::string& name, const std::map<VkShaderStageFlagBits, std::string>& shader_map);
         void createResourceGroupData();
-
-        size_t addResources(const st::DescriptorSetInfo & info);
-        size_t findIdxOfSetWithSingleResource(const std::string& resource_name) const;
+        void createBackingResourceData();
 
         std::vector<std::set<ShaderResource>> resources;
         std::unordered_map<std::string, std::vector<size_t>> groupSetIndices;
@@ -159,73 +155,23 @@ namespace st {
         }
     }
 
-    void ShaderPackImpl::createResourceGroupData() {
 
-        for (auto& entry : groups) {
-            auto& shader_group = *entry.second;
-            BindingGeneratorImpl* b_impl = shader_group.GetBindingGeneratorImpl();
-            const size_t num_sets = shader_group.GetNumSetsRequired();
-            std::vector<size_t> set_indices;
-            for (size_t i = 0; i < num_sets; ++i) {
-                const auto& set_resources = b_impl->sortedSets.at(static_cast<uint32_t>(i));
-                set_indices.emplace_back(addResources(set_resources));
-            }
-
-
-            groupSetIndices.emplace(entry.first, set_indices);
+    void ShaderPackImpl::createBackingResourceData() {
+        namespace fs = std::experimental::filesystem;
+        fs::path resource_path = workingDir / fs::path(filePack->ResourceFileName);
+        if (!fs::exists(resource_path)) {
+            throw std::runtime_error("Couldn't find resource file using given path.");
         }
-    }
+        const std::string resource_path_str = resource_path.string();
 
-    size_t ShaderPackImpl::findIdxOfSetWithSingleResource(const std::string& resource_name) const {
+        auto& ftracker = ShaderFileTracker::GetFileTracker();
+        ResourceFile* file_ptr = ftracker.ResourceScripts.at(resource_path_str).get();
+        const auto& file_resources = file_ptr->GetAllResources();
+
+
         
-        std::vector<bool> search_results;
-        for (const auto& set : resources) {
-            auto find_if_bool = [resource_name](const std::set<ShaderResource>& rsrcs)->bool {
-                auto iter = std::find_if(rsrcs.cbegin(), rsrcs.cend(), [resource_name](const ShaderResource& rsrc) { return rsrc.GetName() == resource_name; });
-                return iter != rsrcs.cend();
-            };
-            search_results.emplace_back(find_if_bool(set));
-        }
-
-        auto iter = std::find(search_results.cbegin(), search_results.cend(), true);
-        if (iter == search_results.cend()) {
-            return std::numeric_limits<size_t>::max();
-        }
-        else {
-            return static_cast<size_t>(std::distance(search_results.cbegin(), iter));
-        }
 
     }
-
-    size_t ShaderPackImpl::addResources(const st::DescriptorSetInfo& info) {
-        std::vector<std::future<size_t>> futures;
-        for (const auto& set : info.Members) {
-            futures.emplace_back(std::async(std::launch::async, &ShaderPackImpl::findIdxOfSetWithSingleResource, this, set.second.GetName()));
-        }
-
-        std::vector<size_t> results;
-        for (auto&& fut : futures) {
-            results.emplace_back(fut.get());
-        }
-
-        auto valid_idx = [](const size_t& idx) { return idx != std::numeric_limits<size_t>::max(); };
-        auto iter = std::find_if(results.cbegin(), results.cend(), valid_idx);
-        if (iter == results.cend()) {
-            resources.emplace_back(std::set<ShaderResource>{});
-            for (const auto& single_resource : info.Members) {
-                resources.back().emplace(single_resource.second);
-            }
-            return resources.size() - 1;
-        }
-        else {
-            const size_t idx = *iter;
-            for (const auto& single_resource : info.Members) {
-                resources[idx].insert(single_resource.second);
-            }
-            return idx;
-        }
-    }
-
 
     ShaderPack::ShaderPack(const char* fpath) : impl(std::make_unique<ShaderPackImpl>(fpath)) {}
 
