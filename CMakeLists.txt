@@ -17,7 +17,8 @@ FILE(GLOB UTIL "${CMAKE_CURRENT_SOURCE_DIR}/src/util/*.cpp" "${CMAKE_CURRENT_SOU
     "${CMAKE_CURRENT_SOURCE_DIR}/include/util/*.hpp")
 FILE(GLOB CORE "${CMAKE_CURRENT_SOURCE_DIR}/src/core/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/include/core/*.hpp")
 FILE(GLOB GENERATION "${CMAKE_CURRENT_SOURCE_DIR}/src/generation/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/include/generation/*.hpp")
-FILE(GLOB PARSER "${CMAKE_CURRENT_SOURCE_DIR}/src/parser/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/include/parser/*.hpp")
+FILE(GLOB PARSER "${CMAKE_CURRENT_SOURCE_DIR}/src/parser/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/include/parser/*.hpp" 
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/parser/*.hpp")
 FILE(GLOB LUA "${CMAKE_CURRENT_SOURCE_DIR}/src/lua/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/lua/*.hpp")
 
 SOURCE_GROUP("common" FILES ${COMMON})
