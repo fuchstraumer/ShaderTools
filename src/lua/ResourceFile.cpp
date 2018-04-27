@@ -1,6 +1,7 @@
 #include "ResourceFile.hpp"
 #include "generation/ShaderGenerator.hpp"
 #include "core/ShaderGroup.hpp"
+#include "common/UtilityStructs.hpp"
 #include "../util/ShaderFileTracker.hpp"
 #include <iostream>
 namespace st {
@@ -88,11 +89,23 @@ namespace st {
         else {
             throw std::runtime_error("Couldn't find resources size.");
         }
-
+        return s_resource;
     }
 
     ShaderResource ResourceFile::createStorageImageResource(const std::string& parent_name, const std::string& name, const std::unordered_map<std::string, luabridge::LuaRef>& table) {
-        
+        auto& f_tracker = ShaderFileTracker::GetFileTracker();
+        ShaderResource s_resource;
+        s_resource.SetParentGroupName(parent_name.c_str());
+        s_resource.SetName(name.c_str());
+        s_resource.SetType(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
+        std::string format_str = table.at("Format").cast<std::string>();
+        s_resource.SetFormat(StorageImageFormatToVkFormat(format_str.c_str()));
+        size_t image_size = static_cast<size_t>(table.at("Size").cast<int>());
+        size_t footprint = MemoryFootprintForFormat(s_resource.GetFormat());
+        if (footprint != std::numeric_limits<size_t>::max()) {
+            s_resource.SetMemoryRequired(footprint * image_size);
+        }
+        return s_resource;
     }
 
     void ResourceFile::parseResources() {
