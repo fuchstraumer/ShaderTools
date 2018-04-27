@@ -24,9 +24,18 @@ namespace st {
         ResourceUsage(const ResourceUsage& other) noexcept;
         ResourceUsage(ResourceUsage&& other) noexcept;
 
+        ResourceUsage& operator=(const ResourceUsage& other) noexcept;
+        ResourceUsage& operator=(ResourceUsage&& other) noexcept;
+
         explicit operator VkDescriptorSetLayoutBinding() const;
         bool operator<(const ResourceUsage& other) const noexcept;
         bool operator==(const ResourceUsage& other) const noexcept;
+
+        VkShaderStageFlags& Stages() noexcept;
+        const Shader& UsedBy() const noexcept;
+        const ShaderResource* BackingResource() const noexcept;
+        const VkDescriptorType& Type() const noexcept;
+        const uint32_t& BindingIdx() const noexcept;
 
     private:
 
