@@ -461,8 +461,8 @@ namespace st {
         std::string resource_block_string{ "" };
 
         for (auto& resource : resource_block) {
-            const auto& resource_name = resource.first;
-            const auto& resource_item = resource.second;
+            const std::string resource_name = resource.GetName();
+            const auto& resource_item = resource;
             switch (resource_item.GetType()) {
             case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
                 resource_block_string += getUniformBufferResourceString(active_set, resource_item, resource_name);

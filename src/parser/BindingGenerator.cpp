@@ -1,6 +1,6 @@
 #include "parser/BindingGenerator.hpp"
 #include "BindingGeneratorImpl.hpp"
-
+#include "core/ResourceUsage.hpp"
 namespace st {
 
     BindingGenerator::BindingGenerator() : impl(std::make_unique<BindingGeneratorImpl>()) {}

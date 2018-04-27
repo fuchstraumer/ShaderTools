@@ -9,10 +9,10 @@
 #include <string>
 #include <unordered_map>
 #include <variant>
-#include <map>
+#include <set>
 namespace st {
 
-    using set_resource_map_t = std::map<std::string, ShaderResource>;
+    using set_resource_map_t = std::set<ShaderResource>;
 
     class ResourceFile {
         ResourceFile(const ResourceFile&) = delete;
