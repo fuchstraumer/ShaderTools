@@ -26,7 +26,9 @@ namespace st {
         std::add_pointer<double()>::type GetZFar{ nullptr };
         std::add_pointer<double()>::type GetFOVY{ nullptr };
     };
-    
+
+    VkFormat StorageImageFormatToVkFormat(const char* fmt);
+    size_t MemoryFootprintForFormat(const VkFormat& fmt);
 }
 
 #endif //!SHADER_TOOLS_UTILITY_STRUCTS_HPP
