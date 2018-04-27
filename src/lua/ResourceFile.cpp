@@ -100,8 +100,6 @@ namespace st {
     }
 
     ShaderResource ResourceFile::createUniformBufferResources(const std::string& parent_name, const std::string& name, const std::unordered_map<std::string, luabridge::LuaRef>& table) {
-        auto& f_tracker = ShaderFileTracker::GetFileTracker();
-
         ShaderResource s_resource;
         s_resource.SetParentGroupName(parent_name.c_str());
         s_resource.SetName(name.c_str());
@@ -113,7 +111,6 @@ namespace st {
     }
 
     ShaderResource ResourceFile::createStorageBufferResource(const std::string& parent_name, const std::string& name, const std::unordered_map<std::string, luabridge::LuaRef>& table) {
-        auto& f_tracker = ShaderFileTracker::GetFileTracker();
         ShaderResource s_resource;
         s_resource.SetParentGroupName(parent_name.c_str());
         s_resource.SetName(name.c_str());
@@ -125,7 +122,6 @@ namespace st {
     }
 
     ShaderResource ResourceFile::createStorageImageResource(const std::string& parent_name, const std::string& name, const std::unordered_map<std::string, luabridge::LuaRef>& table) {
-        auto& f_tracker = ShaderFileTracker::GetFileTracker();
         ShaderResource s_resource;
         s_resource.SetParentGroupName(parent_name.c_str());
         s_resource.SetName(name.c_str());
