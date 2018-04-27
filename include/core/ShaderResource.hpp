@@ -18,7 +18,6 @@ namespace st {
     public:
 
         ShaderResource();
-        ShaderResource(uint32_t parent_idx, uint32_t binding_idx);
         ~ShaderResource();
         ShaderResource(const ShaderResource& other) noexcept;
         ShaderResource(ShaderResource&& other) noexcept;

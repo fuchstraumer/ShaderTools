@@ -55,8 +55,6 @@ namespace st {
 
     ShaderResource::ShaderResource() : impl(std::make_unique<ShaderResourceImpl>()) {}
 
-    ShaderResource::ShaderResource(uint32_t parent_idx, uint32_t binding_idx) : impl(std::make_unique<ShaderResourceImpl>(parent_idx, binding_idx)) {}
-
     ShaderResource::~ShaderResource() {}
 
     ShaderResource::ShaderResource(const ShaderResource & other) noexcept : impl(std::make_unique<ShaderResourceImpl>(*other.impl)) { }
