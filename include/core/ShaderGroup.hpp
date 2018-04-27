@@ -27,8 +27,6 @@ namespace st {
         
         void GetShaderBinary(const Shader& handle, size_t* binary_size, uint32_t* dest_binary_ptr) const;
         void GetVertexAttributes(uint32_t num_bindings, VkVertexInputAttributeDescription* bindings) const;
-        void GetSetLayoutBindings(const uint32_t set_idx, uint32_t* num_bindings, VkDescriptorSetLayoutBinding* bindings) const;
-
 
         static engine_environment_callbacks_t RetrievalCallbacks;
         dll_retrieved_strings_t GetSetResourceNames(const uint32_t set_idx) const;

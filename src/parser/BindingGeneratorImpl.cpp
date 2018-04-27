@@ -135,7 +135,7 @@ namespace st {
             uint32_t set_idx = recompiler->get_decoration(rsrc.id, spv::DecorationDescriptorSet);
             auto spir_type = recompiler->get_type(rsrc.type_id);
             access_modifier modifier = AccessModifierFromSPIRType(spir_type);
-               
+            tempResources.emplace(set_idx, ResourceUsage());
         }
 
     }
