@@ -1,7 +1,5 @@
 #include "generation/Compiler.hpp"
-#include <mutex>
 #include <string>
-#include <map>
 #include <vector>
 #include <filesystem>
 #include <iostream>
@@ -146,7 +144,6 @@ namespace st {
 
             if (FileTracker.FindShaderBinary(handle, found_binary)) {
                 using namespace spirv_cross;
-                assert(!found_binary.empty());
                 CompilerGLSL recompiler(found_binary);
                 spirv_cross::CompilerGLSL::Options options;
                 options.vulkan_semantics = true;
@@ -178,7 +175,6 @@ namespace st {
             }
         }
         else {
-            assert(!recompiled_src_str.empty());
             *str_size = recompiled_src_str.size();
             if (dest_str != nullptr) {
                 std::copy(recompiled_src_str.cbegin(), recompiled_src_str.cend(), dest_str);
@@ -195,7 +191,6 @@ namespace st {
             return;
         }
         else {
-            assert(!recompiled_src_str.empty());
             *str_size = recompiled_src_str.size();
             if (dest_str != nullptr) {
                 std::copy(recompiled_src_str.cbegin(), recompiled_src_str.cend(), dest_str);

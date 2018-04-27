@@ -6,9 +6,7 @@
 #include "../util/ShaderFileTracker.hpp"
 #include "../parser/BindingGeneratorImpl.hpp"
 #include <unordered_map>
-#include <map>
 #include <experimental/filesystem>
-#include <array>
 #include <set>
 #include <future>
 

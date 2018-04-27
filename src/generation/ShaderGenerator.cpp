@@ -3,13 +3,9 @@
 #include <regex>
 #include <fstream>
 #include <experimental/filesystem>
-#include <map>
 #include <vector>
 #include <set>
-#include <cassert>
-#include <sstream>
 #include <unordered_map>
-#include <mutex>
 #include "../lua/ResourceFile.hpp"
 #include "../util/FilesystemUtils.hpp"
 #include "../util/ShaderFileTracker.hpp"
@@ -133,8 +129,6 @@ namespace st {
         std::vector<fs::path> includes;
     };
 
-    
-    static std::mutex fileMutex;
     std::map<fs::path, std::string> ShaderGeneratorImpl::fileContents = std::map<fs::path, std::string>{};
 
     ShaderGeneratorImpl::ShaderGeneratorImpl(const VkShaderStageFlagBits& stage) : Stage(stage) {
@@ -182,7 +176,6 @@ namespace st {
             }
             std::string preamble{ std::istreambuf_iterator<char>(file_stream), std::istreambuf_iterator<char>() };
 
-            std::lock_guard<std::mutex> emplace_guard(fileMutex);
             auto fc_iter = fileContents.emplace(fs::absolute(path), preamble);
             if (!fc_iter.second) {
                 throw std::runtime_error("Failed to emplace preamble (path,source_str) into file contents map.");
@@ -213,7 +206,6 @@ namespace st {
         std::ifstream file_stream(source_file);
 
         std::string file_content{ std::istreambuf_iterator<char>(file_stream), std::istreambuf_iterator<char>() };
-        std::lock_guard<std::mutex> emplace_guard(fileMutex);
         fileContents.emplace(source_file, std::move(file_content));
         return fileContents.at(source_file);
     }
@@ -511,7 +503,6 @@ namespace st {
             if (std::regex_search(body_str, match, use_set_resources)) {
                 useResourceBlock(match[1].str());
                 body_str.erase(body_str.begin() + match.position(), body_str.begin() + match.position() + match.length());
-                FileTracker.usedResourceBlockNames.emplace(handle, match[1].str());
             }
             else {
                 block_found = false;
