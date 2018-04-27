@@ -13,21 +13,20 @@ namespace st {
         ShaderResourceImpl& operator=(ShaderResourceImpl&& other) noexcept;
         std::string name{ "" };
         size_t memoryRequired{ std::numeric_limits<size_t>::max() };
+        VkFormat format{ VK_FORMAT_UNDEFINED };
+        VkDescriptorType type{ VK_DESCRIPTOR_TYPE_MAX_ENUM };
         std::string parentSetName{ "" };
         size_class sizeClass{ size_class::Absolute };
-        storage_class storageClass{ storage_class::Read };
         VkShaderStageFlags stages{ VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM };
-        VkDescriptorType type{ VK_DESCRIPTOR_TYPE_MAX_ENUM };
         std::vector<ShaderResourceSubObject> members;
-        VkFormat format{ VK_FORMAT_UNDEFINED };
 
     };
 
     ShaderResourceImpl::ShaderResourceImpl(const ShaderResourceImpl & other) noexcept : memoryRequired(other.memoryRequired), parentSetName(other.parentSetName),
-        name(other.name), sizeClass(other.sizeClass), storageClass(other.storageClass), stages(other.stages), type(other.type), members(other.members), format(other.format) {}
+        name(other.name), sizeClass(other.sizeClass), stages(other.stages), type(other.type), members(other.members), format(other.format) {}
 
     ShaderResourceImpl::ShaderResourceImpl(ShaderResourceImpl && other) noexcept : memoryRequired(std::move(other.memoryRequired)), parentSetName(std::move(other.parentSetName)),
-        name(std::move(other.name)), sizeClass(std::move(other.sizeClass)), storageClass(std::move(other.storageClass)), stages(std::move(other.stages)), type(std::move(other.type)), members(std::move(other.members)),
+        name(std::move(other.name)), sizeClass(std::move(other.sizeClass)), stages(std::move(other.stages)), type(std::move(other.type)), members(std::move(other.members)),
         format(std::move(other.format)) {}
 
     ShaderResourceImpl & ShaderResourceImpl::operator=(const ShaderResourceImpl & other) noexcept {
@@ -35,7 +34,6 @@ namespace st {
         parentSetName = other.parentSetName;
         name = other.name;
         sizeClass = other.sizeClass;
-        storageClass = other.storageClass;
         stages = other.stages;
         type = other.type;
         members = other.members;
@@ -48,7 +46,6 @@ namespace st {
         parentSetName = std::move(other.parentSetName);
         name = std::move(other.name);
         sizeClass = std::move(other.sizeClass);
-        storageClass = std::move(other.storageClass);
         stages = std::move(other.stages);
         type = std::move(other.type);
         members = std::move(other.members);
@@ -129,10 +126,6 @@ namespace st {
 
     void ShaderResource::SetSizeClass(size_class _size_class) {
         impl->sizeClass = std::move(_size_class);
-    }
-
-    void ShaderResource::SetStorageClass(storage_class _storage_class) {
-        impl->storageClass = std::move(_storage_class);
     }
 
     void ShaderResource::SetName(const char* name) {

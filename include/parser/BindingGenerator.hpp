@@ -9,7 +9,7 @@ namespace st {
     class ShaderGroup;
     class ShaderGroupImpl;
     class BindingGeneratorImpl;
-    class ShaderResource;
+    class ResourceUsage;
 
     class BindingGenerator {
         BindingGenerator(const BindingGenerator&) = delete;
@@ -24,7 +24,7 @@ namespace st {
         void ParseBinary(const Shader& shader);
         uint32_t GetNumSets() const noexcept;
         void Clear();
-        void GetShaderResources(const size_t set_idx, size_t* num_resources, ShaderResource* resources);
+        void GetShaderResources(const size_t set_idx, size_t* num_resources, ResourceUsage* resources);
 
         friend class ShaderGroup;
         friend class ShaderGroupImpl;

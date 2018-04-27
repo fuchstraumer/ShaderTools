@@ -1,23 +1,26 @@
 #include "BindingGeneratorImpl.hpp"
+#include "../util/ShaderFileTracker.hpp"
+#include "core/ShaderResource.hpp"
+#include <array>
 
 namespace st {
 
-    storage_class StorageClassFromSPIRType(const spirv_cross::SPIRType & type) {
+    access_modifier AccessModifierFromSPIRType(const spirv_cross::SPIRType & type) {
         using namespace spirv_cross;
         if (type.basetype == SPIRType::SampledImage || type.basetype == SPIRType::Sampler || type.basetype == SPIRType::Struct || type.basetype == SPIRType::AtomicCounter) {
-            return storage_class::Read;
+            return access_modifier::Read;
         }
         else {
             switch (type.image.access) {
             case spv::AccessQualifier::AccessQualifierReadOnly:
-                return storage_class::Read;
+                return access_modifier::Read;
             case spv::AccessQualifier::AccessQualifierWriteOnly:
-                return storage_class::Write;
+                return access_modifier::Write;
             case spv::AccessQualifier::AccessQualifierReadWrite:
-                return storage_class::ReadWrite;
+                return access_modifier::ReadWrite;
             case spv::AccessQualifier::AccessQualifierMax:
                 // Usually happens for storage images.
-                return storage_class::ReadWrite;
+                return access_modifier::ReadWrite;
             default:
                 throw std::domain_error("SPIRType somehow has invalid access qualifier enum value!");
             }
@@ -78,6 +81,10 @@ namespace st {
 
     void BindingGeneratorImpl::parseResourceType(const VkShaderStageFlags& stage, const VkDescriptorType& type_being_parsed) {
         
+        auto& f_tracker = ShaderFileTracker::GetFileTracker();
+        
+
+
         auto parsing_buffer_type = [](const VkDescriptorType& type) {
             return (type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER) || (type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC) ||
                 (type == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER) || (type == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC);
@@ -125,21 +132,11 @@ namespace st {
         };
 
         for (const auto& rsrc : resources) {
-            ShaderResource obj;
-            obj.SetBinding(recompiler->get_decoration(rsrc.id, spv::DecorationBinding));
-            obj.SetName(rsrc.name.c_str());
+            uint32_t binding_idx = recompiler->get_decoration(rsrc.id, spv::DecorationBinding);
+            uint32_t set_idx = recompiler->get_decoration(rsrc.id, spv::DecorationDescriptorSet);
             auto spir_type = recompiler->get_type(rsrc.type_id);
-            if (parsing_buffer_type(type_being_parsed)) {
-                auto members = extract_buffer_members(rsrc, *recompiler);
-                obj.SetMembers(members.size(), members.data());
-                obj.SetMemoryRequired(recompiler->get_declared_struct_size(spir_type));
-            }
-            obj.SetType(type_being_parsed);
-            obj.SetStorageClass(StorageClassFromSPIRType(spir_type));
-            obj.SetFormat(FormatFromSPIRType(spir_type));
-            obj.SetStages(stage);
-            
-            tempResources.emplace(recompiler->get_decoration(rsrc.id, spv::DecorationDescriptorSet), obj);
+            access_modifier modifier = AccessModifierFromSPIRType(spir_type);
+               
         }
 
     }
@@ -189,9 +186,9 @@ namespace st {
             DescriptorSetInfo& curr_set = sortedSets.at(unique_set);
             auto obj_range = tempResources.equal_range(unique_set);
             for (auto iter = obj_range.first; iter != obj_range.second; ++iter) {
-                const uint32_t& binding_idx = iter->second.GetBinding();
+                const uint32_t& binding_idx = iter->second.BindingIdx();
                 if (curr_set.Members.count(binding_idx) != 0) {
-                    curr_set.Members.at(binding_idx).SetStages(curr_set.Members.at(binding_idx).GetStages() | iter->second.GetStages());
+                    curr_set.Members.at(binding_idx).Stages() |= iter->second.UsedBy().GetStage();
                 }
                 else {
                     curr_set.Members[binding_idx] = iter->second;

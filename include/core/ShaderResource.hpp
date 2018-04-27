@@ -8,12 +8,6 @@ namespace st {
 
     class ShaderResourceImpl;
 
-    enum class storage_class {
-        Read,
-        Write,
-        ReadWrite
-    };
-
     enum class size_class {
         Absolute,
         SwapchainRelative,
@@ -47,7 +41,6 @@ namespace st {
         void SetStages(VkShaderStageFlags stages);
         void SetType(VkDescriptorType _type);
         void SetSizeClass(size_class _size_class);
-        void SetStorageClass(storage_class _storage_class);
         void SetName(const char* name);
         void SetParentGroupName(const char* parent_group_name);
         void SetMembers(const size_t num_members, ShaderResourceSubObject* src_objects);

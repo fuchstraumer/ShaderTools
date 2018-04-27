@@ -11,8 +11,13 @@ namespace st {
 
     struct ShaderResourceSubObject {
         std::string Name;
-        uint32_t Size;
+        std::string Type;
+        union {
+            uint32_t Size;
+            uint32_t NumElements;
+        };
         uint32_t Offset;
+        bool isComplex;
     };
 
     struct SpecializationConstant {
