@@ -83,9 +83,7 @@ namespace st {
     void BindingGeneratorImpl::parseResourceType(const VkShaderStageFlags& stage, const VkDescriptorType& type_being_parsed) {
         
         auto& f_tracker = ShaderFileTracker::GetFileTracker();
-        
-
-
+     
         auto parsing_buffer_type = [](const VkDescriptorType& type) {
             return (type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER) || (type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC) ||
                 (type == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER) || (type == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC);

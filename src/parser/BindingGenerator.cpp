@@ -25,7 +25,17 @@ namespace st {
     }
 
     void BindingGenerator::GetShaderResources(const size_t set_idx, size_t * num_resources, ResourceUsage * resources) {
-
+        auto iter = impl->sortedSets.find(set_idx);
+        if (iter != impl->sortedSets.cend()) {
+            const auto& set = iter->second;
+            *num_resources = set.Members.size();
+            if (resources != nullptr) {
+                std::copy(set.Members.cbegin(), set.Members.cend(), resources);
+            }
+        }
+        else {
+            *num_resources = 0;
+        }
     }
 
     BindingGeneratorImpl * BindingGenerator::GetImpl() {
