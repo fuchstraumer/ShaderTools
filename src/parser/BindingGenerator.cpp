@@ -16,7 +16,7 @@ namespace st {
     }
 
     uint32_t BindingGenerator::GetNumSets() const noexcept {
-        return impl->getNumSets();
+        return static_cast<uint32_t>(impl->getNumSets());
     }    
     
     void BindingGenerator::Clear() {
@@ -25,7 +25,7 @@ namespace st {
     }
 
     void BindingGenerator::GetShaderResources(const size_t set_idx, size_t * num_resources, ResourceUsage * resources) {
-        auto iter = impl->sortedSets.find(set_idx);
+        auto iter = impl->sortedSets.find(static_cast<unsigned int>(set_idx));
         if (iter != impl->sortedSets.cend()) {
             const auto& set = iter->second;
             *num_resources = set.Members.size();

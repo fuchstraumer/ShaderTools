@@ -77,12 +77,12 @@ namespace st {
                 if (type_str == "Array") {
                     std::string element_type = complex_member_table.at("ElementType").cast<std::string>();
                     size_t num_elements = static_cast<size_t>(complex_member_table.at("NumElements").cast<int>());
-                    object.NumElements = num_elements;
+                    object.NumElements = static_cast<uint32_t>(num_elements);
                     size_t element_size = 0;
                     auto iter = f_tracker.ObjectSizes.find(rsrc.second);
                     if (iter != f_tracker.ObjectSizes.cend()) {
                         element_size = iter->second;
-                        offset_total += element_size * num_elements;
+                        offset_total += static_cast<uint32_t>(element_size * num_elements);
                     }
                     object.Name = rsrc.first + std::string("[]");
                     object.Type = element_type;
@@ -96,7 +96,7 @@ namespace st {
         }
 
         parent_resource.SetMemoryRequired(offset_total);
-
+        return results;
     }
 
     ShaderResource ResourceFile::createUniformBufferResources(const std::string& parent_name, const std::string& name, const std::unordered_map<std::string, luabridge::LuaRef>& table) {
