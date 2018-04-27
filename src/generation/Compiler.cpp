@@ -9,10 +9,9 @@
 #include "spirv_glsl.hpp"
 #include "../util/FilesystemUtils.hpp"
 #include "../util/ShaderFileTracker.hpp"
-#define SCL_SECURE_NO_WARNINGS
-namespace fs = std::experimental::filesystem;
 
 namespace st {
+    namespace fs = std::experimental::filesystem;
 
     class ShaderCompilerImpl {
         ShaderCompilerImpl(const ShaderCompilerImpl&) = delete;
