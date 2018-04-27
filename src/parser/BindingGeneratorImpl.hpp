@@ -3,7 +3,6 @@
 #define SHADER_TOOLS_BINDING_GENERATOR_IMPL_HPP
 #include "common/CommonInclude.hpp"
 #include "DescriptorStructs.hpp"
-#include "core/ResourceUsage.hpp"
 #include "spirv-cross/spirv_cross.hpp"
 #include <fstream>
 #include <filesystem>
@@ -14,9 +13,11 @@
 
 namespace st {
 
+    class ResourceUsage;
+
     struct DescriptorSetInfo {
         uint32_t Binding;
-        std::map<uint32_t, ResourceUsage> Members;
+        std::map<uint32_t, std::unique_ptr<ResourceUsage>> Members;
     };
 
     class BindingGeneratorImpl {
@@ -43,6 +44,7 @@ namespace st {
         std::unordered_map<VkShaderStageFlags, std::map<uint32_t, VertexAttributeInfo>> outputAttributes;
         std::map<uint32_t, SpecializationConstant> specializationConstants;
         std::unique_ptr<spirv_cross::Compiler> recompiler{ nullptr };
+        size_t getNumSets() const noexcept;
 
         decltype(sortedSets)::iterator findSetWithIdx(const uint32_t idx);
     };

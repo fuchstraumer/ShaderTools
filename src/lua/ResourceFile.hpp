@@ -4,6 +4,7 @@
 #include "common/CommonInclude.hpp"
 #include "LuaEnvironment.hpp"
 #include "core/ShaderResource.hpp"
+#include "core/ResourceUsage.hpp"
 #include <vector>
 #include <string>
 #include <unordered_map>

@@ -9,6 +9,7 @@
 #include <experimental/filesystem>
 #include <set>
 #include <future>
+#include <array>
 
 namespace st {
 

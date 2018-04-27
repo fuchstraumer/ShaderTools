@@ -16,12 +16,16 @@ namespace st {
     }
 
     uint32_t BindingGenerator::GetNumSets() const noexcept {
-        return static_cast<uint32_t>(impl->sortedSets.size());
+        return impl->getNumSets();
     }    
     
     void BindingGenerator::Clear() {
         impl.reset();
         impl = std::make_unique<BindingGeneratorImpl>();
+    }
+
+    void BindingGenerator::GetShaderResources(const size_t set_idx, size_t * num_resources, ResourceUsage * resources) {
+
     }
 
     BindingGeneratorImpl * BindingGenerator::GetImpl() {

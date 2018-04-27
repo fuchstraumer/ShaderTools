@@ -1,6 +1,7 @@
 #include "BindingGeneratorImpl.hpp"
 #include "../util/ShaderFileTracker.hpp"
 #include "core/ShaderResource.hpp"
+#include "core/ResourceUsage.hpp"
 #include <array>
 
 namespace st {
@@ -37,8 +38,8 @@ namespace st {
         return *this;
     }
 
-    decltype(BindingGeneratorImpl::sortedSets)::iterator BindingGeneratorImpl::findSetWithIdx(const uint32_t idx) {
-        return sortedSets.find(idx);
+    size_t BindingGeneratorImpl::getNumSets() const noexcept {
+        return sortedSets.size();
     }
 
     constexpr static std::array<VkShaderStageFlags, 6> possible_stages{
@@ -188,10 +189,10 @@ namespace st {
             for (auto iter = obj_range.first; iter != obj_range.second; ++iter) {
                 const uint32_t& binding_idx = iter->second.BindingIdx();
                 if (curr_set.Members.count(binding_idx) != 0) {
-                    curr_set.Members.at(binding_idx).Stages() |= iter->second.UsedBy().GetStage();
+                    curr_set.Members.at(binding_idx)->Stages() |= iter->second.UsedBy().GetStage();
                 }
                 else {
-                    curr_set.Members[binding_idx] = iter->second;
+                    *curr_set.Members[binding_idx] = iter->second;
                 }
             }
         }
