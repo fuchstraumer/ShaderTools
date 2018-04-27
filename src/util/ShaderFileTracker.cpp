@@ -1,4 +1,5 @@
 #include "ShaderFileTracker.hpp"
+#include "../lua/ResourceFile.hpp"
 #include <iostream>
 #include <fstream>
 #include <experimental/filesystem>
