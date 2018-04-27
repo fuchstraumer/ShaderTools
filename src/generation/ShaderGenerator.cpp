@@ -54,6 +54,41 @@ namespace st {
     static const std::regex include_local("#include \"(\\S+)\"");
     static const std::regex specialization_constant("\\$SPC\\s+(const\\s+\\S+\\s+\\S+\\s+=\\s+\\S+;\n)");
 
+    static const std::unordered_map<VkFormat, std::string> VkFormatToStorageImageFormatStr{
+        { VK_FORMAT_R8_UINT, "r8ui" },
+        { VK_FORMAT_R8_SINT, "r8i" },
+        { VK_FORMAT_R8G8_UINT, "rg8ui" },
+        { VK_FORMAT_R8G8_SINT, "rg8i" },
+        { VK_FORMAT_R8G8B8_UINT, "rgb8ui" },
+        { VK_FORMAT_R8G8B8_SINT, "rgb8i" },
+        { VK_FORMAT_R8G8B8A8_UINT, "rgba8ui" },
+        { VK_FORMAT_R8G8B8A8_SINT, "rgba8i" },
+        { VK_FORMAT_R16_UINT, "r16ui" },
+        { VK_FORMAT_R16_SINT, "r16i" },
+        { VK_FORMAT_R16_SFLOAT, "r16f" },
+        { VK_FORMAT_R16G16_UINT, "rg16ui" },
+        { VK_FORMAT_R16G16_SINT, "rg16i" },
+        { VK_FORMAT_R16G16_SFLOAT, "rg16f" },
+        { VK_FORMAT_R16G16B16_UINT, "rgb16ui" },
+        { VK_FORMAT_R16G16B16_SINT, "rgb16i" },
+        { VK_FORMAT_R16G16B16_SFLOAT, "rgb16f" },
+        { VK_FORMAT_R16G16B16A16_UINT, "rgba16ui" },
+        { VK_FORMAT_R16G16B16A16_SINT, "rgba16i" },
+        { VK_FORMAT_R16G16B16A16_SFLOAT, "rgba16f" },
+        { VK_FORMAT_R32_UINT, "r32ui" },
+        { VK_FORMAT_R32_SINT, "r32i" },
+        { VK_FORMAT_R32_SFLOAT, "r32f" },
+        { VK_FORMAT_R32G32_UINT, "rg32ui" },
+        { VK_FORMAT_R32G32_SINT, "rg32ui" },
+        { VK_FORMAT_R32G32_SFLOAT, "rg32f" },
+        { VK_FORMAT_R32G32B32_UINT, "rgb32ui" },
+        { VK_FORMAT_R32G32B32_SINT, "rgb32i" },
+        { VK_FORMAT_R32G32B32_SFLOAT, "rgb32f" },
+        { VK_FORMAT_R32G32B32A32_UINT, "rgba32ui" },
+        { VK_FORMAT_R32G32B32A32_SINT, "rgba32i" },
+        { VK_FORMAT_R32G32B32A32_SFLOAT, "rgba32f" }
+    };
+
     enum class fragment_type : uint8_t {
         Preamble = 0,
         InterfaceBlock,
@@ -109,9 +144,10 @@ namespace st {
 
         size_t getBinding(size_t & active_set);
         std::string getResourcePrefix(size_t active_set, const std::string & image_format);
-        std::string getUniformBufferResourceString(const size_t& active_set, const UniformBuffer & buffer, const std::string & name);
-        std::string getStorageBufferResourceString(const size_t & active_set, const StorageBuffer & buffer, const std::string & name);
-        std::string getStorageImageResourceString(const size_t & active_set, const StorageImage & buffer, const std::string & name);
+        std::string getBufferMembersString(const ShaderResource & resource);
+        std::string getUniformBufferResourceString(const size_t& active_set, const ShaderResource & buffer, const std::string & name);
+        std::string getStorageBufferResourceString(const size_t & active_set, const ShaderResource & buffer, const std::string & name);
+        std::string getStorageImageResourceString(const size_t & active_set, const ShaderResource & buffer, const std::string & name);
         void useResourceBlock(const std::string& block_name);
 
         std::string fetchBodyStr(const Shader & handle, const std::string & path_to_source);
@@ -346,30 +382,44 @@ namespace st {
         return prefix;
     }
 
-    std::string ShaderGeneratorImpl::getUniformBufferResourceString(const size_t& active_set, const UniformBuffer& buffer, const std::string& name) {
+    std::string ShaderGeneratorImpl::getBufferMembersString(const ShaderResource& resource) {
+        std::string result;
+
+        size_t num_members = 0;
+        resource.GetMembers(&num_members, nullptr);
+        std::vector<ShaderResourceSubObject> subobjects(num_members);
+        resource.GetMembers(&num_members, subobjects.data());
+
+        for (const auto& member : subobjects) {
+            result += std::string{ "    " };
+            result += member.Type;
+            result += std::string(" ") + member.Name;
+            result += std::string{ ";\n" };
+        }
+
+        return result;
+    }
+
+    std::string ShaderGeneratorImpl::getUniformBufferResourceString(const size_t& active_set, const ShaderResource& buffer, const std::string& name) {
         const std::string prefix = getResourcePrefix(active_set, "");
         const std::string alt_name = std::string{ "_" } + name + std::string{ "_" };
         std::string result = prefix + std::string{ "uniform " } + alt_name + std::string{ " {\n" };
-        for (const auto& member : buffer.MemberTypes) {
-            result += std::string{ "    " };
-            result += member.second;
-            result += std::string{ " " } +member.first;
-            result += std::string{ ";\n" };
-        }
+        result += getBufferMembersString(buffer);
         result += std::string{ "} " } + name + std::string{ ";\n\n" };
         return result;
     }
 
-    std::string ShaderGeneratorImpl::getStorageBufferResourceString(const size_t& active_set, const StorageBuffer& buffer, const std::string& name) {
+    std::string ShaderGeneratorImpl::getStorageBufferResourceString(const size_t& active_set, const ShaderResource& buffer, const std::string& name) {
         const std::string prefix = getResourcePrefix(active_set, "std430");
         const std::string alt_name = std::string{ "buffer " } + std::string{ "_" } + name + std::string{ "_" };
         std::string result = prefix + alt_name + std::string{ " {\n" };
-        result += std::string{ "    " } + buffer.ElementType + std::string{ " Data[];\n" };
+        result += getBufferMembersString(buffer);
+        size_t num_members = 0;
         result += std::string{ "} " } + name + std::string{ ";\n\n" };
         return result;
     }
 
-    std::string ShaderGeneratorImpl::getStorageImageResourceString(const size_t& active_set, const StorageImage& image, const std::string& name) {
+    std::string ShaderGeneratorImpl::getStorageImageResourceString(const size_t& active_set, const ShaderResource& image, const std::string& name) {
 
         auto get_storage_buffer_subtype = [&](const std::string& image_format)->std::string {
             if (image_format.back() == 'f') {
@@ -386,8 +436,10 @@ namespace st {
             }
         };
 
-        const std::string prefix = getResourcePrefix(active_set, image.Format);
-        const std::string buffer_type = get_storage_buffer_subtype(image.Format);
+        const VkFormat& fmt = image.GetFormat();
+        const std::string& format_string = VkFormatToStorageImageFormatStr.at(fmt);
+        const std::string prefix = getResourcePrefix(active_set, format_string);
+        const std::string buffer_type = get_storage_buffer_subtype(format_string);
         return prefix + std::string{ "uniform " } + buffer_type + std::string{ " " } +name + std::string{ ";\n" };
     }
 
@@ -411,18 +463,18 @@ namespace st {
         for (auto& resource : resource_block) {
             const auto& resource_name = resource.first;
             const auto& resource_item = resource.second;
-            
-            if (std::holds_alternative<UniformBuffer>(resource_item)) {
-                resource_block_string += getUniformBufferResourceString(active_set, std::get<UniformBuffer>(resource_item), resource_name);
-            }
-            else if (std::holds_alternative<StorageBuffer>(resource_item)) {
-                resource_block_string += getStorageBufferResourceString(active_set, std::get<StorageBuffer>(resource_item), resource_name);
-            }
-            else if (std::holds_alternative<StorageImage>(resource_item)) {
-                resource_block_string += getStorageImageResourceString(active_set, std::get<StorageImage>(resource_item), resource_name);
-            }
-            else {
-                throw std::domain_error("Encountered currently unsupported resource type.");
+            switch (resource_item.GetType()) {
+            case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+                resource_block_string += getUniformBufferResourceString(active_set, resource_item, resource_name);
+                break;
+            case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+                resource_block_string += getStorageBufferResourceString(active_set, resource_item, resource_name);
+                break;
+            case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+                resource_block_string += getStorageImageResourceString(active_set, resource_item, resource_name);
+                break;
+            default:
+                throw std::domain_error("Unsupported VkDescriptorType encountered in ShaderGenerator!");
             }
 
         }
