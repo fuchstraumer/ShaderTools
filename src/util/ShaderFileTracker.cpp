@@ -6,7 +6,62 @@
 namespace fs = std::experimental::filesystem;
 namespace st {
 
-    
+    const std::unordered_map<std::string, size_t> fallback_resource_sizes = std::unordered_map<std::string, size_t>{
+        { "vec1", 4 },
+        { "vec2", 8 },
+        { "vec3", 12 },
+        { "vec4", 16 },
+        { "ivec1", 4 },
+        { "ivec2", 8 },
+        { "ivec3", 12 },
+        { "ivec4", 16 },
+        { "uvec1", 4 },
+        { "uvec2", 8 },
+        { "uvec3", 12 },
+        { "uvec4", 16 },
+        { "bvec1", 4 },
+        { "bvec2", 8 },
+        { "bvec3", 12 },
+        { "bvec4", 16 },
+        { "dvec1", 8 },
+        { "dvec2", 16 },
+        { "dvec3", 24 },
+        { "dvec4", 32 },
+        { "float", 4 },
+        { "double", 8 },
+        { "int", 4 },
+        { "uint", 4 },
+        { "mat2", 16 },
+        { "mat3", 36 },
+        { "mat4", 64 }
+    };
+
+    std::unordered_map<std::string, size_t> GetBuiltInResourceSizes(const fs::path& built_ins_path = fs::path("../fragments/builtins/ObjectSizes.lua")) {
+        if (!fs::exists(built_ins_path)) {
+            return fallback_resource_sizes;
+        }
+        else {
+            std::unique_ptr<LuaEnvironment> environment;
+            const std::string path = built_ins_path.string();
+            if (luaL_dofile(environment->GetState(), path.c_str())) {
+                std::string err = lua_tostring(environment->GetState(), -1);
+                std::cerr << "Failed to execute built-in script for baseline (GLSL) object sizes:\n ";
+                std::cerr << err.c_str() << "\n";
+                return fallback_resource_sizes;
+            }
+
+            using namespace luabridge;
+            LuaRef object_ref = getGlobal(environment->GetState(), "ObjectSizes");
+            auto object_table = environment->GetTableMap(object_ref);
+
+            std::unordered_map<std::string, size_t> results{};
+            for (const auto& entry : object_table) {
+                size_t size = static_cast<size_t>(entry.second.cast<int>());
+                results.emplace(entry.first, std::move(size));
+            }
+            return results;
+        }
+    }
 
     ShaderFileTracker::ShaderFileTracker(const std::string & initial_directory) {
         if (!initial_directory.empty()) {
@@ -21,6 +76,8 @@ namespace st {
                 throw std::runtime_error("Failed to create cache directories, lack user permissions...");
             }
         }
+
+        ObjectSizes = GetBuiltInResourceSizes();
     }
 
     ShaderFileTracker::~ShaderFileTracker() {

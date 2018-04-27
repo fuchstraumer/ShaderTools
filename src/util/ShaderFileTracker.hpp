@@ -3,13 +3,14 @@
 #define ST_SHADER_FILE_TRACKER_HPP
 #include "common/CommonInclude.hpp"
 #include "common/Shader.hpp"
-#include "../lua/ResourceFile.hpp"
 #include <unordered_map>
 #include <string>
 #include <vector>
 #include <experimental/filesystem>
 #include <unordered_set>
 namespace st {
+
+    class ResourceFile;
 
     struct ShaderFileTracker {
         ShaderFileTracker(const std::string& initial_directory = std::string{ "" });
@@ -39,6 +40,7 @@ namespace st {
         std::unordered_map<Shader, std::experimental::filesystem::path> BodyPaths;
         std::unordered_map<Shader, std::experimental::filesystem::path> BinaryPaths;
         std::unordered_multimap<Shader, std::string> usedResourceBlockNames;
+        std::unordered_map<std::string, size_t> ObjectSizes;
     };
 
 }
