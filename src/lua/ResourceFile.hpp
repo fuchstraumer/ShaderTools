@@ -26,6 +26,7 @@ namespace st {
 
     private:
 
+        std::vector<ShaderResourceSubObject> getBufferSubobjects(ShaderResource & parent_resource, const std::unordered_map<std::string, luabridge::LuaRef>& subobject_table) const;
         ShaderResource createUniformBufferResources(const std::string & parent_name, const std::string & name, const std::unordered_map<std::string, luabridge::LuaRef>& table);
         ShaderResource createStorageBufferResource(const std::string & parent_name, const std::string & name, const std::unordered_map<std::string, luabridge::LuaRef>& table);
         ShaderResource createStorageImageResource(const std::string & parent_name, const std::string & name, const std::unordered_map<std::string, luabridge::LuaRef>& table);

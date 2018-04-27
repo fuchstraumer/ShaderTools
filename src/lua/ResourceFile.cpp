@@ -6,6 +6,9 @@
 #include <iostream>
 namespace st {
 
+    constexpr size_t MINIMUM_REQUIRED_MAX_STORAGE_BUFFER_SIZE = 134217728;
+    constexpr size_t MINIMUM_REQUIRED_MAX_UNIFORM_BUFFER_SIZE = 16384;
+
     ResourceFile::ResourceFile() : environment(std::make_unique<LuaEnvironment>()) {
         using namespace luabridge;
         getGlobalNamespace(environment->GetState())
@@ -40,6 +43,62 @@ namespace st {
         return ready;
     }
 
+    std::vector<ShaderResourceSubObject> ResourceFile::getBufferSubobjects(ShaderResource& parent_resource, const std::unordered_map<std::string, luabridge::LuaRef>& subobject_table) const {
+        uint32_t offset_total = 0;
+        auto& f_tracker = ShaderFileTracker::GetFileTracker();
+
+        std::vector<ShaderResourceSubObject> results;
+        for (auto& rsrc : subobject_table) {
+            if (!rsrc.second.isTable()) {
+                ShaderResourceSubObject object;
+                object.isComplex = false;
+                object.Name = rsrc.first;
+
+                auto iter = f_tracker.ObjectSizes.find(rsrc.second);
+                if (iter != f_tracker.ObjectSizes.cend()) {
+                    object.Size = static_cast<uint32_t>(iter->second);
+                    object.Offset = offset_total;
+                    offset_total += object.Size;
+                }
+                else {
+                    throw std::runtime_error("Couldn't find resources size.");
+                }
+                results.emplace_back(object);
+            }
+            else {
+                // Current member is a complex type, probably an array.
+                ShaderResourceSubObject object;
+                object.isComplex = true;
+                auto complex_member_table = environment->GetTableMap(rsrc.second);
+                if (complex_member_table.empty()) {
+                    throw std::runtime_error("Failed to extract complex member type from a storage/uniform buffer");
+                }
+                std::string type_str = complex_member_table.at("Type").cast<std::string>();
+                if (type_str == "Array") {
+                    std::string element_type = complex_member_table.at("ElementType").cast<std::string>();
+                    size_t num_elements = static_cast<size_t>(complex_member_table.at("NumElements").cast<int>());
+                    object.NumElements = num_elements;
+                    size_t element_size = 0;
+                    auto iter = f_tracker.ObjectSizes.find(rsrc.second);
+                    if (iter != f_tracker.ObjectSizes.cend()) {
+                        element_size = iter->second;
+                        offset_total += element_size * num_elements;
+                    }
+                    object.Name = rsrc.first + std::string("[]");
+                    object.Type = element_type;
+                    object.Offset = offset_total;
+                    results.emplace_back(object);
+                }
+                else {
+                    throw std::domain_error("Unsupported type for uniform buffer complex/composite member!");
+                }
+            }
+        }
+
+        parent_resource.SetMemoryRequired(offset_total);
+
+    }
+
     ShaderResource ResourceFile::createUniformBufferResources(const std::string& parent_name, const std::string& name, const std::unordered_map<std::string, luabridge::LuaRef>& table) {
         auto& f_tracker = ShaderFileTracker::GetFileTracker();
 
@@ -47,29 +106,9 @@ namespace st {
         s_resource.SetParentGroupName(parent_name.c_str());
         s_resource.SetName(name.c_str());
         s_resource.SetType(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
-
-        std::vector<ShaderResourceSubObject> members;
         auto buffer_resources = environment->GetTableMap(table.at("Members"));
-
-        uint32_t offset_total = 0;
-        for (auto& rsrc : buffer_resources) {
-            ShaderResourceSubObject object;
-            object.Name = rsrc.first;
-            auto iter = f_tracker.ObjectSizes.find(rsrc.second);
-            if (iter != f_tracker.ObjectSizes.cend()) {
-                object.Size = static_cast<uint32_t>(iter->second);
-                object.Offset = offset_total;
-                offset_total += object.Size;
-            }
-            else {
-                throw std::runtime_error("Couldn't find resources size.");
-            }
-            members.emplace_back(object);
-        }
-
-        s_resource.SetMemoryRequired(static_cast<size_t>(offset_total));
-        s_resource.SetMembers(members.size(), members.data());
-
+        auto subobjects = getBufferSubobjects(s_resource, buffer_resources);
+        s_resource.SetMembers(subobjects.size(), subobjects.data());
         return s_resource;
     }
 
@@ -79,16 +118,9 @@ namespace st {
         s_resource.SetParentGroupName(parent_name.c_str());
         s_resource.SetName(name.c_str());
         s_resource.SetType(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
-        std::string element_type = table.at("ElementType").cast<std::string>();
-        auto iter = f_tracker.ObjectSizes.find(element_type);
-        if (iter != f_tracker.ObjectSizes.cend()) {
-            const size_t& element_size = iter->second;
-            size_t num_elements = static_cast<size_t>(table.at("NumElements").cast<int>());
-            s_resource.SetMemoryRequired(element_size * num_elements);
-        }
-        else {
-            throw std::runtime_error("Couldn't find resources size.");
-        }
+        auto buffer_resources = environment->GetTableMap(table.at("Members"));
+        auto subobjects = getBufferSubobjects(s_resource, buffer_resources);
+        s_resource.SetMembers(subobjects.size(), subobjects.data());
         return s_resource;
     }
 

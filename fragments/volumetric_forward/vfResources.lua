@@ -111,8 +111,13 @@ Resources = {
         },
         ClusterAABBs = {
             Type = "StorageBuffer",
-            ElementType = "AABB",
-            NumElements = get_num_clusters()
+            Members = {
+                Data = {
+                    Type = "Array",
+                    ElementType = "AABB",
+                    NumElements = get_num_clusters()
+                }
+            }
         },
         ClusterFlags = {
             Type = "StorageImage",
@@ -171,25 +176,43 @@ Resources = {
         },
         PointLights = {
             Type = "StorageBuffer",
-            ElementType = "PointLight",
-            NumElements = get_num_point_lights()
+            Members = {
+                Data = {
+                    Type = "Array",
+                    ElementType = "PointLight",
+                    NumElements = get_num_point_lights()
+                }
+            }
         },
         SpotLights = {
             Type = "StorageBuffer",
-            ElementType = "SpotLight",
-            NumElements = get_num_spot_lights()
+            Members = {
+                Data = {
+                    Type = "Array",
+                    ElementType = "SpotLight",
+                    NumElements = get_num_spot_lights()
+                }
+            }
         },
         DirectionalLights = {
             Type = "StorageBuffer",
-            ElementType = "DirectionalLight",
-            NumElements = get_num_directional_lights()
+            Members = {
+                Data = {
+                    Type = "Array",
+                    ElementType = "DirectionalLight",
+                    NumElements = get_num_directional_lights()
+                }
+            }
         }
     },
     IndirectArgsSet = {
         IndirectArgs = {
             Type = "StorageBuffer",
-            ElementType = "uint",
-            NumElements = 3
+            Members = {
+                NumThreadGroupsX = "uint", 
+                NumThreadGroupsY = "uint", 
+                NumThreadGroupsZ = "uint" 
+            }
         }       
     },
     SortResources = {
@@ -215,8 +238,13 @@ Resources = {
         },
         LightAABBs = {
             Type = "StorageBuffer",
-            ElementType = "AABB",
-            NumElements = get_num_light_aabbs()
+            Members = {
+                Data = {
+                    Type = "Array",
+                    ElementType = "AABB",
+                    NumElements = get_num_light_aabbs()
+                }
+            }
         },
         PointLightMortonCodes = {
             Type = "StorageImage",
@@ -250,13 +278,23 @@ Resources = {
         },
         PointLightBVH = {
             Type = "StorageBuffer",
-            ElementType = "AABB",
-            NumElements = get_num_point_lights()
+            Members = {
+                Data = {
+                    Type = "Array",
+                    ElementType = "AABB",
+                    NumElements = get_num_point_lights()
+                }
+            }
         },
         SpotLightBVH = {
             Type = "StorageBuffer",
-            ElementType = "AABB",
-            NumElements = get_num_spot_lights()
+            Members = {
+                Data = {
+                    Type = "Array",
+                    ElementType = "AABB",
+                    NumElements = get_num_spot_lights()
+                }
+            }
         }
     }
 }
