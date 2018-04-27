@@ -66,49 +66,6 @@ namespace st {
         generator.reset();
     }
 
-    ShaderGroup::dll_retrieved_strings_t::dll_retrieved_strings_t() {}
-
-    ShaderGroup::dll_retrieved_strings_t::~dll_retrieved_strings_t() {
-        for (uint32_t i = 0; i < NumNames; ++i) {
-            free(Strings[i]);
-        }
-    }
-
-    ShaderGroup::dll_retrieved_strings_t::dll_retrieved_strings_t(dll_retrieved_strings_t && other) noexcept : NumNames(std::move(other.NumNames)), Strings(std::move(other.Strings)) {
-        other.NumNames = 0;
-        other.Strings = nullptr;
-    }
-
-    ShaderGroup::dll_retrieved_strings_t& ShaderGroup::dll_retrieved_strings_t::operator=(dll_retrieved_strings_t && other) noexcept {
-        NumNames = std::move(other.NumNames);
-        other.NumNames = 0;
-        Strings = std::move(other.Strings);
-        other.Strings = nullptr;
-        return *this;
-    }
-
-    ShaderGroup::dll_retrieved_strings_t ShaderGroup::GetSetResourceNames(const uint32_t set_idx) const {
-        return dll_retrieved_strings_t{};
-    }
-
-    ShaderGroup::dll_retrieved_strings_t ShaderGroup::GetUsedResourceBlocks(const Shader& handle) const {
-        auto& FileTracker = ShaderFileTracker::GetFileTracker();
-        auto iter_pair = FileTracker.usedResourceBlockNames.equal_range(handle);
-        if (std::distance(iter_pair.first, iter_pair.second) == 0) {
-            return dll_retrieved_strings_t{};
-        }
-        else {
-            dll_retrieved_strings_t results{};
-            results.NumNames = static_cast<uint32_t>(std::distance(iter_pair.first, iter_pair.second));
-            size_t idx = 0;
-            for (auto iter = iter_pair.first; iter != iter_pair.second; ++iter) {
-                results.Strings[idx] = strdup(iter->second.c_str());
-                ++idx;
-            }
-            return results;
-        }
-    }
-
     size_t ShaderGroup::GetNumSetsRequired() const {
         return static_cast<size_t>(impl->bindingGenerator->GetNumSets());
     }
