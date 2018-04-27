@@ -10,6 +10,20 @@ namespace st {
 
     Shader::Shader(const char* shader_name, const VkShaderStageFlagBits stages) : ID(GetShaderHash(shader_name, stages)) {}
 
+    Shader::Shader(const Shader& other) noexcept : ID(other.ID) { }
+
+    Shader & Shader::operator=(const Shader& other) noexcept {
+        ID = other.ID;
+        return *this;
+    }
+
+    Shader::Shader(Shader && other) noexcept : ID(std::move(other.ID)) {}
+
+    Shader & Shader::operator=(Shader && other) noexcept {
+        ID = std::move(other.ID);
+        return *this;
+    }
+
     VkShaderStageFlagBits Shader::GetStage() const noexcept {
         return VkShaderStageFlagBits((uint32_t)ID);
     }

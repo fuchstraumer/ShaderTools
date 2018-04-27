@@ -1,25 +1,41 @@
 #pragma once
 #ifndef SHADER_TOOLS_RESOURCE_USAGE_HPP
 #define SHADER_TOOLS_RESOURCE_USAGE_HPP
+#include "common/Shader.hpp"
 #include "common/CommonInclude.hpp"
 
 namespace st {
 
     class ShaderResource;
 
-    struct ST_API ResourceUsage {
+
+    enum class access_modifier : uint32_t {
+        Read = 0,
+        Write,
+        ReadWrite,
+        INVALID = std::numeric_limits<uint32_t>::max()
+    };
+
+    class ST_API ResourceUsage {
     public:
-        ResourceUsage(const ShaderResource* backing_resource, uint32_t binding, VkShaderStageFlags flags = VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM,
-            VkDescriptorType type = VK_DESCRIPTOR_TYPE_MAX_ENUM);
+
+        ResourceUsage(const Shader& used_by, const ShaderResource* backing_resource, uint32_t binding, access_modifier _access_modifier, 
+            VkDescriptorType type);
+        ResourceUsage(const ResourceUsage& other) noexcept;
+        ResourceUsage(ResourceUsage&& other) noexcept;
 
         explicit operator VkDescriptorSetLayoutBinding() const;
         bool operator<(const ResourceUsage& other) const noexcept;
         bool operator==(const ResourceUsage& other) const noexcept;
 
-        const uint32_t BindingIdx;
-        const ShaderResource* BackingResource;
-        const VkDescriptorType Type;
-        const VkShaderStageFlags Stages;
+    private:
+
+        uint32_t bindingIdx;
+        access_modifier accessModifier;
+        const ShaderResource* backingResource;
+        Shader usedBy;
+        VkDescriptorType type;
+        VkShaderStageFlags stages;
     };
 
 }
