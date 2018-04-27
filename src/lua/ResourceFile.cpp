@@ -39,8 +39,75 @@ namespace st {
         return ready;
     }
 
+    ShaderResource ResourceFile::createUniformBufferResources(const std::string& parent_name, const std::string& name, const std::unordered_map<std::string, luabridge::LuaRef>& table) {
+        auto& f_tracker = ShaderFileTracker::GetFileTracker();
+
+        ShaderResource s_resource;
+        s_resource.SetParentGroupName(parent_name.c_str());
+        s_resource.SetName(name.c_str());
+        s_resource.SetType(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+
+        std::vector<ShaderResourceSubObject> members;
+        auto buffer_resources = environment->GetTableMap(table.at("Members"));
+
+        uint32_t offset_total = 0;
+        for (auto& rsrc : buffer_resources) {
+            ShaderResourceSubObject object;
+            object.Name = rsrc.first;
+            auto iter = f_tracker.ObjectSizes.find(rsrc.second);
+            if (iter != f_tracker.ObjectSizes.cend()) {
+                object.Size = static_cast<uint32_t>(iter->second);
+                object.Offset = offset_total;
+                offset_total += object.Size;
+            }
+            else {
+                throw std::runtime_error("Couldn't find resources size.");
+            }
+            members.emplace_back(object);
+        }
+
+        s_resource.SetMemoryRequired(static_cast<size_t>(offset_total));
+        s_resource.SetMembers(members.size(), members.data());
+
+        return s_resource;
+    }
+
+    ShaderResource ResourceFile::createStorageBufferResource(const std::string& parent_name, const std::string& name, const std::unordered_map<std::string, luabridge::LuaRef>& table) {
+        auto& f_tracker = ShaderFileTracker::GetFileTracker();
+        ShaderResource s_resource;
+        s_resource.SetParentGroupName(parent_name.c_str());
+        s_resource.SetName(name.c_str());
+        s_resource.SetType(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
+        std::string element_type = table.at("ElementType").cast<std::string>();
+        auto iter = f_tracker.ObjectSizes.find(element_type);
+        if (iter != f_tracker.ObjectSizes.cend()) {
+            const size_t& element_size = iter->second;
+            size_t num_elements = static_cast<size_t>(table.at("NumElements").cast<int>());
+            s_resource.SetMemoryRequired(element_size * num_elements);
+        }
+        else {
+            throw std::runtime_error("Couldn't find resources size.");
+        }
+
+    }
+
+    ShaderResource ResourceFile::createStorageImageResource(const std::string& parent_name, const std::string& name, const std::unordered_map<std::string, luabridge::LuaRef>& table) {
+        
+    }
+
     void ResourceFile::parseResources() {
         using namespace luabridge;
+
+        auto& f_tracker = ShaderFileTracker::GetFileTracker();
+
+        LuaRef size_ref = getGlobal(environment->GetState(), "ObjectSizes");
+        if (!size_ref.isNil()) {
+            auto size_table = environment->GetTableMap(size_ref);
+            for (auto & entry : size_table) {
+                size_t size = static_cast<size_t>(entry.second.cast<int>());
+                f_tracker.ObjectSizes.emplace(entry.first, std::move(size));
+            }
+        }
 
         LuaRef set_table = getGlobal(environment->GetState(), "Resources");
         auto resource_sets = environment->GetTableMap(set_table);
@@ -55,32 +122,15 @@ namespace st {
                 // Now accessing/parsing single resource per set
                 auto set_resource_data = environment->GetTableMap(set_resource.second);
                 std::string type_of_resource = set_resource_data.at("Type");
-                ShaderResource s_resource;
-                s_resource.SetParentGroupName(entry.first.c_str());
-                s_resource.SetName(set_resource.first.c_str());
 
                 if (type_of_resource == "UniformBuffer") {
-                    s_resource.SetType(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
-
-                    std::vector<ShaderResourceSubObject> members;
-                    auto buffer_resources = environment->GetTableMap(set_resource_data.at("Members"));
-                    for (auto& rsrc : buffer_resources) {
-                        std::string name = rsrc.first;
-                        std::string type = rsrc.second;
-                        buff.MemberTypes.emplace_back(name, type);
-                    }
-                    setResources[entry.first].emplace(set_resource.first, std::move(buff));
+                    setResources[entry.first].emplace(createUniformBufferResources(entry.first, set_resource.first, set_resource_data));
                 }
                 else if (type_of_resource == "StorageImage") {
-                    s_resource.SetType(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
-                    std::string format = set_resource_data.at("Format");
-                    size_t size = static_cast<size_t>(int(set_resource_data.at("Size")));
-                    setResources[entry.first].emplace(set_resource.first, StorageImage{ format, size });
+                    setResources[entry.first].emplace(createStorageImageResource(entry.first, set_resource.first, set_resource_data));
                 }
                 else if (type_of_resource == "StorageBuffer") {
-                    std::string element_type = set_resource_data.at("ElementType");
-                    size_t num_elements = static_cast<size_t>(int(set_resource_data.at("NumElements")));
-                    setResources[entry.first].emplace(set_resource.first, StorageBuffer{ element_type, num_elements });
+                    setResources[entry.first].emplace(createStorageBufferResource(entry.first, set_resource.first, set_resource_data));
                 }
             }
         }

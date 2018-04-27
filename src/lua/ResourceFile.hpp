@@ -25,6 +25,11 @@ namespace st {
         const std::unordered_map<std::string, set_resource_map_t>& GetAllResources() const noexcept;
 
     private:
+
+        ShaderResource createUniformBufferResources(const std::string & parent_name, const std::string & name, const std::unordered_map<std::string, luabridge::LuaRef>& table);
+        ShaderResource createStorageBufferResource(const std::string & parent_name, const std::string & name, const std::unordered_map<std::string, luabridge::LuaRef>& table);
+        ShaderResource createStorageImageResource(const std::string & parent_name, const std::string & name, const std::unordered_map<std::string, luabridge::LuaRef>& table);
+
         bool ready{ false };
         std::unordered_map<std::string, set_resource_map_t> setResources;
         std::unique_ptr<LuaEnvironment> environment;
