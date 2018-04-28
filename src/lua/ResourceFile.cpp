@@ -4,6 +4,7 @@
 #include "common/UtilityStructs.hpp"
 #include "../util/ShaderFileTracker.hpp"
 #include <iostream>
+#include <future>
 namespace st {
 
     constexpr size_t MINIMUM_REQUIRED_MAX_STORAGE_BUFFER_SIZE = 134217728;
@@ -230,6 +231,27 @@ namespace st {
         return setResources;
     }
 
+    const ShaderResource * ResourceFile::FindResource(const std::string & name) const {
+        std::vector<std::future<const ShaderResource*>> futures;
+        for (auto& group : setResources) {
+            futures.emplace_back(std::async(std::launch::async, &ResourceFile::searchSingleGroupForResource, this, group.first, name));
+        }
+
+        std::vector<const ShaderResource*> resources;
+        for (auto&& fut : futures) {
+            resources.emplace_back(fut.get());
+        }
+
+        auto iter = std::find_if(resources.cbegin(), resources.cend(), [](const ShaderResource* rsrc) { return rsrc != nullptr; });
+        if (iter != resources.cend()) {
+            return *iter;
+        }
+        else {
+            return nullptr;
+        }
+
+    }
+
     void ResourceFile::Execute(const char* fname)  {
 
         if (luaL_dofile(environment->GetState(), fname)) {
@@ -244,6 +266,21 @@ namespace st {
 
     const bool & ResourceFile::IsReady() const noexcept {
         return ready;
+    }
+
+    const ShaderResource* ResourceFile::searchSingleGroupForResource(const std::string& group, const std::string & name) const {
+        
+        auto iter = std::find_if(setResources.at(group).cbegin(), setResources.at(group).cend(), [name](const ShaderResource& rsrc) {
+            return name == std::string(rsrc.GetName());
+        });
+
+        if (iter == setResources.at(group).cend()) {
+            return nullptr;
+        }
+        else {
+            return &(*iter);
+        }
+
     }
 
     std::vector<ShaderResourceSubObject> ResourceFile::getBufferSubobjects(ShaderResource& parent_resource, const std::unordered_map<std::string, luabridge::LuaRef>& subobject_table) const {
