@@ -30,11 +30,10 @@ namespace st {
         BindingGeneratorImpl(BindingGeneratorImpl&& other) noexcept;
         BindingGeneratorImpl& operator=(BindingGeneratorImpl&& other) noexcept;
 
-        void parseBinary(const std::vector<uint32_t>& binary_data, const VkShaderStageFlags stage);
-        void collateSets();
-        void parseResourceType(const VkShaderStageFlags & stage, const VkDescriptorType & type_being_parsed);
+        void collateSets(const Shader& shader_handle);
+        void parseResourceType(const Shader& shader_handle, const VkDescriptorType & type_being_parsed);
         void parseBinary(const Shader& shader_handle);
-        void parseImpl(const std::vector<uint32_t>& binary_data, const VkShaderStageFlags stage);
+        void parseImpl(const Shader& shader_handle, const std::vector<uint32_t>& binary_data);
 
         std::unordered_multimap<VkShaderStageFlags, DescriptorSetInfo> descriptorSets;
         std::map<uint32_t, DescriptorSetInfo> sortedSets;

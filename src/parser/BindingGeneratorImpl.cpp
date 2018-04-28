@@ -80,7 +80,7 @@ namespace st {
         return parseVertAttrs(cmplr, rsrcs.stage_outputs);
     }
 
-    void BindingGeneratorImpl::parseResourceType(const VkShaderStageFlags& stage, const VkDescriptorType& type_being_parsed) {
+    void BindingGeneratorImpl::parseResourceType(const Shader& shader_handle, const VkDescriptorType& type_being_parsed) {
         
         auto& f_tracker = ShaderFileTracker::GetFileTracker();
      
@@ -164,14 +164,10 @@ namespace st {
             throw std::runtime_error("Attempted to parse binary that does not exist in current program!");
         }
 
-        parseImpl(binary_vec, shader_handle.GetStage());
+        parseImpl(shader_handle, binary_vec);
     }
 
-    void BindingGeneratorImpl::parseBinary(const std::vector<uint32_t>& binary_data, const VkShaderStageFlags stage) {
-        parseImpl(binary_data, stage);
-    }
-
-    void BindingGeneratorImpl::collateSets() {
+    void BindingGeneratorImpl::collateSets(const Shader& shader_handle) {
         std::set<uint32_t> unique_keys;
         for (auto iter = tempResources.begin(); iter != tempResources.end(); ++iter) {
             unique_keys.insert(iter->first);
@@ -196,18 +192,18 @@ namespace st {
         }
     }
 
-    void BindingGeneratorImpl::parseImpl(const std::vector<uint32_t>& binary_data, const VkShaderStageFlags stage) {
+    void BindingGeneratorImpl::parseImpl(const Shader& handle, const std::vector<uint32_t>& binary_data) {
         using namespace spirv_cross;
         recompiler = std::make_unique<Compiler>(binary_data);
-
-        parseResourceType(stage, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
-        parseResourceType(stage, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
-        parseResourceType(stage, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT);
-        parseResourceType(stage, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE);
-        parseResourceType(stage, VK_DESCRIPTOR_TYPE_SAMPLER);
-        parseResourceType(stage, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
-        parseResourceType(stage, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
-        collateSets();
+        const auto stage = handle.GetStage();
+        parseResourceType(handle, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
+        parseResourceType(handle, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
+        parseResourceType(handle, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT);
+        parseResourceType(handle, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE);
+        parseResourceType(handle, VK_DESCRIPTOR_TYPE_SAMPLER);
+        parseResourceType(handle, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+        parseResourceType(handle, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
+        collateSets(handle);
         
         auto resources = recompiler->get_shader_resources();
         if (!resources.push_constant_buffers.empty()) {
