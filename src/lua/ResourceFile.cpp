@@ -48,6 +48,16 @@ namespace st {
         VK_FALSE // unnormalized coordinates rare as heck
     };
 
+    constexpr static VkBufferViewCreateInfo buffer_view_info_base{
+        VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO,
+        nullptr,
+        0,
+        VK_NULL_HANDLE,
+        VK_FORMAT_UNDEFINED,
+        0,
+        0
+    };
+
     size_class sizeClassFromString(const std::string& sz_class)  {
         if (sz_class == "Absolute") {
             return size_class::Absolute;
@@ -314,6 +324,14 @@ namespace st {
         return s_resource;
     }
 
+    VkBufferViewCreateInfo ResourceFile::getStorageImageBufferViewInfo(ShaderResource& rsrc) const {
+        VkBufferViewCreateInfo results = buffer_view_info_base;
+        results.format = rsrc.GetFormat();
+        results.offset = 0;
+        results.range = rsrc.GetAmountOfMemoryRequired();
+        return results;
+    }   
+
     ShaderResource ResourceFile::createStorageImageResource(const std::string& parent_name, const std::string& name, const std::unordered_map<std::string, luabridge::LuaRef>& table) const {
         ShaderResource s_resource;
         s_resource.SetParentGroupName(parent_name.c_str());
@@ -326,6 +344,7 @@ namespace st {
         if (footprint != std::numeric_limits<size_t>::max()) {
             s_resource.SetMemoryRequired(footprint * image_size);
         }
+        s_resource.SetBufferViewInfo(getStorageImageBufferViewInfo(s_resource));
         return s_resource;
     }
 

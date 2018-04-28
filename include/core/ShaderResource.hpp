@@ -36,6 +36,7 @@ namespace st {
         const VkDescriptorType& GetType() const noexcept;
         const VkImageCreateInfo& ImageInfo() const noexcept;
         const VkSamplerCreateInfo& SamplerInfo() const noexcept;
+        const VkBufferViewCreateInfo& BufferViewInfo() const noexcept;
         void GetMembers(size_t* num_members, ShaderResourceSubObject* dest_objects) const noexcept;
 
         void SetMemoryRequired(size_t amt);
@@ -48,6 +49,7 @@ namespace st {
         void SetFormat(VkFormat fmt);
         void SetImageInfo(VkImageCreateInfo image_info);
         void SetSamplerInfo(VkSamplerCreateInfo sampler_info);
+        void SetBufferViewInfo(VkBufferViewCreateInfo buffer_info);
 
     private:
         std::unique_ptr<ShaderResourceImpl> impl;

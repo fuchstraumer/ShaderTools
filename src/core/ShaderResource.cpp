@@ -27,9 +27,9 @@ namespace st {
         VK_FILTER_LINEAR,
         VK_FILTER_LINEAR,
         VK_SAMPLER_MIPMAP_MODE_LINEAR,
-        VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT, // This is a good default. Its presence rarely causes visible bugs:
-        VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT, // using other values like clamp though, will cause any bugs that can
-        VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT, // occur to readily appareny (warped, stretched, weird texturing)
+        VK_SAMPLER_ADDRESS_MODE_REPEAT, // This is a good default. Its presence rarely causes visible bugs:
+        VK_SAMPLER_ADDRESS_MODE_REPEAT, // using other values like clamp though, will cause any bugs that can
+        VK_SAMPLER_ADDRESS_MODE_REPEAT, // occur to readily appareny (warped, stretched, weird texturing)
         0.0f,
         VK_FALSE, // anisotropy disabled by default
         1.0f, // max anisotropy is 1.0 by default. depends upon device.
@@ -39,6 +39,16 @@ namespace st {
         1.0f,
         VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
         VK_FALSE // unnormalized coordinates rare as heck
+    };
+
+    constexpr static VkBufferViewCreateInfo buffer_view_info_base {
+        VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO,
+        nullptr,
+        0,
+        VK_NULL_HANDLE,
+        VK_FORMAT_UNDEFINED,
+        0,
+        0
     };
 
     // if trying to retrieve image info for a non-image descriptor type, return this
@@ -84,6 +94,16 @@ namespace st {
         VK_FALSE
     };
 
+    constexpr static VkBufferViewCreateInfo invalid_buffer_view_create_info{
+        VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO,
+        nullptr,
+        0,
+        VK_NULL_HANDLE,
+        VK_FORMAT_MAX_ENUM,
+        std::numeric_limits<uint32_t>::max(),
+        std::numeric_limits<uint32_t>::max()
+    };
+
     class ShaderResourceImpl {
     public:
 
@@ -103,7 +123,9 @@ namespace st {
         std::vector<ShaderResourceSubObject> members;
         VkImageCreateInfo imageInfo{ image_create_info_base };
         VkSamplerCreateInfo samplerInfo{ sampler_create_info_base };
+        VkBufferViewCreateInfo bufferInfo{ buffer_view_info_base };
         bool needsMipMaps{ false };
+
     };
 
     ShaderResourceImpl::ShaderResourceImpl(const ShaderResourceImpl & other) noexcept : memoryRequired(other.memoryRequired), parentSetName(other.parentSetName),
@@ -205,6 +227,15 @@ namespace st {
         }
     }
 
+    const VkBufferViewCreateInfo & ShaderResource::BufferViewInfo() const noexcept {
+        if (impl->type == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE || impl->type == VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER) {
+            return impl->bufferInfo;
+        }
+        else {
+            return invalid_buffer_view_create_info;
+        }
+    }
+
     void ShaderResource::GetMembers(size_t* num_members, ShaderResourceSubObject* objects) const noexcept {
         *num_members = impl->members.size();
         if (objects != nullptr) {
@@ -250,6 +281,10 @@ namespace st {
 
     void ShaderResource::SetSamplerInfo(VkSamplerCreateInfo sampler_info) {
         impl->samplerInfo = std::move(sampler_info);
+    }
+
+    void ShaderResource::SetBufferViewInfo(VkBufferViewCreateInfo buffer_info) {
+        impl->bufferInfo = std::move(buffer_info);
     }
 
 }
