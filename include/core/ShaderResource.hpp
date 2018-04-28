@@ -34,6 +34,8 @@ namespace st {
         const char* ParentGroupName() const;
         const VkShaderStageFlags& GetStages() const noexcept;
         const VkDescriptorType& GetType() const noexcept;
+        const VkImageCreateInfo& ImageInfo() const noexcept;
+        const VkSamplerCreateInfo& SamplerInfo() const noexcept;
         void GetMembers(size_t* num_members, ShaderResourceSubObject* dest_objects) const noexcept;
 
         void SetMemoryRequired(size_t amt);
@@ -44,6 +46,8 @@ namespace st {
         void SetParentGroupName(const char* parent_group_name);
         void SetMembers(const size_t num_members, ShaderResourceSubObject* src_objects);
         void SetFormat(VkFormat fmt);
+        void SetImageInfo(VkImageCreateInfo image_info);
+        void SetSamplerInfo(VkSamplerCreateInfo sampler_info);
 
     private:
         std::unique_ptr<ShaderResourceImpl> impl;

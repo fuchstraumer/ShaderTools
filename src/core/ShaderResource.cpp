@@ -103,6 +103,24 @@ namespace st {
         return impl->type;
     }
 
+    const VkImageCreateInfo& ShaderResource::ImageInfo() const noexcept {
+        if (impl->type == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE || impl->type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) {
+            return impl->imageInfo;
+        }
+        else {
+            return invalid_image_create_info;
+        }
+    }
+
+    const VkSamplerCreateInfo& ShaderResource::SamplerInfo() const noexcept {
+        if (impl->type == VK_DESCRIPTOR_TYPE_SAMPLER || impl->type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) {
+            return impl->samplerInfo;
+        }
+        else {
+            return invalid_sampler_create_info;
+        }
+    }
+
     void ShaderResource::GetMembers(size_t* num_members, ShaderResourceSubObject* objects) const noexcept {
         *num_members = impl->members.size();
         if (objects != nullptr) {
