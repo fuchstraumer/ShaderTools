@@ -2,6 +2,88 @@
 
 namespace st {
 
+    constexpr static VkImageCreateInfo image_create_info_base{
+        VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+        nullptr,
+        0,
+        VK_IMAGE_TYPE_MAX_ENUM, // set this invalid at start, because it needs to be set properly
+        VK_FORMAT_UNDEFINED, // this can't be set by shadertools, so make it invalid for now
+        VkExtent3D{}, // initialize but leave "invalid": ST may not be able to extract the size
+        1, // reasonable MIP base
+        1, // most images only have 1 "array" layer
+        VK_SAMPLE_COUNT_1_BIT, // most images not multisampled
+        VK_IMAGE_TILING_MAX_ENUM, // this has to be set based on format and usage
+        0, // leave image usage flags blank
+        VK_SHARING_MODE_EXCLUSIVE, // next 3 sharing parameters "disabled"
+        0,
+        nullptr,
+        VK_IMAGE_LAYOUT_UNDEFINED // most images start like this
+    };
+
+    constexpr static VkSamplerCreateInfo sampler_create_info_base{
+        VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+        nullptr,
+        0,
+        VK_FILTER_LINEAR,
+        VK_FILTER_LINEAR,
+        VK_SAMPLER_MIPMAP_MODE_LINEAR,
+        VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT, // This is a good default. Its presence rarely causes visible bugs:
+        VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT, // using other values like clamp though, will cause any bugs that can
+        VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT, // occur to readily appareny (warped, stretched, weird texturing)
+        0.0f,
+        VK_FALSE, // anisotropy disabled by default
+        1.0f, // max anisotropy is 1.0 by default. depends upon device.
+        VK_FALSE,
+        VK_COMPARE_OP_ALWAYS,
+        0.0f,
+        1.0f,
+        VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE,
+        VK_FALSE // unnormalized coordinates rare as heck
+    };
+
+    // if trying to retrieve image info for a non-image descriptor type, return this
+    // so that the API causes tons of obvious errors and so that the validation layers throw a fit
+    constexpr static VkImageCreateInfo invalid_image_create_info{
+        VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+        nullptr,
+        0,
+        VK_IMAGE_TYPE_MAX_ENUM,
+        VK_FORMAT_MAX_ENUM,
+        VkExtent3D{},
+        std::numeric_limits<uint32_t>::max(),
+        std::numeric_limits<uint32_t>::max(),
+        VK_SAMPLE_COUNT_FLAG_BITS_MAX_ENUM,
+        VK_IMAGE_TILING_MAX_ENUM,
+        VK_IMAGE_USAGE_FLAG_BITS_MAX_ENUM,
+        VK_SHARING_MODE_MAX_ENUM,
+        std::numeric_limits<uint32_t>::max(),
+        nullptr,
+        VK_IMAGE_LAYOUT_MAX_ENUM
+    };
+
+    // When someone tries to retrieve sampler info for a non-sampler resource, return this.
+    // It should cause havoc in the API, as almost all the values are invalid.
+    constexpr static VkSamplerCreateInfo invalid_sampler_create_info {
+        VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+        nullptr,
+        0,
+        VK_FILTER_MAX_ENUM,
+        VK_FILTER_MAX_ENUM,
+        VK_SAMPLER_MIPMAP_MODE_MAX_ENUM,
+        VK_SAMPLER_ADDRESS_MODE_MAX_ENUM,
+        VK_SAMPLER_ADDRESS_MODE_MAX_ENUM,
+        VK_SAMPLER_ADDRESS_MODE_MAX_ENUM,
+        -1.0f,
+        VK_FALSE,
+        -1.0f,
+        VK_FALSE,
+        VK_COMPARE_OP_MAX_ENUM,
+        -1.0f,
+        -1.0f,
+        VK_BORDER_COLOR_MAX_ENUM,
+        VK_FALSE
+    };
+
     class ShaderResourceImpl {
     public:
 
@@ -19,7 +101,9 @@ namespace st {
         size_class sizeClass{ size_class::Absolute };
         VkShaderStageFlags stages{ VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM };
         std::vector<ShaderResourceSubObject> members;
-
+        VkImageCreateInfo imageInfo{ image_create_info_base };
+        VkSamplerCreateInfo samplerInfo{ sampler_create_info_base };
+        bool needsMipMaps{ false };
     };
 
     ShaderResourceImpl::ShaderResourceImpl(const ShaderResourceImpl & other) noexcept : memoryRequired(other.memoryRequired), parentSetName(other.parentSetName),
@@ -158,6 +242,14 @@ namespace st {
 
     void ShaderResource::SetFormat(VkFormat fmt) {
         impl->format = std::move(fmt);
+    }
+
+    void ShaderResource::SetImageInfo(VkImageCreateInfo image_info) {
+        impl->imageInfo = std::move(image_info);
+    }
+
+    void ShaderResource::SetSamplerInfo(VkSamplerCreateInfo sampler_info) {
+        impl->samplerInfo = std::move(sampler_info);
     }
 
 }
