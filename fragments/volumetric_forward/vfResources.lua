@@ -297,4 +297,27 @@ Resources = {
             }
         }
     }
+    MaterialResources = {
+        diffuseMap = {
+            Type = "CombinedImageSampler",
+            ImageOptions = {
+                SizeClass = "Absolute",
+                SampleCount = 1,
+                ImageType = "2D",
+                GenerateMipMaps = false,
+                MipLevels = 1,
+                Layers = 1
+            },
+            SamplerOptions = {
+                MagFilter = "Linear",
+                MinFilter = "Linear",
+                MipMapFilter = "Linear",
+                AddressModeU = "Repeat",
+                AddressModeV = "Repeat",
+                AddressModeW = "ClampToEdge",
+                EnableAnisotropy = true,
+                MaxAnisotropy = 4.0
+            }
+        }
+    }
 }
