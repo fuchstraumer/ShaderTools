@@ -29,8 +29,13 @@ namespace st {
         if (iter != impl->sortedSets.cend()) {
             const auto& set = iter->second;
             *num_resources = set.Members.size();
+            std::vector<ResourceUsage> resources_copy;
+            for (const auto& member : set.Members) {
+                resources_copy.emplace_back(member.second);
+            }   
+
             if (resources != nullptr) {
-                std::copy(set.Members.cbegin(), set.Members.cend(), resources);
+                std::copy(resources_copy.begin(), resources_copy.end(), resources);
             }
         }
         else {
