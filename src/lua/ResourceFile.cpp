@@ -288,13 +288,20 @@ namespace st {
         auto& f_tracker = ShaderFileTracker::GetFileTracker();
 
         std::vector<ShaderResourceSubObject> results;
+        results.resize(subobject_table.size());
         for (auto& rsrc : subobject_table) {
-            if (!rsrc.second.isTable()) {
+            // Each item is a table: contains type, and relative index.
+            // Index says where in "results" it should go.
+            luabridge::LuaRef type_ref = rsrc.second[1];
+            size_t idx = static_cast<size_t>(rsrc.second[2].cast<int>());
+            if (!type_ref.isTable()) {
                 ShaderResourceSubObject object;
                 object.isComplex = false;
                 object.Name = rsrc.first;
+                std::string type_str = type_ref.cast<std::string>();
+                object.Type = type_str;
 
-                auto iter = f_tracker.ObjectSizes.find(rsrc.second);
+                auto iter = f_tracker.ObjectSizes.find(type_str);
                 if (iter != f_tracker.ObjectSizes.cend()) {
                     object.Size = static_cast<uint32_t>(iter->second);
                     object.Offset = offset_total;
@@ -303,13 +310,13 @@ namespace st {
                 else {
                     throw std::runtime_error("Couldn't find resources size.");
                 }
-                results.emplace_back(object);
+                results[idx] = object;
             }
             else {
                 // Current member is a complex type, probably an array.
                 ShaderResourceSubObject object;
                 object.isComplex = true;
-                auto complex_member_table = environment->GetTableMap(rsrc.second);
+                auto complex_member_table = environment->GetTableMap(type_ref);
                 if (complex_member_table.empty()) {
                     throw std::runtime_error("Failed to extract complex member type from a storage/uniform buffer");
                 }
@@ -318,16 +325,16 @@ namespace st {
                     std::string element_type = complex_member_table.at("ElementType").cast<std::string>();
                     size_t num_elements = static_cast<size_t>(complex_member_table.at("NumElements").cast<int>());
                     object.NumElements = static_cast<uint32_t>(num_elements);
+                    object.Offset = offset_total;
                     size_t element_size = 0;
-                    auto iter = f_tracker.ObjectSizes.find(rsrc.second);
+                    auto iter = f_tracker.ObjectSizes.find(element_type);
                     if (iter != f_tracker.ObjectSizes.cend()) {
                         element_size = iter->second;
                         offset_total += static_cast<uint32_t>(element_size * num_elements);
                     }
                     object.Name = rsrc.first + std::string("[]");
                     object.Type = element_type;
-                    object.Offset = offset_total;
-                    results.emplace_back(object);
+                    results[idx] = object;
                 }
                 else {
                     throw std::domain_error("Unsupported type for uniform buffer complex/composite member!");
@@ -393,7 +400,7 @@ namespace st {
             return image_info_table.count(name) != 0;
         };
 
-        auto member_as_str = [image_info_table](const std::string& name)->const std::string& {
+        auto member_as_str = [image_info_table](const std::string& name)->std::string {
             return image_info_table.at(name).cast<std::string>();
         };
         
@@ -429,7 +436,7 @@ namespace st {
             return sampler_info_table.count(name) != 0;
         };
 
-        auto member_as_str = [sampler_info_table](const std::string& name)->const std::string& {
+        auto member_as_str = [sampler_info_table](const std::string& name)->std::string {
             return sampler_info_table.at(name).cast<std::string>();
         };
 
@@ -555,28 +562,29 @@ namespace st {
                 std::string type_of_resource = set_resource_data.at("Type");
 
                 if (type_of_resource == "UniformBuffer") {
-                    setResources[entry.first].emplace(createUniformBufferResources(entry.first, set_resource.first, set_resource_data));
+                    setResources[entry.first].emplace_back(createUniformBufferResources(entry.first, set_resource.first, set_resource_data));
                 }
                 else if (type_of_resource == "StorageImage") {
-                    setResources[entry.first].emplace(createStorageImageResource(entry.first, set_resource.first, set_resource_data));
+                    setResources[entry.first].emplace_back(createStorageImageResource(entry.first, set_resource.first, set_resource_data));
                 }
                 else if (type_of_resource == "StorageBuffer") {
-                    setResources[entry.first].emplace(createStorageBufferResource(entry.first, set_resource.first, set_resource_data));
+                    setResources[entry.first].emplace_back(createStorageBufferResource(entry.first, set_resource.first, set_resource_data));
                 }
                 else if (type_of_resource == "CombinedImageSampler") {
-                    setResources[entry.first].emplace(createCombinedImageSamplerResource(entry.first, set_resource.first, set_resource_data));
+                    setResources[entry.first].emplace_back(createCombinedImageSamplerResource(entry.first, set_resource.first, set_resource_data));
                 }
                 else if (type_of_resource == "Sampler") {
-                    setResources[entry.first].emplace(createSamplerResource(entry.first, set_resource.first, set_resource_data));
+                    setResources[entry.first].emplace_back(createSamplerResource(entry.first, set_resource.first, set_resource_data));
                 }
                 else if (type_of_resource == "SampledImage") {
-                    setResources[entry.first].emplace(createSampledImageResource(entry.first, set_resource.first, set_resource_data));
+                    setResources[entry.first].emplace_back(createSampledImageResource(entry.first, set_resource.first, set_resource_data));
                 }
                 else {
                     throw std::domain_error("Used invalid or currently unsupported resource type string in Lua resource script!");
                 }
             }
         }
+
     }
 
 }

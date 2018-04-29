@@ -74,27 +74,27 @@ Resources = {
         matrices = {
             Type = "UniformBuffer",
             Members = {
-                model = "mat4",
-                view = "mat4",
-                projection = "mat4",
-                normal = "mat4"
+                model = { "mat4", 0 },
+                view = { "mat4", 1 },
+                projection = { "mat4", 2 },
+                normal = { "mat4", 3 }
             }
         },
         globals = {
             Type = "UniformBuffer",
             Members = {
-                viewPosition = "vec4",
-                mousePosition = "vec2",
-                windowSize = "vec2",
-                depthRange = "vec2",
-                frame = "uint"
+                viewPosition = { "vec4", 0 },
+                mousePosition = { "vec2", 1 },
+                windowSize = { "vec2", 2 },
+                depthRange = { "vec2", 3 },
+                frame = { "uint", 4 }
             }
         },
         lightingData = {
             Type = "UniformBuffer",
             Members = {
-                Exposure = "float",
-                Gamma = "float"
+                Exposure = { "float", 0 },
+                Gamma = { "float", 1 }
             }
         }
     },
@@ -102,21 +102,21 @@ Resources = {
         ClusterData = {
             Type = "UniformBuffer",
             Members = {
-                GridDim = "uvec3",
-                ViewNear = "float",
-                ScreenSize = "uvec2",
-                Near = "float",
-                LogGridDimY = "float"
+                GridDim = { "uvec3", 0 },
+                ViewNear = { "float", 1 },
+                ScreenSize = { "uvec2", 2 },
+                Near = { "float", 3 },
+                LogGridDimY = { "float", 4 }
             }
         },
         ClusterAABBs = {
             Type = "StorageBuffer",
             Members = {
-                Data = {
+                Data = { {
                     Type = "Array",
                     ElementType = "AABB",
                     NumElements = get_num_clusters()
-                }
+                }, 0 }
             }
         },
         ClusterFlags = {
@@ -169,39 +169,39 @@ Resources = {
         LightCounts = {
             Type = "UniformBuffer",
             Members = {
-                NumPointLights = "uint",
-                NumSpotLights = "uint",
-                NumDirectionalLights = "uint"
+                NumPointLights = { "uint", 0 },
+                NumSpotLights = { "uint", 1 },
+                NumDirectionalLights = { "uint", 2 }
             }
         },
         PointLights = {
             Type = "StorageBuffer",
             Members = {
-                Data = {
+                Data = { {
                     Type = "Array",
                     ElementType = "PointLight",
                     NumElements = get_num_point_lights()
-                }
+                }, 0 }
             }
         },
         SpotLights = {
             Type = "StorageBuffer",
             Members = {
-                Data = {
+                Data = { {
                     Type = "Array",
                     ElementType = "SpotLight",
                     NumElements = get_num_spot_lights()
-                }
+                }, 0 }
             }
         },
         DirectionalLights = {
             Type = "StorageBuffer",
             Members = {
-                Data = {
+                Data = { {
                     Type = "Array",
                     ElementType = "DirectionalLight",
                     NumElements = get_num_directional_lights()
-                }
+                }, 0 }
             }
         }
     },
@@ -209,9 +209,9 @@ Resources = {
         IndirectArgs = {
             Type = "StorageBuffer",
             Members = {
-                NumThreadGroupsX = "uint", 
-                NumThreadGroupsY = "uint", 
-                NumThreadGroupsZ = "uint" 
+                NumThreadGroupsX = { "uint", 0 },
+                NumThreadGroupsY = { "uint", 1 },
+                NumThreadGroupsZ = { "uint", 2 }
             }
         }       
     },
@@ -219,31 +219,31 @@ Resources = {
         DispatchParams = {
             Type = "UniformBuffer",
             Members = {
-                NumThreadGroups = "uvec3",
-                NumThreads = "uvec3"
+                NumThreadGroups = { "uvec3", 0 },
+                NumThreads = { "uvec3", 1 }
             }
         },
         ReductionParams = {
             Type = "UniformBuffer",
             Members = {
-                NumElements = "uint"
+                NumElements = { "uint", 0 }
             }
         },
         SortParams = {
             Type = "UniformBuffer",
             Members = {
-                NumElements = "uint",
-                ChunkSize = "uint"
+                NumElements = { "uint", 0 },
+                ChunkSize = { "uint", 1 }
             }
         },
         LightAABBs = {
             Type = "StorageBuffer",
             Members = {
-                Data = {
+                Data = { {
                     Type = "Array",
                     ElementType = "AABB",
                     NumElements = get_num_light_aabbs()
-                }
+                }, 0 }
             }
         },
         PointLightMortonCodes = {
@@ -271,32 +271,32 @@ Resources = {
         BVHParams = {
             Type = "UniformBuffer",
             Members = {
-                PointLightLevels = "uint",
-                SpotLightLevels = "uint",
-                ChildLevel = "uint"
+                PointLightLevels = { "uint", 0 },
+                SpotLightLevels = { "uint", 1 },
+                ChildLevel = { "uint", 2 }
             }
         },
         PointLightBVH = {
             Type = "StorageBuffer",
             Members = {
-                Data = {
+                Data = { {
                     Type = "Array",
                     ElementType = "AABB",
                     NumElements = get_num_point_lights()
-                }
+                }, 0 }
             }
         },
         SpotLightBVH = {
             Type = "StorageBuffer",
             Members = {
-                Data = {
+                Data = { {
                     Type = "Array",
                     ElementType = "AABB",
                     NumElements = get_num_spot_lights()
-                }
+                }, 0 }
             }
         }
-    }
+    },
     MaterialResources = {
         diffuseMap = {
             Type = "CombinedImageSampler",
