@@ -554,6 +554,7 @@ namespace st {
             std::smatch match;
             if (std::regex_search(body_str, match, use_set_resources)) {
                 useResourceBlock(match[1].str());
+                FileTracker.ShaderUsedResourceBlocks.emplace(handle, match[1].str());
                 body_str.erase(body_str.begin() + match.position(), body_str.begin() + match.position() + match.length());
             }
             else {

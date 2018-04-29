@@ -31,6 +31,7 @@ namespace st {
         std::unique_ptr<BindingGenerator> bindingGenerator{ nullptr };
         ResourceFile* rsrcFile{ nullptr };
         const std::string groupName;
+        std::experimental::filesystem::path resourceScriptPath;
     };
 
     ShaderGroupImpl::ShaderGroupImpl(const std::string& group_name, size_t num_includes, const char* const* include_paths) : groupName(group_name), compiler(std::make_unique<ShaderCompiler>()), 
@@ -83,7 +84,9 @@ namespace st {
         else {
             namespace fs = std::experimental::filesystem;
             impl->rsrcFile = FileTracker.ResourceScripts.at(fs::path(fs::absolute(fs::path(file_path))).string()).get();
+            impl->resourceScriptPath = fs::absolute(fs::path(file_path));
         }
+
     }
 
     ShaderGroup::~ShaderGroup() {}
@@ -92,6 +95,7 @@ namespace st {
         Shader handle(shader_name, flags);
         auto& FileTracker = ShaderFileTracker::GetFileTracker();
         FileTracker.ShaderNames.emplace(handle, shader_name);
+        FileTracker.ShaderUsedResourceScript.emplace(handle, impl->resourceScriptPath.string());
         auto iter = impl->stHandles.emplace(handle);
         if (!iter.second) {
             throw std::runtime_error("Could not add shader to ShaderGroup, failed to emplace into handles set: might already exist!");
