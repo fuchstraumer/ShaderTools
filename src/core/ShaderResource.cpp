@@ -177,14 +177,6 @@ namespace st {
         return *this;
     }
 
-    bool ShaderResource::operator==(const ShaderResource & other) const noexcept {
-        return (impl->name == other.impl->name) && (impl->type == other.impl->type);
-    }
-
-    bool ShaderResource::operator<(const ShaderResource & other) const noexcept {
-        return impl->memoryRequired < other.impl->memoryRequired;
-    }
-
     const size_t & ShaderResource::GetAmountOfMemoryRequired() const noexcept {
         return impl->memoryRequired;
     }
@@ -228,7 +220,7 @@ namespace st {
     }
 
     const VkBufferViewCreateInfo & ShaderResource::BufferViewInfo() const noexcept {
-        if (impl->type == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE || impl->type == VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER) {
+        if (impl->type == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE || impl->type == VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER || impl->type == VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER) {
             return impl->bufferInfo;
         }
         else {
