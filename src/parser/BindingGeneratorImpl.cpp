@@ -1,5 +1,6 @@
 #include "BindingGeneratorImpl.hpp"
 #include "../util/ShaderFileTracker.hpp"
+#include "../lua/ResourceFile.hpp"
 #include "core/ShaderResource.hpp"
 #include "core/ResourceUsage.hpp"
 #include <array>
@@ -83,6 +84,27 @@ namespace st {
     void BindingGeneratorImpl::parseResourceType(const Shader& shader_handle, const VkDescriptorType& type_being_parsed) {
         
         auto& f_tracker = ShaderFileTracker::GetFileTracker();
+        const auto& rsrc_path = f_tracker.ShaderUsedResourceScript.at(shader_handle);
+        const auto* rsrc_script = f_tracker.ResourceScripts.at(rsrc_path).get();
+        const auto& resources_map = rsrc_script->GetAllResources();
+
+        auto get_actual_name = [](const std::string& rsrc_name)->std::string {
+            size_t first_idx = rsrc_name.find_first_of('_');
+            std::string results;
+            if (first_idx != std::string::npos) {
+                results = std::string{ rsrc_name.cbegin() + first_idx + 1, rsrc_name.cend() };
+            }
+            else {
+                results = rsrc_name;
+            }
+            
+            size_t second_idx = results.find_last_of('_');
+            if (second_idx != std::string::npos) {
+                results.erase(results.begin() + second_idx, results.end());
+            }
+
+            return results;
+        };
      
         auto parsing_buffer_type = [](const VkDescriptorType& type) {
             return (type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER) || (type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC) ||
@@ -131,11 +153,16 @@ namespace st {
         };
 
         for (const auto& rsrc : resources) {
+            const std::string rsrc_name = get_actual_name(rsrc.name);
+            const ShaderResource* parent_resource = rsrc_script->FindResource(rsrc_name);
+            if (parent_resource == nullptr) {
+                throw std::runtime_error("Couldn't find parent resource for resource usage object.");
+            }
             uint32_t binding_idx = recompiler->get_decoration(rsrc.id, spv::DecorationBinding);
             uint32_t set_idx = recompiler->get_decoration(rsrc.id, spv::DecorationDescriptorSet);
             auto spir_type = recompiler->get_type(rsrc.type_id);
             access_modifier modifier = AccessModifierFromSPIRType(spir_type);
-            tempResources.emplace(set_idx, ResourceUsage());
+            tempResources.emplace(set_idx, ResourceUsage(shader_handle, parent_resource, binding_idx, modifier, parent_resource->GetType()));
         }
 
     }
@@ -183,10 +210,10 @@ namespace st {
             for (auto iter = obj_range.first; iter != obj_range.second; ++iter) {
                 const uint32_t& binding_idx = iter->second.BindingIdx();
                 if (curr_set.Members.count(binding_idx) != 0) {
-                    curr_set.Members.at(binding_idx)->Stages() |= iter->second.UsedBy().GetStage();
+                    curr_set.Members.at(binding_idx).Stages() |= iter->second.UsedBy().GetStage();
                 }
                 else {
-                    *curr_set.Members[binding_idx] = iter->second;
+                    curr_set.Members.emplace(binding_idx, iter->second);
                 }
             }
         }

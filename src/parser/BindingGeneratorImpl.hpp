@@ -17,7 +17,7 @@ namespace st {
 
     struct DescriptorSetInfo {
         uint32_t Binding;
-        std::map<uint32_t, std::unique_ptr<ResourceUsage>> Members;
+        std::map<uint32_t, ResourceUsage> Members;
     };
 
     class BindingGeneratorImpl {
