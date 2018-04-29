@@ -30,7 +30,6 @@ namespace st {
         friend class ShaderGroupImpl;
     protected:
         BindingGeneratorImpl * GetImpl();
-
     private:
         std::unique_ptr<BindingGeneratorImpl> impl;
     };

@@ -1,7 +1,7 @@
 #include <iostream>
 #include <vector>
-#include "common/ShaderGroup.hpp"
-#include "common/ShaderPack.hpp"
+#include "core/ShaderGroup.hpp"
+#include "core/ShaderPack.hpp"
 #include <array>
 
 int screen_x() {

@@ -18,7 +18,6 @@ namespace st {
 
         void DumpContentsToCacheDir();
 
-        bool RegisterShader(const Shader& handle);
         bool FindShaderBody(const Shader& handle, std::string& dest_str);
         bool AddShaderBodyPath(const Shader& handle, const std::string& shader_body_path);
         bool FindShaderBinary(const Shader& handle, std::vector<uint32_t>& dest_binary_vector);
@@ -36,6 +35,7 @@ namespace st {
         std::unordered_map<Shader, std::string> FullSourceStrings;
         std::unordered_map<Shader, std::vector<uint32_t>> Binaries;
         std::unordered_map<Shader, std::string> ShaderUsedResourceScript;
+        std::unordered_multimap<Shader, std::string> ShaderUsedResourceBlocks;
         std::unordered_map<std::string, std::unique_ptr<ResourceFile>> ResourceScripts;
         std::unordered_map<Shader, std::experimental::filesystem::path> BodyPaths;
         std::unordered_map<Shader, std::experimental::filesystem::path> BinaryPaths;

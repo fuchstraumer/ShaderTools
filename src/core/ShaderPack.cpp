@@ -107,7 +107,7 @@ namespace st {
         workingDir = fs::absolute(workingDir);
         workingDir = workingDir.remove_filename();
         createGroups();
-        //createResourceGroupData();
+        createBackingResourceData();
     }
 
     void ShaderPackImpl::createGroups() {
