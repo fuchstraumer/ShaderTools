@@ -22,12 +22,8 @@ namespace st {
         ~ShaderResource();
         ShaderResource(const ShaderResource& other) noexcept;
         ShaderResource(ShaderResource&& other) noexcept;
-
         ShaderResource& operator=(const ShaderResource& other) noexcept;
         ShaderResource& operator=(ShaderResource&& other) noexcept;
-        
-        bool operator==(const ShaderResource& other) const noexcept;
-        bool operator<(const ShaderResource& other) const noexcept;
         
         const size_t& GetAmountOfMemoryRequired() const noexcept;
         const VkFormat& GetFormat() const noexcept;
