@@ -215,23 +215,16 @@ namespace st {
             }
             else {
                 
-                try {
-                    auto iter = ResourceScripts.emplace(absolute_file_path, std::make_unique<ResourceFile>());
+                auto iter = ResourceScripts.emplace(absolute_file_path, std::make_unique<ResourceFile>());
 
-                    if (!iter.second) {
-                        LOG(ERROR) << "Failed to create a new resource script at path " << absolute_file_path.c_str() << " !\n";
-                        throw std::runtime_error("Could not create a new resource script/file!");
-                    }
+                if (!iter.second) {
+                    LOG(ERROR) << "Failed to create a new resource script at path " << absolute_file_path.c_str() << " !\n";
+                    throw std::runtime_error("Could not create a new resource script/file!");
+                }
 
-                    iter.first->second->Execute(absolute_file_path.c_str());
-                    dest_ptr = ResourceScripts.at(absolute_file_path).get();
-                    return true;
-                }
-                catch (const std::logic_error& e) {
-                    LOG(ERROR) << "Failed to create ResourceFile using given script: check console for script errors and try again.\n";
-                    LOG(ERROR) << e.what();
-                    throw e;
-                }
+                iter.first->second->Execute(absolute_file_path.c_str());
+                dest_ptr = ResourceScripts.at(absolute_file_path).get();
+                return true;
             }
         }
         else {
