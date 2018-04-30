@@ -16,8 +16,8 @@ namespace st {
             uint32_t Size;
             uint32_t NumElements;
         };
-        uint32_t Offset;
-        bool isComplex;
+        uint32_t Offset{ 0 };
+        bool isComplex{ false };
     };
 
     struct SpecializationConstant {
@@ -62,7 +62,7 @@ namespace st {
         spirv_cross::SPIRType Type;
         std::string GetTypeStr() const;
         void SetTypeWithStr(std::string str);
-        explicit operator VkVertexInputAttributeDescription() const noexcept;
+        explicit operator VkVertexInputAttributeDescription() const;
         uint32_t Location;
         uint32_t Offset;
     };

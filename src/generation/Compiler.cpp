@@ -67,7 +67,7 @@ namespace st {
         }
     }
 
-    void dump_bad_source_to_file(const std::string& name, const std::string& src, const std::string err_text) {
+    void dump_bad_source_to_file(const std::string& name, const std::string& src, const std::string& err_text) {
         const std::string output_name = name + std::string{ "_failed_compile.glsl" };
         std::ofstream output_stream(output_name);
         output_stream << src;

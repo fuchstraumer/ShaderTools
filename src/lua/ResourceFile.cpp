@@ -4,7 +4,6 @@
 #include "common/UtilityStructs.hpp"
 #include "../util/ShaderFileTracker.hpp"
 #include <iostream>
-#include <future>
 #include "easyloggingpp/src/easylogging++.h"
 #ifdef FindResource
 #undef FindResource
@@ -229,7 +228,6 @@ namespace st {
     }
 
     const ShaderResource * ResourceFile::FindResource(const std::string & name) const {
-        std::vector<std::future<const ShaderResource*>> futures;
         for (auto& group : setResources) {
             const ShaderResource* rsrc_ptr = searchSingleGroupForResource(group.first, name);
             if (rsrc_ptr != nullptr) {
@@ -306,11 +304,10 @@ namespace st {
             size_t num_elements = static_cast<size_t>(complex_member_table.at("NumElements").cast<int>());
             object.NumElements = static_cast<uint32_t>(num_elements);
             object.Offset = offset_total;
-            size_t element_size = 0;
+           
             auto iter = f_tracker.ObjectSizes.find(element_type);
             if (iter != f_tracker.ObjectSizes.cend()) {
-                element_size = iter->second;
-                offset_total += static_cast<uint32_t>(element_size * num_elements);
+                offset_total += static_cast<uint32_t>(iter->second * num_elements);
             }
             object.Name = name + std::string("[]");
             object.Type = element_type;

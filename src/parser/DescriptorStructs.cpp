@@ -430,7 +430,7 @@ namespace st {
         Type = TypeFromStr(str);
     }
 
-    VertexAttributeInfo::operator VkVertexInputAttributeDescription() const noexcept {
+    VertexAttributeInfo::operator VkVertexInputAttributeDescription() const {
         return VkVertexInputAttributeDescription{ Location, 0, FormatFromSPIRType(Type), Offset };
     }
 
