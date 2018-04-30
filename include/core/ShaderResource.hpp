@@ -8,10 +8,11 @@ namespace st {
 
     class ShaderResourceImpl;
 
-    enum class size_class {
-        Absolute,
+    enum class size_class : uint32_t {
+        Absolute = 0,
         SwapchainRelative,
-        ViewportRelative
+        ViewportRelative,
+        Invalid = std::numeric_limits<uint32_t>::max()
     };
 
     class ST_API ShaderResource {
