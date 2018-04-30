@@ -98,6 +98,20 @@ namespace st {
         { "Always", VK_COMPARE_OP_ALWAYS }
     };
 
+    static const std::unordered_map<std::string, VkDescriptorType> descriptor_type_from_str_map = {
+        { "UniformBuffer", VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
+        { "DynamicUniformBuffer", VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC },
+        { "StorageBuffer", VK_DESCRIPTOR_TYPE_STORAGE_BUFFER },
+        { "DynamicStorageBuffer", VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC },
+        { "StorageImage", VK_DESCRIPTOR_TYPE_STORAGE_IMAGE },
+        { "UniformTexelBuffer", VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER },
+        { "StorageTexelBuffer", VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER },
+        { "Sampler", VK_DESCRIPTOR_TYPE_SAMPLER },
+        { "SampledImage", VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE },
+        { "CombinedImageSampler", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER },
+        { "InputAttachment", VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT }
+    };
+
     size_class sizeClassFromString(const std::string& sz_class)  {
         auto iter = size_class_from_string_map.find(sz_class);
         if (iter == size_class_from_string_map.cend()) {
@@ -263,6 +277,117 @@ namespace st {
 
     }
 
+    VkImageCreateInfo ResourceFile::parseImageOptions(ShaderResource& rsrc, const std::unordered_map<std::string, luabridge::LuaRef>& image_info_table) const {
+        // TODO: Flags, usage flags, format, extent
+        VkImageCreateInfo results = image_create_info_base;
+
+        auto has_member = [image_info_table](const std::string& name)->bool {
+            return image_info_table.count(name) != 0;
+        };
+
+        auto member_as_str = [image_info_table](const std::string& name)->std::string {
+            return image_info_table.at(name).cast<std::string>();
+        };
+
+        if (has_member("SizeClass")) {
+            rsrc.SetSizeClass(sizeClassFromString(member_as_str("SizeClass")));
+        }
+
+        if (has_member("ImageType")) {
+            // Might get cubemaps or arrays as the string, which requires setting certain flags PLUS the type
+            imageTypeFromStr(member_as_str("ImageType"), results);
+        }
+
+        if (has_member("MipLevels")) {
+            results.mipLevels = static_cast<uint32_t>(image_info_table.at("MipLevels").cast<int>());
+        }
+
+        if (has_member("ArrayLayers")) {
+            results.arrayLayers = static_cast<uint32_t>(image_info_table.at("ArrayLayers").cast<int>());
+        }
+
+        if (has_member("SampleCount")) {
+            results.samples = SampleCountEnumFromInt(image_info_table.at("SampleCount").cast<int>());
+        }
+
+        return results;
+    }
+
+    VkSamplerCreateInfo ResourceFile::parseSamplerOptions(ShaderResource& rsrc, const std::unordered_map<std::string, luabridge::LuaRef>& sampler_info_table) const {
+
+        VkSamplerCreateInfo results = sampler_create_info_base;
+
+        auto has_member = [sampler_info_table](const std::string& name)->bool {
+            return sampler_info_table.count(name) != 0;
+        };
+
+        auto member_as_str = [sampler_info_table](const std::string& name)->std::string {
+            return sampler_info_table.at(name).cast<std::string>();
+        };
+
+        if (has_member("MagFilter")) {
+            results.magFilter = filterModeFromStr(member_as_str("MagFilter"));
+        }
+
+        if (has_member("MinFilter")) {
+            results.minFilter = filterModeFromStr(member_as_str("MinFilter"));
+        }
+
+        if (has_member("AddressModeU")) {
+            results.addressModeU = addressModeFromStr(member_as_str("AddressModeU"));
+        }
+
+        if (has_member("AddressModeV")) {
+            results.addressModeV = addressModeFromStr(member_as_str("AddressModeV"));
+        }
+
+        if (has_member("AddressModeW")) {
+            results.addressModeW = addressModeFromStr(member_as_str("AddressModeW"));
+        }
+
+        if (has_member("EnableAnisotropy")) {
+            results.anisotropyEnable = static_cast<VkBool32>(sampler_info_table.at("EnableAnisotropy").cast<bool>());
+        }
+
+        if (has_member("MaxAnisotropy")) {
+            results.maxAnisotropy = static_cast<float>(sampler_info_table.at("MaxAnisotropy").cast<double>());
+        }
+
+        if (has_member("CompareEnable")) {
+            results.compareEnable = static_cast<VkBool32>(sampler_info_table.at("CompareEnable").cast<bool>());
+        }
+
+        if (has_member("CompareOp")) {
+            results.compareOp = compareOpFromStr(member_as_str("CompareOp"));
+        }
+
+        if (has_member("MinLod")) {
+            results.minLod = static_cast<float>(sampler_info_table.at("MinLOD").cast<double>());
+        }
+
+        if (has_member("MaxLod")) {
+            results.maxLod = static_cast<float>(sampler_info_table.at("MaxLod").cast<double>());
+        }
+
+        if (has_member("BorderColor")) {
+            results.borderColor = borderColorFromStr(member_as_str("BorderColor"));
+        }
+
+        if (has_member("UnnormalizedCoordinates")) {
+            results.unnormalizedCoordinates = static_cast<VkBool32>(sampler_info_table.at("UnnormalizedCoordinates").cast<bool>());
+        }
+
+        return results;
+    }
+
+    VkBufferViewCreateInfo ResourceFile::getStorageImageBufferViewInfo(ShaderResource& rsrc) const {
+        VkBufferViewCreateInfo results = buffer_view_info_base;
+        results.format = rsrc.GetFormat();
+        results.offset = 0;
+        results.range = rsrc.GetAmountOfMemoryRequired();
+        return results;
+    }
+
     ShaderResourceSubObject ResourceFile::createSimpleBufferSubresource(const std::string& name, const luabridge::LuaRef& object_ref, uint32_t& offset_total) const {
         auto& f_tracker = ShaderFileTracker::GetFileTracker();
         ShaderResourceSubObject object;
@@ -344,191 +469,55 @@ namespace st {
         return results;
     }
 
-    ShaderResource ResourceFile::createUniformBufferResources(const std::string& parent_name, const std::string& name, const std::unordered_map<std::string, luabridge::LuaRef>& table) const {
-        ShaderResource s_resource;
-        s_resource.SetParentGroupName(parent_name.c_str());
-        s_resource.SetName(name.c_str());
-        s_resource.SetType(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
-        auto buffer_resources = environment->GetTableMap(table.at("Members"));
-        auto subobjects = getBufferSubobjects(s_resource, buffer_resources);
-        s_resource.SetMembers(subobjects.size(), subobjects.data());
-        return s_resource;
+    void ResourceFile::setBaseResourceInfo(const std::string& parent_name, const std::string& name, const VkDescriptorType type, ShaderResource& rsrc) const {
+        rsrc.SetParentGroupName(parent_name.c_str());
+        rsrc.SetName(name.c_str());
+        rsrc.SetType(type);
     }
 
-    ShaderResource ResourceFile::createStorageBufferResource(const std::string& parent_name, const std::string& name, const std::unordered_map<std::string, luabridge::LuaRef>& table) const {
-        ShaderResource s_resource;
-        s_resource.SetParentGroupName(parent_name.c_str());
-        s_resource.SetName(name.c_str());
-        s_resource.SetType(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
+    void ResourceFile::createUniformBufferResources(const std::string& parent_name, const std::string& name, const std::unordered_map<std::string, luabridge::LuaRef>& table, ShaderResource& rsrc) const {
         auto buffer_resources = environment->GetTableMap(table.at("Members"));
-        auto subobjects = getBufferSubobjects(s_resource, buffer_resources);
-        s_resource.SetMembers(subobjects.size(), subobjects.data());
-        return s_resource;
+        auto subobjects = getBufferSubobjects(rsrc, buffer_resources);
+        rsrc.SetMembers(subobjects.size(), subobjects.data());
     }
 
-    VkBufferViewCreateInfo ResourceFile::getStorageImageBufferViewInfo(ShaderResource& rsrc) const {
-        VkBufferViewCreateInfo results = buffer_view_info_base;
-        results.format = rsrc.GetFormat();
-        results.offset = 0;
-        results.range = rsrc.GetAmountOfMemoryRequired();
-        return results;
-    }   
+    void ResourceFile::createStorageBufferResource(const std::string& parent_name, const std::string& name, const std::unordered_map<std::string, luabridge::LuaRef>& table, ShaderResource& rsrc) const {
+        auto buffer_resources = environment->GetTableMap(table.at("Members"));
+        auto subobjects = getBufferSubobjects(rsrc, buffer_resources);
+        rsrc.SetMembers(subobjects.size(), subobjects.data());
+    }
 
-    ShaderResource ResourceFile::createStorageImageResource(const std::string& parent_name, const std::string& name, const std::unordered_map<std::string, luabridge::LuaRef>& table) const {
-        ShaderResource s_resource;
-        s_resource.SetParentGroupName(parent_name.c_str());
-        s_resource.SetName(name.c_str());
-        s_resource.SetType(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
+    void ResourceFile::createStorageTexelBufferResource(const std::string& parent_name, const std::string& name, const std::unordered_map<std::string, luabridge::LuaRef>& table, ShaderResource& rsrc) const {
         std::string format_str = table.at("Format").cast<std::string>();
-        s_resource.SetFormat(StorageImageFormatToVkFormat(format_str.c_str()));
+        rsrc.SetFormat(StorageImageFormatToVkFormat(format_str.c_str()));
         size_t image_size = static_cast<size_t>(table.at("Size").cast<int>());
-        size_t footprint = MemoryFootprintForFormat(s_resource.GetFormat());
+        size_t footprint = MemoryFootprintForFormat(rsrc.GetFormat());
         if (footprint != std::numeric_limits<size_t>::max()) {
-            s_resource.SetMemoryRequired(footprint * image_size);
+            rsrc.SetMemoryRequired(footprint * image_size);
         }
-        s_resource.SetBufferViewInfo(getStorageImageBufferViewInfo(s_resource));
-        return s_resource;
+        rsrc.SetBufferViewInfo(getStorageImageBufferViewInfo(rsrc));
     }
 
-    VkImageCreateInfo ResourceFile::parseImageOptions(ShaderResource& rsrc, const std::unordered_map<std::string, luabridge::LuaRef>& image_info_table) const {
-        // TODO: Flags, usage flags, format, extent
-        VkImageCreateInfo results = image_create_info_base;
-        
-        auto has_member = [image_info_table](const std::string& name)->bool {
-            return image_info_table.count(name) != 0;
-        };
-
-        auto member_as_str = [image_info_table](const std::string& name)->std::string {
-            return image_info_table.at(name).cast<std::string>();
-        };
-        
-        if (has_member("SizeClass")) {
-            rsrc.SetSizeClass(sizeClassFromString(member_as_str("SizeClass")));
-        }
-
-        if (has_member("ImageType")) {
-            // Might get cubemaps or arrays as the string, which requires setting certain flags PLUS the type
-            imageTypeFromStr(member_as_str("ImageType"), results);
-        }
-
-        if (has_member("MipLevels")) {
-            results.mipLevels = static_cast<uint32_t>(image_info_table.at("MipLevels").cast<int>());
-        }
-
-        if (has_member("ArrayLayers")) {
-            results.arrayLayers = static_cast<uint32_t>(image_info_table.at("ArrayLayers").cast<int>());
-        }
-
-        if (has_member("SampleCount")) {
-            results.samples = SampleCountEnumFromInt(image_info_table.at("SampleCount").cast<int>());
-        }
-
-        return results;
-    }
-
-    VkSamplerCreateInfo ResourceFile::parseSamplerOptions(ShaderResource& rsrc, const std::unordered_map<std::string, luabridge::LuaRef>& sampler_info_table) const {
-
-        VkSamplerCreateInfo results = sampler_create_info_base;
-
-        auto has_member = [sampler_info_table](const std::string& name)->bool {
-            return sampler_info_table.count(name) != 0;
-        };
-
-        auto member_as_str = [sampler_info_table](const std::string& name)->std::string {
-            return sampler_info_table.at(name).cast<std::string>();
-        };
-
-        if (has_member("MagFilter")) {
-            results.magFilter = filterModeFromStr(member_as_str("MagFilter"));
-        }
-
-        if (has_member("MinFilter")) {
-            results.minFilter = filterModeFromStr(member_as_str("MinFilter"));
-        }
-
-        if (has_member("AddressModeU")) {
-            results.addressModeU = addressModeFromStr(member_as_str("AddressModeU"));
-        }
-
-        if (has_member("AddressModeV")) {
-            results.addressModeV = addressModeFromStr(member_as_str("AddressModeV"));
-        }
-        
-        if (has_member("AddressModeW")) {
-            results.addressModeW = addressModeFromStr(member_as_str("AddressModeW"));
-        }
-
-        if (has_member("EnableAnisotropy")) {
-            results.anisotropyEnable = static_cast<VkBool32>(sampler_info_table.at("EnableAnisotropy").cast<bool>());
-        }
-
-        if (has_member("MaxAnisotropy")) {
-            results.maxAnisotropy = static_cast<float>(sampler_info_table.at("MaxAnisotropy").cast<double>());
-        }
-
-        if (has_member("CompareEnable")) {
-            results.compareEnable = static_cast<VkBool32>(sampler_info_table.at("CompareEnable").cast<bool>());
-        }
-
-        if (has_member("CompareOp")) {
-            results.compareOp = compareOpFromStr(member_as_str("CompareOp"));
-        }
-
-        if (has_member("MinLod")) {
-            results.minLod = static_cast<float>(sampler_info_table.at("MinLOD").cast<double>());
-        }
-
-        if (has_member("MaxLod")) {
-            results.maxLod = static_cast<float>(sampler_info_table.at("MaxLod").cast<double>());
-        }
-
-        if (has_member("BorderColor")) {
-            results.borderColor = borderColorFromStr(member_as_str("BorderColor"));
-        }
-
-        if (has_member("UnnormalizedCoordinates")) {
-            results.unnormalizedCoordinates = static_cast<VkBool32>(sampler_info_table.at("UnnormalizedCoordinates").cast<bool>());
-        }
-
-        return results;
-    }
-
-    ShaderResource ResourceFile::createCombinedImageSamplerResource(const std::string& parent_name, const std::string& name, const std::unordered_map<std::string, luabridge::LuaRef>& table) const {
-        ShaderResource s_resource;
-        s_resource.SetParentGroupName(parent_name.c_str());
-        s_resource.SetName(name.c_str());
-        s_resource.SetType(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
+    void ResourceFile::createCombinedImageSamplerResource(const std::string& parent_name, const std::string& name, const std::unordered_map<std::string, luabridge::LuaRef>& table, ShaderResource& rsrc) const {
         if (table.count("ImageOptions") != 0) {
-            s_resource.SetImageInfo(parseImageOptions(s_resource, environment->GetTableMap(table.at("ImageOptions"))));
+            rsrc.SetImageInfo(parseImageOptions(rsrc, environment->GetTableMap(table.at("ImageOptions"))));
         }
         
         if (table.count("SamplerOptions") != 0) {
-            s_resource.SetSamplerInfo(parseSamplerOptions(s_resource, environment->GetTableMap(table.at("SamplerOptions"))));
+            rsrc.SetSamplerInfo(parseSamplerOptions(rsrc, environment->GetTableMap(table.at("SamplerOptions"))));
         }
-
-        return s_resource;
     }
 
-    ShaderResource ResourceFile::createSampledImageResource(const std::string& parent_name, const std::string& name, const std::unordered_map<std::string, luabridge::LuaRef>& table) const {
-        ShaderResource s_resource;
-        s_resource.SetParentGroupName(parent_name.c_str());
-        s_resource.SetName(name.c_str());
-        s_resource.SetType(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE);
+    void ResourceFile::createSampledImageResource(const std::string& parent_name, const std::string& name, const std::unordered_map<std::string, luabridge::LuaRef>& table, ShaderResource& rsrc) const {
         if (table.count("ImageOptions") != 0) {
-            s_resource.SetImageInfo(parseImageOptions(s_resource, environment->GetTableMap(table.at("ImageOptions"))));
+            rsrc.SetImageInfo(parseImageOptions(rsrc, environment->GetTableMap(table.at("ImageOptions"))));
         }
-        return s_resource;
     }
 
-    ShaderResource ResourceFile::createSamplerResource(const std::string& parent_name, const std::string& name, const std::unordered_map < std::string, luabridge::LuaRef>& table) const {
-        ShaderResource s_resource;
-        s_resource.SetParentGroupName(parent_name.c_str());
-        s_resource.SetName(name.c_str());
-        s_resource.SetType(VK_DESCRIPTOR_TYPE_SAMPLER);
+    void ResourceFile::createSamplerResource(const std::string& parent_name, const std::string& name, const std::unordered_map < std::string, luabridge::LuaRef>& table, ShaderResource& rsrc) const {
         if (table.count("SamplerOptions") != 0) {
-            s_resource.SetSamplerInfo(parseSamplerOptions(s_resource, environment->GetTableMap(table.at("SamplerOptions"))));
+            rsrc.SetSamplerInfo(parseSamplerOptions(rsrc, environment->GetTableMap(table.at("SamplerOptions"))));
         }
-        return s_resource;
     }
 
     void ResourceFile::parseResources() {
@@ -558,28 +547,42 @@ namespace st {
                 // Now accessing/parsing single resource per set
                 auto set_resource_data = environment->GetTableMap(set_resource.second);
                 std::string type_of_resource = set_resource_data.at("Type");
+                ShaderResource resource;
 
-                if (type_of_resource == "UniformBuffer") {
-                    setResources[entry.first].emplace_back(createUniformBufferResources(entry.first, set_resource.first, set_resource_data));
+                auto type_iter = descriptor_type_from_str_map.find(type_of_resource);
+                if (type_iter == descriptor_type_from_str_map.cend()) {
+                    LOG(ERROR) << "Couldn't convert Lua script's resource type string " << type_of_resource << " to valid VkDescriptorType value!";
+                    throw std::runtime_error("Failed to convert Lua resource type string to valid Vulkan enum value.");
                 }
-                else if (type_of_resource == "StorageImage") {
-                    setResources[entry.first].emplace_back(createStorageImageResource(entry.first, set_resource.first, set_resource_data));
+
+                const VkDescriptorType vk_type = type_iter->second;
+                setBaseResourceInfo(entry.first, set_resource.first, vk_type, resource);
+
+                if (vk_type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER || vk_type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC) {
+                    createUniformBufferResources(entry.first, set_resource.first, set_resource_data, resource);
                 }
-                else if (type_of_resource == "StorageBuffer") {
-                    setResources[entry.first].emplace_back(createStorageBufferResource(entry.first, set_resource.first, set_resource_data));
+                else if (vk_type == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER || vk_type == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC) {
+                    createStorageBufferResource(entry.first, set_resource.first, set_resource_data, resource);
                 }
-                else if (type_of_resource == "CombinedImageSampler") {
-                    setResources[entry.first].emplace_back(createCombinedImageSamplerResource(entry.first, set_resource.first, set_resource_data));
+                else if (vk_type == VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER || vk_type == VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER) {
+                    createStorageTexelBufferResource(entry.first, set_resource.first, set_resource_data, resource);
                 }
-                else if (type_of_resource == "Sampler") {
-                    setResources[entry.first].emplace_back(createSamplerResource(entry.first, set_resource.first, set_resource_data));
+                else if (vk_type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) {
+                    createCombinedImageSamplerResource(entry.first, set_resource.first, set_resource_data, resource);
                 }
-                else if (type_of_resource == "SampledImage") {
-                    setResources[entry.first].emplace_back(createSampledImageResource(entry.first, set_resource.first, set_resource_data));
+                else if (vk_type == VK_DESCRIPTOR_TYPE_SAMPLER) {
+                    createSamplerResource(entry.first, set_resource.first, set_resource_data, resource);
+                }
+                else if (vk_type == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE) {
+                    createSampledImageResource(entry.first, set_resource.first, set_resource_data, resource);
                 }
                 else {
-                    throw std::domain_error("Used invalid or currently unsupported resource type string in Lua resource script!");
+                    LOG(ERROR) << "Requested resource type " << type_of_resource << " is currently unsupported.";
+                    throw std::domain_error("Unsupported resource type used.");
                 }
+
+                setResources[entry.first].emplace_back(resource);
+
             }
         }
 
