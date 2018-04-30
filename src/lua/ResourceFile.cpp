@@ -5,6 +5,11 @@
 #include "../util/ShaderFileTracker.hpp"
 #include <iostream>
 #include <future>
+#include "easyloggingpp/src/easylogging++.h"
+#ifdef FindResource
+#undef FindResource
+#endif // FindResource
+
 namespace st {
 
     constexpr size_t MINIMUM_REQUIRED_MAX_STORAGE_BUFFER_SIZE = 134217728;
@@ -59,18 +64,49 @@ namespace st {
         0
     };
 
+    static const std::unordered_map<std::string, size_class> size_class_from_string_map{
+        { "Absolute", size_class::Absolute },
+        { "SwapchainRelative", size_class::SwapchainRelative },
+        { "ViewportRelative", size_class::ViewportRelative }
+    };
+
+    static const std::unordered_map<int, VkSampleCountFlagBits> sample_count_from_int_map = {
+        { 1,  VK_SAMPLE_COUNT_1_BIT },
+        { 2,  VK_SAMPLE_COUNT_2_BIT },
+        { 4,  VK_SAMPLE_COUNT_4_BIT },
+        { 8,  VK_SAMPLE_COUNT_8_BIT },
+        { 16, VK_SAMPLE_COUNT_16_BIT },
+        { 32, VK_SAMPLE_COUNT_32_BIT },
+        { 64, VK_SAMPLE_COUNT_64_BIT }
+    };
+
+    static const std::unordered_map<std::string, VkSamplerAddressMode> address_mode_from_str_map = {
+        { "ClampToEdge", VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE },
+        { "ClampToBorder", VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER },
+        { "Repeat", VK_SAMPLER_ADDRESS_MODE_REPEAT },
+        { "MirroredRepeat", VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT },
+        { "MirroredClampToEdge", VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE }
+    };
+
+    static const std::unordered_map<std::string, VkCompareOp> compare_op_from_str_map = {
+        { "Never", VK_COMPARE_OP_NEVER },
+        { "Less", VK_COMPARE_OP_LESS },
+        { "Equal", VK_COMPARE_OP_EQUAL },
+        { "LessOrEqual", VK_COMPARE_OP_LESS_OR_EQUAL },
+        { "Greater", VK_COMPARE_OP_GREATER },
+        { "NotEqual", VK_COMPARE_OP_NOT_EQUAL },
+        { "GreaterOrEqual", VK_COMPARE_OP_GREATER_OR_EQUAL },
+        { "Always", VK_COMPARE_OP_ALWAYS }
+    };
+
     size_class sizeClassFromString(const std::string& sz_class)  {
-        if (sz_class == "Absolute") {
-            return size_class::Absolute;
-        }
-        else if (sz_class == "SwapchainRelative") {
-            return size_class::SwapchainRelative;
-        }
-        else if (sz_class == "ViewportRelative") {
-            return size_class::ViewportRelative;
+        auto iter = size_class_from_string_map.find(sz_class);
+        if (iter == size_class_from_string_map.cend()) {
+            LOG(WARNING) << "Failed to find requested size class " << sz_class << " in available size classes.";
+            return size_class::Invalid;
         }
         else {
-            throw std::domain_error("Couldn't convert string size_class to size_class enum value!");
+            return iter->second;
         }
     }
 
@@ -102,24 +138,14 @@ namespace st {
         }
     }
 
-    VkSampleCountFlagBits SampleCountEnumFromInt(const int& samples) {
-        switch (samples) {
-        case 1:
-            return VK_SAMPLE_COUNT_1_BIT;
-        case 2:
-            return VK_SAMPLE_COUNT_2_BIT;
-        case 4:
-            return VK_SAMPLE_COUNT_4_BIT;
-        case 8:
-            return VK_SAMPLE_COUNT_8_BIT;
-        case 16:
-            return VK_SAMPLE_COUNT_16_BIT;
-        case 32:
-            return VK_SAMPLE_COUNT_32_BIT;
-        case 64:
-            return VK_SAMPLE_COUNT_64_BIT;
-        default:
-            throw std::domain_error("Invalid integer sample count value passed to enum conversion method.");
+    VkSampleCountFlagBits SampleCountEnumFromInt(const int& samples) noexcept {
+        auto iter = sample_count_from_int_map.find(samples);
+        if (iter != sample_count_from_int_map.cend()) {
+            return iter->second;
+        }
+        else {
+            LOG(WARNING) << "Couldn't match requested sample count " << std::to_string(samples) << " to a valid enum value.";
+            return VK_SAMPLE_COUNT_FLAG_BITS_MAX_ENUM;
         }
     }
 
@@ -139,53 +165,24 @@ namespace st {
     }
 
     VkSamplerAddressMode addressModeFromStr(const std::string& str) {
-        if (str == "ClampToEdge") {
-            return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-        }
-        else if (str == "ClampToBorder") {
-            return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
-        }
-        else if (str == "Repeat") {
-            return VK_SAMPLER_ADDRESS_MODE_REPEAT;
-        }
-        else if (str == "MirroredRepeat") {
-            return VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
-        }
-        else if (str == "MirroredClampToEdge") {
-            return VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE;
+        auto iter = address_mode_from_str_map.find(str);
+        if (iter != address_mode_from_str_map.cend()) {
+            return iter->second;
         }
         else {
-            throw std::domain_error("Couldn't translate address mode string into suitable Vulkan address mode enum!");
+            LOG(WARNING) << "Failed to convert string " << str << " to valid VkSamplerAddressMode value";
+            return VK_SAMPLER_ADDRESS_MODE_MAX_ENUM;
         }
     }
 
     VkCompareOp compareOpFromStr(const std::string& str) {
-        if (str == "Never") {
-            return VK_COMPARE_OP_NEVER;
-        }
-        else if (str == "Less") {
-            return VK_COMPARE_OP_LESS;
-        }
-        else if (str == "Equal") {
-            return VK_COMPARE_OP_EQUAL;
-        }
-        else if (str == "LessOrEqual") {
-            return VK_COMPARE_OP_LESS_OR_EQUAL;
-        }
-        else if (str == "Greater") {
-            return VK_COMPARE_OP_GREATER;
-        }
-        else if (str == "NotEqual") {
-            return VK_COMPARE_OP_NOT_EQUAL;
-        }
-        else if (str == "GreaterOrEqual") {
-            return VK_COMPARE_OP_GREATER_OR_EQUAL;
-        }
-        else if (str == "Always") {
-            return VK_COMPARE_OP_ALWAYS;
+        auto iter = compare_op_from_str_map.find(str);
+        if (iter != compare_op_from_str_map.cend()) {
+            return iter->second;
         }
         else {
-            throw std::domain_error("Invalid compare op string passed to enum conversion method.");
+            LOG(WARNING) << "Couldn't convert string " << str << " to valid VkCompareOp value.";
+            return VK_COMPARE_OP_MAX_ENUM;
         }
     }
 
@@ -234,22 +231,12 @@ namespace st {
     const ShaderResource * ResourceFile::FindResource(const std::string & name) const {
         std::vector<std::future<const ShaderResource*>> futures;
         for (auto& group : setResources) {
-            futures.emplace_back(std::async(std::launch::async, &ResourceFile::searchSingleGroupForResource, this, group.first, name));
+            const ShaderResource* rsrc_ptr = searchSingleGroupForResource(group.first, name);
+            if (rsrc_ptr != nullptr) {
+                return rsrc_ptr;
+            }
         }
-
-        std::vector<const ShaderResource*> resources;
-        for (auto&& fut : futures) {
-            resources.emplace_back(fut.get());
-        }
-
-        auto iter = std::find_if(resources.cbegin(), resources.cend(), [](const ShaderResource* rsrc) { return rsrc != nullptr; });
-        if (iter != resources.cend()) {
-            return *iter;
-        }
-        else {
-            return nullptr;
-        }
-
+        return nullptr;
     }
 
     void ResourceFile::Execute(const char* fname)  {
