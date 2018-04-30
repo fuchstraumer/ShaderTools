@@ -472,7 +472,7 @@ namespace st {
             case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
                 resource_block_string += getStorageBufferResourceString(active_set, resource_item, resource_name);
                 break;
-            case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+            case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
                 resource_block_string += getStorageImageResourceString(active_set, resource_item, resource_name);
                 break;
             default:
