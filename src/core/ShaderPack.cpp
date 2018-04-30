@@ -93,8 +93,6 @@ namespace st {
         ShaderPackImpl(const char* shader_pack_file_path);
         void createGroups();
         void createSingleGroup(const std::string& name, const std::map<VkShaderStageFlagBits, std::string>& shader_map);
-        void createResourceGroupData();
-        void createBackingResourceData();
 
         std::vector<std::set<ShaderResource>> resources;
         std::unordered_map<std::string, std::vector<size_t>> groupSetIndices;
@@ -110,7 +108,6 @@ namespace st {
         workingDir = fs::absolute(workingDir);
         workingDir = workingDir.remove_filename();
         createGroups();
-        createBackingResourceData();
     }
 
     void ShaderPackImpl::createGroups() {
@@ -159,25 +156,6 @@ namespace st {
         }
     }
 
-
-    void ShaderPackImpl::createBackingResourceData() {
-        namespace fs = std::experimental::filesystem;
-        fs::path resource_path = workingDir / fs::path(filePack->ResourceFileName);
-        if (!fs::exists(resource_path)) {
-            LOG(ERROR) << "Couldn't find resource Lua script using given path.";
-            throw std::runtime_error("Couldn't find resource file using given path.");
-        }
-        const std::string resource_path_str = resource_path.string();
-
-        auto& ftracker = ShaderFileTracker::GetFileTracker();
-        ResourceFile* file_ptr = ftracker.ResourceScripts.at(resource_path_str).get();
-        const auto& file_resources = file_ptr->GetAllResources();
-
-
-        
-
-    }
-
     ShaderPack::ShaderPack(const char* fpath) : impl(std::make_unique<ShaderPackImpl>(fpath)) {}
 
     ShaderPack::~ShaderPack() {}
@@ -189,6 +167,23 @@ namespace st {
         else {
             return nullptr;
         }
+    }
+
+    dll_retrieved_strings_t ShaderPack::GetGroupNames() const {
+        dll_retrieved_strings_t names;
+        names.NumNames = impl->groups.size();
+        size_t i = 0;
+        for (auto& group : impl->groups) {
+            names.Strings[i] = strdup(group.first.c_str());
+            ++i;
+        }
+
+        return names;
+    }
+
+    descriptor_type_counts_t ShaderPack::GetDescriptorTypeCounts() const
+    {
+        return descriptor_type_counts_t();
     }
 
 }

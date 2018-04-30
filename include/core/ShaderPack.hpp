@@ -2,6 +2,7 @@
 #ifndef ST_SHADER_PACK_HPP
 #define ST_SHADER_PACK_HPP
 #include "common/CommonInclude.hpp"
+#include "common/UtilityStructs.hpp"
 namespace st {
 
     class ShaderPackImpl;
@@ -19,6 +20,10 @@ namespace st {
         ~ShaderPack();
 
         ShaderGroup* GetShaderGroup(const char* name) const;
+        dll_retrieved_strings_t GetGroupNames() const;
+        descriptor_type_counts_t GetDescriptorTypeCounts() const;
+        ShaderResource* GetResource(const char* rsrc_name);
+
     private:
         std::unique_ptr<ShaderPackImpl> impl;
     };
