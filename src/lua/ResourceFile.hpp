@@ -20,7 +20,6 @@ namespace st {
 
         ResourceFile();
         void Execute(const char* fname);
-        const bool& IsReady() const noexcept;
         const set_resource_map_t& GetResources(const std::string& block_name) const;
         const std::unordered_map<std::string, set_resource_map_t>& GetAllResources() const noexcept;
         const ShaderResource* FindResource(const std::string& name) const;
@@ -28,19 +27,21 @@ namespace st {
     private:
 
         const ShaderResource* searchSingleGroupForResource(const std::string& group, const std::string& name) const;
-        
-        std::vector<ShaderResourceSubObject> getBufferSubobjects(ShaderResource & parent_resource, const std::unordered_map<std::string, luabridge::LuaRef>& subobject_table) const;
-        ShaderResource createUniformBufferResources(const std::string & parent_name, const std::string & name, const std::unordered_map<std::string, luabridge::LuaRef>& table) const;
-        ShaderResource createStorageBufferResource(const std::string & parent_name, const std::string & name, const std::unordered_map<std::string, luabridge::LuaRef>& table) const;
-        VkBufferViewCreateInfo getStorageImageBufferViewInfo(ShaderResource & rsrc) const;
-        ShaderResource createStorageImageResource(const std::string & parent_name, const std::string & name, const std::unordered_map<std::string, luabridge::LuaRef>& table) const;
+
         VkImageCreateInfo parseImageOptions(ShaderResource& rsrc, const std::unordered_map<std::string, luabridge::LuaRef>& image_info_table) const;
         VkSamplerCreateInfo parseSamplerOptions(ShaderResource& rsrc, const std::unordered_map<std::string, luabridge::LuaRef>& sampler_info_table) const;
+        VkBufferViewCreateInfo getStorageImageBufferViewInfo(ShaderResource & rsrc) const;
+        ShaderResourceSubObject createSimpleBufferSubresource(const std::string & name, const luabridge::LuaRef & object_ref, uint32_t& offset_total) const;
+        ShaderResourceSubObject createComplexBufferSubresource(const std::string & name, const luabridge::LuaRef & object_ref, uint32_t & offset_total) const;
+        std::vector<ShaderResourceSubObject> getBufferSubobjects(ShaderResource & parent_resource, const std::unordered_map<std::string, luabridge::LuaRef>& subobject_table) const;
+
+        ShaderResource createUniformBufferResources(const std::string & parent_name, const std::string & name, const std::unordered_map<std::string, luabridge::LuaRef>& table) const;
+        ShaderResource createStorageBufferResource(const std::string & parent_name, const std::string & name, const std::unordered_map<std::string, luabridge::LuaRef>& table) const;
+        ShaderResource createStorageImageResource(const std::string & parent_name, const std::string & name, const std::unordered_map<std::string, luabridge::LuaRef>& table) const;
         ShaderResource createCombinedImageSamplerResource(const std::string & parent_name, const std::string & name, const std::unordered_map<std::string, luabridge::LuaRef>& table) const;
         ShaderResource createSampledImageResource(const std::string & parent_name, const std::string & name, const std::unordered_map<std::string, luabridge::LuaRef>& table) const;
         ShaderResource createSamplerResource(const std::string & parent_name, const std::string & name, const std::unordered_map<std::string, luabridge::LuaRef>& table) const;
 
-        bool ready{ false };
         std::unordered_map<std::string, set_resource_map_t> setResources;
         std::unique_ptr<LuaEnvironment> environment;
         void parseResources();

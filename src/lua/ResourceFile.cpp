@@ -243,16 +243,11 @@ namespace st {
 
         if (luaL_dofile(environment->GetState(), fname)) {
             std::string err = lua_tostring(environment->GetState(), -1);
+            LOG(ERROR) << "Failed to execute Lua script " << fname << " - produced errors as follows:\n" << err.c_str();
             throw std::logic_error(err.c_str());
         }
 
         parseResources();
-        ready = true;
-
-    }
-
-    const bool & ResourceFile::IsReady() const noexcept {
-        return ready;
     }
 
     const ShaderResource* ResourceFile::searchSingleGroupForResource(const std::string& group, const std::string & name) const {
@@ -270,9 +265,68 @@ namespace st {
 
     }
 
+    ShaderResourceSubObject ResourceFile::createSimpleBufferSubresource(const std::string& name, const luabridge::LuaRef& object_ref, uint32_t& offset_total) const {
+        auto& f_tracker = ShaderFileTracker::GetFileTracker();
+        ShaderResourceSubObject object;
+        object.isComplex = false;
+        object.Name = name;
+        std::string type_str = object_ref.cast<std::string>();
+        object.Type = type_str;
+
+        auto iter = f_tracker.ObjectSizes.find(type_str);
+        if (iter != f_tracker.ObjectSizes.cend()) {
+            object.Size = static_cast<uint32_t>(iter->second);
+            object.Offset = offset_total;
+            offset_total += object.Size;
+        }
+        else {
+            LOG(ERROR) << "Could not find size of resource " << type_str << " in programs object sizes map.";
+            throw std::runtime_error("Couldn't find resources size.");
+        }
+
+        return object;
+    }
+
+    ShaderResourceSubObject ResourceFile::createComplexBufferSubresource(const std::string& name, const luabridge::LuaRef& object_ref, uint32_t& offset_total) const {
+        // Current member is a complex type, probably an array.
+        auto& f_tracker = ShaderFileTracker::GetFileTracker();
+        ShaderResourceSubObject object;
+        object.isComplex = true;
+        auto complex_member_table = environment->GetTableMap(object_ref);
+
+        if (complex_member_table.empty()) {
+            LOG(ERROR) << "Could not extract complex/composite member metadata";
+            throw std::runtime_error("Failed to extract complex member type from a storage/uniform buffer");
+        }
+
+        std::string type_str = complex_member_table.at("Type").cast<std::string>();
+
+        if (type_str == "Array") {
+            std::string element_type = complex_member_table.at("ElementType").cast<std::string>();
+            size_t num_elements = static_cast<size_t>(complex_member_table.at("NumElements").cast<int>());
+            object.NumElements = static_cast<uint32_t>(num_elements);
+            object.Offset = offset_total;
+            size_t element_size = 0;
+            auto iter = f_tracker.ObjectSizes.find(element_type);
+            if (iter != f_tracker.ObjectSizes.cend()) {
+                element_size = iter->second;
+                offset_total += static_cast<uint32_t>(element_size * num_elements);
+            }
+            object.Name = name + std::string("[]");
+            object.Type = element_type;
+            
+        }
+        else {
+            LOG(ERROR) << "Unsupported type for buffer complex/composite member!";
+            throw std::domain_error("Unsupported type for uniform buffer complex/composite member!");
+        }
+
+        return object;
+    }
+
     std::vector<ShaderResourceSubObject> ResourceFile::getBufferSubobjects(ShaderResource& parent_resource, const std::unordered_map<std::string, luabridge::LuaRef>& subobject_table) const {
         uint32_t offset_total = 0;
-        auto& f_tracker = ShaderFileTracker::GetFileTracker();
+        
 
         std::vector<ShaderResourceSubObject> results;
         results.resize(subobject_table.size());
@@ -282,50 +336,10 @@ namespace st {
             luabridge::LuaRef type_ref = rsrc.second[1];
             size_t idx = static_cast<size_t>(rsrc.second[2].cast<int>());
             if (!type_ref.isTable()) {
-                ShaderResourceSubObject object;
-                object.isComplex = false;
-                object.Name = rsrc.first;
-                std::string type_str = type_ref.cast<std::string>();
-                object.Type = type_str;
-
-                auto iter = f_tracker.ObjectSizes.find(type_str);
-                if (iter != f_tracker.ObjectSizes.cend()) {
-                    object.Size = static_cast<uint32_t>(iter->second);
-                    object.Offset = offset_total;
-                    offset_total += object.Size;
-                }
-                else {
-                    throw std::runtime_error("Couldn't find resources size.");
-                }
-                results[idx] = object;
+                results[idx] = createSimpleBufferSubresource(rsrc.first, type_ref, offset_total);
             }
             else {
-                // Current member is a complex type, probably an array.
-                ShaderResourceSubObject object;
-                object.isComplex = true;
-                auto complex_member_table = environment->GetTableMap(type_ref);
-                if (complex_member_table.empty()) {
-                    throw std::runtime_error("Failed to extract complex member type from a storage/uniform buffer");
-                }
-                std::string type_str = complex_member_table.at("Type").cast<std::string>();
-                if (type_str == "Array") {
-                    std::string element_type = complex_member_table.at("ElementType").cast<std::string>();
-                    size_t num_elements = static_cast<size_t>(complex_member_table.at("NumElements").cast<int>());
-                    object.NumElements = static_cast<uint32_t>(num_elements);
-                    object.Offset = offset_total;
-                    size_t element_size = 0;
-                    auto iter = f_tracker.ObjectSizes.find(element_type);
-                    if (iter != f_tracker.ObjectSizes.cend()) {
-                        element_size = iter->second;
-                        offset_total += static_cast<uint32_t>(element_size * num_elements);
-                    }
-                    object.Name = rsrc.first + std::string("[]");
-                    object.Type = element_type;
-                    results[idx] = object;
-                }
-                else {
-                    throw std::domain_error("Unsupported type for uniform buffer complex/composite member!");
-                }
+                results[idx] = createComplexBufferSubresource(rsrc.first, type_ref, offset_total);
             }
         }
 
