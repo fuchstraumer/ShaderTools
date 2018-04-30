@@ -1,5 +1,5 @@
 #include "LuaEnvironment.hpp"
-
+#include "easyloggingpp/src/easylogging++.h"
 using namespace luabridge;
 
 namespace st {
@@ -23,6 +23,7 @@ namespace st {
         std::unordered_map<std::string, luabridge::LuaRef> results{};
 
         if (table.isNil()) {
+            LOG(WARNING) << "Passed LuaRef to GetTableMap method was nil!";
             return results;
         }
 

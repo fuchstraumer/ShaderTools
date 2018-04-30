@@ -5,6 +5,7 @@
 #include "core/ShaderResource.hpp"
 #include "../util/ShaderFileTracker.hpp"
 #include "../parser/BindingGeneratorImpl.hpp"
+#include "easyloggingpp/src/easylogging++.h"
 #include <unordered_map>
 #include <experimental/filesystem>
 #include <set>
@@ -30,6 +31,7 @@ namespace st {
         lua_State* state = environment->GetState();
         if (luaL_dofile(state, fname)) {
             const std::string err = std::string("Failed to execute Lua script, error log is:\n") + lua_tostring(state, -1) + std::string("\n");
+            LOG(ERROR) << err;
             throw std::logic_error(err.c_str());
         }
         else {
@@ -74,6 +76,7 @@ namespace st {
                         ShaderGroups[group.first].emplace(VK_SHADER_STAGE_COMPUTE_BIT, shader_name);
                     }
                     else {
+                        LOG(ERROR) << "Found invalid shader stage type in ShaderPack Lua script.";
                         throw std::domain_error("Invalid shader stage in parsed Lua script.");
                     }
                 }
@@ -115,6 +118,7 @@ namespace st {
 
         fs::path resource_path = workingDir / fs::path(filePack->ResourceFileName);
         if (!fs::exists(resource_path)) {
+            LOG(ERROR) << "Resource Lua script could not be found using specified path.";
             throw std::runtime_error("Couldn't find resource file using given path.");
         }
         const std::string resource_path_str = resource_path.string();
@@ -135,6 +139,7 @@ namespace st {
             std::string shader_name_str = shader.second;
             fs::path shader_path = workingDir / fs::path(shader_name_str);
             if (!fs::exists(shader_path)) {
+                LOG(ERROR) << "Shader path given could not be found.";
                 throw std::runtime_error("Failed to find shader using given path.");
             }
             const std::string shader_path_str = shader_path.string();
@@ -159,6 +164,7 @@ namespace st {
         namespace fs = std::experimental::filesystem;
         fs::path resource_path = workingDir / fs::path(filePack->ResourceFileName);
         if (!fs::exists(resource_path)) {
+            LOG(ERROR) << "Couldn't find resource Lua script using given path.";
             throw std::runtime_error("Couldn't find resource file using given path.");
         }
         const std::string resource_path_str = resource_path.string();

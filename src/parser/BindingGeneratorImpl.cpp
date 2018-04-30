@@ -1,9 +1,13 @@
 #include "BindingGeneratorImpl.hpp"
+#include "easyloggingpp/src/easylogging++.h"
 #include "../util/ShaderFileTracker.hpp"
 #include "../lua/ResourceFile.hpp"
 #include "core/ShaderResource.hpp"
 #include "core/ResourceUsage.hpp"
 #include <array>
+#ifdef FindResource
+#undef FindResource
+#endif // FindResource
 
 namespace st {
 
@@ -24,6 +28,7 @@ namespace st {
                 // Usually happens for storage images.
                 return access_modifier::ReadWrite;
             default:
+                LOG(ERROR) << "SPIRType somehow has invalid access qualifier enum value!";
                 throw std::domain_error("SPIRType somehow has invalid access qualifier enum value!");
             }
         }
@@ -149,6 +154,7 @@ namespace st {
             resources = resources_all.subpass_inputs;
             break;
         default:
+            LOG(ERROR) << "Passed invalid resource type during binding generation";
             throw std::runtime_error("Passed invalid resource type.");
         };
 
@@ -156,6 +162,7 @@ namespace st {
             const std::string rsrc_name = get_actual_name(rsrc.name);
             const ShaderResource* parent_resource = rsrc_script->FindResource(rsrc_name);
             if (parent_resource == nullptr) {
+                LOG(ERROR) << "Couldn't find parent resource of resource usage object!";
                 throw std::runtime_error("Couldn't find parent resource for resource usage object.");
             }
             uint32_t binding_idx = recompiler->get_decoration(rsrc.id, spv::DecorationBinding);
@@ -188,6 +195,7 @@ namespace st {
         auto& FileTracker = ShaderFileTracker::GetFileTracker();
         std::vector<uint32_t> binary_vec;
         if (!FileTracker.FindShaderBinary(shader_handle, binary_vec)) {
+            LOG(ERROR) << "Attempted to parse and generate bindings for binary that cannot be found!";
             throw std::runtime_error("Attempted to parse binary that does not exist in current program!");
         }
 

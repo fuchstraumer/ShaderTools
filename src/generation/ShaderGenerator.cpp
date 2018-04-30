@@ -9,6 +9,7 @@
 #include "../lua/ResourceFile.hpp"
 #include "../util/FilesystemUtils.hpp"
 #include "../util/ShaderFileTracker.hpp"
+#include "easyloggingpp/src/easylogging++.h"
 namespace fs = std::experimental::filesystem;
 
 namespace st {
@@ -184,13 +185,7 @@ namespace st {
 
     }
 
-    ShaderGeneratorImpl::~ShaderGeneratorImpl() {
-        std::ofstream out("compute_test.glsl");
-        for (auto& frag : fragments) {
-            out << frag.Data;
-        }
-        out.close();
-    }
+    ShaderGeneratorImpl::~ShaderGeneratorImpl() { }
 
     ShaderGeneratorImpl::ShaderGeneratorImpl(ShaderGeneratorImpl&& other) noexcept : Stage(std::move(other.Stage)), fragments(std::move(other.fragments)),
         resourceBlocks(std::move(other.resourceBlocks)), ShaderResources(std::move(other.ShaderResources)), includes(std::move(other.includes)) {}
@@ -208,17 +203,19 @@ namespace st {
         if (fileContents.count(fs::absolute(path)) == 0) {
             std::ifstream file_stream(path);
             if (!file_stream.is_open()) {
+                LOG(ERROR) << "Couldn't find shader preamble file. Workding directory is probably set incorrectly!";
                 throw std::runtime_error("Failed to open preamble file at given path.");
             }
             std::string preamble{ std::istreambuf_iterator<char>(file_stream), std::istreambuf_iterator<char>() };
 
             auto fc_iter = fileContents.emplace(fs::absolute(path), preamble);
             if (!fc_iter.second) {
-                throw std::runtime_error("Failed to emplace preamble (path,source_str) into file contents map.");
+                LOG(WARNING) << "Failed to emplace loaded source string into fileContents map.";
             }
 
             auto frag_iter = fragments.emplace(shaderFragment{ fragment_type::Preamble, preamble });
             if (frag_iter == fragments.end()) {
+                LOG(ERROR) << "Couldn't add premamble to generator's fragments container! Generation cannot proceed without this component.";
                 throw std::runtime_error("Failed to add preamble to generator's fragments multimap!");
             }
 
@@ -236,6 +233,7 @@ namespace st {
 
         if (!fs::exists(source_file)) {
             const std::string exception_str = std::string("Given shader fragment path \"") + source_file.string() + std::string("\" does not exist!");
+            LOG(ERROR) << exception_str;
             throw std::runtime_error(exception_str);
         }
 
@@ -256,6 +254,7 @@ namespace st {
         }
 
         if (match.size() == 0) {
+            LOG(ERROR) << "Could not find match for interface block.";
             throw std::runtime_error("Failed to find any matches.");
         }
 
@@ -319,6 +318,7 @@ namespace st {
             include_path = fs::path(std::string(LibPath + str));
 
             if (!fs::exists(include_path)) {
+                LOG(ERROR) << "Couldn't find specified include " << include_path.string() << " in library includes.";
                 throw std::runtime_error("Failed to find desired include in library includes.");
             }
         }
@@ -333,6 +333,7 @@ namespace st {
             }
             
             if (!found) {
+                LOG(ERROR) << "Could not find desired include " << include_path.string() << " in shader-local include paths.";
                 throw std::runtime_error("Failed to find desired include in local include paths.");
             }
         }
@@ -345,6 +346,7 @@ namespace st {
         std::ifstream include_file(include_path);
 
         if (!include_file.is_open()) {
+            LOG(ERROR) << "Include file path was valid, but failed to open input file stream!";
             throw std::runtime_error("Failed to open include file, despite having a valid path!");
         }
 
@@ -474,22 +476,13 @@ namespace st {
                 resource_block_string += getStorageImageResourceString(active_set, resource_item, resource_name);
                 break;
             default:
+                LOG(ERROR) << "Unsupported VkDescriptorType encountered when generating resources for resource block in ShaderGenerator!";
                 throw std::domain_error("Unsupported VkDescriptorType encountered in ShaderGenerator!");
             }
 
         }
 
         resource_block_string += std::string{ "// End resource block\n\n" };
-
-        if (SAVE_BLOCKS_TO_FILE) {
-            std::string block_file_name = block_name + std::string{ ".glsl" };
-            std::ofstream block_stream(block_file_name);
-            if (!block_stream.is_open()) {
-                throw std::runtime_error("failed to open stream!");
-            }
-            block_stream << resource_block_string;
-            block_stream.flush(); block_stream.close();
-        }
 
         fragments.emplace(shaderFragment{ fragment_type::ResourceBlock, resource_block_string });
 
@@ -500,6 +493,7 @@ namespace st {
         auto& FileTracker = ShaderFileTracker::GetFileTracker();
         if (!FileTracker.FindShaderBody(handle, body_str)) {
             if (!FileTracker.AddShaderBodyPath(handle, path_to_source)) {
+                LOG(ERROR) << "Could not find or add+load a shader body source string at path " << path_to_source;
                 throw std::runtime_error("Failed to find or add (then load) a shader body source string!");
             }
             else {
@@ -614,6 +608,7 @@ namespace st {
         const std::string source_str = impl->getFullSource();
         std::ofstream output_file(fname);
         if (!output_file.is_open()) {
+            LOG(ERROR) << "Could not open file to output completed shader to.";
             throw std::runtime_error("Could not open file to write completed plaintext shader to!");
         }
 

@@ -1,4 +1,6 @@
 #include "core/ShaderResource.hpp"
+#define NOMINMAX
+#include "easyloggingpp/src/easylogging++.h"
 
 namespace st {
 
@@ -206,6 +208,7 @@ namespace st {
             return impl->imageInfo;
         }
         else {
+            LOG(WARNING) << "Attempted to retrive VkImageCreateInfo for invalid descriptor type. Invalid VkImageCreateInfo structure returned.";
             return invalid_image_create_info;
         }
     }
@@ -215,6 +218,7 @@ namespace st {
             return impl->samplerInfo;
         }
         else {
+            LOG(WARNING) << "Attempted to retrive VkSamplerCreateInfo for invalid descriptor type. Invalid VkSamplerCreateInfo structure returned.";
             return invalid_sampler_create_info;
         }
     }
@@ -224,6 +228,7 @@ namespace st {
             return impl->bufferInfo;
         }
         else {
+            LOG(WARNING) << "Attempted to retrieve VkBufferViewCreateInfo for invalid descriptor type. Invalid VkBufferViewCreateInfo structure returned.";
             return invalid_buffer_view_create_info;
         }
     }

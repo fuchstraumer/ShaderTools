@@ -9,6 +9,9 @@
 #include "util/Delegate.hpp"
 #include <unordered_set>
 #include <experimental/filesystem>
+#define NOMINMAX
+#include "easyloggingpp/src/easylogging++.h"
+
 namespace st {
 
     engine_environment_callbacks_t ShaderGroup::RetrievalCallbacks = engine_environment_callbacks_t{};
@@ -79,6 +82,7 @@ namespace st {
         const std::string file_path{ resource_file_path };
         auto& FileTracker = ShaderFileTracker::GetFileTracker();
         if (!FileTracker.FindResourceScript(file_path, impl->rsrcFile)) {
+            LOG(ERROR) << "Failed to execute or find resource script.";
             throw std::runtime_error("Failed to execute resource script: check error log.");
         }
         else {
@@ -98,6 +102,7 @@ namespace st {
         FileTracker.ShaderUsedResourceScript.emplace(handle, impl->resourceScriptPath.string());
         auto iter = impl->stHandles.emplace(handle);
         if (!iter.second) {
+            LOG(ERROR) << "Could not add/emplace Shader to ShaderGroup - handle or shader may already exist!";
             throw std::runtime_error("Could not add shader to ShaderGroup, failed to emplace into handles set: might already exist!");
         }
         impl->addShader(handle, body_src_file_path);
@@ -109,6 +114,7 @@ namespace st {
         auto iter = impl->stHandles.find(handle);
         std::vector<uint32_t> binary_vec;
         if (iter == impl->stHandles.cend()) {
+            LOG(WARNING) << "Could not find requested shader binary in ShaderGroup.";
             *binary_size = 0;
         }
         else if (FileTracker.FindShaderBinary(handle, binary_vec)) {

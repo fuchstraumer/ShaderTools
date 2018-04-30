@@ -9,7 +9,7 @@
 #include "spirv_glsl.hpp"
 #include "../util/FilesystemUtils.hpp"
 #include "../util/ShaderFileTracker.hpp"
-
+#include "easyloggingpp/src/easylogging++.h"
 namespace st {
     namespace fs = std::experimental::filesystem;
 
@@ -62,6 +62,7 @@ namespace st {
         case VK_SHADER_STAGE_COMPUTE_BIT:
             return shaderc_glsl_compute_shader;
         default:
+            LOG(ERROR) << "Invalid shader stage bitfield, or shader stage selected not supported on current platform!";
             throw std::domain_error("Invalid shader stage bitfield, or shader stage not supported on current platform!");
         }
     }
@@ -87,7 +88,7 @@ namespace st {
 
         // First check to verify the path given exists.
         if (!fs::exists(path_to_source)) {
-            std::cerr << "Given shader source path/file does not exist!\n";
+            LOG(ERROR) << "Given shader source path/file does not exist!\n";
             throw std::runtime_error("Failed to open/find given shader file.");
         }
 
@@ -95,6 +96,7 @@ namespace st {
 
         std::ifstream input_file(path_to_source);
         if (!input_file.is_open()) {
+            LOG(ERROR) << "Failed to open " << path_to_source_str << " for compiliation.";
             throw std::runtime_error("Failed to open supplied file in GLSLCompiler!");
         }
         const std::string source_code((std::istreambuf_iterator<char>(input_file)), (std::istreambuf_iterator<char>()));
@@ -111,8 +113,9 @@ namespace st {
         shaderc::AssemblyCompilationResult assembly_result = compiler.CompileGlslToSpvAssembly(src_str, kind, name.c_str(), options);
         if (assembly_result.GetCompilationStatus() != shaderc_compilation_status_success) {
             const std::string err_msg = assembly_result.GetErrorMessage();
-            std::cerr << "Shader compiliation to assembly failed: " << err_msg.c_str() << "\n";
+            LOG(ERROR) << "Shader compiliation to assembly failed: " << err_msg.c_str() << "\n";
 #ifndef NDEBUG
+            LOG(ERROR) << "Dumping shader source to file...";
             dump_bad_source_to_file(name, src_str, err_msg);
 #endif
             const std::string except_msg = std::string("Failed to compile shader to assembly: ") + err_msg + std::string("\n");
@@ -124,8 +127,8 @@ namespace st {
         shaderc::SpvCompilationResult binary_result = compiler.AssembleToSpv(iter.first->second, options);
         if (binary_result.GetCompilationStatus() != shaderc_compilation_status_success) {
             const std::string err_msg = binary_result.GetErrorMessage();
-            std::cerr << "Shader assembly into final SPIR-V result failed.\n";
-            std::cerr << "Error message(s): \n" << err_msg << "\n";
+            LOG(ERROR) << "Shader assembly into final SPIR-V result failed.\n";
+            LOG(ERROR) << "Error message(s): \n" << err_msg << "\n";
             const std::string except_msg = std::string("Failed to assemble SPIR-V assembly into final binary result: ") + err_msg + std::string("\n");
             throw std::runtime_error(except_msg.c_str());
         }
@@ -152,14 +155,14 @@ namespace st {
                     recompiled_source = recompiler.compile();
                 }
                 catch (const spirv_cross::CompilerError& e) {
-                    std::cerr << "Failed to fully parse/recompile SPIR-V binary back to GLSL text. Outputting partial source thus far.";
-                    std::cerr << "spirv_cross::CompilerError.what(): " << e.what() << "\n";
+                    LOG(WARNING) << "Failed to fully parse/recompile SPIR-V binary back to GLSL text. Outputting partial source thus far.";
+                    LOG(WARNING) << "spirv_cross::CompilerError.what(): " << e.what() << "\n";
                     recompiled_source = recompiler.get_partial_source();
                 }
 
                 auto iter = FileTracker.RecompiledSourcesFromBinaries.emplace(handle, recompiled_source);
                 if (!iter.second) {
-                    throw std::runtime_error("Failed to emplace recompiled source into FileTracker map!");
+                    LOG(WARNING) << "Failed to emplace recompiled shader source into program's filetracker system!";
                 }
 
                 *str_size = recompiled_source.size();
@@ -169,6 +172,7 @@ namespace st {
 
             }
             else {
+                LOG(WARNING) << "Failed to find or recompile shader's binary to GLSL code.";
                 *str_size = 0;
                 return;
             }
@@ -186,6 +190,7 @@ namespace st {
         auto& FileTracker = ShaderFileTracker::GetFileTracker();
         std::string recompiled_src_str;
         if (!FileTracker.FindAssemblyString(handle, recompiled_src_str)) {
+            LOG(WARNING) << "Could not find requested shader's assembly source!";
             *str_size = 0;
             return;
         }
@@ -227,6 +232,7 @@ namespace st {
             }
         }
         else {
+            LOG(WARNING) << "Could not find requested Shader handle's binary source!";
             *binary_sz = 0;
         }
     }
