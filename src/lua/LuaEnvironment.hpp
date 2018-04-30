@@ -9,6 +9,8 @@
 namespace st {
 
     class LuaEnvironment {
+        LuaEnvironment(const LuaEnvironment&) = delete;
+        LuaEnvironment& operator=(const LuaEnvironment&) = delete;
     public:
 
         LuaEnvironment();
