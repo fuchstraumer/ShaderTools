@@ -1,8 +1,8 @@
 #include "ShaderFileTracker.hpp"
 #include "../lua/ResourceFile.hpp"
-#include <iostream>
 #include <fstream>
 #include <experimental/filesystem>
+#include "easyloggingpp/src/easylogging++.h"
 namespace fs = std::experimental::filesystem;
 namespace st {
 
@@ -45,8 +45,8 @@ namespace st {
             const std::string path = built_ins_path.string();
             if (luaL_dofile(environment->GetState(), path.c_str())) {
                 std::string err = lua_tostring(environment->GetState(), -1);
-                std::cerr << "Failed to execute built-in script for baseline (GLSL) object sizes:\n ";
-                std::cerr << err.c_str() << "\n";
+                LOG(WARNING) << "Failed to execute built-in script for baseline (GLSL) object sizes:\n ";
+                LOG(WARNING) << err.c_str() << "\n";
                 return fallback_resource_sizes;
             }
 
@@ -73,7 +73,7 @@ namespace st {
         }
         if (!fs::exists(cacheDir)) {
             if (!fs::create_directories(cacheDir)) {
-                throw std::runtime_error("Failed to create cache directories, lack user permissions...");
+                LOG(WARNING) << "Couldn't create cache directory. File caching will not be possible.";
             }
         }
 
@@ -121,13 +121,13 @@ namespace st {
             // Load source string into memory
             std::ifstream input_file(BodyPaths.at(handle));
             if (!input_file.is_open()) {
-                std::cerr << "Path to source of shader existed in program map, but source file itself could not be opened!\n";
+                LOG(ERROR) << "Path to source of shader existed in program map, but source file itself could not be opened!\n";
                 throw std::runtime_error("Failed to open shader source file.");
             }
 
             auto iter = ShaderBodies.emplace(handle, std::string{ std::istreambuf_iterator<char>(input_file), std::istreambuf_iterator<char>() });
             if (!iter.second) {
-                std::cerr << "Failed to add read shader source file to programs source string map!\n";
+                LOG(ERROR) << "Failed to add read shader source file to programs source string map!\n";
                 throw std::runtime_error("Could not add source file string to program map!");
             }
 
@@ -147,7 +147,7 @@ namespace st {
         else {
             fs::path source_body_path(shader_body_path);
             if (!fs::exists(source_body_path)) {
-                std::cerr << "Given path does not exist.";
+                LOG(ERROR) << "Given path does not exist.";
                 throw std::runtime_error("Failed to open given file: invalid path.");
             }
 
@@ -155,7 +155,7 @@ namespace st {
 
             std::ifstream input_stream(source_body_path);
             if (!input_stream.is_open()) {
-                std::cerr << "Given shader body path exists, but opening a file stream for this path failed!";
+                LOG(ERROR) << "Given shader body path exists, but opening a file stream for this path failed!";
                 throw std::runtime_error("Failed to open input stream for given shader body path.");
             }
 
@@ -178,7 +178,7 @@ namespace st {
             
             std::ifstream input_file(BinaryPaths.at(handle), std::ios::binary | std::ios::in | std::ios::ate);
             if (!input_file.is_open()) {
-                std::cerr << "Path to binary of shader existed in programs map, but binary file itself could not be read!\n";
+                LOG(ERROR) << "Path to binary of shader existed in programs map, but binary file itself could not be read!\n";
                 throw std::runtime_error("Failed to open shader source file.");
             }
 
@@ -193,7 +193,7 @@ namespace st {
             auto iter = Binaries.emplace(handle, imported_binary);
 
             if (!iter.second) {
-                std::cerr << "Failed to add shader binary to programs shader binary map!\n";
+                LOG(ERROR) << "Failed to add shader binary to programs shader binary map!\n";
                 throw std::runtime_error("Failed to emplace shader binary into program binary map.");
             }
 
@@ -219,19 +219,17 @@ namespace st {
                     auto iter = ResourceScripts.emplace(absolute_file_path, std::make_unique<ResourceFile>());
 
                     if (!iter.second) {
-                        std::cerr << "Failed to create a new resource script at path " << absolute_file_path.c_str() << " !\n";
+                        LOG(ERROR) << "Failed to create a new resource script at path " << absolute_file_path.c_str() << " !\n";
                         throw std::runtime_error("Could not create a new resource script/file!");
                     }
 
                     iter.first->second->Execute(absolute_file_path.c_str());
-
                     dest_ptr = ResourceScripts.at(absolute_file_path).get();
                     return true;
                 }
                 catch (const std::logic_error& e) {
-                    dest_ptr = nullptr;
-                    std::cerr << "Failed to create ResourceFile using given script: check console for script errors and try again.\n";
-                    std::cerr << e.what();
+                    LOG(ERROR) << "Failed to create ResourceFile using given script: check console for script errors and try again.\n";
+                    LOG(ERROR) << e.what();
                     throw e;
                 }
             }
