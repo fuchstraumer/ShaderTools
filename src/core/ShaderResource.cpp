@@ -1,5 +1,4 @@
 #include "core/ShaderResource.hpp"
-#define NOMINMAX
 #include "easyloggingpp/src/easylogging++.h"
 
 namespace st {

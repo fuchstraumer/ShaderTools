@@ -3,7 +3,8 @@
 #include "core/ShaderGroup.hpp"
 #include "core/ShaderPack.hpp"
 #include <array>
-
+#include "easyloggingpp/src/easylogging++.h"
+INITIALIZE_EASYLOGGINGPP
 int screen_x() {
     return 1920;
 }
