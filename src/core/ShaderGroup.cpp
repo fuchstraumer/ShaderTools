@@ -9,12 +9,38 @@
 #include "util/Delegate.hpp"
 #include <unordered_set>
 #include <experimental/filesystem>
-#define NOMINMAX
+#include "../parser/BindingGeneratorImpl.hpp"
 #include "easyloggingpp/src/easylogging++.h"
 
 namespace st {
 
-    engine_environment_callbacks_t ShaderGroup::RetrievalCallbacks = engine_environment_callbacks_t{};
+    static int screen_x() {
+        return 1920;
+    }
+
+    static int screen_y() {
+        return 1080;
+    }
+
+    static double z_near() {
+        return 0.1;
+    }
+
+    static double z_far() {
+        return 3000.0;
+    }
+
+    static double fov_y() {
+        return 75.0;
+    }
+
+    engine_environment_callbacks_t ShaderGroup::RetrievalCallbacks = engine_environment_callbacks_t{
+        &screen_x,
+        &screen_y,
+        &z_near,
+        &z_far,
+        &fov_y
+    };
 
     class ShaderGroupImpl {
         ShaderGroupImpl(const ShaderGroupImpl& other) = delete;
@@ -23,9 +49,10 @@ namespace st {
 
         ShaderGroupImpl(const std::string& group_name, size_t num_includes, const char* const* include_paths);
         ~ShaderGroupImpl();
+        ShaderGroupImpl(ShaderGroupImpl&& other) noexcept;
+        ShaderGroupImpl& operator=(ShaderGroupImpl&& other) noexcept;
 
         void addShader(const Shader& handle, std::string src_str_path);
-
 
         std::vector<const char*> includePaths;
         std::unordered_set<st::Shader> stHandles{};
@@ -33,7 +60,7 @@ namespace st {
         std::unique_ptr<ShaderCompiler> compiler{ nullptr };
         std::unique_ptr<BindingGenerator> bindingGenerator{ nullptr };
         ResourceFile* rsrcFile{ nullptr };
-        const std::string groupName;
+        std::string groupName;
         std::experimental::filesystem::path resourceScriptPath;
     };
 
@@ -45,6 +72,21 @@ namespace st {
     }
 
     ShaderGroupImpl::~ShaderGroupImpl() { }
+
+    ShaderGroupImpl::ShaderGroupImpl(ShaderGroupImpl && other) noexcept : includePaths(std::move(other.includePaths)), stHandles(std::move(other.stHandles)), generator(std::move(other.generator)), 
+        compiler(std::move(other.compiler)), bindingGenerator(std::move(other.bindingGenerator)), rsrcFile(std::move(other.rsrcFile)), groupName(std::move(other.groupName)), resourceScriptPath(std::move(other.resourceScriptPath)) {}
+
+    ShaderGroupImpl & ShaderGroupImpl::operator=(ShaderGroupImpl && other) noexcept {
+        includePaths = std::move(other.includePaths);
+        stHandles = std::move(other.stHandles);
+        generator = std::move(other.generator);
+        compiler = std::move(other.compiler);
+        bindingGenerator = std::move(other.bindingGenerator);
+        rsrcFile = std::move(other.rsrcFile);
+        groupName = std::move(other.groupName);
+        resourceScriptPath = std::move(other.resourceScriptPath);
+        return *this;
+    }
 
     void ShaderGroupImpl::addShader(const Shader& handle, std::string src_str_path) {
         auto& FileTracker = ShaderFileTracker::GetFileTracker();
@@ -78,6 +120,10 @@ namespace st {
         return impl->bindingGenerator->GetImpl();
     }
 
+    const BindingGeneratorImpl* ShaderGroup::GetBindingGeneratorImpl() const {
+        return impl->bindingGenerator->GetImpl();
+    }
+
     ShaderGroup::ShaderGroup(const char * group_name, const char * resource_file_path, const size_t num_includes, const char* const* paths) : impl(std::make_unique<ShaderGroupImpl>(group_name, num_includes, paths)){
         const std::string file_path{ resource_file_path };
         auto& FileTracker = ShaderFileTracker::GetFileTracker();
@@ -94,6 +140,13 @@ namespace st {
     }
 
     ShaderGroup::~ShaderGroup() {}
+
+    ShaderGroup::ShaderGroup(ShaderGroup && other) noexcept : impl(std::move(other.impl)) {}
+
+    ShaderGroup & ShaderGroup::operator=(ShaderGroup && other) noexcept {
+        impl = std::move(other.impl);
+        return *this;
+    }
 
     Shader ShaderGroup::AddShader(const char * shader_name, const char * body_src_file_path, const VkShaderStageFlagBits & flags) {
         Shader handle(shader_name, flags);
@@ -125,6 +178,63 @@ namespace st {
         }
         else {
             *binary_size = 0;
+        }
+    }
+
+    void ShaderGroup::GetSetLayoutBindings(const uint32_t & set_idx, size_t * num_bindings, VkDescriptorSetLayoutBinding * bindings) const {
+        const auto& b_impl = GetBindingGeneratorImpl();
+        
+        auto iter = b_impl->sortedSets.find(set_idx);
+        if (iter != b_impl->sortedSets.cend()) {
+            *num_bindings = iter->second.Members.size();
+            if (bindings != nullptr) {
+                std::vector<VkDescriptorSetLayoutBinding> bindings_vec;
+                for (auto& member : iter->second.Members) {
+                    bindings_vec.emplace_back((VkDescriptorSetLayoutBinding)member.second);
+                }
+                std::copy(bindings_vec.begin(), bindings_vec.end(), bindings);
+            }
+        }
+        else {
+            *num_bindings = 0;
+        }
+    }
+
+    dll_retrieved_strings_t ShaderGroup::GetSetResourceNames(const uint32_t set_idx) const {
+        const auto& b_impl = GetBindingGeneratorImpl();
+        auto iter = b_impl->sortedSets.find(set_idx);
+        
+        if (iter != b_impl->sortedSets.cend()) {
+            dll_retrieved_strings_t results;
+            results.NumNames = iter->second.Members.size();
+            size_t i = 0;
+            for (auto& member : iter->second.Members) {
+                results.Strings[i] = strdup(member.second.BackingResource()->GetName());
+                ++i;
+            }
+            return results;
+        }
+        else {
+            return dll_retrieved_strings_t();
+        }
+        
+    }
+
+    dll_retrieved_strings_t ShaderGroup::GetUsedResourceBlocks(const Shader & handle) const {
+        auto& ftracker = ShaderFileTracker::GetFileTracker();
+        if (ftracker.ShaderUsedResourceBlocks.count(handle) != 0) {
+            dll_retrieved_strings_t results;
+            results.NumNames = ftracker.ShaderUsedResourceBlocks.count(handle);
+            size_t i = 0;
+            auto iter_pair = ftracker.ShaderUsedResourceBlocks.equal_range(handle);
+            for (auto iter = iter_pair.first; iter != iter_pair.second; ++iter) {
+                results.Strings[i] = strdup(iter->second.c_str());
+                ++i;
+            }
+            return results;
+        }
+        else {
+            return dll_retrieved_strings_t();
         }
     }
 
