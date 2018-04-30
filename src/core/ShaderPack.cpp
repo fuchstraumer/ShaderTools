@@ -5,6 +5,7 @@
 #include "core/ShaderResource.hpp"
 #include "../util/ShaderFileTracker.hpp"
 #include "../parser/BindingGeneratorImpl.hpp"
+#include "common/UtilityStructs.hpp"
 #include "easyloggingpp/src/easylogging++.h"
 #include <unordered_map>
 #include <experimental/filesystem>
@@ -93,6 +94,7 @@ namespace st {
         ShaderPackImpl(const char* shader_pack_file_path);
         void createGroups();
         void createSingleGroup(const std::string& name, const std::map<VkShaderStageFlagBits, std::string>& shader_map);
+        void setDescriptorTypeCounts() const;
 
         std::vector<std::set<ShaderResource>> resources;
         std::unordered_map<std::string, std::vector<size_t>> groupSetIndices;
@@ -100,6 +102,8 @@ namespace st {
         std::unique_ptr<shader_pack_file_t> filePack;
         std::experimental::filesystem::path workingDir;
         std::mutex guardMutex;
+        ResourceFile* rsrcFile;
+        mutable descriptor_type_counts_t typeCounts;
     };
 
 
@@ -108,6 +112,7 @@ namespace st {
         workingDir = fs::absolute(workingDir);
         workingDir = workingDir.remove_filename();
         createGroups();
+        setDescriptorTypeCounts();
     }
 
     void ShaderPackImpl::createGroups() {
@@ -127,6 +132,10 @@ namespace st {
             groups.emplace(group.first, std::make_unique<ShaderGroup>(group.first.c_str(), resource_path_str.c_str(), base_includes.size(), base_includes.data()));
             createSingleGroup(group.first, group.second);
         }
+
+        resource_path = fs::absolute(resource_path);
+        auto& ftracker = ShaderFileTracker::GetFileTracker();
+        rsrcFile = ftracker.ResourceScripts.at(resource_path.string()).get();
     }
 
     void ShaderPackImpl::createSingleGroup(const std::string & name, const std::map<VkShaderStageFlagBits, std::string>& shader_map) {
@@ -156,6 +165,49 @@ namespace st {
         }
     }
 
+    void ShaderPackImpl::setDescriptorTypeCounts() const {
+        const auto& sets = rsrcFile->GetAllResources();
+        for (const auto& resource_set : sets) {
+            for (const auto& resource : resource_set.second) {
+                switch (resource.GetType()) {
+                case VK_DESCRIPTOR_TYPE_SAMPLER:
+                    typeCounts.Samplers++;
+                    break;
+                case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+                    typeCounts.CombinedImageSamplers++;
+                    break;
+                case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
+                    typeCounts.SampledImages++;
+                    break;
+                case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+                    typeCounts.SampledImages++;
+                    break;
+                case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
+                    typeCounts.UniformTexelBuffers++;
+                    break;
+                case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
+                    typeCounts.StorageTexelBuffers++;
+                    break;
+                case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+                    typeCounts.UniformBuffers++;
+                    break;
+                case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+                    typeCounts.StorageBuffers++;
+                    break;
+                case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
+                    typeCounts.UniformBuffersDynamic++;
+                    break;
+                case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
+                    typeCounts.StorageBuffersDynamic++;
+                    break;
+                default:
+                    LOG(ERROR) << "Got invalid VkDescriptor type value when counting up descriptors of each type!";
+                    throw std::domain_error("Invalid VkDescriptorType enum value.");
+                }
+            }
+        }
+    }
+
     ShaderPack::ShaderPack(const char* fpath) : impl(std::make_unique<ShaderPackImpl>(fpath)) {}
 
     ShaderPack::~ShaderPack() {}
@@ -171,7 +223,7 @@ namespace st {
 
     dll_retrieved_strings_t ShaderPack::GetGroupNames() const {
         dll_retrieved_strings_t names;
-        names.NumNames = impl->groups.size();
+        names.SetNumStrings(impl->groups.size());
         size_t i = 0;
         for (auto& group : impl->groups) {
             names.Strings[i] = strdup(group.first.c_str());

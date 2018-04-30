@@ -15,8 +15,9 @@ namespace st {
         ~dll_retrieved_strings_t();
         dll_retrieved_strings_t(dll_retrieved_strings_t&& other) noexcept;
         dll_retrieved_strings_t& operator=(dll_retrieved_strings_t&& other) noexcept;
+        void SetNumStrings(const size_t& num_names);
         char** Strings{ nullptr };
-        size_t NumNames{ 0 };
+        size_t NumStrings{ 0 };
     };
 
     struct ST_API descriptor_type_counts_t {

@@ -206,7 +206,7 @@ namespace st {
         
         if (iter != b_impl->sortedSets.cend()) {
             dll_retrieved_strings_t results;
-            results.NumNames = iter->second.Members.size();
+            results.SetNumStrings(iter->second.Members.size());
             size_t i = 0;
             for (auto& member : iter->second.Members) {
                 results.Strings[i] = strdup(member.second.BackingResource()->GetName());
@@ -224,7 +224,7 @@ namespace st {
         auto& ftracker = ShaderFileTracker::GetFileTracker();
         if (ftracker.ShaderUsedResourceBlocks.count(handle) != 0) {
             dll_retrieved_strings_t results;
-            results.NumNames = ftracker.ShaderUsedResourceBlocks.count(handle);
+            results.SetNumStrings(ftracker.ShaderUsedResourceBlocks.count(handle));
             size_t i = 0;
             auto iter_pair = ftracker.ShaderUsedResourceBlocks.equal_range(handle);
             for (auto iter = iter_pair.first; iter != iter_pair.second; ++iter) {

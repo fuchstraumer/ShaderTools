@@ -7,22 +7,28 @@ namespace st {
     dll_retrieved_strings_t::dll_retrieved_strings_t() {}
 
     dll_retrieved_strings_t::~dll_retrieved_strings_t() {
-        for (uint32_t i = 0; i < NumNames; ++i) {
+        for (uint32_t i = 0; i < NumStrings; ++i) {
             free(Strings[i]);
         }
+        delete[] Strings;
     }
 
-    dll_retrieved_strings_t::dll_retrieved_strings_t(dll_retrieved_strings_t && other) noexcept : NumNames(std::move(other.NumNames)), Strings(std::move(other.Strings)) {
-        other.NumNames = 0;
+    dll_retrieved_strings_t::dll_retrieved_strings_t(dll_retrieved_strings_t && other) noexcept : NumStrings(std::move(other.NumStrings)), Strings(std::move(other.Strings)) {
+        other.NumStrings = 0;
         other.Strings = nullptr;
     }
 
     dll_retrieved_strings_t& dll_retrieved_strings_t::operator=(dll_retrieved_strings_t && other) noexcept {
-        NumNames = std::move(other.NumNames);
-        other.NumNames = 0;
+        NumStrings = std::move(other.NumStrings);
+        other.NumStrings = 0;
         Strings = std::move(other.Strings);
         other.Strings = nullptr;
         return *this;
+    }
+
+    void dll_retrieved_strings_t::SetNumStrings(const size_t & num_names) {
+        NumStrings = num_names;
+        Strings = new char*[num_names];
     }
     
     VkFormat StorageImageFormatToVkFormat(const char* fmt) {

@@ -35,6 +35,14 @@ int main(int argc, char* argv[]) {
     ShaderGroup::RetrievalCallbacks.GetFOVY = &fov_y;
     
     ShaderPack pack("../fragments/volumetric_forward/ShaderPack.lua");
+    std::vector<std::string> group_names;
+    {
+        auto names = pack.GetGroupNames();
+        for (size_t i = 0; i < names.NumStrings; ++i) {
+            group_names.emplace_back(names.Strings[i]);
+        }
+
+    }
 
     std::cerr << "Tests complete.";
 }

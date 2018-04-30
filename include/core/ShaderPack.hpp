@@ -7,6 +7,7 @@ namespace st {
 
     class ShaderPackImpl;
     class ShaderGroup;
+    class ShaderResource;
 
     static void SetCacheDirectory(const char* new_cache_directory);
     static const char* GetCacheDirectory();
