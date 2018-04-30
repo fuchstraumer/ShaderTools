@@ -120,47 +120,47 @@ Resources = {
             }
         },
         ClusterFlags = {
-            Type = "StorageImage",
+            Type = "StorageTexelBuffer",
             Format = "r8ui",
             Size = get_num_clusters()
         },
         PointLightIndexList = {
-            Type = "StorageImage",
+            Type = "StorageTexelBuffer",
             Format = "r32ui",
             Size = light_index_list_size()
         },
         SpotLightIndexList = {
-            Type = "StorageImage",
+            Type = "StorageTexelBuffer",
             Format = "r32ui",
             Size = light_index_list_size()
         },
         PointLightGrid = {
-            Type = "StorageImage",
+            Type = "StorageTexelBuffer",
             Format = "rg32ui",
             Size = light_grid_size()
         },
         SpotLightGrid = {
-            Type = "StorageImage",
+            Type = "StorageTexelBuffer",
             Format = "rg32ui",
             Size = light_grid_size()
         },
         PointLightIndexCounter = {
-            Type = "StorageImage",
+            Type = "StorageTexelBuffer",
             Format = "r32ui",
             Size = 1
         },
         SpotLightIndexCounter = {
-            Type = "StorageImage",
+            Type = "StorageTexelBuffer",
             Format = "r32ui",
             Size = 1
         },
         UniqueClustersCounter = {
-            Type = "StorageImage",
+            Type = "StorageTexelBuffer",
             Format = "r32ui",
             Size = 1
         },
         UniqueClusters = {
-            Type = "StorageImage",
+            Type = "StorageTexelBuffer",
             Format = "r32ui",
             Size = get_num_clusters()
         }
@@ -247,22 +247,22 @@ Resources = {
             }
         },
         PointLightMortonCodes = {
-            Type = "StorageImage",
+            Type = "StorageTexelBuffer",
             Format = "r32ui",
             Size = get_num_point_lights()
         },
         SpotLightMortonCodes = {
-            Type = "StorageImage",
+            Type = "StorageTexelBuffer",
             Format = "r32ui",
             Size = get_num_spot_lights()
         },
         PointLightIndices = {
-            Type = "StorageImage",
+            Type = "StorageTexelBuffer",
             Format = "r32ui",
             Size = get_num_point_lights()
         },
         SpotLightIndices = {
-            Type = "StorageImage",
+            Type = "StorageTexelBuffer",
             Format = "r32ui",
             Size = get_num_spot_lights()
         }
