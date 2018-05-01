@@ -29,7 +29,6 @@ namespace st {
         void GetVertexAttributes(size_t* num_bindings, VkVertexInputAttributeDescription* bindings) const;
         void GetSetLayoutBindings(const size_t& set_idx, size_t* num_bindings, VkDescriptorSetLayoutBinding* bindings) const;
 
-        static engine_environment_callbacks_t RetrievalCallbacks;
         dll_retrieved_strings_t GetSetResourceNames(const uint32_t set_idx) const;
         dll_retrieved_strings_t GetUsedResourceBlocks() const;
         size_t GetSetIdxOfResourceBlock(const char* block_name);

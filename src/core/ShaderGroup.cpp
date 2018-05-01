@@ -14,34 +14,6 @@
 
 namespace st {
 
-    static int screen_x() {
-        return 1920;
-    }
-
-    static int screen_y() {
-        return 1080;
-    }
-
-    static double z_near() {
-        return 0.1;
-    }
-
-    static double z_far() {
-        return 3000.0;
-    }
-
-    static double fov_y() {
-        return 75.0;
-    }
-
-    engine_environment_callbacks_t ShaderGroup::RetrievalCallbacks = engine_environment_callbacks_t{
-        &screen_x,
-        &screen_y,
-        &z_near,
-        &z_far,
-        &fov_y
-    };
-
     class ShaderGroupImpl {
         ShaderGroupImpl(const ShaderGroupImpl& other) = delete;
         ShaderGroupImpl& operator=(const ShaderGroupImpl& other) = delete;

@@ -1,6 +1,6 @@
 #include "ResourceFile.hpp"
 #include "generation/ShaderGenerator.hpp"
-#include "core/ShaderGroup.hpp"
+#include "core/ShaderPack.hpp"
 #include "common/UtilityStructs.hpp"
 #include "../util/ShaderFileTracker.hpp"
 #include <iostream>
@@ -225,12 +225,13 @@ namespace st {
 
     ResourceFile::ResourceFile() : environment(std::make_unique<LuaEnvironment>()) {
         using namespace luabridge;
+        auto& callbacks = ShaderPack::RetrievalCallbacks();
         getGlobalNamespace(environment->GetState())
-            .addFunction("GetWindowX", ShaderGroup::RetrievalCallbacks.GetScreenSizeX)
-            .addFunction("GetWindowY", ShaderGroup::RetrievalCallbacks.GetScreenSizeY)
-            .addFunction("GetZNear", ShaderGroup::RetrievalCallbacks.GetZNear)
-            .addFunction("GetZFar", ShaderGroup::RetrievalCallbacks.GetZFar)
-            .addFunction("GetFieldOfViewY", ShaderGroup::RetrievalCallbacks.GetFOVY);
+            .addFunction("GetWindowX", callbacks.GetScreenSizeX)
+            .addFunction("GetWindowY", callbacks.GetScreenSizeY)
+            .addFunction("GetZNear", callbacks.GetZNear)
+            .addFunction("GetZFar", callbacks.GetZFar)
+            .addFunction("GetFieldOfViewY", callbacks.GetFOVY);
     }
 
     const set_resource_map_t& ResourceFile::GetResources(const std::string & block_name) const {

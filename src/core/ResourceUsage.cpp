@@ -17,6 +17,7 @@ namespace st {
         usedBy = other.usedBy;
         accessModifier = other.accessModifier;
         stages = other.stages;
+
         return *this;
     }
 

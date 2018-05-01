@@ -8,6 +8,7 @@
 #include "common/UtilityStructs.hpp"
 #include "shader_pack_file.hpp"
 #include "easyloggingpp/src/easylogging++.h"
+INITIALIZE_NULL_EASYLOGGINGPP
 #ifdef FindResource
 #undef FindResource
 #endif
@@ -20,6 +21,25 @@
 
 namespace st {
 
+    static int screen_x() {
+        return 1920;
+    }
+
+    static int screen_y() {
+        return 1080;
+    }
+
+    static double z_near() {
+        return 0.1;
+    }
+
+    static double z_far() {
+        return 3000.0;
+    }
+
+    static double fov_y() {
+        return 75.0;
+    }
 
     class ShaderPackImpl {
     public:
@@ -229,6 +249,17 @@ namespace st {
         const ShaderResource* result = impl->rsrcFile->FindResource(rsrc_name);
         LOG_IF(result == nullptr, WARNING) << "Couldn't find requested resource" << rsrc_name << " in ShaderPack's resource script data.";
         return result;
+    }
+
+    engine_environment_callbacks_t & ShaderPack::RetrievalCallbacks() {
+        static engine_environment_callbacks_t callbacks = engine_environment_callbacks_t{
+            &screen_x,
+            &screen_y,
+            &z_near,
+            &z_far,
+            &fov_y
+        };
+        return callbacks;
     }
 
 }

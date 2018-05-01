@@ -29,6 +29,8 @@ namespace st {
         descriptor_type_counts_t GetSingleSetTypeCounts() const;
         const ShaderResource* GetResource(const char* rsrc_name);
 
+        static engine_environment_callbacks_t& RetrievalCallbacks();
+
     private:
         std::unique_ptr<ShaderPackImpl> impl;
     };
