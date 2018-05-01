@@ -2,24 +2,14 @@
 #ifndef SHADER_TOOLS_DESCRIPTOR_STRUCTS_HPP
 #define SHADER_TOOLS_DESCRIPTOR_STRUCTS_HPP
 #include "common/CommonInclude.hpp"
+#include "common/UtilityStructs.hpp"
 #include "spirv-cross/spirv_cross.hpp"
 #include <string>
 #include <vector>
 #include <map>
 
 namespace st {
-
-    struct ShaderResourceSubObject {
-        std::string Name;
-        std::string Type;
-        union {
-            uint32_t Size;
-            uint32_t NumElements;
-        };
-        uint32_t Offset{ 0 };
-        bool isComplex{ false };
-    };
-   
+  
     struct PushConstantInfo {
         VkShaderStageFlags Stages;
         std::string Name;

@@ -120,4 +120,41 @@ namespace st {
             return std::numeric_limits<size_t>::max();
         }
     }
+
+    ShaderResourceSubObject::ShaderResourceSubObject(const ShaderResourceSubObject & other) noexcept : Type(strdup(other.Type)), Name(strdup(other.Name)), NumElements(other.NumElements),
+        isComplex(other.isComplex) {}
+
+    ShaderResourceSubObject::ShaderResourceSubObject(ShaderResourceSubObject && other) noexcept : Type(std::move(other.Type)), Name(std::move(other.Name)), NumElements(std::move(other.NumElements)),
+        isComplex(std::move(other.isComplex)) {
+        other.Type = nullptr;
+        other.Name = nullptr;
+    }
+
+    ShaderResourceSubObject & ShaderResourceSubObject::operator=(const ShaderResourceSubObject & other) noexcept {
+        Type = strdup(other.Type);
+        Name = strdup(other.Name);
+        NumElements = other.NumElements;
+        isComplex = other.isComplex;
+        return *this;
+    }
+
+    ShaderResourceSubObject & ShaderResourceSubObject::operator=(ShaderResourceSubObject && other) noexcept {
+        Type = std::move(other.Type);
+        Name = std::move(other.Name);
+        NumElements = std::move(other.NumElements);
+        isComplex = std::move(other.isComplex);
+        other.Type = nullptr;
+        other.Name = nullptr;
+        return *this;
+    }
+
+    ShaderResourceSubObject::~ShaderResourceSubObject() {
+        if (Type != nullptr) {
+            free(Type);
+        }
+        if (Name != nullptr) {
+            free(Name);
+        }
+    }
+
 }

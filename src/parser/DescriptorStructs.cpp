@@ -1,5 +1,6 @@
 #include "DescriptorStructs.hpp"
 
+
 namespace st {
 
      std::string StageFlagToStr(const VkShaderStageFlags & flag) {

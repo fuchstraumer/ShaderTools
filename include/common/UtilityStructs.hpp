@@ -33,7 +33,7 @@ namespace st {
         uint32_t CombinedImageSamplers{ 0 };
     };
 
-    struct engine_environment_callbacks_t {
+    struct ST_API engine_environment_callbacks_t {
         std::add_pointer<int()>::type GetScreenSizeX{ nullptr };
         std::add_pointer<int()>::type GetScreenSizeY{ nullptr };
         std::add_pointer<double()>::type GetZNear{ nullptr };
@@ -63,6 +63,23 @@ namespace st {
             int64_t value_i64;
             uint64_t value_ui64;
         };
+    };
+
+    struct ST_API ShaderResourceSubObject {
+        ShaderResourceSubObject() = default;
+        ShaderResourceSubObject(const ShaderResourceSubObject& other) noexcept;
+        ShaderResourceSubObject(ShaderResourceSubObject&& other) noexcept;
+        ShaderResourceSubObject& operator=(const ShaderResourceSubObject& other) noexcept;
+        ShaderResourceSubObject& operator=(ShaderResourceSubObject&& other) noexcept;
+        ~ShaderResourceSubObject();
+        char* Name{ nullptr };
+        char* Type{ nullptr };
+        union {
+            uint32_t Size;
+            uint32_t NumElements;
+        };
+        uint32_t Offset{ 0 };
+        bool isComplex{ false };
     };
 
     VkFormat StorageImageFormatToVkFormat(const char* fmt);
