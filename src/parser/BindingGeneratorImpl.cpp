@@ -238,8 +238,9 @@ namespace st {
                     // Already registered this one.
                     continue;
                 }
-                const SPIRType spc_type = recompiler->get_type(spc.id);
                 const SPIRConstant& spc_value = recompiler->get_constant(spc.id);
+                const SPIRType& spc_type = recompiler->get_type(spc_value.constant_type);
+                
 
                 if (spc_type.columns > 1 || spc_type.vecsize > 1) {
                     LOG(ERROR) << "Matrix/vector specialization constants are currently not supported!";
