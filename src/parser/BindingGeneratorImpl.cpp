@@ -121,7 +121,7 @@ namespace st {
             auto ranges = cmplr.get_active_buffer_ranges(rsrc.id);
             for (auto& range : ranges) {
                 ShaderResourceSubObject member;
-                member.Name = cmplr.get_member_name(rsrc.base_type_id, range.index);
+                member.Name = strdup(cmplr.get_member_name(rsrc.base_type_id, range.index).c_str());
                 member.Size = static_cast<uint32_t>(range.range);
                 member.Offset = static_cast<uint32_t>(range.offset);
                 results.emplace_back(member);
@@ -183,7 +183,7 @@ namespace st {
         result.Name = cmplr.get_name(pconstant.id);
         for(auto& range : ranges) {
             ShaderResourceSubObject member;
-            member.Name = cmplr.get_member_name(pconstant.base_type_id, range.index);
+            member.Name = strdup(cmplr.get_member_name(pconstant.base_type_id, range.index).c_str());
             member.Size = static_cast<uint32_t>(range.range);
             member.Offset = static_cast<uint32_t>(range.offset);
             result.Members.push_back(std::move(member));

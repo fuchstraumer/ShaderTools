@@ -1,4 +1,5 @@
 #include "core/ShaderResource.hpp"
+#include "common/UtilityStructs.hpp"
 #include "easyloggingpp/src/easylogging++.h"
 
 namespace st {

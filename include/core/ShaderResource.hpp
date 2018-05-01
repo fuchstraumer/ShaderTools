@@ -2,11 +2,11 @@
 #ifndef ST_SHADER_RESOURCE_HPP
 #define ST_SHADER_RESOURCE_HPP
 #include "common/CommonInclude.hpp"
-#include "../parser/DescriptorStructs.hpp"
 
 namespace st {
 
     class ShaderResourceImpl;
+    class ShaderResourceSubObject;
 
     enum class size_class : uint32_t {
         Absolute = 0,

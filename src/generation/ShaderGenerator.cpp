@@ -9,6 +9,7 @@
 #include "../lua/ResourceFile.hpp"
 #include "../util/FilesystemUtils.hpp"
 #include "../util/ShaderFileTracker.hpp"
+#include "common/UtilityStructs.hpp"
 #include "easyloggingpp/src/easylogging++.h"
 namespace fs = std::experimental::filesystem;
 

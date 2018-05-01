@@ -393,9 +393,9 @@ namespace st {
         auto& f_tracker = ShaderFileTracker::GetFileTracker();
         ShaderResourceSubObject object;
         object.isComplex = false;
-        object.Name = name;
+        object.Name = strdup(name.c_str());
         std::string type_str = object_ref.cast<std::string>();
-        object.Type = type_str;
+        object.Type = strdup(type_str.c_str());
 
         auto iter = f_tracker.ObjectSizes.find(type_str);
         if (iter != f_tracker.ObjectSizes.cend()) {
@@ -435,8 +435,8 @@ namespace st {
             if (iter != f_tracker.ObjectSizes.cend()) {
                 offset_total += static_cast<uint32_t>(iter->second * num_elements);
             }
-            object.Name = name + std::string("[]");
-            object.Type = element_type;
+            object.Name = strdup(std::string(name + std::string("[]")).c_str());
+            object.Type = strdup(element_type.c_str());
             
         }
         else {
