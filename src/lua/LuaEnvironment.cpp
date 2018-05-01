@@ -14,6 +14,14 @@ namespace st {
         }
     }
 
+    void LuaEnvironment::Execute(const char * fname) {
+        if (luaL_dofile(state, fname)) {
+            const std::string err = std::string("Failed to execute Lua script, error log is:\n") + lua_tostring(state, -1) + std::string("\n");
+            LOG(ERROR) << err;
+            throw std::logic_error(err.c_str());
+        }
+    }
+
     bool LuaEnvironment::HasVariable(const std::string & var_name) {
         LuaRef ref = getGlobal(state, var_name.c_str());
         return !ref.isNil();
