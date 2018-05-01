@@ -23,9 +23,11 @@ namespace st {
         ShaderGroup* GetShaderGroup(const char* name) const;
         dll_retrieved_strings_t GetShaderGroupNames() const;
         dll_retrieved_strings_t GetResourceGroupNames() const;
-        void GetResourceGroupPointers(const char* name, size_t* num_resources, ShaderResource** pointers);
-        descriptor_type_counts_t GetDescriptorTypeCounts() const;
-        ShaderResource* GetResource(const char* rsrc_name);
+        void GetResourceGroupPointers(const char* name, size_t* num_resources, const ShaderResource** pointers);
+        void CopyShaderResources(const char* name, size_t* num_resources, ShaderResource* dest_array);
+        const descriptor_type_counts_t& GetTotalDescriptorTypeCounts() const;
+        descriptor_type_counts_t GetSingleSetTypeCounts() const;
+        const ShaderResource* GetResource(const char* rsrc_name);
 
     private:
         std::unique_ptr<ShaderPackImpl> impl;

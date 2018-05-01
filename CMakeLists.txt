@@ -16,7 +16,8 @@ ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/easyloggingpp")
 FILE(GLOB COMMON "${CMAKE_CURRENT_SOURCE_DIR}/src/common/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/include/common/*.hpp")
 FILE(GLOB UTIL "${CMAKE_CURRENT_SOURCE_DIR}/src/util/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/util/*.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/include/util/*.hpp")
-FILE(GLOB CORE "${CMAKE_CURRENT_SOURCE_DIR}/src/core/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/include/core/*.hpp")
+FILE(GLOB CORE "${CMAKE_CURRENT_SOURCE_DIR}/src/core/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/include/core/*.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/core/*.hpp")
 FILE(GLOB GENERATION "${CMAKE_CURRENT_SOURCE_DIR}/src/generation/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/include/generation/*.hpp")
 FILE(GLOB PARSER "${CMAKE_CURRENT_SOURCE_DIR}/src/parser/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/include/parser/*.hpp" 
     "${CMAKE_CURRENT_SOURCE_DIR}/src/parser/*.hpp")

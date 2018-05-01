@@ -1,12 +1,17 @@
 #include "core/ShaderPack.hpp"
 #include "core/ShaderGroup.hpp"
 #include "../lua/LuaEnvironment.hpp"
-#include "../lua/ResourceFile.hpp"
+
 #include "core/ShaderResource.hpp"
 #include "../util/ShaderFileTracker.hpp"
 #include "../parser/BindingGeneratorImpl.hpp"
 #include "common/UtilityStructs.hpp"
+#include "shader_pack_file.hpp"
 #include "easyloggingpp/src/easylogging++.h"
+#ifdef FindResource
+#undef FindResource
+#endif
+#include "../lua/ResourceFile.hpp"
 #include <unordered_map>
 #include <experimental/filesystem>
 #include <set>
@@ -15,76 +20,6 @@
 
 namespace st {
 
-    struct shader_pack_file_t {
-
-        shader_pack_file_t(const char* fname);
-        ~shader_pack_file_t() {};
-
-        std::string PackName;
-        std::string ResourceFileName;
-        std::unordered_map<std::string, std::map<VkShaderStageFlagBits, std::string>> ShaderGroups;
-        std::unique_ptr<LuaEnvironment> environment;
-
-        void parseScript();
-    };
-
-    shader_pack_file_t::shader_pack_file_t(const char * fname) : environment(std::make_unique<LuaEnvironment>()) {
-        lua_State* state = environment->GetState();
-        if (luaL_dofile(state, fname)) {
-            const std::string err = std::string("Failed to execute Lua script, error log is:\n") + lua_tostring(state, -1) + std::string("\n");
-            LOG(ERROR) << err;
-            throw std::logic_error(err.c_str());
-        }
-        else {
-            parseScript();
-        }
-        
-    }
-
-    void shader_pack_file_t::parseScript() {
-        using namespace luabridge;
-        lua_State* state = environment->GetState();
-        {
-            LuaRef pack_name_ref = getGlobal(state, "PackName");
-            PackName = pack_name_ref.cast<std::string>();
-            LuaRef resource_file_ref = getGlobal(state, "ResourceFileName");
-            ResourceFileName = resource_file_ref.cast<std::string>();
-
-            LuaRef shader_groups_table = getGlobal(state, "ShaderGroups");
-            auto shader_groups = environment->GetTableMap(shader_groups_table);
-
-            for (auto& group : shader_groups) {
-                auto group_entries = environment->GetTableMap(group.second);
-                for (auto& entry : group_entries) {
-                    const std::string& shader_stage = entry.first;
-                    const std::string shader_name = entry.second;
-                    if (shader_stage == "Vertex") {
-                        ShaderGroups[group.first].emplace(VK_SHADER_STAGE_VERTEX_BIT, shader_name);
-                    }
-                    else if (shader_stage == "Fragment") {
-                        ShaderGroups[group.first].emplace(VK_SHADER_STAGE_FRAGMENT_BIT, shader_name);
-                    }
-                    else if (shader_stage == "Geometry") {
-                        ShaderGroups[group.first].emplace(VK_SHADER_STAGE_GEOMETRY_BIT, shader_name);
-                    }
-                    else if (shader_stage == "TessEval") {
-                        ShaderGroups[group.first].emplace(VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, shader_name);
-                    }
-                    else if (shader_stage == "TessControl") {
-                        ShaderGroups[group.first].emplace(VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT, shader_name);
-                    }
-                    else if (shader_stage == "Compute") {
-                        ShaderGroups[group.first].emplace(VK_SHADER_STAGE_COMPUTE_BIT, shader_name);
-                    }
-                    else {
-                        LOG(ERROR) << "Found invalid shader stage type in ShaderPack Lua script.";
-                        throw std::domain_error("Invalid shader stage in parsed Lua script.");
-                    }
-                }
-            }
-        }
-        environment.reset();
-    }
 
     class ShaderPackImpl {
     public:
@@ -221,7 +156,7 @@ namespace st {
         }
     }
 
-    dll_retrieved_strings_t ShaderPack::GetGroupNames() const {
+    dll_retrieved_strings_t ShaderPack::GetShaderGroupNames() const {
         dll_retrieved_strings_t names;
         names.SetNumStrings(impl->groups.size());
         size_t i = 0;
@@ -233,9 +168,67 @@ namespace st {
         return names;
     }
 
-    descriptor_type_counts_t ShaderPack::GetDescriptorTypeCounts() const
-    {
-        return descriptor_type_counts_t();
+    dll_retrieved_strings_t ShaderPack::GetResourceGroupNames() const {
+        dll_retrieved_strings_t names;
+        const auto& sets = impl->rsrcFile->GetAllResources();
+        names.SetNumStrings(sets.size());
+        size_t i = 0;
+        for (const auto& set : sets) {
+            names.Strings[i] = strdup(set.first.c_str());
+            ++i;
+        }
+
+        return names;
+    }
+
+    void ShaderPack::GetResourceGroupPointers(const char * name, size_t * num_resources, const ShaderResource** pointers) {
+        const auto& sets = impl->rsrcFile->GetAllResources();
+        auto iter = sets.find(std::string(name));
+        if (iter != sets.cend()) {
+            *num_resources = iter->second.size();
+            if (pointers != nullptr) {
+                size_t i = 0;
+                for (auto& resource : iter->second) {
+                    pointers[i] = &resource;
+                    ++i;
+                }
+                return;
+            }
+        }
+        else {
+            *num_resources = 0;
+            return;
+        }
+    }
+
+    void ShaderPack::CopyShaderResources(const char * name, size_t * num_resources, ShaderResource * dest_array) {
+        const auto& sets = impl->rsrcFile->GetAllResources();
+        auto iter = sets.find(std::string(name));
+        if (iter != sets.cend()) {
+            *num_resources = iter->second.size();
+            if (dest_array != nullptr) {
+                std::vector<ShaderResource> resources;
+                for (const auto& rsrc : iter->second) {
+                    resources.emplace_back(rsrc);
+                }
+                std::copy(resources.begin(), resources.end(), dest_array);
+                return;
+            }
+        }
+        else {
+            *num_resources = 0;
+            return;
+        }
+    }
+
+    const descriptor_type_counts_t& ShaderPack::GetTotalDescriptorTypeCounts() const {
+        return impl->typeCounts;
+    }
+
+    const ShaderResource * ShaderPack::GetResource(const char* rsrc_name) {
+        const ShaderResource* result = impl->rsrcFile->FindResource(rsrc_name);
+        LOG_IF(result == nullptr, WARNING) << "Couldn't find requested resource" << rsrc_name << " in ShaderPack's resource script data.";
+        return result;
     }
 
 }
