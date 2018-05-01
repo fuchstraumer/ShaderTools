@@ -50,10 +50,12 @@ int main(int argc, char* argv[]) {
     using bindings_map_t = std::map<uint32_t, std::vector<VkDescriptorSetLayoutBinding>>;
     using pack_bindings_map_t = std::unordered_map<std::string, bindings_map_t>;
     using pack_resources_per_group_t = std::unordered_map<std::string, std::vector<std::string>>;
+    using pack_specialization_constants_map_t = std::unordered_map<std::string, std::vector<SpecializationConstant>>;
+    pack_specialization_constants_map_t constants_map;
     pack_bindings_map_t all_bindings;
 
     for (const auto& group_name : group_names) {
-        ShaderGroup* group = pack.GetShaderGroup(group_name.c_str());
+        const ShaderGroup* group = pack.GetShaderGroup(group_name.c_str());
         size_t num_sets = group->GetNumSetsRequired();
         bindings_map_t group_bindings;
         for (size_t i = 0; i < num_sets; ++i) {
@@ -70,6 +72,13 @@ int main(int argc, char* argv[]) {
             for (size_t i = 0; i < retrieved_block_names.NumStrings; ++i) {
                 block_names.emplace_back(retrieved_block_names.Strings[i]);
             }
+        }
+        size_t num_spcs = 0;
+        group->GetSpecializationConstants(&num_spcs, nullptr);
+        std::vector<SpecializationConstant> constants(num_spcs);
+        group->GetSpecializationConstants(&num_spcs, constants.data());
+        if (!constants.empty()) {
+            constants_map.emplace(group_name, constants);
         }
 
         all_bindings.emplace(group_name, group_bindings);
