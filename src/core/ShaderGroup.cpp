@@ -181,7 +181,7 @@ namespace st {
         }
     }
 
-    void ShaderGroup::GetSetLayoutBindings(const uint32_t & set_idx, size_t * num_bindings, VkDescriptorSetLayoutBinding * bindings) const {
+    void ShaderGroup::GetSetLayoutBindings(const size_t & set_idx, size_t * num_bindings, VkDescriptorSetLayoutBinding * bindings) const {
         const auto& b_impl = GetBindingGeneratorImpl();
         
         auto iter = b_impl->sortedSets.find(set_idx);
@@ -220,22 +220,29 @@ namespace st {
         
     }
 
-    dll_retrieved_strings_t ShaderGroup::GetUsedResourceBlocks(const Shader & handle) const {
+    dll_retrieved_strings_t ShaderGroup::GetUsedResourceBlocks() const {
         auto& ftracker = ShaderFileTracker::GetFileTracker();
-        if (ftracker.ShaderUsedResourceBlocks.count(handle) != 0) {
-            dll_retrieved_strings_t results;
-            results.SetNumStrings(ftracker.ShaderUsedResourceBlocks.count(handle));
-            size_t i = 0;
+        size_t num_strings = 0;
+        for (auto& handle : impl->stHandles) {
+            num_strings += ftracker.ShaderUsedResourceBlocks.count(handle);
+        }
+        dll_retrieved_strings_t results;
+        results.SetNumStrings(num_strings);
+
+        size_t curr_idx = 0;
+        for (auto& handle : impl->stHandles) {
             auto iter_pair = ftracker.ShaderUsedResourceBlocks.equal_range(handle);
             for (auto iter = iter_pair.first; iter != iter_pair.second; ++iter) {
-                results.Strings[i] = strdup(iter->second.c_str());
-                ++i;
+                results.Strings[curr_idx] = strdup(iter->second.c_str());
+                ++curr_idx;
             }
-            return results;
         }
-        else {
-            return dll_retrieved_strings_t();
-        }
+
+        return results;
+    }
+
+    size_t ShaderGroup::GetSetIdxOfResourceBlock(const char * block_name) {
+        return size_t();
     }
 
 }

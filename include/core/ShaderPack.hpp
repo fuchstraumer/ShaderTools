@@ -21,7 +21,9 @@ namespace st {
         ~ShaderPack();
 
         ShaderGroup* GetShaderGroup(const char* name) const;
-        dll_retrieved_strings_t GetGroupNames() const;
+        dll_retrieved_strings_t GetShaderGroupNames() const;
+        dll_retrieved_strings_t GetResourceGroupNames() const;
+        void GetResourceGroupPointers(const char* name, size_t* num_resources, ShaderResource** pointers);
         descriptor_type_counts_t GetDescriptorTypeCounts() const;
         ShaderResource* GetResource(const char* rsrc_name);
 
