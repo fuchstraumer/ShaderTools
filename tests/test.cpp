@@ -5,39 +5,42 @@
 #include <array>
 #include "easyloggingpp/src/easylogging++.h"
 INITIALIZE_EASYLOGGINGPP
-int screen_x() {
+
+static int screen_x() {
     return 1920;
 }
 
-int screen_y() {
+static int screen_y() {
     return 1080;
 }
 
-double z_near() {
+static double z_near() {
     return 0.1;
 }
 
-double z_far() {
+static double z_far() {
     return 3000.0;
 }
 
-double fov_y() {
+static double fov_y() {
     return 75.0;
 }
 
 int main(int argc, char* argv[]) {
     using namespace st; 
+
+    auto& callbacks = ShaderPack::RetrievalCallbacks();
     
-    ShaderGroup::RetrievalCallbacks.GetScreenSizeX = &screen_x;
-    ShaderGroup::RetrievalCallbacks.GetScreenSizeY = &screen_y;
-    ShaderGroup::RetrievalCallbacks.GetZNear = &z_near;
-    ShaderGroup::RetrievalCallbacks.GetZFar = &z_far;
-    ShaderGroup::RetrievalCallbacks.GetFOVY = &fov_y;
+    callbacks.GetScreenSizeX = &screen_x;
+    callbacks.GetScreenSizeY = &screen_y;
+    callbacks.GetZNear = &z_near;
+    callbacks.GetZFar = &z_far;
+    callbacks.GetFOVY = &fov_y;
     
     ShaderPack pack("../fragments/volumetric_forward/ShaderPack.lua");
     std::vector<std::string> group_names;
     {
-        auto names = pack.GetGroupNames();
+        auto names = pack.GetShaderGroupNames();
         for (size_t i = 0; i < names.NumStrings; ++i) {
             group_names.emplace_back(names.Strings[i]);
         }
