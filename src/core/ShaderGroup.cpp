@@ -153,6 +153,23 @@ namespace st {
         }
     }
 
+    void ShaderGroup::GetVertexAttributes(size_t * num_attributes, VkVertexInputAttributeDescription * attributes) const {
+        const BindingGeneratorImpl* b_impl = GetBindingGeneratorImpl();
+        if (!b_impl->inputAttributes.at(VK_SHADER_STAGE_VERTEX_BIT).empty()) {
+            *num_attributes = b_impl->inputAttributes.at(VK_SHADER_STAGE_VERTEX_BIT).size();
+            if (attributes != nullptr) {
+                std::vector<VkVertexInputAttributeDescription> descriptions;
+                for (const auto& attr : b_impl->inputAttributes.at(VK_SHADER_STAGE_VERTEX_BIT)) {
+                    descriptions.emplace_back(attr.second);
+                }
+                std::copy(descriptions.begin(), descriptions.end(), attributes);
+            }
+        }
+        else {
+            *num_attributes = 0;
+        }
+    }
+
     void ShaderGroup::GetSetLayoutBindings(const size_t & set_idx, size_t * num_bindings, VkDescriptorSetLayoutBinding * bindings) const {
         const auto& b_impl = GetBindingGeneratorImpl();
         
@@ -169,6 +186,23 @@ namespace st {
         }
         else {
             *num_bindings = 0;
+        }
+    }
+
+    void ShaderGroup::GetSpecializationConstants(size_t * num_constants, SpecializationConstant * constants) const {
+        const BindingGeneratorImpl* b_impl = GetBindingGeneratorImpl();
+        if (!b_impl->specializationConstants.empty()) {
+            *num_constants = b_impl->specializationConstants.size();
+            if (constants != nullptr) {
+                std::vector<SpecializationConstant> constant_vec;
+                for (const auto& entry : b_impl->specializationConstants) {
+                    constant_vec.emplace_back(entry.second);
+                }
+                std::copy(constant_vec.begin(), constant_vec.end(), constants);
+            }
+        }
+        else {
+            *num_constants = 0;
         }
     }
 

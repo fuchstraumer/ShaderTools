@@ -8,7 +8,8 @@
 #include "common/UtilityStructs.hpp"
 #include "shader_pack_file.hpp"
 #include "easyloggingpp/src/easylogging++.h"
-INITIALIZE_NULL_EASYLOGGINGPP
+#define ELPP_ASYNC_LOGGING
+INITIALIZE_EASYLOGGINGPP
 #ifdef FindResource
 #undef FindResource
 #endif
@@ -167,7 +168,7 @@ namespace st {
 
     ShaderPack::~ShaderPack() {}
 
-    ShaderGroup * ShaderPack::GetShaderGroup(const char * name) const {
+    const ShaderGroup* ShaderPack::GetShaderGroup(const char * name) const {
         if (impl->groups.count(name) != 0) {
             return impl->groups.at(name).get();
         }
@@ -239,6 +240,11 @@ namespace st {
             *num_resources = 0;
             return;
         }
+    }
+
+    void ShaderPack::GetGroupSpecializationConstants(const char * group_name, size_t * num_spcs, SpecializationConstant * constants) {
+        const ShaderGroup* group = GetShaderGroup(group_name);
+        group->GetSpecializationConstants(num_spcs, constants);
     }
 
     const descriptor_type_counts_t& ShaderPack::GetTotalDescriptorTypeCounts() const {

@@ -20,13 +20,14 @@ namespace st {
         ShaderPack(const char* shader_pack_lua_script_path);
         ~ShaderPack();
 
-        ShaderGroup* GetShaderGroup(const char* name) const;
+        const ShaderGroup* GetShaderGroup(const char* name) const;
         dll_retrieved_strings_t GetShaderGroupNames() const;
         dll_retrieved_strings_t GetResourceGroupNames() const;
+        const descriptor_type_counts_t& GetTotalDescriptorTypeCounts() const;
+
         void GetResourceGroupPointers(const char* name, size_t* num_resources, const ShaderResource** pointers);
         void CopyShaderResources(const char* name, size_t* num_resources, ShaderResource* dest_array);
-        const descriptor_type_counts_t& GetTotalDescriptorTypeCounts() const;
-        descriptor_type_counts_t GetSingleSetTypeCounts() const;
+        void GetGroupSpecializationConstants(const char* group_name, size_t* num_spcs, SpecializationConstant* constants);
         const ShaderResource* GetResource(const char* rsrc_name);
 
         static engine_environment_callbacks_t& RetrievalCallbacks();
