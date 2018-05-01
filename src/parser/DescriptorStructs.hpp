@@ -19,25 +19,7 @@ namespace st {
         uint32_t Offset{ 0 };
         bool isComplex{ false };
     };
-
-    struct SpecializationConstant {
-        enum class constant_type : uint32_t {
-            u32,
-            i32,
-            u64,
-            i64,
-            f32,
-            f64,
-            vector,
-            matrix,
-            invalid
-        } Type{ constant_type::u32 };
-        constant_type MemberType{ constant_type::f32 };
-        uint32_t Rows{ 1 };
-        uint32_t Columns{ 1 };
-        bool UsedForArrayLength{ false };
-    };
-    
+   
     struct PushConstantInfo {
         VkShaderStageFlags Stages;
         std::string Name;

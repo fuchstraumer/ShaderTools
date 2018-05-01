@@ -41,6 +41,30 @@ namespace st {
         std::add_pointer<double()>::type GetFOVY{ nullptr };
     };
 
+
+    struct ST_API SpecializationConstant {
+        enum class constant_type : uint32_t {
+            b32,
+            ui32,
+            i32,
+            ui64,
+            i64,
+            f32,
+            f64,
+            invalid
+        } Type{ constant_type::invalid };
+        uint32_t ConstantID;
+        union {
+            VkBool32 value_b32;
+            float value_f32;
+            int32_t value_i32;
+            uint32_t value_ui32;
+            double value_f64;
+            int64_t value_i64;
+            uint64_t value_ui64;
+        };
+    };
+
     VkFormat StorageImageFormatToVkFormat(const char* fmt);
     size_t MemoryFootprintForFormat(const VkFormat& fmt);
 }
