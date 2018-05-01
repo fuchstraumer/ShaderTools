@@ -170,16 +170,16 @@ namespace st {
     std::map<fs::path, std::string> ShaderGeneratorImpl::fileContents = std::map<fs::path, std::string>{};
 
     ShaderGeneratorImpl::ShaderGeneratorImpl(const VkShaderStageFlagBits& stage) : Stage(stage) {
-        fs::path preamble(std::string(BasePath) + "builtins/preamble450.glsl");
+        fs::path preamble(std::string(BasePath) + "/builtins/preamble450.glsl");
         addPreamble(preamble);
         if (Stage == VK_SHADER_STAGE_VERTEX_BIT) {
-            fs::path vertex_interface_base(std::string(BasePath) + "builtins/vertexInterface.glsl");
+            fs::path vertex_interface_base(std::string(BasePath) + "/builtins/vertexInterface.glsl");
             const auto& interface_str = addFragment(vertex_interface_base);
             parseInterfaceBlock(interface_str);
             addPerVertex();
         }
         else if (Stage == VK_SHADER_STAGE_FRAGMENT_BIT) {
-            fs::path fragment_interface_base(std::string(BasePath) + "builtins/fragmentInterface.glsl");
+            fs::path fragment_interface_base(std::string(BasePath) + "/builtins/fragmentInterface.glsl");
             const auto& interface_str = addFragment(fragment_interface_base);
             parseInterfaceBlock(interface_str);
         }
