@@ -11,28 +11,15 @@ namespace st {
 
     struct ShaderResourceSubObject {
         std::string Name;
-        uint32_t Size;
-        uint32_t Offset;
+        std::string Type;
+        union {
+            uint32_t Size;
+            uint32_t NumElements;
+        };
+        uint32_t Offset{ 0 };
+        bool isComplex{ false };
     };
-
-    struct SpecializationConstant {
-        enum class constant_type : uint32_t {
-            u32,
-            i32,
-            u64,
-            i64,
-            f32,
-            f64,
-            vector,
-            matrix,
-            invalid
-        } Type{ constant_type::u32 };
-        constant_type MemberType{ constant_type::f32 };
-        uint32_t Rows{ 1 };
-        uint32_t Columns{ 1 };
-        bool UsedForArrayLength{ false };
-    };
-    
+   
     struct PushConstantInfo {
         VkShaderStageFlags Stages;
         std::string Name;
@@ -57,7 +44,7 @@ namespace st {
         spirv_cross::SPIRType Type;
         std::string GetTypeStr() const;
         void SetTypeWithStr(std::string str);
-        explicit operator VkVertexInputAttributeDescription() const noexcept;
+        explicit operator VkVertexInputAttributeDescription() const;
         uint32_t Location;
         uint32_t Offset;
     };

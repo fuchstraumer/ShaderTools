@@ -56,65 +56,111 @@ function get_num_light_aabbs()
     return 512;
 end
 
-local Resources = {
+ObjectSizes = {
+    PointLight = 64,
+    SpotLight = 96,
+    DirectionalLight = 64,
+    AABB = 32,
+    Plane = 16,
+    Frustum = 64,
+    Sphere = 16,
+    Cone = 32,
+    LightingResult = 48,
+    Material = 128
+}
+
+Resources = {
+    GlobalResources = {
+        matrices = {
+            Type = "UniformBuffer",
+            Members = {
+                model = { "mat4", 0 },
+                view = { "mat4", 1 },
+                projection = { "mat4", 2 },
+                normal = { "mat4", 3 }
+            }
+        },
+        globals = {
+            Type = "UniformBuffer",
+            Members = {
+                viewPosition = { "vec4", 0 },
+                mousePosition = { "vec2", 1 },
+                windowSize = { "vec2", 2 },
+                depthRange = { "vec2", 3 },
+                frame = { "uint", 4 }
+            }
+        },
+        lightingData = {
+            Type = "UniformBuffer",
+            Members = {
+                Exposure = { "float", 0 },
+                Gamma = { "float", 1 }
+            }
+        }
+    },
     VolumetricForward = {
         ClusterData = {
             Type = "UniformBuffer",
             Members = {
-                GridDim = "uvec3",
-                ViewNear = "float",
-                ScreenSize = "uvec2",
-                Near = "float",
-                LogGridDimY = "float"
+                GridDim = { "uvec3", 0 },
+                ViewNear = { "float", 1 },
+                ScreenSize = { "uvec2", 2 },
+                Near = { "float", 3 },
+                LogGridDimY = { "float", 4 }
             }
         },
         ClusterAABBs = {
             Type = "StorageBuffer",
-            ElementType = "AABB",
-            NumElements = get_num_clusters()
+            Members = {
+                Data = { {
+                    Type = "Array",
+                    ElementType = "AABB",
+                    NumElements = get_num_clusters()
+                }, 0 }
+            }
         },
         ClusterFlags = {
-            Type = "StorageImage",
+            Type = "StorageTexelBuffer",
             Format = "r8ui",
             Size = get_num_clusters()
         },
         PointLightIndexList = {
-            Type = "StorageImage",
+            Type = "StorageTexelBuffer",
             Format = "r32ui",
             Size = light_index_list_size()
         },
         SpotLightIndexList = {
-            Type = "StorageImage",
+            Type = "StorageTexelBuffer",
             Format = "r32ui",
             Size = light_index_list_size()
         },
         PointLightGrid = {
-            Type = "StorageImage",
+            Type = "StorageTexelBuffer",
             Format = "rg32ui",
             Size = light_grid_size()
         },
         SpotLightGrid = {
-            Type = "StorageImage",
+            Type = "StorageTexelBuffer",
             Format = "rg32ui",
             Size = light_grid_size()
         },
         PointLightIndexCounter = {
-            Type = "StorageImage",
+            Type = "StorageTexelBuffer",
             Format = "r32ui",
             Size = 1
         },
         SpotLightIndexCounter = {
-            Type = "StorageImage",
+            Type = "StorageTexelBuffer",
             Format = "r32ui",
             Size = 1
         },
         UniqueClustersCounter = {
-            Type = "StorageImage",
+            Type = "StorageTexelBuffer",
             Format = "r32ui",
             Size = 1
         },
         UniqueClusters = {
-            Type = "StorageImage",
+            Type = "StorageTexelBuffer",
             Format = "r32ui",
             Size = get_num_clusters()
         }
@@ -123,34 +169,49 @@ local Resources = {
         LightCounts = {
             Type = "UniformBuffer",
             Members = {
-                NumPointLights = "uint",
-                NumSpotLights = "uint",
-                NumDirectionalLights = "uint"
+                NumPointLights = { "uint", 0 },
+                NumSpotLights = { "uint", 1 },
+                NumDirectionalLights = { "uint", 2 }
             }
         },
         PointLights = {
             Type = "StorageBuffer",
-            ElementType = "PointLight",
-            NumElements = get_num_point_lights()
+            Members = {
+                Data = { {
+                    Type = "Array",
+                    ElementType = "PointLight",
+                    NumElements = get_num_point_lights()
+                }, 0 }
+            }
         },
         SpotLights = {
             Type = "StorageBuffer",
-            ElementType = "SpotLight",
-            NumElements = get_num_spot_lights()
+            Members = {
+                Data = { {
+                    Type = "Array",
+                    ElementType = "SpotLight",
+                    NumElements = get_num_spot_lights()
+                }, 0 }
+            }
         },
         DirectionalLights = {
             Type = "StorageBuffer",
-            ElementType = "DirectionalLight",
-            NumElements = get_num_directional_lights()
+            Members = {
+                Data = { {
+                    Type = "Array",
+                    ElementType = "DirectionalLight",
+                    NumElements = get_num_directional_lights()
+                }, 0 }
+            }
         }
     },
     IndirectArgsSet = {
         IndirectArgs = {
-            Type = "UniformBuffer",
+            Type = "StorageBuffer",
             Members = {
-                NumThreadGroupsX = "uint",
-                NumThreadGroupsY = "uint",
-                NumThreadGroupsZ = "uint"
+                NumThreadGroupsX = { "uint", 0 },
+                NumThreadGroupsY = { "uint", 1 },
+                NumThreadGroupsZ = { "uint", 2 }
             }
         }       
     },
@@ -158,45 +219,50 @@ local Resources = {
         DispatchParams = {
             Type = "UniformBuffer",
             Members = {
-                NumThreadGroups = "uvec3",
-                NumThreads = "uvec3"
+                NumThreadGroups = { "uvec3", 0 },
+                NumThreads = { "uvec3", 1 }
             }
         },
         ReductionParams = {
             Type = "UniformBuffer",
             Members = {
-                NumElements = "uint"
+                NumElements = { "uint", 0 }
             }
         },
         SortParams = {
             Type = "UniformBuffer",
             Members = {
-                NumElements = "uint",
-                ChunkSize = "uint"
+                NumElements = { "uint", 0 },
+                ChunkSize = { "uint", 1 }
             }
         },
         LightAABBs = {
             Type = "StorageBuffer",
-            ElementType = "AABB",
-            NumElements = get_num_light_aabbs()
+            Members = {
+                Data = { {
+                    Type = "Array",
+                    ElementType = "AABB",
+                    NumElements = get_num_light_aabbs()
+                }, 0 }
+            }
         },
         PointLightMortonCodes = {
-            Type = "StorageImage",
+            Type = "StorageTexelBuffer",
             Format = "r32ui",
             Size = get_num_point_lights()
         },
         SpotLightMortonCodes = {
-            Type = "StorageImage",
+            Type = "StorageTexelBuffer",
             Format = "r32ui",
             Size = get_num_spot_lights()
         },
         PointLightIndices = {
-            Type = "StorageImage",
+            Type = "StorageTexelBuffer",
             Format = "r32ui",
             Size = get_num_point_lights()
         },
         SpotLightIndices = {
-            Type = "StorageImage",
+            Type = "StorageTexelBuffer",
             Format = "r32ui",
             Size = get_num_spot_lights()
         }
@@ -205,20 +271,53 @@ local Resources = {
         BVHParams = {
             Type = "UniformBuffer",
             Members = {
-                PointLightLevels = "uint",
-                SpotLightLevels = "uint",
-                ChildLevel = "uint"
+                PointLightLevels = { "uint", 0 },
+                SpotLightLevels = { "uint", 1 },
+                ChildLevel = { "uint", 2 }
             }
         },
         PointLightBVH = {
             Type = "StorageBuffer",
-            ElementType = "AABB",
-            NumElements = get_num_point_lights()
+            Members = {
+                Data = { {
+                    Type = "Array",
+                    ElementType = "AABB",
+                    NumElements = get_num_point_lights()
+                }, 0 }
+            }
         },
         SpotLightBVH = {
             Type = "StorageBuffer",
-            ElementType = "AABB",
-            NumElements = get_num_spot_lights()
+            Members = {
+                Data = { {
+                    Type = "Array",
+                    ElementType = "AABB",
+                    NumElements = get_num_spot_lights()
+                }, 0 }
+            }
+        }
+    },
+    MaterialResources = {
+        diffuseMap = {
+            Type = "CombinedImageSampler",
+            ImageOptions = {
+                SizeClass = "Absolute",
+                SampleCount = 1,
+                ImageType = "2D",
+                GenerateMipMaps = false,
+                MipLevels = 1,
+                Layers = 1
+            },
+            SamplerOptions = {
+                MagFilter = "Linear",
+                MinFilter = "Linear",
+                MipMapFilter = "Linear",
+                AddressModeU = "Repeat",
+                AddressModeV = "Repeat",
+                AddressModeW = "ClampToEdge",
+                EnableAnisotropy = true,
+                MaxAnisotropy = 4.0
+            }
         }
     }
 }

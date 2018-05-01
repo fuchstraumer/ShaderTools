@@ -1,4 +1,4 @@
-#include "parser/DescriptorStructs.hpp"
+#include "DescriptorStructs.hpp"
 
 namespace st {
 
@@ -170,6 +170,14 @@ namespace st {
         }
         else if (type.basetype == SPIRType::Image || type.basetype == SPIRType::SampledImage) {
             switch (type.image.format) {
+            case spv::ImageFormatR8ui:
+                return VK_FORMAT_R8_UINT;
+            case spv::ImageFormat::ImageFormatR8i:
+                return VK_FORMAT_R8_SINT;
+            case spv::ImageFormatRg8ui:
+                return VK_FORMAT_R8G8_UINT;
+            case spv::ImageFormatRg8i:
+                return VK_FORMAT_R8G8_SINT;
             case spv::ImageFormatRgba32f:
                 return VK_FORMAT_R32G32B32A32_SFLOAT;
             case spv::ImageFormatRgba16f:
@@ -422,7 +430,7 @@ namespace st {
         Type = TypeFromStr(str);
     }
 
-    VertexAttributeInfo::operator VkVertexInputAttributeDescription() const noexcept {
+    VertexAttributeInfo::operator VkVertexInputAttributeDescription() const {
         return VkVertexInputAttributeDescription{ Location, 0, FormatFromSPIRType(Type), Offset };
     }
 

@@ -3,23 +3,19 @@
 #include <regex>
 #include <fstream>
 #include <experimental/filesystem>
-#include <map>
 #include <vector>
 #include <set>
-#include <cassert>
-#include <sstream>
 #include <unordered_map>
-#include <mutex>
-#include "lua/ResourceFile.hpp"
+#include "../lua/ResourceFile.hpp"
 #include "../util/FilesystemUtils.hpp"
 #include "../util/ShaderFileTracker.hpp"
+#include "easyloggingpp/src/easylogging++.h"
 namespace fs = std::experimental::filesystem;
 
 namespace st {
 
     extern std::unordered_map<Shader, std::string> shaderFiles;
     extern std::unordered_multimap<Shader, fs::path> shaderPaths;
-    extern ShaderFileTracker FileTracker;
 
     std::string BasePath = "../fragments/";
     std::string LibPath = "../fragments/include";
@@ -58,6 +54,41 @@ namespace st {
     static const std::regex include_library("#include <(\\S+)>");
     static const std::regex include_local("#include \"(\\S+)\"");
     static const std::regex specialization_constant("\\$SPC\\s+(const\\s+\\S+\\s+\\S+\\s+=\\s+\\S+;\n)");
+
+    static const std::unordered_map<VkFormat, std::string> VkFormatToStorageImageFormatStr{
+        { VK_FORMAT_R8_UINT, "r8ui" },
+        { VK_FORMAT_R8_SINT, "r8i" },
+        { VK_FORMAT_R8G8_UINT, "rg8ui" },
+        { VK_FORMAT_R8G8_SINT, "rg8i" },
+        { VK_FORMAT_R8G8B8_UINT, "rgb8ui" },
+        { VK_FORMAT_R8G8B8_SINT, "rgb8i" },
+        { VK_FORMAT_R8G8B8A8_UINT, "rgba8ui" },
+        { VK_FORMAT_R8G8B8A8_SINT, "rgba8i" },
+        { VK_FORMAT_R16_UINT, "r16ui" },
+        { VK_FORMAT_R16_SINT, "r16i" },
+        { VK_FORMAT_R16_SFLOAT, "r16f" },
+        { VK_FORMAT_R16G16_UINT, "rg16ui" },
+        { VK_FORMAT_R16G16_SINT, "rg16i" },
+        { VK_FORMAT_R16G16_SFLOAT, "rg16f" },
+        { VK_FORMAT_R16G16B16_UINT, "rgb16ui" },
+        { VK_FORMAT_R16G16B16_SINT, "rgb16i" },
+        { VK_FORMAT_R16G16B16_SFLOAT, "rgb16f" },
+        { VK_FORMAT_R16G16B16A16_UINT, "rgba16ui" },
+        { VK_FORMAT_R16G16B16A16_SINT, "rgba16i" },
+        { VK_FORMAT_R16G16B16A16_SFLOAT, "rgba16f" },
+        { VK_FORMAT_R32_UINT, "r32ui" },
+        { VK_FORMAT_R32_SINT, "r32i" },
+        { VK_FORMAT_R32_SFLOAT, "r32f" },
+        { VK_FORMAT_R32G32_UINT, "rg32ui" },
+        { VK_FORMAT_R32G32_SINT, "rg32ui" },
+        { VK_FORMAT_R32G32_SFLOAT, "rg32f" },
+        { VK_FORMAT_R32G32B32_UINT, "rgb32ui" },
+        { VK_FORMAT_R32G32B32_SINT, "rgb32i" },
+        { VK_FORMAT_R32G32B32_SFLOAT, "rgb32f" },
+        { VK_FORMAT_R32G32B32A32_UINT, "rgba32ui" },
+        { VK_FORMAT_R32G32B32A32_SINT, "rgba32i" },
+        { VK_FORMAT_R32G32B32A32_SFLOAT, "rgba32f" }
+    };
 
     enum class fragment_type : uint8_t {
         Preamble = 0,
@@ -114,9 +145,10 @@ namespace st {
 
         size_t getBinding(size_t & active_set);
         std::string getResourcePrefix(size_t active_set, const std::string & image_format);
-        std::string getUniformBufferResourceString(const size_t& active_set, const UniformBuffer & buffer, const std::string & name);
-        std::string getStorageBufferResourceString(const size_t & active_set, const StorageBuffer & buffer, const std::string & name);
-        std::string getStorageImageResourceString(const size_t & active_set, const StorageImage & buffer, const std::string & name);
+        std::string getBufferMembersString(const ShaderResource & resource);
+        std::string getUniformBufferResourceString(const size_t& active_set, const ShaderResource & buffer, const std::string & name);
+        std::string getStorageBufferResourceString(const size_t & active_set, const ShaderResource & buffer, const std::string & name);
+        std::string getStorageImageResourceString(const size_t & active_set, const ShaderResource & buffer, const std::string & name);
         void useResourceBlock(const std::string& block_name);
 
         std::string fetchBodyStr(const Shader & handle, const std::string & path_to_source);
@@ -134,8 +166,6 @@ namespace st {
         std::vector<fs::path> includes;
     };
 
-    
-    static std::mutex fileMutex;
     std::map<fs::path, std::string> ShaderGeneratorImpl::fileContents = std::map<fs::path, std::string>{};
 
     ShaderGeneratorImpl::ShaderGeneratorImpl(const VkShaderStageFlagBits& stage) : Stage(stage) {
@@ -155,13 +185,7 @@ namespace st {
 
     }
 
-    ShaderGeneratorImpl::~ShaderGeneratorImpl() {
-        std::ofstream out("compute_test.glsl");
-        for (auto& frag : fragments) {
-            out << frag.Data;
-        }
-        out.close();
-    }
+    ShaderGeneratorImpl::~ShaderGeneratorImpl() { }
 
     ShaderGeneratorImpl::ShaderGeneratorImpl(ShaderGeneratorImpl&& other) noexcept : Stage(std::move(other.Stage)), fragments(std::move(other.fragments)),
         resourceBlocks(std::move(other.resourceBlocks)), ShaderResources(std::move(other.ShaderResources)), includes(std::move(other.includes)) {}
@@ -176,21 +200,22 @@ namespace st {
     }
 
     void ShaderGeneratorImpl::addPreamble(const fs::path& path) {
-        if (fileContents.count(path) == 0) {
+        if (fileContents.count(fs::absolute(path)) == 0) {
             std::ifstream file_stream(path);
             if (!file_stream.is_open()) {
+                LOG(ERROR) << "Couldn't find shader preamble file. Workding directory is probably set incorrectly!";
                 throw std::runtime_error("Failed to open preamble file at given path.");
             }
             std::string preamble{ std::istreambuf_iterator<char>(file_stream), std::istreambuf_iterator<char>() };
 
-            std::lock_guard<std::mutex> emplace_guard(fileMutex);
             auto fc_iter = fileContents.emplace(fs::absolute(path), preamble);
             if (!fc_iter.second) {
-                throw std::runtime_error("Failed to emplace preamble (path,source_str) into file contents map.");
+                LOG(WARNING) << "Failed to emplace loaded source string into fileContents map.";
             }
 
             auto frag_iter = fragments.emplace(shaderFragment{ fragment_type::Preamble, preamble });
             if (frag_iter == fragments.end()) {
+                LOG(ERROR) << "Couldn't add premamble to generator's fragments container! Generation cannot proceed without this component.";
                 throw std::runtime_error("Failed to add preamble to generator's fragments multimap!");
             }
 
@@ -208,13 +233,13 @@ namespace st {
 
         if (!fs::exists(source_file)) {
             const std::string exception_str = std::string("Given shader fragment path \"") + source_file.string() + std::string("\" does not exist!");
+            LOG(ERROR) << exception_str;
             throw std::runtime_error(exception_str);
         }
 
         std::ifstream file_stream(source_file);
 
         std::string file_content{ std::istreambuf_iterator<char>(file_stream), std::istreambuf_iterator<char>() };
-        std::lock_guard<std::mutex> emplace_guard(fileMutex);
         fileContents.emplace(source_file, std::move(file_content));
         return fileContents.at(source_file);
     }
@@ -229,6 +254,7 @@ namespace st {
         }
 
         if (match.size() == 0) {
+            LOG(ERROR) << "Could not find match for interface block.";
             throw std::runtime_error("Failed to find any matches.");
         }
 
@@ -292,6 +318,7 @@ namespace st {
             include_path = fs::path(std::string(LibPath + str));
 
             if (!fs::exists(include_path)) {
+                LOG(ERROR) << "Couldn't find specified include " << include_path.string() << " in library includes.";
                 throw std::runtime_error("Failed to find desired include in library includes.");
             }
         }
@@ -306,6 +333,7 @@ namespace st {
             }
             
             if (!found) {
+                LOG(ERROR) << "Could not find desired include " << include_path.string() << " in shader-local include paths.";
                 throw std::runtime_error("Failed to find desired include in local include paths.");
             }
         }
@@ -318,6 +346,7 @@ namespace st {
         std::ifstream include_file(include_path);
 
         if (!include_file.is_open()) {
+            LOG(ERROR) << "Include file path was valid, but failed to open input file stream!";
             throw std::runtime_error("Failed to open include file, despite having a valid path!");
         }
 
@@ -355,30 +384,44 @@ namespace st {
         return prefix;
     }
 
-    std::string ShaderGeneratorImpl::getUniformBufferResourceString(const size_t& active_set, const UniformBuffer& buffer, const std::string& name) {
+    std::string ShaderGeneratorImpl::getBufferMembersString(const ShaderResource& resource) {
+        std::string result;
+
+        size_t num_members = 0;
+        resource.GetMembers(&num_members, nullptr);
+        std::vector<ShaderResourceSubObject> subobjects(num_members);
+        resource.GetMembers(&num_members, subobjects.data());
+
+        for (const auto& member : subobjects) {
+            result += std::string{ "    " };
+            result += member.Type;
+            result += std::string(" ") + member.Name;
+            result += std::string{ ";\n" };
+        }
+
+        return result;
+    }
+
+    std::string ShaderGeneratorImpl::getUniformBufferResourceString(const size_t& active_set, const ShaderResource& buffer, const std::string& name) {
         const std::string prefix = getResourcePrefix(active_set, "");
         const std::string alt_name = std::string{ "_" } + name + std::string{ "_" };
         std::string result = prefix + std::string{ "uniform " } + alt_name + std::string{ " {\n" };
-        for (const auto& member : buffer.MemberTypes) {
-            result += std::string{ "    " };
-            result += member.second;
-            result += std::string{ " " } +member.first;
-            result += std::string{ ";\n" };
-        }
+        result += getBufferMembersString(buffer);
         result += std::string{ "} " } + name + std::string{ ";\n\n" };
         return result;
     }
 
-    std::string ShaderGeneratorImpl::getStorageBufferResourceString(const size_t& active_set, const StorageBuffer& buffer, const std::string& name) {
+    std::string ShaderGeneratorImpl::getStorageBufferResourceString(const size_t& active_set, const ShaderResource& buffer, const std::string& name) {
         const std::string prefix = getResourcePrefix(active_set, "std430");
         const std::string alt_name = std::string{ "buffer " } + std::string{ "_" } + name + std::string{ "_" };
         std::string result = prefix + alt_name + std::string{ " {\n" };
-        result += std::string{ "    " } + buffer.ElementType + std::string{ " Data[];\n" };
+        result += getBufferMembersString(buffer);
+        size_t num_members = 0;
         result += std::string{ "} " } + name + std::string{ ";\n\n" };
         return result;
     }
 
-    std::string ShaderGeneratorImpl::getStorageImageResourceString(const size_t& active_set, const StorageImage& image, const std::string& name) {
+    std::string ShaderGeneratorImpl::getStorageImageResourceString(const size_t& active_set, const ShaderResource& image, const std::string& name) {
 
         auto get_storage_buffer_subtype = [&](const std::string& image_format)->std::string {
             if (image_format.back() == 'f') {
@@ -395,13 +438,15 @@ namespace st {
             }
         };
 
-        const std::string prefix = getResourcePrefix(active_set, image.Format);
-        const std::string buffer_type = get_storage_buffer_subtype(image.Format);
+        const VkFormat& fmt = image.GetFormat();
+        const std::string& format_string = VkFormatToStorageImageFormatStr.at(fmt);
+        const std::string prefix = getResourcePrefix(active_set, format_string);
+        const std::string buffer_type = get_storage_buffer_subtype(format_string);
         return prefix + std::string{ "uniform " } + buffer_type + std::string{ " " } +name + std::string{ ";\n" };
     }
 
 #ifndef NDEBUG
-    constexpr bool SAVE_BLOCKS_TO_FILE = true;
+    constexpr bool SAVE_BLOCKS_TO_FILE = false;
 #else
     constexpr bool SAVE_BLOCKS_TO_FILE = false;
 #endif
@@ -418,35 +463,26 @@ namespace st {
         std::string resource_block_string{ "" };
 
         for (auto& resource : resource_block) {
-            const auto& resource_name = resource.first;
-            const auto& resource_item = resource.second;
-            
-            if (std::holds_alternative<UniformBuffer>(resource_item)) {
-                resource_block_string += getUniformBufferResourceString(active_set, std::get<UniformBuffer>(resource_item), resource_name);
-            }
-            else if (std::holds_alternative<StorageBuffer>(resource_item)) {
-                resource_block_string += getStorageBufferResourceString(active_set, std::get<StorageBuffer>(resource_item), resource_name);
-            }
-            else if (std::holds_alternative<StorageImage>(resource_item)) {
-                resource_block_string += getStorageImageResourceString(active_set, std::get<StorageImage>(resource_item), resource_name);
-            }
-            else {
-                throw std::domain_error("Encountered currently unsupported resource type.");
+            const std::string resource_name = resource.GetName();
+            const auto& resource_item = resource;
+            switch (resource_item.GetType()) {
+            case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+                resource_block_string += getUniformBufferResourceString(active_set, resource_item, resource_name);
+                break;
+            case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+                resource_block_string += getStorageBufferResourceString(active_set, resource_item, resource_name);
+                break;
+            case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
+                resource_block_string += getStorageImageResourceString(active_set, resource_item, resource_name);
+                break;
+            default:
+                LOG(ERROR) << "Unsupported VkDescriptorType encountered when generating resources for resource block in ShaderGenerator!";
+                throw std::domain_error("Unsupported VkDescriptorType encountered in ShaderGenerator!");
             }
 
         }
 
         resource_block_string += std::string{ "// End resource block\n\n" };
-
-        if (SAVE_BLOCKS_TO_FILE) {
-            std::string block_file_name = block_name + std::string{ ".glsl" };
-            std::ofstream block_stream(block_file_name);
-            if (!block_stream.is_open()) {
-                throw std::runtime_error("failed to open stream!");
-            }
-            block_stream << resource_block_string;
-            block_stream.flush(); block_stream.close();
-        }
 
         fragments.emplace(shaderFragment{ fragment_type::ResourceBlock, resource_block_string });
 
@@ -454,9 +490,10 @@ namespace st {
 
     std::string ShaderGeneratorImpl::fetchBodyStr(const Shader& handle, const std::string& path_to_source) {
         std::string body_str;
-
+        auto& FileTracker = ShaderFileTracker::GetFileTracker();
         if (!FileTracker.FindShaderBody(handle, body_str)) {
             if (!FileTracker.AddShaderBodyPath(handle, path_to_source)) {
+                LOG(ERROR) << "Could not find or add+load a shader body source string at path " << path_to_source;
                 throw std::runtime_error("Failed to find or add (then load) a shader body source string!");
             }
             else {
@@ -504,13 +541,15 @@ namespace st {
     }
 
     void ShaderGeneratorImpl::processBodyStrResourceBlocks(const Shader& handle, std::string& body_str) {
+
+        auto& FileTracker = ShaderFileTracker::GetFileTracker();
         bool block_found = true;
         while (block_found) {
             std::smatch match;
             if (std::regex_search(body_str, match, use_set_resources)) {
                 useResourceBlock(match[1].str());
+                FileTracker.ShaderUsedResourceBlocks.emplace(handle, match[1].str());
                 body_str.erase(body_str.begin() + match.position(), body_str.begin() + match.position() + match.length());
-                FileTracker.usedResourceBlockNames.emplace(handle, match[1].str());
             }
             else {
                 block_found = false;
@@ -569,6 +608,7 @@ namespace st {
         const std::string source_str = impl->getFullSource();
         std::ofstream output_file(fname);
         if (!output_file.is_open()) {
+            LOG(ERROR) << "Could not open file to output completed shader to.";
             throw std::runtime_error("Could not open file to write completed plaintext shader to!");
         }
 

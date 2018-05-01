@@ -1,5 +1,7 @@
-#include "lua/LuaEnvironment.hpp"
+#include "LuaEnvironment.hpp"
+#include "easyloggingpp/src/easylogging++.h"
 using namespace luabridge;
+
 namespace st {
 
     LuaEnvironment::LuaEnvironment() : state(luaL_newstate()) {
@@ -12,9 +14,12 @@ namespace st {
         }
     }
 
-    LuaEnvironment & LuaEnvironment::GetCurrentLuaEnvironment() {
-        static LuaEnvironment environment;
-        return environment;
+    void LuaEnvironment::Execute(const char * fname) {
+        if (luaL_dofile(state, fname)) {
+            const std::string err = std::string("Failed to execute Lua script, error log is:\n") + lua_tostring(state, -1) + std::string("\n");
+            LOG(ERROR) << err;
+            throw std::logic_error(err.c_str());
+        }
     }
 
     bool LuaEnvironment::HasVariable(const std::string & var_name) {
@@ -26,6 +31,7 @@ namespace st {
         std::unordered_map<std::string, luabridge::LuaRef> results{};
 
         if (table.isNil()) {
+            LOG(WARNING) << "Passed LuaRef to GetTableMap method was nil!";
             return results;
         }
 
