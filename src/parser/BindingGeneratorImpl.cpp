@@ -227,6 +227,60 @@ namespace st {
         }
     }
 
+    void BindingGeneratorImpl::parseSpecializationConstants() {
+        using namespace spirv_cross;
+        auto constants = recompiler->get_specialization_constants();
+        if (!constants.empty()) {
+            for (const auto& spc : constants) {
+                SpecializationConstant spc_new;
+                spc_new.ConstantID = spc.constant_id;
+                if (specializationConstants.count(spc.constant_id) != 0) {
+                    // Already registered this one.
+                    continue;
+                }
+                const SPIRType spc_type = recompiler->get_type(spc.id);
+                const SPIRConstant& spc_value = recompiler->get_constant(spc.id);
+
+                if (spc_type.columns > 1 || spc_type.vecsize > 1) {
+                    LOG(ERROR) << "Matrix/vector specialization constants are currently not supported!";
+                    throw std::domain_error("Attempted to use unsupported specialization constant type.");
+                }
+
+                switch (spc_type.basetype) {
+                case SPIRType::Boolean:
+                    spc_new.Type = SpecializationConstant::constant_type::b32;
+                    spc_new.value_b32 = static_cast<VkBool32>(spc_value.scalar());
+                    break;
+                case SPIRType::UInt:
+                    spc_new.Type = SpecializationConstant::constant_type::ui32;
+                    spc_new.value_ui32 = spc_value.scalar();
+                    break;
+                case SPIRType::Int:
+                    spc_new.Type = SpecializationConstant::constant_type::i32;
+                    spc_new.value_i32 = spc_value.scalar_i32();
+                    break;
+                case SPIRType::Float:
+                    spc_new.Type = SpecializationConstant::constant_type::f32;
+                    spc_new.value_f32 = spc_value.scalar_f32();
+                    break;
+                case SPIRType::Double:
+                    spc_new.Type = SpecializationConstant::constant_type::f64;
+                    spc_new.value_f64 = spc_value.scalar_f64();
+                    break;
+                case SPIRType::UInt64:
+                    spc_new.Type = SpecializationConstant::constant_type::ui32;
+                    spc_new.value_ui64 = spc_value.scalar_u64();
+                case SPIRType::Int64:
+                    spc_new.Type = SpecializationConstant::constant_type::i64;
+                    spc_new.value_i64 = spc_value.scalar_i64();
+                    break;
+                }
+
+                specializationConstants.emplace(spc.constant_id, spc_new);
+            }
+        }
+    }
+
     void BindingGeneratorImpl::parseImpl(const Shader& handle, const std::vector<uint32_t>& binary_data) {
         using namespace spirv_cross;
         recompiler = std::make_unique<Compiler>(binary_data);
@@ -239,7 +293,8 @@ namespace st {
         parseResourceType(handle, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
         parseResourceType(handle, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
         collateSets(handle);
-        
+        parseSpecializationConstants();
+
         auto resources = recompiler->get_shader_resources();
         if (!resources.push_constant_buffers.empty()) {
             auto iter = pushConstants.emplace(stage, parsePushConstants(*recompiler, stage));
