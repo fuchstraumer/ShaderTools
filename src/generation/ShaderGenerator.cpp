@@ -39,6 +39,9 @@ namespace st {
     static const std::regex end_lighting_model("#pragma LIGHTING_MODEL_END\n");
     static const std::regex feature_resources("#pragma FEATURE_RESOURCES_BEGIN\n");
     static const std::regex end_feature_resources("#pragma FEATURE_RESOURCES_END\n");
+
+    static const std::regex interface_override("#pragma INTERFACE_OVERRIDE\n");
+    static const std::regex end_interface_override("#pragma END_INTERFACE_OVERRIDE");
     
     // $TEXTURE flag indicates texture follows. First match group is type. Second match group is name.
     static const std::regex sampler2d_resource("SAMPLER_2D\\s+(\\S+;\n)");
@@ -127,8 +130,9 @@ namespace st {
         void useResourceBlock(const std::string& block_name);
 
         std::string fetchBodyStr(const Shader & handle, const std::string & path_to_source);
-        void processBodyStrSpecializationConstants(std::string & body_src_str);
+        void checkInterfaceOverrides(std::string& body_src_str);
         void processBodyStrIncludes(std::string & body_src_str);
+        void processBodyStrSpecializationConstants(std::string & body_src_str);
         void processBodyStrResourceBlocks(const Shader& handle, std::string & body_str);
         void generate(const Shader& handle, const std::string& path_to_src);
 
@@ -638,6 +642,22 @@ namespace st {
         return body_str;
     }
 
+    void ShaderGeneratorImpl::checkInterfaceOverrides(std::string& body_src_str) {
+        std::smatch match;
+        if (std::regex_search(body_src_str, match, interface_override)) {
+            auto iter = std::find_if(fragments.begin(), fragments.end(), [](const shaderFragment& fragment){ return fragment.Type == fragment_type::InterfaceBlock; });
+            if (iter != fragments.cend()) {
+                // Remove pre-existing interface block, use one defined inline in source string.
+                fragments.erase(iter);
+            }
+            body_src_str.erase(body_src_str.begin() + match.position(), body_src_str.begin() + match.position() + match.length());
+            if (!std::regex_search(body_src_str, match, end_interface_override)) {
+                throw std::runtime_error("Found opening of an override interface block, but couldn't find closing #pragma.");
+            }
+            body_src_str.erase(body_src_str.begin() + match.position(), body_src_str.begin() + match.position() + match.length());
+        }
+    }
+
     void ShaderGeneratorImpl::processBodyStrSpecializationConstants(std::string& body_src_str) {
         bool spc_found = true;
         while (spc_found) {
@@ -692,8 +712,11 @@ namespace st {
 
     void ShaderGeneratorImpl::generate(const Shader& handle, const std::string& path_to_source) {
         std::string body_str{ fetchBodyStr(handle, path_to_source) };
-        processBodyStrSpecializationConstants(body_str);
+        // Includes can be any of the following: resource blocks, overrides, specialization_constants. 
+        // Get them imported first so any potentially unique elements included are processed properly.
         processBodyStrIncludes(body_str);
+        checkInterfaceOverrides(body_str);
+        processBodyStrSpecializationConstants(body_str);
         processBodyStrResourceBlocks(handle, body_str);
         fragments.emplace(shaderFragment{ fragment_type::Main, body_str });
     }
