@@ -387,7 +387,7 @@ namespace st {
         return result;
     }
 
-    std::string ShaderGeneratorImpl::getStorageImageResourceString(const size_t& active_set, const ShaderResource& image, const std::string& name) {
+    std::string ShaderGeneratorImpl::getStorageTexelBufferString(const size_t& active_set, const ShaderResource& image, const std::string& name) {
 
         auto get_storage_buffer_subtype = [&](const std::string& image_format)->std::string {
             if (image_format.back() == 'f') {
@@ -398,14 +398,17 @@ namespace st {
                 if (last_two == "ui") {
                     return std::string("uimageBuffer");
                 }
-                else {
+                else if (image_format.back() == 'i') {
                     return std::string("iimageBuffer");
+                }
+                else {
+                    return std::string("imageBuffer");
                 }
             }
         };
 
         const VkFormat& fmt = image.GetFormat();
-        const std::string& format_string = VkFormatToStorageImageFormatStr.at(fmt);
+        const std::string format_string = VkFormatEnumToString(fmt);
         const std::string prefix = getResourcePrefix(active_set, format_string);
         const std::string buffer_type = get_storage_buffer_subtype(format_string);
         return prefix + std::string{ "uniform " } + buffer_type + std::string{ " " } +name + std::string{ ";\n" };
