@@ -87,7 +87,7 @@ Resources = {
             Size = NumLights
         }
         lightColors = {
-            Type = "StorageTexelBuffer",
+            Type = "UniformTexelBuffer",
             Format = "rgba8",
             Size = NumLights
         }
@@ -117,6 +117,9 @@ Resources = {
         },
         diffuseMap = {
             Type = "CombinedImageSampler"
+            ImageInfo = {
+                DataStoredOn = "Host"
+            }
         },
         normalMap = {
             Type = "CombinedImageSampler"

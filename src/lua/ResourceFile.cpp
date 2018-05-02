@@ -489,7 +489,7 @@ namespace st {
         rsrc.SetMembers(subobjects.size(), subobjects.data());
     }
 
-    void ResourceFile::createStorageTexelBufferResource(const std::unordered_map<std::string, luabridge::LuaRef>& table, ShaderResource& rsrc) const {
+    void ResourceFile::createTexelBufferResource(const std::unordered_map<std::string, luabridge::LuaRef>& table, ShaderResource& rsrc) const {
         std::string format_str = table.at("Format").cast<std::string>();
         rsrc.SetFormat(VkFormatFromString(format_str));
         size_t image_size = static_cast<size_t>(table.at("Size").cast<int>());
@@ -520,6 +520,26 @@ namespace st {
         if (table.count("SamplerOptions") != 0) {
             rsrc.SetSamplerInfo(parseSamplerOptions(environment->GetTableMap(table.at("SamplerOptions"))));
         }
+    }
+
+    void ResourceFile::createStorageImageResource(const std::unordered_map<std::string, luabridge::LuaRef>& table, ShaderResource& rsrc) const {
+        if (table.count("ImageOptions") == 0) {
+            LOG(WARNING) << "No ImageInfo given for a storage image: can't fill out ShaderResource information members!";
+            return;
+        }
+
+        rsrc.SetImageInfo(parseImageOptions(rsrc, environment->GetTableMap(table.at("ImageOptions"))));
+        size_t format_size = VkFormatSize(rsrc.GetFormat());
+        size_t image_size = static_cast<size_t>(table.at("Size").cast<int>());
+        rsrc.SetMemoryRequired(format_size * image_size);
+
+    }
+
+    void ResourceFile::createInputAttachmentResource(const std::unordered_map<std::string, luabridge::LuaRef>& table, ShaderResource& rsrc) const {
+        const std::string format_str = table.at("Format").cast<std::string>();
+        rsrc.SetFormat(VkFormatFromString(format_str));
+        size_t idx = static_cast<size_t>(table.at("Index").cast<int>());
+        rsrc.SetInputAttachmentIndex(idx);
     }
 
     void ResourceFile::parseResources() {
@@ -567,7 +587,8 @@ namespace st {
                     createStorageBufferResource(set_resource_data, resource);
                 }
                 else if (vk_type == VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER || vk_type == VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER) {
-                    createStorageTexelBufferResource(set_resource_data, resource);
+                    // Different descriptor type set above, but otherwise their setup here is identical.
+                    createTexelBufferResource(set_resource_data, resource);
                 }
                 else if (vk_type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) {
                     createCombinedImageSamplerResource(set_resource_data, resource);
@@ -577,6 +598,12 @@ namespace st {
                 }
                 else if (vk_type == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE) {
                     createSampledImageResource(set_resource_data, resource);
+                }
+                else if (vk_type == VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT) {
+                    createInputAttachmentResource(set_resource_data, resource);
+                }
+                else if (vk_type == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE) {
+                    createStorageImageResource(set_resource_data, resource);
                 }
                 else {
                     LOG(ERROR) << "Requested resource type " << type_of_resource << " is currently unsupported.";
