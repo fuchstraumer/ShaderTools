@@ -173,7 +173,7 @@ namespace st {
     void ShaderGroup::GetSetLayoutBindings(const size_t & set_idx, size_t * num_bindings, VkDescriptorSetLayoutBinding * bindings) const {
         const auto& b_impl = GetBindingGeneratorImpl();
         
-        auto iter = b_impl->sortedSets.find(set_idx);
+        auto iter = b_impl->sortedSets.find(static_cast<uint32_t>(set_idx));
         if (iter != b_impl->sortedSets.cend()) {
             *num_bindings = iter->second.Members.size();
             if (bindings != nullptr) {
@@ -245,10 +245,6 @@ namespace st {
         }
 
         return results;
-    }
-
-    size_t ShaderGroup::GetSetIdxOfResourceBlock(const char * block_name) {
-        return size_t();
     }
 
 }

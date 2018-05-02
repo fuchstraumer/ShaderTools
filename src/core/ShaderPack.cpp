@@ -1,14 +1,13 @@
 #include "core/ShaderPack.hpp"
 #include "core/ShaderGroup.hpp"
 #include "../lua/LuaEnvironment.hpp"
-
 #include "core/ShaderResource.hpp"
 #include "../util/ShaderFileTracker.hpp"
 #include "../parser/BindingGeneratorImpl.hpp"
+#include "generation/ShaderGenerator.hpp"
 #include "common/UtilityStructs.hpp"
 #include "shader_pack_file.hpp"
 #include "easyloggingpp/src/easylogging++.h"
-#define ELPP_ASYNC_LOGGING
 INITIALIZE_EASYLOGGINGPP
 #ifdef FindResource
 #undef FindResource
@@ -67,6 +66,8 @@ namespace st {
         namespace fs = std::experimental::filesystem;
         workingDir = fs::absolute(workingDir);
         workingDir = workingDir.remove_filename();
+        const std::string dir_string = workingDir.parent_path().string();
+        ShaderGenerator::SetBasePath(dir_string.c_str());
         createGroups();
         setDescriptorTypeCounts();
     }

@@ -8,7 +8,9 @@
 #include <unordered_map>
 #include "../lua/ResourceFile.hpp"
 #include "../util/FilesystemUtils.hpp"
+#include "../util/ResourceFormats.hpp"
 #include "../util/ShaderFileTracker.hpp"
+#include "common/UtilityStructs.hpp"
 #include "easyloggingpp/src/easylogging++.h"
 namespace fs = std::experimental::filesystem;
 
@@ -55,41 +57,6 @@ namespace st {
     static const std::regex include_local("#include \"(\\S+)\"");
     static const std::regex specialization_constant("\\$SPC\\s+(const\\s+\\S+\\s+\\S+\\s+=\\s+\\S+;\n)");
 
-    static const std::unordered_map<VkFormat, std::string> VkFormatToStorageImageFormatStr{
-        { VK_FORMAT_R8_UINT, "r8ui" },
-        { VK_FORMAT_R8_SINT, "r8i" },
-        { VK_FORMAT_R8G8_UINT, "rg8ui" },
-        { VK_FORMAT_R8G8_SINT, "rg8i" },
-        { VK_FORMAT_R8G8B8_UINT, "rgb8ui" },
-        { VK_FORMAT_R8G8B8_SINT, "rgb8i" },
-        { VK_FORMAT_R8G8B8A8_UINT, "rgba8ui" },
-        { VK_FORMAT_R8G8B8A8_SINT, "rgba8i" },
-        { VK_FORMAT_R16_UINT, "r16ui" },
-        { VK_FORMAT_R16_SINT, "r16i" },
-        { VK_FORMAT_R16_SFLOAT, "r16f" },
-        { VK_FORMAT_R16G16_UINT, "rg16ui" },
-        { VK_FORMAT_R16G16_SINT, "rg16i" },
-        { VK_FORMAT_R16G16_SFLOAT, "rg16f" },
-        { VK_FORMAT_R16G16B16_UINT, "rgb16ui" },
-        { VK_FORMAT_R16G16B16_SINT, "rgb16i" },
-        { VK_FORMAT_R16G16B16_SFLOAT, "rgb16f" },
-        { VK_FORMAT_R16G16B16A16_UINT, "rgba16ui" },
-        { VK_FORMAT_R16G16B16A16_SINT, "rgba16i" },
-        { VK_FORMAT_R16G16B16A16_SFLOAT, "rgba16f" },
-        { VK_FORMAT_R32_UINT, "r32ui" },
-        { VK_FORMAT_R32_SINT, "r32i" },
-        { VK_FORMAT_R32_SFLOAT, "r32f" },
-        { VK_FORMAT_R32G32_UINT, "rg32ui" },
-        { VK_FORMAT_R32G32_SINT, "rg32ui" },
-        { VK_FORMAT_R32G32_SFLOAT, "rg32f" },
-        { VK_FORMAT_R32G32B32_UINT, "rgb32ui" },
-        { VK_FORMAT_R32G32B32_SINT, "rgb32i" },
-        { VK_FORMAT_R32G32B32_SFLOAT, "rgb32f" },
-        { VK_FORMAT_R32G32B32A32_UINT, "rgba32ui" },
-        { VK_FORMAT_R32G32B32A32_SINT, "rgba32i" },
-        { VK_FORMAT_R32G32B32A32_SFLOAT, "rgba32f" }
-    };
-
     enum class fragment_type : uint8_t {
         Preamble = 0,
         InterfaceBlock,
@@ -120,6 +87,7 @@ namespace st {
         size_t PushConstantOffset = 0;
         size_t LastInputIndex = 0;
         size_t LastOutputIndex = 0;
+        size_t LastInputAttachmentIndex = 0;
         size_t NumAttributes = 0;
         size_t NumInstanceAttributes = 0;
         std::multimap<size_t, size_t> DescriptorBindings;
@@ -143,12 +111,19 @@ namespace st {
         void parseConstantBlock(const std::string& str);
         void parseInclude(const std::string& str, bool local);
 
-        size_t getBinding(size_t & active_set);
-        std::string getResourcePrefix(size_t active_set, const std::string & image_format);
-        std::string getBufferMembersString(const ShaderResource & resource);
-        std::string getUniformBufferResourceString(const size_t& active_set, const ShaderResource & buffer, const std::string & name);
-        std::string getStorageBufferResourceString(const size_t & active_set, const ShaderResource & buffer, const std::string & name);
-        std::string getStorageImageResourceString(const size_t & active_set, const ShaderResource & buffer, const std::string & name);
+        size_t getBinding(size_t & active_set) const;
+        std::string getResourcePrefix(size_t active_set, const std::string & image_format) const;
+        std::string getBufferMembersString(const ShaderResource & resource) const;
+        std::string getUniformBufferString(const size_t& active_set, const ShaderResource & buffer, const std::string & name) const;
+        std::string getStorageBufferString(const size_t & active_set, const ShaderResource & buffer, const std::string & name) const;
+        std::string getStorageTexelBufferString(const size_t & active_set, const ShaderResource & buffer, const std::string & name) const;
+        std::string getUniformTexelBufferString(const size_t & active_set, const ShaderResource & texel_buffer, const std::string & name) const;
+        std::string getImageTypeSuffix(const VkImageCreateInfo & info) const;
+        std::string getStorageImageString(const size_t & active_set, const ShaderResource & storage_image, const std::string & name) const;
+        std::string getSamplerString(const size_t & active_set, const ShaderResource & sampler, const std::string & name) const;
+        std::string getSampledImageString(const size_t & active_set, const ShaderResource & sampled_image, const std::string & name) const;
+        std::string getCombinedImageSamplerString(const size_t & active_set, const ShaderResource & combined_image_sampler, const std::string & name) const;
+        std::string getInputAttachmentString(const size_t & active_set, const ShaderResource & input_attachment, const std::string & name) const;
         void useResourceBlock(const std::string& block_name);
 
         std::string fetchBodyStr(const Shader & handle, const std::string & path_to_source);
@@ -161,7 +136,7 @@ namespace st {
         std::multiset<shaderFragment> fragments;
         static std::map<fs::path, std::string> fileContents;
         std::map<std::string, std::string> resourceBlocks;
-        shader_resources_t ShaderResources;
+        mutable shader_resources_t ShaderResources;
         ResourceFile* luaResources;
         std::vector<fs::path> includes;
     };
@@ -169,16 +144,16 @@ namespace st {
     std::map<fs::path, std::string> ShaderGeneratorImpl::fileContents = std::map<fs::path, std::string>{};
 
     ShaderGeneratorImpl::ShaderGeneratorImpl(const VkShaderStageFlagBits& stage) : Stage(stage) {
-        fs::path preamble(std::string(BasePath) + "builtins/preamble450.glsl");
+        fs::path preamble(std::string(BasePath) + "/builtins/preamble450.glsl");
         addPreamble(preamble);
         if (Stage == VK_SHADER_STAGE_VERTEX_BIT) {
-            fs::path vertex_interface_base(std::string(BasePath) + "builtins/vertexInterface.glsl");
+            fs::path vertex_interface_base(std::string(BasePath) + "/builtins/vertexInterface.glsl");
             const auto& interface_str = addFragment(vertex_interface_base);
             parseInterfaceBlock(interface_str);
             addPerVertex();
         }
         else if (Stage == VK_SHADER_STAGE_FRAGMENT_BIT) {
-            fs::path fragment_interface_base(std::string(BasePath) + "builtins/fragmentInterface.glsl");
+            fs::path fragment_interface_base(std::string(BasePath) + "/builtins/fragmentInterface.glsl");
             const auto& interface_str = addFragment(fragment_interface_base);
             parseInterfaceBlock(interface_str);
         }
@@ -356,7 +331,7 @@ namespace st {
 
     }
 
-    size_t ShaderGeneratorImpl::getBinding(size_t& active_set) {
+    size_t ShaderGeneratorImpl::getBinding(size_t& active_set) const {
         if (ShaderResources.DescriptorBindings.count(active_set) == 0) {
             ShaderResources.DescriptorBindings.insert({ active_set, 0 });
             return 0;
@@ -369,7 +344,7 @@ namespace st {
         }
     }
 
-    std::string ShaderGeneratorImpl::getResourcePrefix(size_t active_set, const std::string& format_specifier) {
+    std::string ShaderGeneratorImpl::getResourcePrefix(size_t active_set, const std::string& format_specifier) const {
         std::string prefix{
             std::string{ "layout (set = " } + std::to_string(active_set) + std::string{ ", binding = " } + std::to_string(getBinding(active_set))
         };
@@ -384,7 +359,7 @@ namespace st {
         return prefix;
     }
 
-    std::string ShaderGeneratorImpl::getBufferMembersString(const ShaderResource& resource) {
+    std::string ShaderGeneratorImpl::getBufferMembersString(const ShaderResource& resource) const {
         std::string result;
 
         size_t num_members = 0;
@@ -402,7 +377,7 @@ namespace st {
         return result;
     }
 
-    std::string ShaderGeneratorImpl::getUniformBufferResourceString(const size_t& active_set, const ShaderResource& buffer, const std::string& name) {
+    std::string ShaderGeneratorImpl::getUniformBufferString(const size_t& active_set, const ShaderResource& buffer, const std::string& name) const {
         const std::string prefix = getResourcePrefix(active_set, "");
         const std::string alt_name = std::string{ "_" } + name + std::string{ "_" };
         std::string result = prefix + std::string{ "uniform " } + alt_name + std::string{ " {\n" };
@@ -411,19 +386,18 @@ namespace st {
         return result;
     }
 
-    std::string ShaderGeneratorImpl::getStorageBufferResourceString(const size_t& active_set, const ShaderResource& buffer, const std::string& name) {
+    std::string ShaderGeneratorImpl::getStorageBufferString(const size_t& active_set, const ShaderResource& buffer, const std::string& name) const {
         const std::string prefix = getResourcePrefix(active_set, "std430");
         const std::string alt_name = std::string{ "buffer " } + std::string{ "_" } + name + std::string{ "_" };
         std::string result = prefix + alt_name + std::string{ " {\n" };
         result += getBufferMembersString(buffer);
-        size_t num_members = 0;
         result += std::string{ "} " } + name + std::string{ ";\n\n" };
         return result;
     }
 
-    std::string ShaderGeneratorImpl::getStorageImageResourceString(const size_t& active_set, const ShaderResource& image, const std::string& name) {
+    std::string ShaderGeneratorImpl::getStorageTexelBufferString(const size_t& active_set, const ShaderResource& image, const std::string& name) const {
 
-        auto get_storage_buffer_subtype = [&](const std::string& image_format)->std::string {
+        auto get_storage_texel_buffer_subtype = [&](const std::string& image_format)->std::string {
             if (image_format.back() == 'f') {
                 return std::string("imageBuffer");
             }
@@ -432,17 +406,155 @@ namespace st {
                 if (last_two == "ui") {
                     return std::string("uimageBuffer");
                 }
-                else {
+                else if (image_format.back() == 'i') {
                     return std::string("iimageBuffer");
+                }
+                else {
+                    return std::string("imageBuffer");
                 }
             }
         };
 
         const VkFormat& fmt = image.GetFormat();
-        const std::string& format_string = VkFormatToStorageImageFormatStr.at(fmt);
+        const std::string format_string = VkFormatEnumToString(fmt);
         const std::string prefix = getResourcePrefix(active_set, format_string);
-        const std::string buffer_type = get_storage_buffer_subtype(format_string);
+        const std::string buffer_type = get_storage_texel_buffer_subtype(format_string);
         return prefix + std::string{ "uniform " } + buffer_type + std::string{ " " } +name + std::string{ ";\n" };
+    }
+
+    std::string ShaderGeneratorImpl::getUniformTexelBufferString(const size_t& active_set, const ShaderResource& texel_buffer, const std::string& name) const {
+        auto get_uniform_texel_buffer_subtype = [&](const std::string& image_format)->std::string {
+            if (image_format.back() == 'f') {
+                return std::string("textureBuffer");
+            }
+            else {
+                std::string last_two = image_format.substr(image_format.size() - 2, 2);
+                if (last_two == "ui") {
+                    return std::string("utextureBuffer");
+                }
+                else if (image_format.back() == 'i') {
+                    return std::string("itextureBuffer");
+                }
+                else {
+                    return std::string("textureBuffer");
+                }
+            }
+        };
+        
+        const VkFormat fmt = texel_buffer.GetFormat();
+        const std::string format_string = VkFormatEnumToString(fmt);
+        const std::string prefix = getResourcePrefix(active_set, format_string);
+        const std::string buffer_type = get_uniform_texel_buffer_subtype(format_string);
+        return prefix + std::string("uniform ") + buffer_type + std::string(" ") + name + std::string(";\n");
+    }
+
+    std::string ShaderGeneratorImpl::getImageTypeSuffix(const VkImageCreateInfo& info) const {
+        std::string base_suffix;
+        switch (info.imageType) {
+        case VK_IMAGE_TYPE_1D:
+            base_suffix = "1D";
+            break;
+        case VK_IMAGE_TYPE_2D:
+            base_suffix = "2D";
+            break;
+        case VK_IMAGE_TYPE_3D:
+            base_suffix = "3D";
+            break;
+        default:
+            LOG(ERROR) << "Encountered invalid image type.";
+            throw std::domain_error("Invalid/not set ImageType value");
+        }
+
+        if (info.flags & VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT) {
+            base_suffix += "Array";
+        }
+        else if (info.flags & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT) {
+            base_suffix += "CubeArray";
+        }
+
+        return base_suffix;
+    }
+
+    std::string ShaderGeneratorImpl::getStorageImageString(const size_t& active_set, const ShaderResource& storage_image, const std::string& name) const {
+        auto get_image_subtype = [&](const std::string& image_format)->std::string {
+            if (image_format.back() == 'f') {
+                return std::string("image");
+            }
+            else {
+                std::string last_two = image_format.substr(image_format.size() - 2, 2);
+                if (last_two == "ui") {
+                    return std::string("uimage");
+            }
+                else if (image_format.back() == 'i') {
+                    return std::string("iimage");
+                }
+                else {
+                    return std::string("image");
+                }
+            }
+        };
+
+        const VkFormat fmt = storage_image.GetFormat();
+        const std::string fmt_string = VkFormatEnumToString(fmt);
+        const std::string prefix = getResourcePrefix(active_set, fmt_string);
+        const std::string resource_type = get_image_subtype(fmt_string) + getImageTypeSuffix(storage_image.ImageInfo());
+        return prefix + std::string("uniform ") + resource_type + std::string(" ") + name + std::string(";\n");
+    }
+
+    std::string ShaderGeneratorImpl::getSamplerString(const size_t& active_set, const ShaderResource& sampler, const std::string& name) const {
+        const std::string prefix = getResourcePrefix(active_set, "");
+        return prefix + std::string("uniform sampler ") + name + std::string(";\n");
+    }
+
+    std::string ShaderGeneratorImpl::getSampledImageString(const size_t& active_set, const ShaderResource& sampled_image, const std::string& name) const {
+        const std::string prefix = getResourcePrefix(active_set, "");
+        const std::string resource_type = std::string("texture") + getImageTypeSuffix(sampled_image.ImageInfo());
+        return prefix + std::string("uniform ") + resource_type + std::string(" ") + name + std::string(";\n");
+    }
+
+    std::string ShaderGeneratorImpl::getCombinedImageSamplerString(const size_t& active_set, const ShaderResource& combined_image_sampler, const std::string& name) const {
+        const std::string prefix = getResourcePrefix(active_set, "");
+        const std::string resource_type = std::string("sampler") + getImageTypeSuffix(combined_image_sampler.ImageInfo());
+        return prefix + std::string("uniform ") + resource_type + std::string(" ") + name + std::string(";\n");
+    }
+
+    std::string ShaderGeneratorImpl::getInputAttachmentString(const size_t& active_set, const ShaderResource& input_attachment, const std::string& name) const {
+        auto get_input_attachment_specifier = [&]()->std::string {
+            static const std::string base_str("input_attachment_index=");
+            return base_str + std::to_string(input_attachment.GetInputAttachmentIndex()) + std::string(" ");
+        };
+
+        auto get_input_attachment_subtype = [&](const std::string& format_str)->std::string {
+            std::string result;
+            if (format_str.back() == 'f') {
+                result = std::string("subpassInput");
+            }
+            else {
+                std::string last_two = format_str.substr(format_str.size() - 2, 2);
+                if (last_two == "ui") {
+                    result = std::string("usubpassInput");
+                }
+                else if (format_str.back() == 'i') {
+                    result = std::string("isubpassInput");
+                }
+                else {
+                    result = std::string("subpassInput");
+                }
+            }
+           
+            const VkImageCreateInfo info = input_attachment.ImageInfo();
+            if (info.samples != VK_SAMPLE_COUNT_1_BIT) {
+                result += std::string("MS"); // add multisampled flag.
+            }
+
+            return result;
+        };
+
+        const VkFormat fmt = input_attachment.GetFormat();
+        const std::string fmt_string = VkFormatEnumToString(fmt);
+        const std::string prefix = getResourcePrefix(active_set, get_input_attachment_specifier());
+        const std::string resource_type = get_input_attachment_subtype(fmt_string);
+        return prefix + std::string("uniform ") + resource_type + std::string(" ") + name + std::string(";\n");
     }
 
 #ifndef NDEBUG
@@ -464,16 +576,37 @@ namespace st {
 
         for (auto& resource : resource_block) {
             const std::string resource_name = resource.GetName();
-            const auto& resource_item = resource;
+            auto& resource_item = resource;
             switch (resource_item.GetType()) {
-            case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
-                resource_block_string += getUniformBufferResourceString(active_set, resource_item, resource_name);
+            case VK_DESCRIPTOR_TYPE_SAMPLER:
+                resource_block_string += getSamplerString(active_set, resource_item, resource_name);
                 break;
-            case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
-                resource_block_string += getStorageBufferResourceString(active_set, resource_item, resource_name);
+            case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+                resource_block_string += getCombinedImageSamplerString(active_set, resource_item, resource_name);
+                break;
+            case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+                resource_block_string += getStorageImageString(active_set, resource_item, resource_name);
+                break;
+            case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
+                resource_block_string += getUniformTexelBufferString(active_set, resource_item, resource_name);
                 break;
             case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
-                resource_block_string += getStorageImageResourceString(active_set, resource_item, resource_name);
+                resource_block_string += getStorageTexelBufferString(active_set, resource_item, resource_name);
+                break;
+            case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+                resource_block_string += getUniformBufferString(active_set, resource_item, resource_name);
+                break;
+            case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+                resource_block_string += getStorageBufferString(active_set, resource_item, resource_name);
+                break;
+            case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
+                resource_block_string += getUniformBufferString(active_set, resource_item, resource_name);
+                break;
+            case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
+                resource_block_string += getStorageBufferString(active_set, resource_item, resource_name);
+                break;
+            case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
+                resource_block_string += getInputAttachmentString(active_set, resource_item, resource_name);
                 break;
             default:
                 LOG(ERROR) << "Unsupported VkDescriptorType encountered when generating resources for resource block in ShaderGenerator!";

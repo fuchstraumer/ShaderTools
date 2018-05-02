@@ -41,11 +41,11 @@ ENDIF()
 SET_PROPERTY(TARGET ShaderTools PROPERTY CXX_STANDARD 17)
 TARGET_COMPILE_OPTIONS(ShaderTools PRIVATE "/bigobj" "/MP")
 #TARGET_COMPILE_DEFINITIONS(ShaderTools PRIVATE -DSHADERTOOLS_BUILD_DLL)
-TARGET_LINK_LIBRARIES(ShaderTools shaderc spirv-cross-core spirv-cross-glsl spirv-cross-cpp)
-TARGET_LINK_LIBRARIES(ShaderTools liblua easyloggingpp)
-TARGET_INCLUDE_DIRECTORIES(ShaderTools PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/third_party/" "${CMAKE_CURRENT_SOURCE_DIR}/include" "${Vulkan_INCLUDE_DIRS}")
-TARGET_INCLUDE_DIRECTORIES(ShaderTools PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/ext/include" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/luajit/src"
-    "${CMAKE_CURRENT_SOURCE_DIR}/third_party/luabridge/Source")
+TARGET_LINK_LIBRARIES(ShaderTools PRIVATE shaderc spirv-cross-core spirv-cross-glsl spirv-cross-cpp)
+TARGET_LINK_LIBRARIES(ShaderTools PRIVATE liblua easyloggingpp)
+TARGET_INCLUDE_DIRECTORIES(ShaderTools PUBLIC  "${CMAKE_CURRENT_SOURCE_DIR}/include" "${Vulkan_INCLUDE_DIRS}")
+TARGET_INCLUDE_DIRECTORIES(ShaderTools PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/" "${CMAKE_CURRENT_SOURCE_DIR}/ext/include" 
+    "${CMAKE_CURRENT_SOURCE_DIR}/third_party/luajit/src" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/luabridge/Source")
     
 TARGET_COMPILE_DEFINITIONS(ShaderTools PRIVATE 
     "-D_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS"
