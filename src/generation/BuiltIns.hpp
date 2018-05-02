@@ -61,6 +61,11 @@ namespace st {
     #extension GL_KHR_shader_subgroup_quad: enable
     )";
 
+    const char* SparseResidencyExtensions = R"(
+    #extension GL_ARB_sparse_texture2 : enable
+    #extension GL_ARB_sparse_texture_clamp : enable
+    )";
+
 }
 
 #endif //!ST_BUILT_IN_FRAGMENTS_HPP
