@@ -56,41 +56,6 @@ namespace st {
     static const std::regex include_local("#include \"(\\S+)\"");
     static const std::regex specialization_constant("\\$SPC\\s+(const\\s+\\S+\\s+\\S+\\s+=\\s+\\S+;\n)");
 
-    static const std::unordered_map<VkFormat, std::string> VkFormatToStorageImageFormatStr{
-        { VK_FORMAT_R8_UINT, "r8ui" },
-        { VK_FORMAT_R8_SINT, "r8i" },
-        { VK_FORMAT_R8G8_UINT, "rg8ui" },
-        { VK_FORMAT_R8G8_SINT, "rg8i" },
-        { VK_FORMAT_R8G8B8_UINT, "rgb8ui" },
-        { VK_FORMAT_R8G8B8_SINT, "rgb8i" },
-        { VK_FORMAT_R8G8B8A8_UINT, "rgba8ui" },
-        { VK_FORMAT_R8G8B8A8_SINT, "rgba8i" },
-        { VK_FORMAT_R16_UINT, "r16ui" },
-        { VK_FORMAT_R16_SINT, "r16i" },
-        { VK_FORMAT_R16_SFLOAT, "r16f" },
-        { VK_FORMAT_R16G16_UINT, "rg16ui" },
-        { VK_FORMAT_R16G16_SINT, "rg16i" },
-        { VK_FORMAT_R16G16_SFLOAT, "rg16f" },
-        { VK_FORMAT_R16G16B16_UINT, "rgb16ui" },
-        { VK_FORMAT_R16G16B16_SINT, "rgb16i" },
-        { VK_FORMAT_R16G16B16_SFLOAT, "rgb16f" },
-        { VK_FORMAT_R16G16B16A16_UINT, "rgba16ui" },
-        { VK_FORMAT_R16G16B16A16_SINT, "rgba16i" },
-        { VK_FORMAT_R16G16B16A16_SFLOAT, "rgba16f" },
-        { VK_FORMAT_R32_UINT, "r32ui" },
-        { VK_FORMAT_R32_SINT, "r32i" },
-        { VK_FORMAT_R32_SFLOAT, "r32f" },
-        { VK_FORMAT_R32G32_UINT, "rg32ui" },
-        { VK_FORMAT_R32G32_SINT, "rg32ui" },
-        { VK_FORMAT_R32G32_SFLOAT, "rg32f" },
-        { VK_FORMAT_R32G32B32_UINT, "rgb32ui" },
-        { VK_FORMAT_R32G32B32_SINT, "rgb32i" },
-        { VK_FORMAT_R32G32B32_SFLOAT, "rgb32f" },
-        { VK_FORMAT_R32G32B32A32_UINT, "rgba32ui" },
-        { VK_FORMAT_R32G32B32A32_SINT, "rgba32i" },
-        { VK_FORMAT_R32G32B32A32_SFLOAT, "rgba32f" }
-    };
-
     enum class fragment_type : uint8_t {
         Preamble = 0,
         InterfaceBlock,

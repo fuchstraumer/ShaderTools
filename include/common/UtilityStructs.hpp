@@ -82,8 +82,6 @@ namespace st {
         bool isComplex{ false };
     };
 
-    VkFormat StorageImageFormatToVkFormat(const char* fmt);
-    size_t MemoryFootprintForFormat(const VkFormat& fmt);
 }
 
 #endif //!SHADER_TOOLS_UTILITY_STRUCTS_HPP

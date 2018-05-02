@@ -18,17 +18,6 @@ namespace st {
         explicit operator VkPushConstantRange() const noexcept;
     };
 
-    std::string GetTypeString(const VkDescriptorType& type);
-    VkDescriptorType GetTypeFromString(const std::string& str);
-
-    std::string StageFlagToStr(const VkShaderStageFlags& flag);
-    VkShaderStageFlags StrToStageFlags(const std::string& str);
-        
-    std::string TypeToStr(const spirv_cross::SPIRType& stype);
-    spirv_cross::SPIRType::BaseType BaseTypeEnumFromStr(const std::string& str);
-    spirv_cross::SPIRType TypeFromStr(const std::string& str);
-    VkFormat FormatFromSPIRType(const spirv_cross::SPIRType& type);
-
     struct VertexAttributeInfo {
         std::string Name;
         spirv_cross::SPIRType Type;
