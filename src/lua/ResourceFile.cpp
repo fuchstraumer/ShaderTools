@@ -3,6 +3,7 @@
 #include "core/ShaderPack.hpp"
 #include "common/UtilityStructs.hpp"
 #include "../util/ShaderFileTracker.hpp"
+#include "../util/ResourceFormats.hpp"
 #include <iostream>
 #include "easyloggingpp/src/easylogging++.h"
 #ifdef FindResource
@@ -490,9 +491,9 @@ namespace st {
 
     void ResourceFile::createStorageTexelBufferResource(const std::unordered_map<std::string, luabridge::LuaRef>& table, ShaderResource& rsrc) const {
         std::string format_str = table.at("Format").cast<std::string>();
-        rsrc.SetFormat(StorageImageFormatToVkFormat(format_str.c_str()));
+        rsrc.SetFormat(VkFormatFromString(format_str));
         size_t image_size = static_cast<size_t>(table.at("Size").cast<int>());
-        size_t footprint = MemoryFootprintForFormat(rsrc.GetFormat());
+        size_t footprint = VkFormatSize(rsrc.GetFormat());
         if (footprint != std::numeric_limits<size_t>::max()) {
             rsrc.SetMemoryRequired(footprint * image_size);
         }

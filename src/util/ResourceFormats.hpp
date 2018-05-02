@@ -22,7 +22,6 @@ namespace st {
     // Image formats (mainly)
     VkFormat VkFormatFromSPIRType(const spirv_cross::SPIRType& type);
     VkFormat VkFormatFromString(const std::string& string);
-    std::string SPIR_TypeToImageFormatString(const spirv_cross::SPIRType& type);
     std::string VkFormatEnumToString(const VkFormat& string);
     size_t VkFormatSize(const VkFormat& fmt); 
       

@@ -8,6 +8,7 @@
 #include <unordered_map>
 #include "../lua/ResourceFile.hpp"
 #include "../util/FilesystemUtils.hpp"
+#include "../util/ResourceFormats.hpp"
 #include "../util/ShaderFileTracker.hpp"
 #include "common/UtilityStructs.hpp"
 #include "easyloggingpp/src/easylogging++.h"
@@ -438,7 +439,7 @@ namespace st {
                 resource_block_string += getStorageBufferResourceString(active_set, resource_item, resource_name);
                 break;
             case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
-                resource_block_string += getStorageImageResourceString(active_set, resource_item, resource_name);
+                resource_block_string += getStorageTexelBufferString(active_set, resource_item, resource_name);
                 break;
             default:
                 LOG(ERROR) << "Unsupported VkDescriptorType encountered when generating resources for resource block in ShaderGenerator!";
