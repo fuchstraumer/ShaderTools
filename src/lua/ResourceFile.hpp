@@ -38,13 +38,16 @@ namespace st {
         void setBaseResourceInfo(const std::string & parent_name, const std::string & name, const VkDescriptorType type, ShaderResource & rsrc) const;
         void createUniformBufferResources(const std::unordered_map<std::string, luabridge::LuaRef>& table, ShaderResource& rsrc) const;
         void createStorageBufferResource(const std::unordered_map<std::string, luabridge::LuaRef>& table, ShaderResource& rsrc) const;
-        void createStorageTexelBufferResource(const std::unordered_map<std::string, luabridge::LuaRef>& table, ShaderResource& rsrc) const;
+        void createTexelBufferResource(const std::unordered_map<std::string, luabridge::LuaRef>& table, ShaderResource& rsrc) const;
         void createCombinedImageSamplerResource(const std::unordered_map<std::string, luabridge::LuaRef>& table, ShaderResource& rsrc) const;
         void createSampledImageResource(const std::unordered_map<std::string, luabridge::LuaRef>& table, ShaderResource& rsrc) const;
         void createSamplerResource(const std::unordered_map<std::string, luabridge::LuaRef>& table, ShaderResource& rsrc) const;
 
+        void createStorageImageResource(const std::unordered_map<std::string, luabridge::LuaRef>& table, ShaderResource & rsrc) const;
+
         std::unordered_map<std::string, set_resource_map_t> setResources;
         std::unique_ptr<LuaEnvironment> environment;
+        void createInputAttachmentResource(const std::unordered_map<std::string, luabridge::LuaRef>& table, ShaderResource & rsrc) const;
         void parseResources();
     };
 
