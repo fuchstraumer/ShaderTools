@@ -58,17 +58,17 @@ void SerialMerge(int a0, int a1, int b0, int b1, int diag, int num_values, int o
 }
 
 void MergePathPartitionsFunc() {
-    const uint chunkSize = SortParams.ChunkSize;
-    const uint numValuesPerSortGroup = min(chunkSize * 2, SortParams.NumElements);
-    const uint numChunks = uint(ceil(float(SortParams.NumElements) / float(chunkSize)));
-    const uint numSortGroups = numChunks / 2;
+    uint chunkSize = SortParams.ChunkSize;
+    uint numValuesPerSortGroup = min(chunkSize * 2, SortParams.NumElements);
+    uint numChunks = uint(ceil(float(SortParams.NumElements) / float(chunkSize)));
+    uint numSortGroups = numChunks / 2;
 
-    const uint numPartitionsPerSortGroup = uint(ceil(numValuesPerSortGroup / float(NUM_VALUES_PER_THREAD_GROUP)) + 1);
-    const uint sortGroup = gl_GlobalInvocationID.x / numPartitionsPerSortGroup;
-    const uint partitionInSortGroup = gl_GlobalInvocationID.x % numPartitionsPerSortGroup;
+    uint numPartitionsPerSortGroup = uint(ceil(numValuesPerSortGroup / float(NUM_VALUES_PER_THREAD_GROUP)) + 1);
+    uint sortGroup = gl_GlobalInvocationID.x / numPartitionsPerSortGroup;
+    uint partitionInSortGroup = gl_GlobalInvocationID.x % numPartitionsPerSortGroup;
 
-    const uint globalPartition = (sortGroup * numPartitionsPerSortGroup) + partitionInSortGroup;
-    const uint maxPartitions = numSortGroups * numPartitionsPerSortGroup;
+    uint globalPartition = (sortGroup * numPartitionsPerSortGroup) + partitionInSortGroup;
+    uint maxPartitions = numSortGroups * numPartitionsPerSortGroup;
 
     if (globalPartition < maxPartitions) {
         int a0 = int(sortGroup * numValuesPerSortGroup);
@@ -85,32 +85,32 @@ void MergePathPartitionsFunc() {
 }
 
 void MergeSort() {
-    const restrict uint numChunks = uint(ceil(float(SortParams.NumElements) / float(SortParams.ChunkSize)));
-    const restrict uint numSortGroups = max(numChunks / 2, 1);
+    restrict uint numChunks = uint(ceil(float(SortParams.NumElements) / float(SortParams.ChunkSize)));
+    restrict uint numSortGroups = max(numChunks / 2, 1);
 
-    const uint numValuesPerSortGroup = min(SortParams.ChunkSize * 2, SortParams.NumElements);
-    const uint numThreadGroupsPerSortGroup = uint(ceil(numValuesPerSortGroup / float(NUM_VALUES_PER_THREAD_GROUP)));
-    const uint numPartitionsPerSortGroup = numThreadGroupsPerSortGroup + 1;
+    uint numValuesPerSortGroup = min(SortParams.ChunkSize * 2, SortParams.NumElements);
+    uint numThreadGroupsPerSortGroup = uint(ceil(numValuesPerSortGroup / float(NUM_VALUES_PER_THREAD_GROUP)));
+    uint numPartitionsPerSortGroup = numThreadGroupsPerSortGroup + 1;
     
-    const uint sortGroup = gl_GlobalInvocationID.x / numThreadGroupsPerSortGroup;
-    const uint partitionVal = gl_GlobalInvocationID.x % numThreadGroupsPerSortGroup;
+    uint sortGroup = gl_GlobalInvocationID.x / numThreadGroupsPerSortGroup;
+    uint partitionVal = gl_GlobalInvocationID.x % numThreadGroupsPerSortGroup;
     
-    const uint globalPartition = (sortGroup * numPartitionsPerSortGroup) + partitionVal;
+    uint globalPartition = (sortGroup * numPartitionsPerSortGroup) + partitionVal;
 
-    const int mergePath0 = imageLoad(MergePathPartitions, int(globalPartition)).r;
-    const int mergePath1 = imageLoad(MergePathPartitions, int(globalPartition + 1)).r;
-    const int diag0 = int(min(partitionVal * NUM_VALUES_PER_THREAD_GROUP, numValuesPerSortGroup));
-    const int diag1 = int(min((partitionVal + 1) * NUM_VALUES_PER_THREAD_GROUP, numValuesPerSortGroup));
+    int mergePath0 = imageLoad(MergePathPartitions, int(globalPartition)).r;
+    int mergePath1 = imageLoad(MergePathPartitions, int(globalPartition + 1)).r;
+    int diag0 = int(min(partitionVal * NUM_VALUES_PER_THREAD_GROUP, numValuesPerSortGroup));
+    int diag1 = int(min((partitionVal + 1) * NUM_VALUES_PER_THREAD_GROUP, numValuesPerSortGroup));
 
-    const int chunkOffsetA0 = int(min(sortGroup * numValuesPerSortGroup, SortParams.NumElements));
-    const int chunkOffsetA1 = int(min(chunkOffsetA0 + SortParams.ChunkSize, SortParams.NumElements));
-    const int chunkSizeA = chunkOffsetA1 - chunkOffsetA0;
+    int chunkOffsetA0 = int(min(sortGroup * numValuesPerSortGroup, SortParams.NumElements));
+    int chunkOffsetA1 = int(min(chunkOffsetA0 + SortParams.ChunkSize, SortParams.NumElements));
+    int chunkSizeA = chunkOffsetA1 - chunkOffsetA0;
     
-    const int chunkOffsetB1 = int(min(chunkOffsetA1 + SortParams.ChunkSize, SortParams.NumElements));
-    const int chunkSizeB = chunkOffsetB1 - chunkOffsetA1;
+    int chunkOffsetB1 = int(min(chunkOffsetA1 + SortParams.ChunkSize, SortParams.NumElements));
+    int chunkSizeB = chunkOffsetB1 - chunkOffsetA1;
 
-    const uint numValues = uint(chunkSizeA + chunkSizeB);
-    const int numA = min(mergePath1 - mergePath0, chunkSizeA);
+    uint numValues = uint(chunkSizeA + chunkSizeB);
+    int numA = min(mergePath1 - mergePath0, chunkSizeA);
 
     int b0 = diag0 - mergePath0;
     int b1 = diag1 - mergePath1;
