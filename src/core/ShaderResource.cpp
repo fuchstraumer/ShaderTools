@@ -181,13 +181,11 @@ namespace st {
     }
 
     const size_t & ShaderResource::GetInputAttachmentIndex() const noexcept {
-        if (impl->type == VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT) {
-            return impl->inputAttachmentIdx;
-        }
-        else {
+        if (impl->type != VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT) {
             LOG(WARNING) << "Tried to retrieve input attachment index for resource that is not an input attachment.";
-            return std::numeric_limits<size_t>::max();
+            // Default constructed value should be invalid enough to be obvious.
         }
+        return impl->inputAttachmentIdx;
     }
 
     const size_t & ShaderResource::GetAmountOfMemoryRequired() const noexcept {
