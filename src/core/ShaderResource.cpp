@@ -119,6 +119,7 @@ namespace st {
         size_t memoryRequired{ std::numeric_limits<size_t>::max() };
         VkFormat format{ VK_FORMAT_UNDEFINED };
         VkDescriptorType type{ VK_DESCRIPTOR_TYPE_MAX_ENUM };
+        size_t inputAttachmentIdx{ std::numeric_limits<size_t>::max() };
         std::string parentSetName{ "" };
         size_class sizeClass{ size_class::Absolute };
         VkShaderStageFlags stages{ VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM };
@@ -177,6 +178,16 @@ namespace st {
     ShaderResource & ShaderResource::operator=(ShaderResource && other) noexcept {
         impl = std::move(other.impl);
         return *this;
+    }
+
+    const size_t & ShaderResource::GetInputAttachmentIndex() const noexcept {
+        if (impl->type == VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT) {
+            return impl->inputAttachmentIdx;
+        }
+        else {
+            LOG(WARNING) << "Tried to retrieve input attachment index for resource that is not an input attachment.";
+            return std::numeric_limits<size_t>::max();
+        }
     }
 
     const size_t & ShaderResource::GetAmountOfMemoryRequired() const noexcept {
@@ -238,6 +249,10 @@ namespace st {
         if (objects != nullptr) {
             std::copy(impl->members.cbegin(), impl->members.cend(), objects);
         }
+    }
+
+    void ShaderResource::SetInputAttachmentIndex(size_t idx) {
+        impl->inputAttachmentIdx = idx;
     }
 
     void ShaderResource::SetMemoryRequired(size_t amt) {
