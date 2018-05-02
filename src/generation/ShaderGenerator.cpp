@@ -417,7 +417,6 @@ namespace st {
         const std::string alt_name = std::string{ "buffer " } + std::string{ "_" } + name + std::string{ "_" };
         std::string result = prefix + alt_name + std::string{ " {\n" };
         result += getBufferMembersString(buffer);
-        size_t num_members = 0;
         result += std::string{ "} " } + name + std::string{ ";\n\n" };
         return result;
     }

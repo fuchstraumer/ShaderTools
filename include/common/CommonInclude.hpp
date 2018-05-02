@@ -17,6 +17,11 @@
 #define ST_API 
 #endif 
 
+#ifdef _MSC_VER 
+// Disable warning about dll interface for impl members.
+#pragma warning(disable: 4251 )
+#endif
+
 #include <vulkan/vulkan.h>
 #include <cstdint>
 #include <memory>

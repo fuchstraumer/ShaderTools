@@ -8,7 +8,6 @@
 #include "common/UtilityStructs.hpp"
 #include "shader_pack_file.hpp"
 #include "easyloggingpp/src/easylogging++.h"
-#define ELPP_ASYNC_LOGGING
 INITIALIZE_EASYLOGGINGPP
 #ifdef FindResource
 #undef FindResource

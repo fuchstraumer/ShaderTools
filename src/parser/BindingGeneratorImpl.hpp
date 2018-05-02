@@ -31,7 +31,7 @@ namespace st {
         BindingGeneratorImpl(BindingGeneratorImpl&& other) noexcept;
         BindingGeneratorImpl& operator=(BindingGeneratorImpl&& other) noexcept;
 
-        void collateSets(const Shader& shader_handle);
+        void collateSets();
         void parseSpecializationConstants();
         void parseResourceType(const Shader& shader_handle, const VkDescriptorType & type_being_parsed);
         void parseBinary(const Shader& shader_handle);

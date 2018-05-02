@@ -6,7 +6,7 @@
 namespace st {
 
     class ShaderResourceImpl;
-    class ShaderResourceSubObject;
+    struct ShaderResourceSubObject;
 
     enum class size_class : uint32_t {
         Absolute = 0,

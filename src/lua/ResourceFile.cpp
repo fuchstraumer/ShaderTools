@@ -314,7 +314,7 @@ namespace st {
         return results;
     }
 
-    VkSamplerCreateInfo ResourceFile::parseSamplerOptions(ShaderResource& rsrc, const std::unordered_map<std::string, luabridge::LuaRef>& sampler_info_table) const {
+    VkSamplerCreateInfo ResourceFile::parseSamplerOptions(const std::unordered_map<std::string, luabridge::LuaRef>& sampler_info_table) const {
 
         VkSamplerCreateInfo results = sampler_create_info_base;
 
@@ -476,19 +476,19 @@ namespace st {
         rsrc.SetType(type);
     }
 
-    void ResourceFile::createUniformBufferResources(const std::string& parent_name, const std::string& name, const std::unordered_map<std::string, luabridge::LuaRef>& table, ShaderResource& rsrc) const {
+    void ResourceFile::createUniformBufferResources(const std::unordered_map<std::string, luabridge::LuaRef>& table, ShaderResource& rsrc) const {
         auto buffer_resources = environment->GetTableMap(table.at("Members"));
         auto subobjects = getBufferSubobjects(rsrc, buffer_resources);
         rsrc.SetMembers(subobjects.size(), subobjects.data());
     }
 
-    void ResourceFile::createStorageBufferResource(const std::string& parent_name, const std::string& name, const std::unordered_map<std::string, luabridge::LuaRef>& table, ShaderResource& rsrc) const {
+    void ResourceFile::createStorageBufferResource(const std::unordered_map<std::string, luabridge::LuaRef>& table, ShaderResource& rsrc) const {
         auto buffer_resources = environment->GetTableMap(table.at("Members"));
         auto subobjects = getBufferSubobjects(rsrc, buffer_resources);
         rsrc.SetMembers(subobjects.size(), subobjects.data());
     }
 
-    void ResourceFile::createStorageTexelBufferResource(const std::string& parent_name, const std::string& name, const std::unordered_map<std::string, luabridge::LuaRef>& table, ShaderResource& rsrc) const {
+    void ResourceFile::createStorageTexelBufferResource(const std::unordered_map<std::string, luabridge::LuaRef>& table, ShaderResource& rsrc) const {
         std::string format_str = table.at("Format").cast<std::string>();
         rsrc.SetFormat(StorageImageFormatToVkFormat(format_str.c_str()));
         size_t image_size = static_cast<size_t>(table.at("Size").cast<int>());
@@ -499,25 +499,25 @@ namespace st {
         rsrc.SetBufferViewInfo(getStorageImageBufferViewInfo(rsrc));
     }
 
-    void ResourceFile::createCombinedImageSamplerResource(const std::string& parent_name, const std::string& name, const std::unordered_map<std::string, luabridge::LuaRef>& table, ShaderResource& rsrc) const {
+    void ResourceFile::createCombinedImageSamplerResource(const std::unordered_map<std::string, luabridge::LuaRef>& table, ShaderResource& rsrc) const {
         if (table.count("ImageOptions") != 0) {
             rsrc.SetImageInfo(parseImageOptions(rsrc, environment->GetTableMap(table.at("ImageOptions"))));
         }
         
         if (table.count("SamplerOptions") != 0) {
-            rsrc.SetSamplerInfo(parseSamplerOptions(rsrc, environment->GetTableMap(table.at("SamplerOptions"))));
+            rsrc.SetSamplerInfo(parseSamplerOptions(environment->GetTableMap(table.at("SamplerOptions"))));
         }
     }
 
-    void ResourceFile::createSampledImageResource(const std::string& parent_name, const std::string& name, const std::unordered_map<std::string, luabridge::LuaRef>& table, ShaderResource& rsrc) const {
+    void ResourceFile::createSampledImageResource(const std::unordered_map<std::string, luabridge::LuaRef>& table, ShaderResource& rsrc) const {
         if (table.count("ImageOptions") != 0) {
             rsrc.SetImageInfo(parseImageOptions(rsrc, environment->GetTableMap(table.at("ImageOptions"))));
         }
     }
 
-    void ResourceFile::createSamplerResource(const std::string& parent_name, const std::string& name, const std::unordered_map < std::string, luabridge::LuaRef>& table, ShaderResource& rsrc) const {
+    void ResourceFile::createSamplerResource(const std::unordered_map < std::string, luabridge::LuaRef>& table, ShaderResource& rsrc) const {
         if (table.count("SamplerOptions") != 0) {
-            rsrc.SetSamplerInfo(parseSamplerOptions(rsrc, environment->GetTableMap(table.at("SamplerOptions"))));
+            rsrc.SetSamplerInfo(parseSamplerOptions(environment->GetTableMap(table.at("SamplerOptions"))));
         }
     }
 
@@ -560,22 +560,22 @@ namespace st {
                 setBaseResourceInfo(entry.first, set_resource.first, vk_type, resource);
 
                 if (vk_type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER || vk_type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC) {
-                    createUniformBufferResources(entry.first, set_resource.first, set_resource_data, resource);
+                    createUniformBufferResources(set_resource_data, resource);
                 }
                 else if (vk_type == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER || vk_type == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC) {
-                    createStorageBufferResource(entry.first, set_resource.first, set_resource_data, resource);
+                    createStorageBufferResource(set_resource_data, resource);
                 }
                 else if (vk_type == VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER || vk_type == VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER) {
-                    createStorageTexelBufferResource(entry.first, set_resource.first, set_resource_data, resource);
+                    createStorageTexelBufferResource(set_resource_data, resource);
                 }
                 else if (vk_type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) {
-                    createCombinedImageSamplerResource(entry.first, set_resource.first, set_resource_data, resource);
+                    createCombinedImageSamplerResource(set_resource_data, resource);
                 }
                 else if (vk_type == VK_DESCRIPTOR_TYPE_SAMPLER) {
-                    createSamplerResource(entry.first, set_resource.first, set_resource_data, resource);
+                    createSamplerResource(set_resource_data, resource);
                 }
                 else if (vk_type == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE) {
-                    createSampledImageResource(entry.first, set_resource.first, set_resource_data, resource);
+                    createSampledImageResource(set_resource_data, resource);
                 }
                 else {
                     LOG(ERROR) << "Requested resource type " << type_of_resource << " is currently unsupported.";

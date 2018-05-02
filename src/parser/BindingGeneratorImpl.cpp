@@ -91,7 +91,6 @@ namespace st {
         auto& f_tracker = ShaderFileTracker::GetFileTracker();
         const auto& rsrc_path = f_tracker.ShaderUsedResourceScript.at(shader_handle);
         const auto* rsrc_script = f_tracker.ResourceScripts.at(rsrc_path).get();
-        const auto& resources_map = rsrc_script->GetAllResources();
 
         auto get_actual_name = [](const std::string& rsrc_name)->std::string {
             size_t first_idx = rsrc_name.find_first_of('_');
@@ -202,7 +201,7 @@ namespace st {
         parseImpl(shader_handle, binary_vec);
     }
 
-    void BindingGeneratorImpl::collateSets(const Shader& shader_handle) {
+    void BindingGeneratorImpl::collateSets() {
         std::set<uint32_t> unique_keys;
         for (auto iter = tempResources.begin(); iter != tempResources.end(); ++iter) {
             unique_keys.insert(iter->first);
@@ -293,7 +292,7 @@ namespace st {
         parseResourceType(handle, VK_DESCRIPTOR_TYPE_SAMPLER);
         parseResourceType(handle, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER);
         parseResourceType(handle, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE);
-        collateSets(handle);
+        collateSets();
         parseSpecializationConstants();
 
         auto resources = recompiler->get_shader_resources();
