@@ -3,6 +3,7 @@
 #include "generation/ShaderGenerator.hpp"
 #include "parser/BindingGenerator.hpp"
 #include "core/ShaderResource.hpp"
+#include "core/ResourceUsage.hpp"
 #include "../lua/LuaEnvironment.hpp"
 #include "../lua/ResourceFile.hpp"
 #include "../util/ShaderFileTracker.hpp"
@@ -203,6 +204,24 @@ namespace st {
         }
         else {
             *num_constants = 0;
+        }
+    }
+
+    void ShaderGroup::GetResourceUsages(const size_t & set_idx, size_t * num_resources, ResourceUsage * resources) const {
+        const BindingGeneratorImpl* b_impl = GetBindingGeneratorImpl();
+        if (b_impl->sortedSets.count(set_idx) != 0) {
+            if (b_impl->sortedSets.at(set_idx).Members.empty()) {
+                *num_resources = 0;
+                return;
+            }
+            *num_resources = b_impl->sortedSets.at(set_idx).Members.size();
+            if (resources != nullptr) {
+                std::vector<ResourceUsage> resources_vec;
+                for (const auto& rsrc : b_impl->sortedSets.at(set_idx).Members) {
+                    resources_vec.emplace_back(rsrc.second);
+                }
+                std::copy(resources_vec.begin(), resources_vec.end(), resources);
+            }   
         }
     }
 

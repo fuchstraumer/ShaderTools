@@ -96,6 +96,62 @@ Resources = {
                 Exposure = { "float", 0 },
                 Gamma = { "float", 1 }
             }
+        },
+        Material = {
+            Type = "UniformBuffer",
+            Members = {
+                ambient = { "vec4", 0 },
+                diffuse = { "vec4", 1 },
+                specular = { "vec4", 2 },
+                transmittance = { "vec4", 3 },
+                emission = { "vec4", 4 },
+                shininess = { "float", 5 },
+                ior = { "float", 6 },
+                alpha = { "float", 7 },
+                illuminationModel = { "int", 8 },
+                roughness = { "float", 9 },
+                metallic = { "float", 10 },
+                sheen = { "float", 11 },
+                clearcoatThickness = { "float", 12 },
+                clearcoatRoughness = { "float", 13 },
+                anisotropy = { "float", 14 },
+                anisotropyRotation = { "float", 15 },
+                padding = { "float", 16 }
+            }
+        },
+        textureSampler = {
+            Type = "Sampler",
+            SamplerInfo = {
+
+            }
+        }
+        diffuseMap = {
+            Type = "SampledImage",
+            ImageInfo = {
+                SizeClass = "Absolute",
+                ImageType = "2D"
+            }
+        },
+        normalMap = {
+            Type = "SampledImage",
+            ImageInfo = {
+                ImageType = "2D",
+                SizeClass = "Absolute"
+            }
+        },
+        roughnessMap = {
+            Type = "SampledImage",
+            ImageInfo = {
+                ImageType = "2D",
+                SizeClass = "Absolute"
+            }
+        },
+        metallicMap = {
+            Type = "SampledImage",
+            ImageInfo = {
+                ImageType = "2D",
+                SizeClass = "Absolute"
+            }
         }
     },
     VolumetricForward = {
@@ -294,29 +350,6 @@ Resources = {
                     ElementType = "AABB",
                     NumElements = get_num_spot_lights()
                 }, 0 }
-            }
-        }
-    },
-    MaterialResources = {
-        diffuseMap = {
-            Type = "CombinedImageSampler",
-            ImageOptions = {
-                SizeClass = "Absolute",
-                SampleCount = 1,
-                ImageType = "2D",
-                GenerateMipMaps = false,
-                MipLevels = 1,
-                Layers = 1
-            },
-            SamplerOptions = {
-                MagFilter = "Linear",
-                MinFilter = "Linear",
-                MipMapFilter = "Linear",
-                AddressModeU = "Repeat",
-                AddressModeV = "Repeat",
-                AddressModeW = "ClampToEdge",
-                EnableAnisotropy = true,
-                MaxAnisotropy = 4.0
             }
         }
     }

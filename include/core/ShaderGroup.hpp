@@ -9,6 +9,7 @@ namespace st {
     class ShaderGroupImpl;
     class ShaderPackImpl;
     class BindingGeneratorImpl;
+    class ResourceUsage;
 
     /*  Designed to be used to group shaders into the groups that they are used in
         when bound to a pipeline, to simplify a few key things.
@@ -29,6 +30,7 @@ namespace st {
         void GetVertexAttributes(size_t* num_attributes, VkVertexInputAttributeDescription* attributes) const;
         void GetSetLayoutBindings(const size_t& set_idx, size_t* num_bindings, VkDescriptorSetLayoutBinding* bindings) const;
         void GetSpecializationConstants(size_t* num_constants, SpecializationConstant* constants) const;
+        void GetResourceUsages(const size_t& set_idx, size_t* num_resources, ResourceUsage* resources) const;
 
         dll_retrieved_strings_t GetSetResourceNames(const uint32_t set_idx) const;
         dll_retrieved_strings_t GetUsedResourceBlocks() const;
