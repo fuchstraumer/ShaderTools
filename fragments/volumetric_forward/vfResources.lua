@@ -97,60 +97,112 @@ Resources = {
                 Gamma = { "float", 1 }
             }
         },
-        Material = {
+        MaterialParameters = {
             Type = "UniformBuffer",
             Members = {
-                ambient = { "vec4", 0 },
-                diffuse = { "vec4", 1 },
-                specular = { "vec4", 2 },
-                transmittance = { "vec4", 3 },
-                emission = { "vec4", 4 },
-                shininess = { "float", 5 },
-                ior = { "float", 6 },
-                alpha = { "float", 7 },
-                illuminationModel = { "int", 8 },
-                roughness = { "float", 9 },
-                metallic = { "float", 10 },
-                sheen = { "float", 11 },
-                clearcoatThickness = { "float", 12 },
-                clearcoatRoughness = { "float", 13 },
-                anisotropy = { "float", 14 },
-                anisotropyRotation = { "float", 15 },
-                padding = { "float", 16 }
+                Data = { "Material", 0 }
             }
         },
-        textureSampler = {
+        DiffuseMap = {
+            Type = "SampledImage",
+            ImageInfo = {
+                -- Images from file don't have any info set here:
+                -- all we do is generate a suitable descriptor binding
+                -- for what will eventually be used
+                FromFile = true
+            }
+        },
+        NormalMap = {
+            Type = "SampledImage",
+            ImageInfo = {
+                FromFile = true
+            }
+        },
+        RoughnessMap = {
+            Type = "SampledImage",
+            ImageInfo = {
+                FromFile = true
+            }
+        },
+        MetallicMap = {
+            Type = "SampledImage",
+            ImageInfo = {
+                FromFile = true
+            }
+        },
+        BumpMap = {
+            Type = "SampledImage",
+            ImageInfo = {
+                FromFile = true
+            }
+        },
+        SpecularMap = {
+            Type = "SampledImage",
+            ImageInfo = {
+                FromFile = true
+            }
+        },
+        SpecularHighlightMap = {
+            Type = "SampledImage",
+            ImageInfo = {
+                FromFile = true
+            }
+        },
+        DisplacementMap = {
+            Type = "SampledImage",
+            ImageInfo = {
+                FromFile = true
+            }
+        },
+        AlphaMap = {
+            Type = "SampledImage",
+            ImageInfo = {
+                FromFile = true
+            }
+        },
+        ReflectionMap = {
+            Type = "SampledImage",
+            ImageInfo = {
+                FromFile = true
+            }
+        },
+        SheenMap = {
+            Type = "SampledImage",
+            ImageInfo = {
+                FromFile = true
+            }
+        },
+        EmissiveMap = {
+            Type = "SampledImage",
+            ImageInfo = {
+                FromFile = true
+            }
+        },
+        AmbientMap = {
+            Type = "SampledImage",
+            ImageInfo = {
+                FromFile = true
+            }
+        },
+        LinearRepeatSampler = {
             Type = "Sampler",
             SamplerInfo = {
 
             }
-        }
-        diffuseMap = {
-            Type = "SampledImage",
-            ImageInfo = {
-                SizeClass = "Absolute",
-                ImageType = "2D"
+        },
+        LinearClampSampler = {
+            Type = "Sampler",
+            SamplerInfo = {
+                AddressModeU = "ClampToEdge",
+                AddressModeV = "ClampToEdge",
+                AddressModeW = "ClampToEdge"
             }
         },
-        normalMap = {
-            Type = "SampledImage",
-            ImageInfo = {
-                ImageType = "2D",
-                SizeClass = "Absolute"
-            }
-        },
-        roughnessMap = {
-            Type = "SampledImage",
-            ImageInfo = {
-                ImageType = "2D",
-                SizeClass = "Absolute"
-            }
-        },
-        metallicMap = {
-            Type = "SampledImage",
-            ImageInfo = {
-                ImageType = "2D",
-                SizeClass = "Absolute"
+        AnisotropicSampler = {
+            Type = "Sampler",
+            AnisotropicSampler = {
+                EnableAnisotropy = true,
+                MaxAnisotropy = 8.0
             }
         }
     },

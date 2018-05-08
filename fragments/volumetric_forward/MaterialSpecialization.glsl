@@ -1,0 +1,13 @@
+SPC const bool HasAmbientTexture = false;
+SPC const bool HasDiffuseTexture = false;
+SPC const bool HasSpecularTexture = false;
+SPC const bool HasSpecularHighlightTexture = false;
+SPC const bool HasBumpTexture = false;
+SPC const bool HasDisplacementTexture = false;
+SPC const bool HasAlphaTexture = false;
+SPC const bool HasReflectionTexture = false;
+SPC const bool HasRoughnessTexture = false;
+SPC const bool HasMetallicTexture = false;
+SPC const bool HasSheenTexture = false;
+SPC const bool HasEmissiveTexture = false;
+SPC const bool HasNormalTexture = false;
