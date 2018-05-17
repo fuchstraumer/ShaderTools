@@ -7,6 +7,7 @@ layout(early_fragment_tests) in;
 #pragma USE_RESOURCES GlobalResources
 #pragma USE_RESOURCES VolumetricForward
 #pragma USE_RESOURCES VolumetricForwardLights
+#pragma USE_RESOURCES MaterialResources
 
 LightingResult Lighting(in Material mtl, vec4 eye_pos, vec4 p, vec4 n) {
     vec4 v = normalize(eye_pos - p);
@@ -51,8 +52,8 @@ void main() {
     Material mtl = MaterialParameters.Data;
 
     vec4 diffuse = mtl.diffuse;
-    if (HasAmbientTexture) {
-        vec4 diffuse_sample = texture(sampler2D(AmbientMap, LinearRepeatSampler), vUV);
+    if (HasDiffuseTexture) {
+        vec4 diffuse_sample = texture(sampler2D(DiffuseMap, LinearRepeatSampler), vUV);
         if (any(diffuse.rgb)) {
             diffuse *= diffuse_sample;
         }
@@ -68,7 +69,7 @@ void main() {
 
     vec4 ambient = mtl.ambient;
     if (HasAmbientTexture) {
-        vec4 ambient_sample = texture(sampler2D(AmbientMap, LinearRepeatSampler), vUV).r;
+        vec4 ambient_sample = texture(sampler2D(AmbientOcclusionMap, LinearRepeatSampler), vUV).r;
         if (any(ambient.rgb)) {
             ambient *= ambient_sample;
         }

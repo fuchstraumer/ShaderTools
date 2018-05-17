@@ -96,7 +96,9 @@ Resources = {
                 Exposure = { "float", 0 },
                 Gamma = { "float", 1 }
             }
-        },
+        }
+    },
+    MaterialResources = {
         MaterialParameters = {
             Type = "UniformBuffer",
             Members = {
@@ -117,6 +119,12 @@ Resources = {
             ImageInfo = {
                 FromFile = true
             }
+        },        
+        AmbientOcclusionMap = {
+            Type = "SampledImage",
+            ImageInfo = {
+                FromFile = true
+            }
         },
         RoughnessMap = {
             Type = "SampledImage",
@@ -130,55 +138,7 @@ Resources = {
                 FromFile = true
             }
         },
-        BumpMap = {
-            Type = "SampledImage",
-            ImageInfo = {
-                FromFile = true
-            }
-        },
-        SpecularMap = {
-            Type = "SampledImage",
-            ImageInfo = {
-                FromFile = true
-            }
-        },
-        SpecularHighlightMap = {
-            Type = "SampledImage",
-            ImageInfo = {
-                FromFile = true
-            }
-        },
-        DisplacementMap = {
-            Type = "SampledImage",
-            ImageInfo = {
-                FromFile = true
-            }
-        },
-        AlphaMap = {
-            Type = "SampledImage",
-            ImageInfo = {
-                FromFile = true
-            }
-        },
-        ReflectionMap = {
-            Type = "SampledImage",
-            ImageInfo = {
-                FromFile = true
-            }
-        },
-        SheenMap = {
-            Type = "SampledImage",
-            ImageInfo = {
-                FromFile = true
-            }
-        },
         EmissiveMap = {
-            Type = "SampledImage",
-            ImageInfo = {
-                FromFile = true
-            }
-        },
-        AmbientMap = {
             Type = "SampledImage",
             ImageInfo = {
                 FromFile = true
