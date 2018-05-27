@@ -252,7 +252,7 @@ namespace st {
         return impl->typeCounts;
     }
 
-    const ShaderResource * ShaderPack::GetResource(const char* rsrc_name) {
+    const ShaderResource * ShaderPack::GetResource(const char* rsrc_name) const {
         const ShaderResource* result = impl->rsrcFile->FindResource(rsrc_name);
         LOG_IF(result == nullptr, WARNING) << "Couldn't find requested resource" << rsrc_name << " in ShaderPack's resource script data.";
         return result;
