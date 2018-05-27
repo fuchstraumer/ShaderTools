@@ -118,6 +118,7 @@ namespace st {
         std::string name{ "" };
         size_t memoryRequired{ std::numeric_limits<size_t>::max() };
         VkFormat format{ VK_FORMAT_UNDEFINED };
+        bool fromFile{ false };
         VkDescriptorType type{ VK_DESCRIPTOR_TYPE_MAX_ENUM };
         size_t inputAttachmentIdx{ std::numeric_limits<size_t>::max() };
         std::string parentSetName{ "" };
@@ -196,6 +197,10 @@ namespace st {
         return impl->format;
     }
 
+    const bool& ShaderResource::DataIsFromFile() const noexcept {
+        return impl->fromFile;
+    }
+
     const char* ShaderResource::GetName() const {
         return impl->name.c_str();
     }
@@ -247,6 +252,10 @@ namespace st {
         if (objects != nullptr) {
             std::copy(impl->members.cbegin(), impl->members.cend(), objects);
         }
+    }
+
+    void ShaderResource::SetDataFromFile(bool from_file) {
+        impl->fromFile = std::move(from_file);
     }
 
     void ShaderResource::SetInputAttachmentIndex(size_t idx) {

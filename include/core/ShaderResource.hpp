@@ -28,6 +28,9 @@ namespace st {
         const size_t& GetInputAttachmentIndex() const noexcept;
         const size_t& GetAmountOfMemoryRequired() const noexcept;
         const VkFormat& GetFormat() const noexcept;
+        // Used to indicate a binding for a texture, where the texture data is
+        // loaded from a file
+        const bool& DataIsFromFile() const noexcept;
         const char* GetName() const;
         const char* ParentGroupName() const;
         const VkShaderStageFlags& GetStages() const noexcept;
@@ -37,6 +40,7 @@ namespace st {
         const VkBufferViewCreateInfo& BufferViewInfo() const noexcept;
         void GetMembers(size_t* num_members, ShaderResourceSubObject* dest_objects) const noexcept;
 
+        void SetDataFromFile(bool from_file);
         void SetInputAttachmentIndex(size_t idx);
         void SetMemoryRequired(size_t amt);
         void SetStages(VkShaderStageFlags stages);

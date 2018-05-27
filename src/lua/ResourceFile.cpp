@@ -21,7 +21,7 @@ namespace st {
         0,
         VK_IMAGE_TYPE_MAX_ENUM, // set this invalid at start, because it needs to be set properly
         VK_FORMAT_UNDEFINED, // this can't be set by shadertools, so make it invalid for now
-        VkExtent3D{}, // initialize but leave "invalid": ST may not be able to extract the size
+        VkExtent3D{ std::numeric_limits<uint32_t>::max(), std::numeric_limits<uint32_t>::max(), 1}, // initialize but leave "invalid": ST may not be able to extract the size
         1, // reasonable MIP base
         1, // most images only have 1 "array" layer
         VK_SAMPLE_COUNT_1_BIT, // most images not multisampled
@@ -501,6 +501,16 @@ namespace st {
     }
 
     void ResourceFile::createCombinedImageSamplerResource(const std::unordered_map<std::string, luabridge::LuaRef>& table, ShaderResource& rsrc) const {
+        if (table.count("FromFile") != 0) {
+            bool from_file = table.at("FromFile").cast<bool>();
+            if (from_file) {
+                rsrc.SetImageInfo(image_create_info_base);
+                rsrc.SetSamplerInfo(sampler_create_info_base);
+                rsrc.SetDataFromFile(true);
+                return;
+            }
+        }
+
         if (table.count("ImageOptions") != 0) {
             rsrc.SetImageInfo(parseImageOptions(rsrc, environment->GetTableMap(table.at("ImageOptions"))));
         }
@@ -511,18 +521,37 @@ namespace st {
     }
 
     void ResourceFile::createSampledImageResource(const std::unordered_map<std::string, luabridge::LuaRef>& table, ShaderResource& rsrc) const {
+        if (table.count("FromFile") != 0) {
+            bool from_file = table.at("FromFile").cast<bool>();
+            if (from_file) {
+                rsrc.SetImageInfo(image_create_info_base);
+                rsrc.SetDataFromFile(true);
+                return;
+            }
+        }
+        
         if (table.count("ImageOptions") != 0) {
             rsrc.SetImageInfo(parseImageOptions(rsrc, environment->GetTableMap(table.at("ImageOptions"))));
         }
     }
 
     void ResourceFile::createSamplerResource(const std::unordered_map < std::string, luabridge::LuaRef>& table, ShaderResource& rsrc) const {
+        if (table.count("FromFile") != 0) {
+            bool from_file = table.at("FromFile").cast<bool>();
+            if (from_file) {
+                rsrc.SetSamplerInfo(sampler_create_info_base);
+                rsrc.SetDataFromFile(true);
+                return;
+            }
+        }
+        
         if (table.count("SamplerOptions") != 0) {
             rsrc.SetSamplerInfo(parseSamplerOptions(environment->GetTableMap(table.at("SamplerOptions"))));
         }
     }
 
     void ResourceFile::createStorageImageResource(const std::unordered_map<std::string, luabridge::LuaRef>& table, ShaderResource& rsrc) const {
+        
         if (table.count("ImageOptions") == 0) {
             LOG(WARNING) << "No ImageInfo given for a storage image: can't fill out ShaderResource information members!";
             return;
