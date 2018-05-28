@@ -124,6 +124,36 @@ namespace st {
         { "InputAttachment", VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT }
     };
 
+    static const std::unordered_map<std::string, VkImageViewType> image_view_type_from_str_map = {
+        { "1D", VK_IMAGE_VIEW_TYPE_1D },
+        { "2D", VK_IMAGE_VIEW_TYPE_2D },
+        { "3D", VK_IMAGE_VIEW_TYPE_3D },
+        { "1D_Array", VK_IMAGE_VIEW_TYPE_1D_ARRAY },
+        { "2D_Array", VK_IMAGE_VIEW_TYPE_2D_ARRAY },
+        { "Cube", VK_IMAGE_VIEW_TYPE_CUBE },
+        { "Cube_Array", VK_IMAGE_VIEW_TYPE_CUBE_ARRAY }
+    };
+
+    static const std::unordered_map<std::string, VkImageAspectFlags> aspect_flags_from_str_map = {
+        { "Color", VK_IMAGE_ASPECT_COLOR_BIT },
+        { "Depth", VK_IMAGE_ASPECT_DEPTH_BIT },
+        { "Stencil", VK_IMAGE_ASPECT_STENCIL_BIT },
+        { "Metadata", VK_IMAGE_ASPECT_METADATA_BIT },
+        { "Plane0", VK_IMAGE_ASPECT_PLANE_0_BIT },
+        { "Plane1", VK_IMAGE_ASPECT_PLANE_1_BIT },
+        { "Plane2", VK_IMAGE_ASPECT_PLANE_2_BIT }
+    };
+
+    static const std::unordered_map<std::string, VkComponentSwizzle> swizzle_from_str_map = {
+        { "R", VK_COMPONENT_SWIZZLE_R },
+        { "G", VK_COMPONENT_SWIZZLE_G },
+        { "B", VK_COMPONENT_SWIZZLE_B },
+        { "A", VK_COMPONENT_SWIZZLE_A },
+        { "Zero", VK_COMPONENT_SWIZZLE_ZERO },
+        { "One", VK_COMPONENT_SWIZZLE_ONE },
+        { "Identity", VK_COMPONENT_SWIZZLE_IDENTITY }
+    };
+
     size_class sizeClassFromString(const std::string& sz_class)  {
         auto iter = size_class_from_string_map.find(sz_class);
         if (iter == size_class_from_string_map.cend()) {
@@ -235,6 +265,54 @@ namespace st {
         }
     }
 
+    VkImageViewType viewTypeFromStr(const std::string& str) {
+        auto iter = image_view_type_from_str_map.find(str);
+        if (iter == image_view_type_from_str_map.end()) {
+            return VK_IMAGE_VIEW_TYPE_MAX_ENUM;
+        }
+        else {
+            return iter->second;
+        }
+    }
+
+    VkImageAspectFlags aspectFlagsFromStr(const std::string& str) {
+        auto iter = aspect_flags_from_str_map.find(str);
+        if (iter == aspect_flags_from_str_map.end()) {
+            return VK_IMAGE_ASPECT_FLAG_BITS_MAX_ENUM;
+        }
+        else {
+            return iter->second;
+        }
+    }
+
+    VkComponentSwizzle componentSwizzleFromStr(const std::string& str) {
+        auto iter = swizzle_from_str_map.find(str);
+        if (iter == swizzle_from_str_map.end()) {
+            return VK_COMPONENT_SWIZZLE_MAX_ENUM;
+        }
+        else {
+            return iter->second;
+        }
+    }
+
+    VkComponentMapping componentMappingFromLua(const std::unordered_map<std::string, luabridge::LuaRef>& table) {
+        VkComponentMapping result;
+        for (auto& entry : table) {
+            if (entry.second[0].cast<int>() == 0) {
+                result.r = componentSwizzleFromStr(entry.second[1].cast<std::string>());
+            }
+            else if (entry.second[0].cast<int>() == 1) {
+                result.g = componentSwizzleFromStr(entry.second[1].cast<std::string>());
+            }
+            else if (entry.second[0].cast<int>() == 2) {
+                result.b = componentSwizzleFromStr(entry.second[1].cast<std::string>());
+            }
+            else if (entry.second[0].cast<int>() == 3) {
+                result.a = componentSwizzleFromStr(entry.second[1].cast<std::string>());
+            }
+        }
+    }
+
     ResourceFile::ResourceFile() : environment(std::make_unique<LuaEnvironment>()) {
         using namespace luabridge;
         auto& callbacks = ShaderPack::RetrievalCallbacks();
@@ -324,6 +402,77 @@ namespace st {
         }
 
         return results;
+    }
+
+    VkImageViewCreateInfo ResourceFile::parseImageViewOptions(const std::unordered_map<std::string, luabridge::LuaRef>& view_info_table, LuaEnvironment* env, const VkImageCreateInfo& parent_image_info) const {
+
+        VkImageViewCreateInfo result = image_view_create_info_base;
+
+        auto has_member = [view_info_table](const std::string& name)->bool {
+            return view_info_table.count(name) != 0;
+        };
+
+        auto member_as_str = [view_info_table](const std::string& name)->std::string {
+            return view_info_table.at(name).cast<std::string>();
+        };
+
+        if (has_member("ViewType")) {
+            result.viewType = viewTypeFromStr(member_as_str("ViewType"));
+        }
+        else {
+            switch (parent_image_info.imageType) {
+            case VK_IMAGE_TYPE_1D:
+                result.viewType = VK_IMAGE_VIEW_TYPE_1D;
+                break;
+            case VK_IMAGE_TYPE_2D:
+                result.viewType = VK_IMAGE_VIEW_TYPE_2D;
+                break;
+            case VK_IMAGE_TYPE_3D:
+                result.viewType = VK_IMAGE_VIEW_TYPE_3D;
+                break;
+            default:
+                result.viewType = VK_IMAGE_VIEW_TYPE_2D;
+                break;
+            }
+        }
+
+        if (has_member("ImageAspect")) {
+            result.subresourceRange.aspectMask = aspectFlagsFromStr(member_as_str("ImageAspect"));
+        }
+        else {
+            result.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        }
+
+        if (has_member("ComponentSwizzle")) {
+            auto table = env->GetTableMap(view_info_table.at("ComponentSwizzle"));
+            result.components = componentMappingFromLua(table);
+        }
+        
+        if (has_member("BaseMipLevel")) {
+            result.subresourceRange.baseMipLevel = static_cast<uint32_t>(view_info_table.at("BaseMipLevel").cast<int>());
+        }
+
+        if (has_member("LevelCount")) {
+            result.subresourceRange.levelCount = static_cast<uint32_t>(view_info_table.at("LevelCount").cast<int>());
+        }
+        else {
+            result.subresourceRange.levelCount = parent_image_info.mipLevels;
+        }
+
+        if (has_member("BaseArrayLayer")) {
+            result.subresourceRange.baseArrayLayer = static_cast<uint32_t>(view_info_table.at("BaseArrayLayer").cast<int>());
+        }
+
+        if (has_member("LayerCount")) {
+            result.subresourceRange.layerCount = static_cast<uint32_t>(view_info_table.at("LayerCount").cast<int>());
+        }
+        else {
+            result.subresourceRange.layerCount = parent_image_info.arrayLayers;
+        }
+
+        result.format = parent_image_info.format;
+
+        return result;
     }
 
     VkSamplerCreateInfo ResourceFile::parseSamplerOptions(const std::unordered_map<std::string, luabridge::LuaRef>& sampler_info_table) const {
@@ -517,6 +666,7 @@ namespace st {
             if (from_file) {
                 rsrc.SetImageInfo(image_create_info_base);
                 rsrc.SetSamplerInfo(sampler_create_info_base);
+                rsrc.SetImageViewInfo(image_view_create_info_base);
                 rsrc.SetDataFromFile(true);
                 return;
             }
@@ -524,6 +674,10 @@ namespace st {
 
         if (table.count("ImageOptions") != 0) {
             rsrc.SetImageInfo(parseImageOptions(rsrc, environment->GetTableMap(table.at("ImageOptions"))));
+        }
+
+        if (table.count("ViewOptions") != 0) {
+            rsrc.SetImageViewInfo(parseImageViewOptions(environment->GetTableMap(table.at("ViewOptions")), environment.get(), rsrc.ImageInfo()));
         }
         
         if (table.count("SamplerOptions") != 0) {
@@ -535,6 +689,7 @@ namespace st {
         if (table.count("FromFile") != 0) {
             bool from_file = table.at("FromFile").cast<bool>();
             if (from_file) {
+                rsrc.SetImageViewInfo(image_view_create_info_base);
                 rsrc.SetImageInfo(image_create_info_base);
                 rsrc.SetDataFromFile(true);
                 return;
@@ -544,6 +699,11 @@ namespace st {
         if (table.count("ImageOptions") != 0) {
             rsrc.SetImageInfo(parseImageOptions(rsrc, environment->GetTableMap(table.at("ImageOptions"))));
         }
+
+        if (table.count("ViewOptions") != 0) {
+            rsrc.SetImageViewInfo(parseImageViewOptions(environment->GetTableMap(table.at("ViewOptions")), environment.get(), rsrc.ImageInfo()));
+        }
+
     }
 
     void ResourceFile::createSamplerResource(const std::unordered_map < std::string, luabridge::LuaRef>& table, ShaderResource& rsrc) const {

@@ -29,6 +29,7 @@ namespace st {
         const ShaderResource* searchSingleGroupForResource(const std::string& group, const std::string& name) const;
 
         VkImageCreateInfo parseImageOptions(ShaderResource& rsrc, const std::unordered_map<std::string, luabridge::LuaRef>& image_info_table) const;
+        VkImageViewCreateInfo parseImageViewOptions(const std::unordered_map<std::string, luabridge::LuaRef>& view_info_table, LuaEnvironment* env, const VkImageCreateInfo& parent_image_info) const;
         VkSamplerCreateInfo parseSamplerOptions(const std::unordered_map<std::string, luabridge::LuaRef>& sampler_info_table) const;
         VkBufferViewCreateInfo getStorageImageBufferViewInfo(ShaderResource & rsrc) const;
         ShaderResourceSubObject createSimpleBufferSubresource(const std::string & name, const luabridge::LuaRef & object_ref, uint32_t& offset_total) const;

@@ -46,7 +46,7 @@ Resources = {
             ImageInfo = {
                 --[[
                     Potential image types are:
-                    1D, 2D, 3D, 2D_Array, Cubemap
+                    1D, 2D, 3D
                 ]]
                 ImageType = "2D",
                 -- Specifying this as "FromFile" tells the parser
@@ -59,6 +59,62 @@ Resources = {
                 -- hardware supports up to 64.0
                 EnableAnisotropy = true,
                 MaxAnisotropy = 4.0
+            },
+            ViewInfo = {
+                --[[
+                    Options are:
+                    1D, 2D, 3D, Cube, 1D_Array, 2D_array, 
+                    Cube_Array
+                ]]
+                ViewType = "2D",
+                --[[
+                    Options are:
+                    Color, Depth, Stencil,
+                    Metadata, Plane0, Plane1, Plane2
+                ]]
+                ImageAspect = "Color",
+                --[[
+                    Component swizzles are used to set the channels
+                    seen when viewing the image at the given channel.
+
+                    So, one can use it to make each channel actually just
+                    the R channel of an underlying image, for example.
+
+                    The default is just RGBA. Note that since Lua tables are
+                    unordered, the paired form which specifies the channel as
+                    an integer index is required to ensure the resulting 
+                    swizzle is properly parsed
+
+                    Options are:
+                    "R", "G", "B", "A", "Identity", "Zero", "One"
+
+                    Zero and One mean that the data read from that channel
+                    just becomes zero and one, respectively. Identity keeps
+                    the mapping between channels: so "Identity" for R channel
+                    means it remains the R channel. 
+                ]]
+                ComponentSwizzle = {
+                    { 0, "R" },
+                    { 1, "G" },
+                    { 2, "B" },
+                    -- now our A channel is actually a read from the
+                    -- R channel
+                    { 3, "R" } 
+                },
+                BaseMipLevel = 0,
+                --[[
+                    If left blank, LevelCount will be set
+                    to match the mipLevels member of a suitable
+                    VkImage structure
+                ]]
+                LevelCount = 3,
+                BaseArrayLayer = 0,
+                --[[
+                    Like LevelCount, LayerCount will just mirror
+                    the arrayLayers member of the matching VkImageCreateInfo
+                    structure
+                ]]
+                LayerCount = 1
             }
         }
         ClampedSampler = {
