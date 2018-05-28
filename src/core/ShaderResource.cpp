@@ -22,6 +22,17 @@ namespace st {
         VK_IMAGE_LAYOUT_UNDEFINED // most images start like this
     };
 
+    constexpr static VkImageViewCreateInfo image_view_create_info_base {
+        VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+        nullptr,
+        0,
+        VK_NULL_HANDLE,
+        VK_IMAGE_VIEW_TYPE_MAX_ENUM,
+        VK_FORMAT_UNDEFINED,
+		{ VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A },
+		{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }
+    };
+
     constexpr static VkSamplerCreateInfo sampler_create_info_base{
         VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
         nullptr,
@@ -126,6 +137,7 @@ namespace st {
         VkShaderStageFlags stages{ VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM };
         std::vector<ShaderResourceSubObject> members;
         VkImageCreateInfo imageInfo{ image_create_info_base };
+        VkImageViewCreateInfo imageViewInfo{ image_view_create_info_base };
         VkSamplerCreateInfo samplerInfo{ sampler_create_info_base };
         VkBufferViewCreateInfo bufferInfo{ buffer_view_info_base };
         bool needsMipMaps{ false };
@@ -227,6 +239,16 @@ namespace st {
         }
     }
 
+    const VkImageViewCreateInfo& ShaderResource::ImageViewInfo() const noexcept {
+        if (impl->type == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE || impl->type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) {
+            return impl->imageViewInfo;
+        }
+        else {
+            LOG(WARNING) << "Attempted to retrieve VkImageViewCreateInfo for invalid descriptor type. Returning invalid VkImageViewCreateInfo object.";
+            return image_view_create_info_base;
+        }
+    }
+
     const VkSamplerCreateInfo& ShaderResource::SamplerInfo() const noexcept {
         if (impl->type == VK_DESCRIPTOR_TYPE_SAMPLER || impl->type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) {
             return impl->samplerInfo;
@@ -296,6 +318,10 @@ namespace st {
 
     void ShaderResource::SetImageInfo(VkImageCreateInfo image_info) {
         impl->imageInfo = std::move(image_info);
+    }
+
+    void ShaderResource::SetImageViewInfo(VkImageViewCreateInfo view_info) {
+        impl->imageViewInfo = std::move(view_info);
     }
 
     void ShaderResource::SetSamplerInfo(VkSamplerCreateInfo sampler_info) {

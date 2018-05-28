@@ -36,6 +36,7 @@ namespace st {
         const VkShaderStageFlags& GetStages() const noexcept;
         const VkDescriptorType& GetType() const noexcept;
         const VkImageCreateInfo& ImageInfo() const noexcept;
+        const VkImageViewCreateInfo& ImageViewInfo() const noexcept;
         const VkSamplerCreateInfo& SamplerInfo() const noexcept;
         const VkBufferViewCreateInfo& BufferViewInfo() const noexcept;
         void GetMembers(size_t* num_members, ShaderResourceSubObject* dest_objects) const noexcept;
@@ -51,6 +52,7 @@ namespace st {
         void SetMembers(const size_t num_members, ShaderResourceSubObject* src_objects);
         void SetFormat(VkFormat fmt);
         void SetImageInfo(VkImageCreateInfo image_info);
+        void SetImageViewInfo(VkImageViewCreateInfo view_info);
         void SetSamplerInfo(VkSamplerCreateInfo sampler_info);
         void SetBufferViewInfo(VkBufferViewCreateInfo buffer_info);
 
