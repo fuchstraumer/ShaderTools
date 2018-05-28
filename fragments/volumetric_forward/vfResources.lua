@@ -51,42 +51,30 @@ Resources = {
         },
         DiffuseMap = {
             Type = "SampledImage",
-            ImageInfo = {
-                -- Images from file don't have any info set here:
-                -- all we do is generate a suitable descriptor binding
-                -- for what will eventually be used
-                FromFile = true
-            }
+            -- Images from file don't have any info set here:
+            -- all we do is generate a suitable descriptor binding
+            -- for what will eventually be used
+            FromFile = true
         },
         NormalMap = {
             Type = "SampledImage",
-            ImageInfo = {
-                FromFile = true
-            }
+            FromFile = true
         },        
         AmbientOcclusionMap = {
             Type = "SampledImage",
-            ImageInfo = {
-                FromFile = true
-            }
+            FromFile = true
         },
         RoughnessMap = {
             Type = "SampledImage",
-            ImageInfo = {
-                FromFile = true
-            }
+            FromFile = true
         },
         MetallicMap = {
             Type = "SampledImage",
-            ImageInfo = {
-                FromFile = true
-            }
+            FromFile = true
         },
         EmissiveMap = {
             Type = "SampledImage",
-            ImageInfo = {
-                FromFile = true
-            }
+            FromFile = true
         },
         LinearRepeatSampler = {
             Type = "Sampler",

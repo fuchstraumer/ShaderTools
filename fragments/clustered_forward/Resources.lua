@@ -93,10 +93,8 @@ Resources = {
             }
         },
         diffuseMap = {
-            Type = "CombinedImageSampler"
-            ImageInfo = {
-                DataStoredOn = "Host"
-            }
+            Type = "CombinedImageSampler",
+            FromFile = true
         },
         normalMap = {
             Type = "CombinedImageSampler"
