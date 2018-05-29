@@ -17,7 +17,6 @@ namespace st {
     std::string SPIR_TypeToString(const spirv_cross::SPIRType& stype);
     spirv_cross::SPIRType SPIR_TypeFromString(const std::string& str);
     spirv_cross::SPIRType::BaseType SPIR_BaseTypeEnumFromString(const std::string& str);
-    size_t SPIRTypeMemoryFootprint(const spirv_cross::SPIRType& stype);
 
     // Image formats (mainly)
     VkFormat VkFormatFromSPIRType(const spirv_cross::SPIRType& type);
