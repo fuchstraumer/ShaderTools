@@ -194,6 +194,7 @@ namespace st {
     }
 
     const size_t & ShaderResource::GetInputAttachmentIndex() const noexcept {
+    const size_t& ShaderResource::InputAttachmentIndex() const noexcept {
         if (impl->type != VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT) {
             LOG(WARNING) << "Tried to retrieve input attachment index for resource that is not an input attachment.";
             // Default constructed value should be invalid enough to be obvious.
@@ -201,31 +202,31 @@ namespace st {
         return impl->inputAttachmentIdx;
     }
 
-    const size_t & ShaderResource::GetAmountOfMemoryRequired() const noexcept {
+    const size_t& ShaderResource::MemoryRequired() const noexcept {
         return impl->memoryRequired;
     }
 
-    const VkFormat& ShaderResource::GetFormat() const noexcept {
+    const VkFormat& ShaderResource::Format() const noexcept {
         return impl->format;
     }
 
-    const bool& ShaderResource::DataIsFromFile() const noexcept {
+    const bool& ShaderResource::FromFile() const noexcept {
         return impl->fromFile;
     }
 
-    const char* ShaderResource::GetName() const {
+    const char* ShaderResource::Name() const {
         return impl->name.c_str();
     }
 
-    const char * ShaderResource::ParentGroupName() const {
+    const char* ShaderResource::ParentGroupName() const {
         return impl->parentSetName.c_str();
     }
 
-    const VkShaderStageFlags & ShaderResource::GetStages() const noexcept {
+    const VkShaderStageFlags& ShaderResource::ShaderStages() const noexcept {
         return impl->stages;
     }
 
-    const VkDescriptorType & ShaderResource::GetType() const noexcept {
+    const VkDescriptorType& ShaderResource::DescriptorType() const noexcept {
         return impl->type;
     }
 
@@ -259,7 +260,7 @@ namespace st {
         }
     }
 
-    const VkBufferViewCreateInfo & ShaderResource::BufferViewInfo() const noexcept {
+    const VkBufferViewCreateInfo& ShaderResource::BufferViewInfo() const noexcept {
         if (impl->type == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE || impl->type == VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER || impl->type == VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER) {
             return impl->bufferInfo;
         }

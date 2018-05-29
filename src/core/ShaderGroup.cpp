@@ -234,7 +234,7 @@ namespace st {
             results.SetNumStrings(iter->second.Members.size());
             size_t i = 0;
             for (auto& member : iter->second.Members) {
-                results.Strings[i] = strdup(member.second.BackingResource()->GetName());
+                results.Strings[i] = strdup(member.second.BackingResource()->Name());
                 ++i;
             }
             return results;

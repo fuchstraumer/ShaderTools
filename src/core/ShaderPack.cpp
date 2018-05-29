@@ -126,7 +126,7 @@ namespace st {
         const auto& sets = rsrcFile->GetAllResources();
         for (const auto& resource_set : sets) {
             for (const auto& resource : resource_set.second) {
-                switch (resource.GetType()) {
+                switch (resource.DescriptorType()) {
                 case VK_DESCRIPTOR_TYPE_SAMPLER:
                     typeCounts.Samplers++;
                     break;

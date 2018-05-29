@@ -445,7 +445,7 @@ namespace st {
             }
         };
         
-        const VkFormat fmt = texel_buffer.GetFormat();
+        const VkFormat fmt = texel_buffer.Format();
         const std::string format_string = VkFormatEnumToString(fmt);
         const std::string prefix = getResourcePrefix(active_set, format_string);
         const std::string buffer_type = get_uniform_texel_buffer_subtype(format_string);
@@ -498,7 +498,7 @@ namespace st {
             }
         };
 
-        const VkFormat fmt = storage_image.GetFormat();
+        const VkFormat fmt = storage_image.Format();
         const std::string fmt_string = VkFormatEnumToString(fmt);
         const std::string prefix = getResourcePrefix(active_set, fmt_string);
         const std::string resource_type = get_image_subtype(fmt_string) + getImageTypeSuffix(storage_image.ImageInfo());
@@ -554,7 +554,7 @@ namespace st {
             return result;
         };
 
-        const VkFormat fmt = input_attachment.GetFormat();
+        const VkFormat fmt = input_attachment.Format();
         const std::string fmt_string = VkFormatEnumToString(fmt);
         const std::string prefix = getResourcePrefix(active_set, get_input_attachment_specifier());
         const std::string resource_type = get_input_attachment_subtype(fmt_string);
@@ -579,9 +579,9 @@ namespace st {
         std::string resource_block_string{ "" };
 
         for (auto& resource : resource_block) {
-            const std::string resource_name = resource.GetName();
+            const std::string resource_name = resource.Name();
             auto& resource_item = resource;
-            switch (resource_item.GetType()) {
+            switch (resource_item.DescriptorType()) {
             case VK_DESCRIPTOR_TYPE_SAMPLER:
                 resource_block_string += getSamplerString(active_set, resource_item, resource_name);
                 break;

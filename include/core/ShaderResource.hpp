@@ -25,16 +25,16 @@ namespace st {
         ShaderResource& operator=(const ShaderResource& other) noexcept;
         ShaderResource& operator=(ShaderResource&& other) noexcept;
         
-        const size_t& GetInputAttachmentIndex() const noexcept;
-        const size_t& GetAmountOfMemoryRequired() const noexcept;
-        const VkFormat& GetFormat() const noexcept;
+        const size_t& InputAttachmentIndex() const noexcept;
+        const size_t& MemoryRequired() const noexcept;
+        const VkFormat& Format() const noexcept;
         // Used to indicate a binding for a texture, where the texture data is
         // loaded from a file
-        const bool& DataIsFromFile() const noexcept;
-        const char* GetName() const;
+        const bool& FromFile() const noexcept;
+        const char* Name() const;
         const char* ParentGroupName() const;
-        const VkShaderStageFlags& GetStages() const noexcept;
-        const VkDescriptorType& GetType() const noexcept;
+        const VkShaderStageFlags& ShaderStages() const noexcept;
+        const VkDescriptorType& DescriptorType() const noexcept;
         const VkImageCreateInfo& ImageInfo() const noexcept;
         const VkImageViewCreateInfo& ImageViewInfo() const noexcept;
         const VkSamplerCreateInfo& SamplerInfo() const noexcept;

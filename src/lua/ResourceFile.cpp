@@ -362,7 +362,7 @@ namespace st {
     const ShaderResource* ResourceFile::searchSingleGroupForResource(const std::string& group, const std::string & name) const {
         
         auto iter = std::find_if(setResources.at(group).cbegin(), setResources.at(group).cend(), [name](const ShaderResource& rsrc) {
-            return name == std::string(rsrc.GetName());
+            return name == std::string(rsrc.Name());
         });
 
         if (iter == setResources.at(group).cend()) {
@@ -550,9 +550,9 @@ namespace st {
 
     VkBufferViewCreateInfo ResourceFile::getStorageImageBufferViewInfo(ShaderResource& rsrc) const {
         VkBufferViewCreateInfo results = buffer_view_info_base;
-        results.format = rsrc.GetFormat();
+        results.format = rsrc.Format();
         results.offset = 0;
-        results.range = rsrc.GetAmountOfMemoryRequired();
+        results.range = rsrc.MemoryRequired();
         return results;
     }
 
@@ -659,7 +659,7 @@ namespace st {
         std::string format_str = table.at("Format").cast<std::string>();
         rsrc.SetFormat(VkFormatFromString(format_str));
         size_t image_size = static_cast<size_t>(table.at("Size").cast<int>());
-        size_t footprint = VkFormatSize(rsrc.GetFormat());
+        size_t footprint = VkFormatSize(rsrc.Format());
         if (footprint != std::numeric_limits<size_t>::max()) {
             rsrc.SetMemoryRequired(footprint * image_size);
         }
@@ -735,7 +735,7 @@ namespace st {
         }
 
         rsrc.SetImageInfo(parseImageOptions(rsrc, environment->GetTableMap(table.at("ImageOptions"))));
-        size_t format_size = VkFormatSize(rsrc.GetFormat());
+        size_t format_size = VkFormatSize(rsrc.Format());
         size_t image_size = static_cast<size_t>(table.at("Size").cast<int>());
         rsrc.SetMemoryRequired(format_size * image_size);
 
@@ -816,6 +816,7 @@ namespace st {
                     throw std::domain_error("Unsupported resource type used.");
                 }
 
+                resource.SetBindingIndex(setResources[entry.first].size());
                 setResources[entry.first].emplace_back(resource);
 
             }
