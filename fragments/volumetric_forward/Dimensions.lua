@@ -57,3 +57,5 @@ end
 function dimensions.NumLightAABBs()
     return 512;
 end
+
+return dimensions;

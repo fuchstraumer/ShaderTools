@@ -1,4 +1,5 @@
-local dimensions = require("Dimensions");
+
+local dimensions = require "Dimensions";
 
 ObjectSizes = {
     PointLight = 64,
