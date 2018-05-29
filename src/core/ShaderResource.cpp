@@ -126,6 +126,7 @@ namespace st {
         ShaderResourceImpl(ShaderResourceImpl&& other) noexcept;
         ShaderResourceImpl& operator=(const ShaderResourceImpl& other) noexcept;
         ShaderResourceImpl& operator=(ShaderResourceImpl&& other) noexcept;
+        size_t bindingIdx{ std::numeric_limits<size_t>::max() };
         std::string name{ "" };
         size_t memoryRequired{ std::numeric_limits<size_t>::max() };
         VkFormat format{ VK_FORMAT_UNDEFINED };
@@ -193,7 +194,10 @@ namespace st {
         return *this;
     }
 
-    const size_t & ShaderResource::GetInputAttachmentIndex() const noexcept {
+    const size_t& ShaderResource::BindingIndex() const noexcept {
+        return impl->bindingIdx;
+    }
+
     const size_t& ShaderResource::InputAttachmentIndex() const noexcept {
         if (impl->type != VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT) {
             LOG(WARNING) << "Tried to retrieve input attachment index for resource that is not an input attachment.";
@@ -275,6 +279,10 @@ namespace st {
         if (objects != nullptr) {
             std::copy(impl->members.cbegin(), impl->members.cend(), objects);
         }
+    }
+
+    void ShaderResource::SetBindingIndex(size_t idx) {
+        impl->bindingIdx = std::move(idx);
     }
 
     void ShaderResource::SetDataFromFile(bool from_file) {

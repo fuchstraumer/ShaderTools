@@ -25,6 +25,7 @@ namespace st {
         ShaderResource& operator=(const ShaderResource& other) noexcept;
         ShaderResource& operator=(ShaderResource&& other) noexcept;
         
+        const size_t& BindingIndex() const noexcept;
         const size_t& InputAttachmentIndex() const noexcept;
         const size_t& MemoryRequired() const noexcept;
         const VkFormat& Format() const noexcept;
@@ -41,6 +42,7 @@ namespace st {
         const VkBufferViewCreateInfo& BufferViewInfo() const noexcept;
         void GetMembers(size_t* num_members, ShaderResourceSubObject* dest_objects) const noexcept;
 
+        void SetBindingIndex(size_t idx);
         void SetDataFromFile(bool from_file);
         void SetInputAttachmentIndex(size_t idx);
         void SetMemoryRequired(size_t amt);
