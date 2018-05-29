@@ -296,7 +296,11 @@ namespace st {
     }
 
     VkComponentMapping componentMappingFromLua(const std::unordered_map<std::string, luabridge::LuaRef>& table) {
-        VkComponentMapping result;
+        VkComponentMapping result{ 
+            VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY,
+            VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY
+        };
+
         for (auto& entry : table) {
             if (entry.second[0].cast<int>() == 0) {
                 result.r = componentSwizzleFromStr(entry.second[1].cast<std::string>());
@@ -311,6 +315,8 @@ namespace st {
                 result.a = componentSwizzleFromStr(entry.second[1].cast<std::string>());
             }
         }
+
+        return result;
     }
 
     ResourceFile::ResourceFile() : environment(std::make_unique<LuaEnvironment>()) {
