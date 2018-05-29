@@ -499,13 +499,26 @@ namespace st {
     }
 
     std::string ShaderGeneratorImpl::getSampledImageString(const size_t& active_set, const ShaderResource& sampled_image, const std::string& name) const {
-        const std::string resource_type = std::string("texture") + getImageTypeSuffix(sampled_image.ImageInfo());
+        const std::string prefix = getResourcePrefix(active_set, "", sampled_image);
+        std::string resource_type = std::string("texture");
+        if (!sampled_image.FromFile()) {
+            resource_type += getImageTypeSuffix(sampled_image.ImageInfo());
+        }
+        else {
+            resource_type += "2D";
+        }
         return prefix + std::string("uniform ") + resource_type + std::string(" ") + name + std::string(";\n");
     }
 
     std::string ShaderGeneratorImpl::getCombinedImageSamplerString(const size_t& active_set, const ShaderResource& combined_image_sampler, const std::string& name) const {
-        const std::string resource_type = std::string("sampler") + getImageTypeSuffix(combined_image_sampler.ImageInfo());
         const std::string prefix = getResourcePrefix(active_set, "", combined_image_sampler);
+        std::string resource_type = std::string("sampler");
+        if (!combined_image_sampler.FromFile()) {
+            resource_type += getImageTypeSuffix(combined_image_sampler.ImageInfo());
+        }
+        else {
+            resource_type += "2D";
+        }
         return prefix + std::string("uniform ") + resource_type + std::string(" ") + name + std::string(";\n");
     }
 
