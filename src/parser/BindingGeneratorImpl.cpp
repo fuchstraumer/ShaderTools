@@ -158,17 +158,21 @@ namespace st {
         };
 
         for (const auto& rsrc : resources) {
-            const std::string rsrc_name = get_actual_name(rsrc.name);
+            const std::string rsrc_name = get_actual_name(recompiler->get_name(rsrc.id));
             const ShaderResource* parent_resource = rsrc_script->FindResource(rsrc_name);
             if (parent_resource == nullptr) {
                 LOG(ERROR) << "Couldn't find parent resource of resource usage object!";
                 throw std::runtime_error("Couldn't find parent resource for resource usage object.");
             }
             uint32_t binding_idx = recompiler->get_decoration(rsrc.id, spv::DecorationBinding);
+            if (binding_idx != parent_resource->BindingIndex()) {
+                LOG(ERROR) << "Binding index of generated shader code, and binding of the actual resource, did not match!";
+                throw std::runtime_error("Binding index of generated shader code, and binding of the actual resource, did not match!");
+            }
             uint32_t set_idx = recompiler->get_decoration(rsrc.id, spv::DecorationDescriptorSet);
             auto spir_type = recompiler->get_type(rsrc.type_id);
             access_modifier modifier = AccessModifierFromSPIRType(spir_type);
-            tempResources.emplace(set_idx, ResourceUsage(shader_handle, parent_resource, binding_idx, modifier, parent_resource->GetType()));
+            tempResources.emplace(set_idx, ResourceUsage(shader_handle, parent_resource, modifier, parent_resource->DescriptorType()));
         }
 
     }
@@ -283,7 +287,7 @@ namespace st {
 
     void BindingGeneratorImpl::parseImpl(const Shader& handle, const std::vector<uint32_t>& binary_data) {
         using namespace spirv_cross;
-        recompiler = std::make_unique<Compiler>(binary_data);
+        recompiler = std::make_unique<CompilerGLSL>(binary_data);
         const auto stage = handle.GetStage();
         parseResourceType(handle, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
         parseResourceType(handle, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
