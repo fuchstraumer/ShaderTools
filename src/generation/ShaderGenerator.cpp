@@ -93,7 +93,7 @@ namespace st {
         size_t LastInputAttachmentIndex = 0;
         size_t NumAttributes = 0;
         size_t NumInstanceAttributes = 0;
-        std::multimap<size_t, size_t> DescriptorBindings;
+        size_t LastSetIdx = 0;
     };
 
     class ShaderGeneratorImpl {
@@ -115,7 +115,7 @@ namespace st {
         void parseInclude(const std::string& str, bool local);
 
         size_t getBinding(size_t & active_set) const;
-        std::string getResourcePrefix(size_t active_set, const std::string & image_format) const;
+        std::string getResourcePrefix(size_t active_set, const std::string & image_format, const ShaderResource& rsrc) const;
         std::string getBufferMembersString(const ShaderResource & resource) const;
         std::string getUniformBufferString(const size_t& active_set, const ShaderResource & buffer, const std::string & name) const;
         std::string getStorageBufferString(const size_t & active_set, const ShaderResource & buffer, const std::string & name) const;
@@ -335,22 +335,10 @@ namespace st {
 
     }
 
-    size_t ShaderGeneratorImpl::getBinding(size_t& active_set) const {
-        if (ShaderResources.DescriptorBindings.count(active_set) == 0) {
-            ShaderResources.DescriptorBindings.insert({ active_set, 0 });
-            return 0;
-        }
-        else {
-            const auto& iter = ShaderResources.DescriptorBindings.equal_range(active_set);
-            auto minmax = std::minmax_element(iter.first, iter.second);
-            ShaderResources.DescriptorBindings.insert({ active_set, (*minmax.second).second + 1 });
-            return (*minmax.second).second + 1;
-        }
-    }
+    std::string ShaderGeneratorImpl::getResourcePrefix(size_t active_set, const std::string& format_specifier, const ShaderResource& rsrc) const {
 
-    std::string ShaderGeneratorImpl::getResourcePrefix(size_t active_set, const std::string& format_specifier) const {
         std::string prefix{
-            std::string{ "layout (set = " } + std::to_string(active_set) + std::string{ ", binding = " } + std::to_string(getBinding(active_set))
+            std::string{ "layout (set = " } + std::to_string(active_set) + std::string{ ", binding = " } + std::to_string(rsrc.BindingIndex())
         };
 
         if (!format_specifier.empty()) {
@@ -382,7 +370,7 @@ namespace st {
     }
 
     std::string ShaderGeneratorImpl::getUniformBufferString(const size_t& active_set, const ShaderResource& buffer, const std::string& name) const {
-        const std::string prefix = getResourcePrefix(active_set, "");
+        const std::string prefix = getResourcePrefix(active_set, "", buffer);
         const std::string alt_name = std::string{ "_" } + name + std::string{ "_" };
         std::string result = prefix + std::string{ "uniform " } + alt_name + std::string{ " {\n" };
         result += getBufferMembersString(buffer);
@@ -391,7 +379,7 @@ namespace st {
     }
 
     std::string ShaderGeneratorImpl::getStorageBufferString(const size_t& active_set, const ShaderResource& buffer, const std::string& name) const {
-        const std::string prefix = getResourcePrefix(active_set, "std430");
+        const std::string prefix = getResourcePrefix(active_set, "std430", buffer);
         const std::string alt_name = std::string{ "buffer " } + std::string{ "_" } + name + std::string{ "_" };
         std::string result = prefix + alt_name + std::string{ " {\n" };
         result += getBufferMembersString(buffer);
@@ -419,9 +407,9 @@ namespace st {
             }
         };
 
-        const VkFormat& fmt = image.GetFormat();
+        const VkFormat& fmt = image.Format();
         const std::string format_string = VkFormatEnumToString(fmt);
-        const std::string prefix = getResourcePrefix(active_set, format_string);
+        const std::string prefix = getResourcePrefix(active_set, format_string, image);
         const std::string buffer_type = get_storage_texel_buffer_subtype(format_string);
         return prefix + std::string{ "uniform " } + buffer_type + std::string{ " " } +name + std::string{ ";\n" };
     }
@@ -447,7 +435,7 @@ namespace st {
         
         const VkFormat fmt = texel_buffer.Format();
         const std::string format_string = VkFormatEnumToString(fmt);
-        const std::string prefix = getResourcePrefix(active_set, format_string);
+        const std::string prefix = getResourcePrefix(active_set, format_string, texel_buffer);
         const std::string buffer_type = get_uniform_texel_buffer_subtype(format_string);
         return prefix + std::string("uniform ") + buffer_type + std::string(" ") + name + std::string(";\n");
     }
@@ -500,32 +488,31 @@ namespace st {
 
         const VkFormat fmt = storage_image.Format();
         const std::string fmt_string = VkFormatEnumToString(fmt);
-        const std::string prefix = getResourcePrefix(active_set, fmt_string);
+        const std::string prefix = getResourcePrefix(active_set, fmt_string, storage_image);
         const std::string resource_type = get_image_subtype(fmt_string) + getImageTypeSuffix(storage_image.ImageInfo());
         return prefix + std::string("uniform ") + resource_type + std::string(" ") + name + std::string(";\n");
     }
 
     std::string ShaderGeneratorImpl::getSamplerString(const size_t& active_set, const ShaderResource& sampler, const std::string& name) const {
-        const std::string prefix = getResourcePrefix(active_set, "");
+        const std::string prefix = getResourcePrefix(active_set, "", sampler);
         return prefix + std::string("uniform sampler ") + name + std::string(";\n");
     }
 
     std::string ShaderGeneratorImpl::getSampledImageString(const size_t& active_set, const ShaderResource& sampled_image, const std::string& name) const {
-        const std::string prefix = getResourcePrefix(active_set, "");
         const std::string resource_type = std::string("texture") + getImageTypeSuffix(sampled_image.ImageInfo());
         return prefix + std::string("uniform ") + resource_type + std::string(" ") + name + std::string(";\n");
     }
 
     std::string ShaderGeneratorImpl::getCombinedImageSamplerString(const size_t& active_set, const ShaderResource& combined_image_sampler, const std::string& name) const {
-        const std::string prefix = getResourcePrefix(active_set, "");
         const std::string resource_type = std::string("sampler") + getImageTypeSuffix(combined_image_sampler.ImageInfo());
+        const std::string prefix = getResourcePrefix(active_set, "", combined_image_sampler);
         return prefix + std::string("uniform ") + resource_type + std::string(" ") + name + std::string(";\n");
     }
 
     std::string ShaderGeneratorImpl::getInputAttachmentString(const size_t& active_set, const ShaderResource& input_attachment, const std::string& name) const {
         auto get_input_attachment_specifier = [&]()->std::string {
             static const std::string base_str("input_attachment_index=");
-            return base_str + std::to_string(input_attachment.GetInputAttachmentIndex()) + std::string(" ");
+            return base_str + std::to_string(input_attachment.InputAttachmentIndex()) + std::string(" ");
         };
 
         auto get_input_attachment_subtype = [&](const std::string& format_str)->std::string {
@@ -556,7 +543,7 @@ namespace st {
 
         const VkFormat fmt = input_attachment.Format();
         const std::string fmt_string = VkFormatEnumToString(fmt);
-        const std::string prefix = getResourcePrefix(active_set, get_input_attachment_specifier());
+        const std::string prefix = getResourcePrefix(active_set, get_input_attachment_specifier(), input_attachment);
         const std::string resource_type = get_input_attachment_subtype(fmt_string);
         return prefix + std::string("uniform ") + resource_type + std::string(" ") + name + std::string(";\n");
     }
@@ -568,10 +555,8 @@ namespace st {
 #endif
 
     void ShaderGeneratorImpl::useResourceBlock(const std::string & block_name) {
-        size_t active_set = 0;
-        if (!ShaderResources.DescriptorBindings.empty()) {
-            active_set = ShaderResources.DescriptorBindings.crbegin()->first + 1;
-        }
+        size_t active_set = ShaderResources.LastSetIdx;
+        
 
         fragments.emplace(shaderFragment{ fragment_type::ResourceBlock, std::string("// Resource block: ") + block_name + std::string("\n") });
 
@@ -622,7 +607,7 @@ namespace st {
         resource_block_string += std::string{ "// End resource block\n\n" };
 
         fragments.emplace(shaderFragment{ fragment_type::ResourceBlock, resource_block_string });
-
+        ++ShaderResources.LastSetIdx;
     }
 
     std::string ShaderGeneratorImpl::fetchBodyStr(const Shader& handle, const std::string& path_to_source) {
