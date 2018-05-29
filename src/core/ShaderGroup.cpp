@@ -7,11 +7,10 @@
 #include "../lua/LuaEnvironment.hpp"
 #include "../lua/ResourceFile.hpp"
 #include "../util/ShaderFileTracker.hpp"
-#include "util/Delegate.hpp"
-#include <unordered_set>
-#include <experimental/filesystem>
 #include "../parser/BindingGeneratorImpl.hpp"
 #include "easyloggingpp/src/easylogging++.h"
+#include <unordered_set>
+#include <experimental/filesystem>
 
 namespace st {
 
@@ -207,8 +206,9 @@ namespace st {
         }
     }
 
-    void ShaderGroup::GetResourceUsages(const size_t & set_idx, size_t * num_resources, ResourceUsage * resources) const {
+    void ShaderGroup::GetResourceUsages(const size_t & _set_idx, size_t * num_resources, ResourceUsage * resources) const {
         const BindingGeneratorImpl* b_impl = GetBindingGeneratorImpl();
+        const uint32_t set_idx = static_cast<uint32_t>(_set_idx);
         if (b_impl->sortedSets.count(set_idx) != 0) {
             if (b_impl->sortedSets.at(set_idx).Members.empty()) {
                 *num_resources = 0;
