@@ -1,6 +1,13 @@
 
 layout(early_fragment_tests) in;
-#include "MaterialSpecialization.glsl"
+
+SPC const bool HasDiffuse = false;
+SPC const bool HasNormal = false;
+SPC const bool HasAmbientOcclusion = false;
+SPC const bool HasRoughness = false;
+SPC const bool HasMetallic = false;
+SPC const bool HasEmissive = false;
+
 #include "Structures.glsl"
 #include "Functions.glsl"
 
@@ -23,7 +30,7 @@ LightingResult Lighting(in Material mtl, vec4 eye_pos, vec4 p, vec4 n) {
         results.Specular += point_result.Specular;
     }
 
-    for (uint j = 0; j < LightCounts.NumSpotLights; ++i) {
+    for (uint j = 0; j < LightCounts.NumSpotLights; ++j) {
         if (!SpotLights.Data[j].Enabled) {
             continue;
         }
@@ -49,12 +56,14 @@ LightingResult Lighting(in Material mtl, vec4 eye_pos, vec4 p, vec4 n) {
 void main() {
     vec4 eye_pos = vec4(0.0f, 0.0f, 0.0f, 1.0f);
 
+    const vec3 zero_vec = vec3(0.0f, 0.0f, 0.0f);
+
     Material mtl = MaterialParameters.Data;
 
     vec4 diffuse = mtl.diffuse;
-    if (HasDiffuseTexture) {
+    if (HasDiffuse) {
         vec4 diffuse_sample = texture(sampler2D(DiffuseMap, LinearRepeatSampler), vUV);
-        if (any(diffuse.rgb)) {
+        if (any(notEqual(diffuse.rgb, zero_vec))) {
             diffuse *= diffuse_sample;
         }
         else {
@@ -62,15 +71,10 @@ void main() {
         }
     }
 
-    float alpha = mtl.alpha;
-    if (HasAlphaTexture) {
-        alpha = texture(sampler2D(AlphaMap, LinearRepeatSampler), vUV).r;
-    }
-
     vec4 ambient = mtl.ambient;
-    if (HasAmbientTexture) {
-        vec4 ambient_sample = texture(sampler2D(AmbientOcclusionMap, LinearRepeatSampler), vUV).r;
-        if (any(ambient.rgb)) {
+    if (HasAmbientOcclusion) {
+        vec4 ambient_sample = vec4(texture(sampler2D(AmbientOcclusionMap, LinearRepeatSampler), vUV).r);
+        if (any(notEqual(ambient.rgb, zero_vec))) {
             ambient *= ambient_sample;
         }
         else {
@@ -81,9 +85,9 @@ void main() {
     ambient *= mtl.globalAmbient;
 
     vec4 emissive = mtl.emissive;
-    if (HasEmissiveTexture) {
-        vec4 emissive_sample = texture(sampler2D(EmissiveMap, LinearRepeatSampler), vUV).r;
-        if (any(emissive.rgb)) {
+    if (HasEmissive) {
+        vec4 emissive_sample = vec4(texture(sampler2D(EmissiveMap, LinearRepeatSampler), vUV).r);
+        if (any(notEqual(emissive.rgb, zero_vec))) {
             emissive *= emissive_sample;
         }
         else {
@@ -92,7 +96,7 @@ void main() {
     }
 
     float metallic = mtl.metallic;
-    if (HasMetallicTexture) {
+    if (HasMetallic) {
         float metallic_sample = texture(sampler2D(MetallicMap, LinearRepeatSampler), vUV).r;
         if (metallic != 0.0f) {
             metallic *= metallic_sample;
@@ -103,7 +107,7 @@ void main() {
     }
 
     float roughness = mtl.roughness;
-    if (HasRoughnessTexture) {
+    if (HasRoughness) {
         float roughness_sample = texture(sampler2D(RoughnessMap, LinearRepeatSampler), vUV).r;
         if (roughness != 0.0f) {
             roughness *= roughness_sample;

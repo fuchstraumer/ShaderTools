@@ -3,7 +3,7 @@
 #pragma USE_RESOURCES SortResource
 #pragma USE_RESOURCES MergeSortResources
 
-$SPC const uint SortAlgorithm = 0;
+SPC const uint SortAlgorithm = 0;
 
 const uint NUM_THREADS = 256;
 const uint NUM_VALUES_PER_THREAD = 8;

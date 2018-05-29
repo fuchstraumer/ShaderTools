@@ -3,7 +3,7 @@
 #pragma USE_RESOURCES SortResources
 #pragma USE_RESOURCES VolumetricForwardLights
 
-$SPC const uint BuildStage = 0;
+SPC const uint BuildStage = 0;
 
 const uint NUM_THREADS = 32 * 16;
 const float FLT_MAX = 3.402823466e+36f;
