@@ -324,11 +324,11 @@ namespace st {
             .addFunction("GetFieldOfViewY", callbacks.GetFOVY);
     }
 
-    const set_resource_map_t& ResourceFile::GetResources(const std::string & block_name) const {
+    const std::vector<ShaderResource>& ResourceFile::GetResources(const std::string & block_name) const {
         return setResources.at(block_name);
     }
 
-    const std::unordered_map<std::string, set_resource_map_t>& ResourceFile::GetAllResources() const noexcept {
+    const std::unordered_map<std::string, std::vector<ShaderResource>>& ResourceFile::GetAllResources() const noexcept {
         return setResources;
     }
 
@@ -761,7 +761,7 @@ namespace st {
 
         for (auto& entry : resource_sets) {
             // Now accessing single "group" of resources
-            setResources.emplace(entry.first, set_resource_map_t{});
+            setResources.emplace(entry.first, std::vector<ShaderResource>{});
 
             auto per_set_resources = environment->GetTableMap(entry.second);
             for (auto& set_resource : per_set_resources) {

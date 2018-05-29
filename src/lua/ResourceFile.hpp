@@ -11,8 +11,6 @@
 #include <variant>
 namespace st {
 
-    using set_resource_map_t = std::vector<ShaderResource>;
-
     class ResourceFile {
         ResourceFile(const ResourceFile&) = delete;
         ResourceFile& operator=(const ResourceFile&) = delete;
@@ -20,8 +18,8 @@ namespace st {
 
         ResourceFile();
         void Execute(const char* fname);
-        const set_resource_map_t& GetResources(const std::string& block_name) const;
-        const std::unordered_map<std::string, set_resource_map_t>& GetAllResources() const noexcept;
+        const std::vector<ShaderResource>& GetResources(const std::string& block_name) const;
+        const std::unordered_map<std::string, std::vector<ShaderResource>>& GetAllResources() const noexcept;
         const ShaderResource* FindResource(const std::string& name) const;
 
     private:
@@ -46,7 +44,7 @@ namespace st {
 
         void createStorageImageResource(const std::unordered_map<std::string, luabridge::LuaRef>& table, ShaderResource & rsrc) const;
 
-        std::unordered_map<std::string, set_resource_map_t> setResources;
+        std::unordered_map<std::string, std::vector<ShaderResource>> setResources;
         std::unique_ptr<LuaEnvironment> environment;
         void createInputAttachmentResource(const std::unordered_map<std::string, luabridge::LuaRef>& table, ShaderResource & rsrc) const;
         void parseResources();
