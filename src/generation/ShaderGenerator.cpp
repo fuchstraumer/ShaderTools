@@ -583,6 +583,9 @@ namespace st {
             case VK_DESCRIPTOR_TYPE_SAMPLER:
                 resource_block_string += getSamplerString(active_set, resource_item, resource_name);
                 break;
+            case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
+                resource_block_string += getSampledImageString(active_set, resource_item, resource_name);
+                break;
             case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
                 resource_block_string += getCombinedImageSamplerString(active_set, resource_item, resource_name);
                 break;
