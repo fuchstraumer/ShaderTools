@@ -122,10 +122,11 @@ namespace st {
 
         ShaderResourceImpl() = default;
         ~ShaderResourceImpl() {};
-        ShaderResourceImpl(const ShaderResourceImpl& other) noexcept;
-        ShaderResourceImpl(ShaderResourceImpl&& other) noexcept;
-        ShaderResourceImpl& operator=(const ShaderResourceImpl& other) noexcept;
-        ShaderResourceImpl& operator=(ShaderResourceImpl&& other) noexcept;
+        ShaderResourceImpl(const ShaderResourceImpl& other) = default;
+        ShaderResourceImpl(ShaderResourceImpl&& other) noexcept = default;
+        ShaderResourceImpl& operator=(const ShaderResourceImpl& other) = default;
+        ShaderResourceImpl& operator=(ShaderResourceImpl&& other) = default;
+
         size_t bindingIdx{ std::numeric_limits<size_t>::max() };
         std::string name{ "" };
         size_t memoryRequired{ std::numeric_limits<size_t>::max() };
@@ -144,37 +145,6 @@ namespace st {
         bool needsMipMaps{ false };
 
     };
-
-    ShaderResourceImpl::ShaderResourceImpl(const ShaderResourceImpl & other) noexcept : memoryRequired(other.memoryRequired), parentSetName(other.parentSetName),
-        name(other.name), sizeClass(other.sizeClass), stages(other.stages), type(other.type), members(other.members), format(other.format) {}
-
-    ShaderResourceImpl::ShaderResourceImpl(ShaderResourceImpl && other) noexcept : memoryRequired(std::move(other.memoryRequired)), parentSetName(std::move(other.parentSetName)),
-        name(std::move(other.name)), sizeClass(std::move(other.sizeClass)), stages(std::move(other.stages)), type(std::move(other.type)), members(std::move(other.members)),
-        format(std::move(other.format)) {}
-
-    ShaderResourceImpl & ShaderResourceImpl::operator=(const ShaderResourceImpl & other) noexcept {
-        memoryRequired = other.memoryRequired;
-        parentSetName = other.parentSetName;
-        name = other.name;
-        sizeClass = other.sizeClass;
-        stages = other.stages;
-        type = other.type;
-        members = other.members;
-        format = other.format;
-        return *this;
-    }
-
-    ShaderResourceImpl & ShaderResourceImpl::operator=(ShaderResourceImpl && other) noexcept {
-        memoryRequired = std::move(other.memoryRequired);
-        parentSetName = std::move(other.parentSetName);
-        name = std::move(other.name);
-        sizeClass = std::move(other.sizeClass);
-        stages = std::move(other.stages);
-        type = std::move(other.type);
-        members = std::move(other.members);
-        format = std::move(other.format);
-        return *this;
-    }
 
     ShaderResource::ShaderResource() : impl(std::make_unique<ShaderResourceImpl>()) {}
 
