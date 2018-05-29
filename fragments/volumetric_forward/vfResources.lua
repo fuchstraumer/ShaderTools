@@ -1,60 +1,5 @@
-LightGridBlockSize = 32;
-ClusterGridBlockSize = 64;
-AverageLightsPerTile = 100;
 
-function get_cluster_dimensions()
-    cluster_x = math.ceil(GetWindowX() / ClusterGridBlockSize);
-    cluster_y = math.ceil(GetWindowY() / ClusterGridBlockSize);
-    s_d = 2.0 * math.tan(math.rad(GetFieldOfViewY()) * 0.50) / cluster_y;
-    log_dim_y = 1.0 / math.log(1.0 + s_d);
-    log_depth = math.abs(math.log(GetZNear() / GetZFar()));
-    cluster_z = math.floor(log_depth * log_dim_y);
-    return cluster_x, cluster_y, cluster_z;
-end
-
-function get_num_clusters()
-    x, y, z = get_cluster_dimensions();
-    return x * y * z;
-end
-
-function get_num_threads()
-   threads_x = math.ceil(GetWindowX() / LightGridBlockSize);
-   threads_y = math.ceil(GetWindowY() / LightGridBlockSize);
-   return threads_x, threads_y, 1; 
-end
-
-function get_num_thread_groups()
-    tx, ty, tz = get_num_threads();
-    groups_x = math.ceil(tx / LightGridBlockSize);
-    groups_y = math.ceil(ty / LightGridBlockSize);
-    return groups_x, groups_y, 1;
-end
-
-function light_index_list_size()
-    tx, ty, tz = get_num_threads();
-    return tx * ty * tz * AverageLightsPerTile;
-end
-
-function light_grid_size()
-    tx, ty, tz = get_num_threads();
-    return tx * ty * tz;
-end
-
-function get_num_point_lights()
-    return 8192;
-end
-
-function get_num_spot_lights()
-    return 8192;
-end
-
-function get_num_directional_lights()
-    return 1024;
-end
-
-function get_num_light_aabbs()
-    return 512;
-end
+local dimensions = require "Dimensions";
 
 ObjectSizes = {
     PointLight = 64,
@@ -98,6 +43,62 @@ Resources = {
             }
         }
     },
+    MaterialResources = {
+        MaterialParameters = {
+            Type = "UniformBuffer",
+            Members = {
+                Data = { "Material", 0 }
+            }
+        },
+        DiffuseMap = {
+            Type = "SampledImage",
+            -- Images from file don't have any info set here:
+            -- all we do is generate a suitable descriptor binding
+            -- for what will eventually be used
+            FromFile = true
+        },
+        NormalMap = {
+            Type = "SampledImage",
+            FromFile = true
+        },        
+        AmbientOcclusionMap = {
+            Type = "SampledImage",
+            FromFile = true
+        },
+        RoughnessMap = {
+            Type = "SampledImage",
+            FromFile = true
+        },
+        MetallicMap = {
+            Type = "SampledImage",
+            FromFile = true
+        },
+        EmissiveMap = {
+            Type = "SampledImage",
+            FromFile = true
+        },
+        LinearRepeatSampler = {
+            Type = "Sampler",
+            SamplerInfo = {
+
+            }
+        },
+        LinearClampSampler = {
+            Type = "Sampler",
+            SamplerInfo = {
+                AddressModeU = "ClampToEdge",
+                AddressModeV = "ClampToEdge",
+                AddressModeW = "ClampToEdge"
+            }
+        },
+        AnisotropicSampler = {
+            Type = "Sampler",
+            AnisotropicSampler = {
+                EnableAnisotropy = true,
+                MaxAnisotropy = 8.0
+            }
+        }
+    },
     VolumetricForward = {
         ClusterData = {
             Type = "UniformBuffer",
@@ -115,34 +116,34 @@ Resources = {
                 Data = { {
                     Type = "Array",
                     ElementType = "AABB",
-                    NumElements = get_num_clusters()
+                    NumElements = dimensions.NumClusters()
                 }, 0 }
             }
         },
         ClusterFlags = {
             Type = "StorageTexelBuffer",
             Format = "r8ui",
-            Size = get_num_clusters()
+            Size = dimensions.NumClusters()
         },
         PointLightIndexList = {
             Type = "StorageTexelBuffer",
             Format = "r32ui",
-            Size = light_index_list_size()
+            Size = dimensions.LightIndexListSize()
         },
         SpotLightIndexList = {
             Type = "StorageTexelBuffer",
             Format = "r32ui",
-            Size = light_index_list_size()
+            Size = dimensions.LightIndexListSize()
         },
         PointLightGrid = {
             Type = "StorageTexelBuffer",
             Format = "rg32ui",
-            Size = light_grid_size()
+            Size = dimensions.LightGridSize()
         },
         SpotLightGrid = {
             Type = "StorageTexelBuffer",
             Format = "rg32ui",
-            Size = light_grid_size()
+            Size = dimensions.LightGridSize()
         },
         PointLightIndexCounter = {
             Type = "StorageTexelBuffer",
@@ -162,7 +163,7 @@ Resources = {
         UniqueClusters = {
             Type = "StorageTexelBuffer",
             Format = "r32ui",
-            Size = get_num_clusters()
+            Size = dimensions.NumClusters()
         }
     },
     VolumetricForwardLights = {
@@ -180,7 +181,7 @@ Resources = {
                 Data = { {
                     Type = "Array",
                     ElementType = "PointLight",
-                    NumElements = get_num_point_lights()
+                    NumElements = dimensions.NumPointLights()
                 }, 0 }
             }
         },
@@ -190,7 +191,7 @@ Resources = {
                 Data = { {
                     Type = "Array",
                     ElementType = "SpotLight",
-                    NumElements = get_num_spot_lights()
+                    NumElements = dimensions.NumSpotLights()
                 }, 0 }
             }
         },
@@ -200,7 +201,7 @@ Resources = {
                 Data = { {
                     Type = "Array",
                     ElementType = "DirectionalLight",
-                    NumElements = get_num_directional_lights()
+                    NumElements = dimensions.NumDirectionalLights()
                 }, 0 }
             }
         }
@@ -242,29 +243,29 @@ Resources = {
                 Data = { {
                     Type = "Array",
                     ElementType = "AABB",
-                    NumElements = get_num_light_aabbs()
+                    NumElements = dimensions.NumLightAABBs()
                 }, 0 }
             }
         },
         PointLightMortonCodes = {
             Type = "StorageTexelBuffer",
             Format = "r32ui",
-            Size = get_num_point_lights()
+            Size = dimensions.NumPointLights()
         },
         SpotLightMortonCodes = {
             Type = "StorageTexelBuffer",
             Format = "r32ui",
-            Size = get_num_spot_lights()
+            Size = dimensions.NumSpotLights()
         },
         PointLightIndices = {
             Type = "StorageTexelBuffer",
             Format = "r32ui",
-            Size = get_num_point_lights()
+            Size = dimensions.NumPointLights()
         },
         SpotLightIndices = {
             Type = "StorageTexelBuffer",
             Format = "r32ui",
-            Size = get_num_spot_lights()
+            Size = dimensions.NumSpotLights()
         }
     },
     BVHResources = {
@@ -282,7 +283,7 @@ Resources = {
                 Data = { {
                     Type = "Array",
                     ElementType = "AABB",
-                    NumElements = get_num_point_lights()
+                    NumElements = dimensions.NumPointLights()
                 }, 0 }
             }
         },
@@ -292,31 +293,8 @@ Resources = {
                 Data = { {
                     Type = "Array",
                     ElementType = "AABB",
-                    NumElements = get_num_spot_lights()
+                    NumElements = dimensions.NumSpotLights()
                 }, 0 }
-            }
-        }
-    },
-    MaterialResources = {
-        diffuseMap = {
-            Type = "CombinedImageSampler",
-            ImageOptions = {
-                SizeClass = "Absolute",
-                SampleCount = 1,
-                ImageType = "2D",
-                GenerateMipMaps = false,
-                MipLevels = 1,
-                Layers = 1
-            },
-            SamplerOptions = {
-                MagFilter = "Linear",
-                MinFilter = "Linear",
-                MipMapFilter = "Linear",
-                AddressModeU = "Repeat",
-                AddressModeV = "Repeat",
-                AddressModeW = "ClampToEdge",
-                EnableAnisotropy = true,
-                MaxAnisotropy = 4.0
             }
         }
     }

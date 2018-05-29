@@ -1,28 +1,5 @@
 
-NumLights = 2048;
-TileWidth = 64;
-TileHeight = 64;
-
-function get_tile_count_x():
-    return (GetWindowX() - 1) / TileWidth + 1;
-end
-
-function get_tile_count_y():
-    return (GetWindowY() - 1) / TileHeight + 1;
-end
-
-function get_tile_count_z():
-    return 256;
-end
-
-function get_tile_sizes():
-    return get_tile_count_x(), get_tile_count_y(), get_tile_count_z();
-end
-
-function get_total_tile_count():
-    x, y, z = get_tile_sizes();
-    return x * y * z;
-end
+local dimensions = require("Functions")
 
 ObjectSizes = {
     Material = 128
@@ -47,7 +24,7 @@ Resources = {
         flags = {
             Type = "StorageTexelBuffer",
             Format = "r8ui",
-            Size = get_total_tile_count()
+            Size = dimensions.TotalTileCount()
         },
         bounds = {
             Type = "StorageTexelBuffer",
@@ -57,7 +34,7 @@ Resources = {
         lightCounts = {
             Type = "StorageTexelBuffer",
             Format = "r32ui",
-            Size = get_total_tile_count()
+            Size = dimensions.TotalTileCount()
         },
         lightCountTotal = {
             Type = "StorageTexelBuffer",
@@ -67,7 +44,7 @@ Resources = {
         lightCountOffsets = {
             Type = "StorageTexelBuffer",
             Format = "r32ui",
-            Size = get_total_tile_count()
+            Size = dimensions.TotalTileCount()
         },
         lightList = {
             Type = "StorageTexelBuffer",
@@ -77,19 +54,19 @@ Resources = {
         lightCountCompare = {
             Type = "StorageTexelBuffer",
             Format = "r32ui",
-            Size = get_total_tile_count()
+            Size = dimensions.TotalTileCount()
         }
     },
     Lights = {
         positionRanges = {
             Type = "StorageTexelBuffer",
             Format = "rgba32f",
-            Size = NumLights
+            Size = dimensions.NumLights
         }
         lightColors = {
             Type = "UniformTexelBuffer",
             Format = "rgba8",
-            Size = NumLights
+            Size = dimensions.NumLights
         }
     },
     ObjMaterial = {
@@ -116,10 +93,8 @@ Resources = {
             }
         },
         diffuseMap = {
-            Type = "CombinedImageSampler"
-            ImageInfo = {
-                DataStoredOn = "Host"
-            }
+            Type = "CombinedImageSampler",
+            FromFile = true
         },
         normalMap = {
             Type = "CombinedImageSampler"

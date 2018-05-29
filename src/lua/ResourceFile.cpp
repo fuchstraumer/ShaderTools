@@ -21,7 +21,7 @@ namespace st {
         0,
         VK_IMAGE_TYPE_MAX_ENUM, // set this invalid at start, because it needs to be set properly
         VK_FORMAT_UNDEFINED, // this can't be set by shadertools, so make it invalid for now
-        VkExtent3D{}, // initialize but leave "invalid": ST may not be able to extract the size
+        VkExtent3D{ std::numeric_limits<uint32_t>::max(), std::numeric_limits<uint32_t>::max(), 1}, // initialize but leave "invalid": ST may not be able to extract the size
         1, // reasonable MIP base
         1, // most images only have 1 "array" layer
         VK_SAMPLE_COUNT_1_BIT, // most images not multisampled
@@ -31,6 +31,17 @@ namespace st {
         0,
         nullptr,
         VK_IMAGE_LAYOUT_UNDEFINED // most images start like this
+    };
+
+    constexpr static VkImageViewCreateInfo image_view_create_info_base {
+        VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+        nullptr,
+        0,
+        VK_NULL_HANDLE,
+        VK_IMAGE_VIEW_TYPE_MAX_ENUM,
+        VK_FORMAT_UNDEFINED,
+		{ VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A },
+		{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }
     };
 
     constexpr static VkSamplerCreateInfo sampler_create_info_base{
@@ -111,6 +122,36 @@ namespace st {
         { "SampledImage", VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE },
         { "CombinedImageSampler", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER },
         { "InputAttachment", VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT }
+    };
+
+    static const std::unordered_map<std::string, VkImageViewType> image_view_type_from_str_map = {
+        { "1D", VK_IMAGE_VIEW_TYPE_1D },
+        { "2D", VK_IMAGE_VIEW_TYPE_2D },
+        { "3D", VK_IMAGE_VIEW_TYPE_3D },
+        { "1D_Array", VK_IMAGE_VIEW_TYPE_1D_ARRAY },
+        { "2D_Array", VK_IMAGE_VIEW_TYPE_2D_ARRAY },
+        { "Cube", VK_IMAGE_VIEW_TYPE_CUBE },
+        { "Cube_Array", VK_IMAGE_VIEW_TYPE_CUBE_ARRAY }
+    };
+
+    static const std::unordered_map<std::string, VkImageAspectFlags> aspect_flags_from_str_map = {
+        { "Color", VK_IMAGE_ASPECT_COLOR_BIT },
+        { "Depth", VK_IMAGE_ASPECT_DEPTH_BIT },
+        { "Stencil", VK_IMAGE_ASPECT_STENCIL_BIT },
+        { "Metadata", VK_IMAGE_ASPECT_METADATA_BIT },
+        { "Plane0", VK_IMAGE_ASPECT_PLANE_0_BIT },
+        { "Plane1", VK_IMAGE_ASPECT_PLANE_1_BIT },
+        { "Plane2", VK_IMAGE_ASPECT_PLANE_2_BIT }
+    };
+
+    static const std::unordered_map<std::string, VkComponentSwizzle> swizzle_from_str_map = {
+        { "R", VK_COMPONENT_SWIZZLE_R },
+        { "G", VK_COMPONENT_SWIZZLE_G },
+        { "B", VK_COMPONENT_SWIZZLE_B },
+        { "A", VK_COMPONENT_SWIZZLE_A },
+        { "Zero", VK_COMPONENT_SWIZZLE_ZERO },
+        { "One", VK_COMPONENT_SWIZZLE_ONE },
+        { "Identity", VK_COMPONENT_SWIZZLE_IDENTITY }
     };
 
     size_class sizeClassFromString(const std::string& sz_class)  {
@@ -224,6 +265,60 @@ namespace st {
         }
     }
 
+    VkImageViewType viewTypeFromStr(const std::string& str) {
+        auto iter = image_view_type_from_str_map.find(str);
+        if (iter == image_view_type_from_str_map.end()) {
+            return VK_IMAGE_VIEW_TYPE_MAX_ENUM;
+        }
+        else {
+            return iter->second;
+        }
+    }
+
+    VkImageAspectFlags aspectFlagsFromStr(const std::string& str) {
+        auto iter = aspect_flags_from_str_map.find(str);
+        if (iter == aspect_flags_from_str_map.end()) {
+            return VK_IMAGE_ASPECT_FLAG_BITS_MAX_ENUM;
+        }
+        else {
+            return iter->second;
+        }
+    }
+
+    VkComponentSwizzle componentSwizzleFromStr(const std::string& str) {
+        auto iter = swizzle_from_str_map.find(str);
+        if (iter == swizzle_from_str_map.end()) {
+            return VK_COMPONENT_SWIZZLE_MAX_ENUM;
+        }
+        else {
+            return iter->second;
+        }
+    }
+
+    VkComponentMapping componentMappingFromLua(const std::unordered_map<std::string, luabridge::LuaRef>& table) {
+        VkComponentMapping result{ 
+            VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY,
+            VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY
+        };
+
+        for (auto& entry : table) {
+            if (entry.second[0].cast<int>() == 0) {
+                result.r = componentSwizzleFromStr(entry.second[1].cast<std::string>());
+            }
+            else if (entry.second[0].cast<int>() == 1) {
+                result.g = componentSwizzleFromStr(entry.second[1].cast<std::string>());
+            }
+            else if (entry.second[0].cast<int>() == 2) {
+                result.b = componentSwizzleFromStr(entry.second[1].cast<std::string>());
+            }
+            else if (entry.second[0].cast<int>() == 3) {
+                result.a = componentSwizzleFromStr(entry.second[1].cast<std::string>());
+            }
+        }
+
+        return result;
+    }
+
     ResourceFile::ResourceFile() : environment(std::make_unique<LuaEnvironment>()) {
         using namespace luabridge;
         auto& callbacks = ShaderPack::RetrievalCallbacks();
@@ -235,11 +330,11 @@ namespace st {
             .addFunction("GetFieldOfViewY", callbacks.GetFOVY);
     }
 
-    const set_resource_map_t& ResourceFile::GetResources(const std::string & block_name) const {
+    const std::vector<ShaderResource>& ResourceFile::GetResources(const std::string & block_name) const {
         return setResources.at(block_name);
     }
 
-    const std::unordered_map<std::string, set_resource_map_t>& ResourceFile::GetAllResources() const noexcept {
+    const std::unordered_map<std::string, std::vector<ShaderResource>>& ResourceFile::GetAllResources() const noexcept {
         return setResources;
     }
 
@@ -267,7 +362,7 @@ namespace st {
     const ShaderResource* ResourceFile::searchSingleGroupForResource(const std::string& group, const std::string & name) const {
         
         auto iter = std::find_if(setResources.at(group).cbegin(), setResources.at(group).cend(), [name](const ShaderResource& rsrc) {
-            return name == std::string(rsrc.GetName());
+            return name == std::string(rsrc.Name());
         });
 
         if (iter == setResources.at(group).cend()) {
@@ -313,6 +408,77 @@ namespace st {
         }
 
         return results;
+    }
+
+    VkImageViewCreateInfo ResourceFile::parseImageViewOptions(const std::unordered_map<std::string, luabridge::LuaRef>& view_info_table, LuaEnvironment* env, const VkImageCreateInfo& parent_image_info) const {
+
+        VkImageViewCreateInfo result = image_view_create_info_base;
+
+        auto has_member = [view_info_table](const std::string& name)->bool {
+            return view_info_table.count(name) != 0;
+        };
+
+        auto member_as_str = [view_info_table](const std::string& name)->std::string {
+            return view_info_table.at(name).cast<std::string>();
+        };
+
+        if (has_member("ViewType")) {
+            result.viewType = viewTypeFromStr(member_as_str("ViewType"));
+        }
+        else {
+            switch (parent_image_info.imageType) {
+            case VK_IMAGE_TYPE_1D:
+                result.viewType = VK_IMAGE_VIEW_TYPE_1D;
+                break;
+            case VK_IMAGE_TYPE_2D:
+                result.viewType = VK_IMAGE_VIEW_TYPE_2D;
+                break;
+            case VK_IMAGE_TYPE_3D:
+                result.viewType = VK_IMAGE_VIEW_TYPE_3D;
+                break;
+            default:
+                result.viewType = VK_IMAGE_VIEW_TYPE_2D;
+                break;
+            }
+        }
+
+        if (has_member("ImageAspect")) {
+            result.subresourceRange.aspectMask = aspectFlagsFromStr(member_as_str("ImageAspect"));
+        }
+        else {
+            result.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        }
+
+        if (has_member("ComponentSwizzle")) {
+            auto table = env->GetTableMap(view_info_table.at("ComponentSwizzle"));
+            result.components = componentMappingFromLua(table);
+        }
+        
+        if (has_member("BaseMipLevel")) {
+            result.subresourceRange.baseMipLevel = static_cast<uint32_t>(view_info_table.at("BaseMipLevel").cast<int>());
+        }
+
+        if (has_member("LevelCount")) {
+            result.subresourceRange.levelCount = static_cast<uint32_t>(view_info_table.at("LevelCount").cast<int>());
+        }
+        else {
+            result.subresourceRange.levelCount = parent_image_info.mipLevels;
+        }
+
+        if (has_member("BaseArrayLayer")) {
+            result.subresourceRange.baseArrayLayer = static_cast<uint32_t>(view_info_table.at("BaseArrayLayer").cast<int>());
+        }
+
+        if (has_member("LayerCount")) {
+            result.subresourceRange.layerCount = static_cast<uint32_t>(view_info_table.at("LayerCount").cast<int>());
+        }
+        else {
+            result.subresourceRange.layerCount = parent_image_info.arrayLayers;
+        }
+
+        result.format = parent_image_info.format;
+
+        return result;
     }
 
     VkSamplerCreateInfo ResourceFile::parseSamplerOptions(const std::unordered_map<std::string, luabridge::LuaRef>& sampler_info_table) const {
@@ -384,9 +550,9 @@ namespace st {
 
     VkBufferViewCreateInfo ResourceFile::getStorageImageBufferViewInfo(ShaderResource& rsrc) const {
         VkBufferViewCreateInfo results = buffer_view_info_base;
-        results.format = rsrc.GetFormat();
+        results.format = rsrc.Format();
         results.offset = 0;
-        results.range = rsrc.GetAmountOfMemoryRequired();
+        results.range = rsrc.MemoryRequired();
         return results;
     }
 
@@ -493,7 +659,7 @@ namespace st {
         std::string format_str = table.at("Format").cast<std::string>();
         rsrc.SetFormat(VkFormatFromString(format_str));
         size_t image_size = static_cast<size_t>(table.at("Size").cast<int>());
-        size_t footprint = VkFormatSize(rsrc.GetFormat());
+        size_t footprint = VkFormatSize(rsrc.Format());
         if (footprint != std::numeric_limits<size_t>::max()) {
             rsrc.SetMemoryRequired(footprint * image_size);
         }
@@ -501,8 +667,23 @@ namespace st {
     }
 
     void ResourceFile::createCombinedImageSamplerResource(const std::unordered_map<std::string, luabridge::LuaRef>& table, ShaderResource& rsrc) const {
+        if (table.count("FromFile") != 0) {
+            bool from_file = table.at("FromFile").cast<bool>();
+            if (from_file) {
+                rsrc.SetImageInfo(image_create_info_base);
+                rsrc.SetSamplerInfo(sampler_create_info_base);
+                rsrc.SetImageViewInfo(image_view_create_info_base);
+                rsrc.SetDataFromFile(true);
+                return;
+            }
+        }
+
         if (table.count("ImageOptions") != 0) {
             rsrc.SetImageInfo(parseImageOptions(rsrc, environment->GetTableMap(table.at("ImageOptions"))));
+        }
+
+        if (table.count("ViewOptions") != 0) {
+            rsrc.SetImageViewInfo(parseImageViewOptions(environment->GetTableMap(table.at("ViewOptions")), environment.get(), rsrc.ImageInfo()));
         }
         
         if (table.count("SamplerOptions") != 0) {
@@ -511,25 +692,50 @@ namespace st {
     }
 
     void ResourceFile::createSampledImageResource(const std::unordered_map<std::string, luabridge::LuaRef>& table, ShaderResource& rsrc) const {
+        if (table.count("FromFile") != 0) {
+            bool from_file = table.at("FromFile").cast<bool>();
+            if (from_file) {
+                rsrc.SetImageViewInfo(image_view_create_info_base);
+                rsrc.SetImageInfo(image_create_info_base);
+                rsrc.SetDataFromFile(true);
+                return;
+            }
+        }
+        
         if (table.count("ImageOptions") != 0) {
             rsrc.SetImageInfo(parseImageOptions(rsrc, environment->GetTableMap(table.at("ImageOptions"))));
         }
+
+        if (table.count("ViewOptions") != 0) {
+            rsrc.SetImageViewInfo(parseImageViewOptions(environment->GetTableMap(table.at("ViewOptions")), environment.get(), rsrc.ImageInfo()));
+        }
+
     }
 
     void ResourceFile::createSamplerResource(const std::unordered_map < std::string, luabridge::LuaRef>& table, ShaderResource& rsrc) const {
+        if (table.count("FromFile") != 0) {
+            bool from_file = table.at("FromFile").cast<bool>();
+            if (from_file) {
+                rsrc.SetSamplerInfo(sampler_create_info_base);
+                rsrc.SetDataFromFile(true);
+                return;
+            }
+        }
+        
         if (table.count("SamplerOptions") != 0) {
             rsrc.SetSamplerInfo(parseSamplerOptions(environment->GetTableMap(table.at("SamplerOptions"))));
         }
     }
 
     void ResourceFile::createStorageImageResource(const std::unordered_map<std::string, luabridge::LuaRef>& table, ShaderResource& rsrc) const {
+        
         if (table.count("ImageOptions") == 0) {
             LOG(WARNING) << "No ImageInfo given for a storage image: can't fill out ShaderResource information members!";
             return;
         }
 
         rsrc.SetImageInfo(parseImageOptions(rsrc, environment->GetTableMap(table.at("ImageOptions"))));
-        size_t format_size = VkFormatSize(rsrc.GetFormat());
+        size_t format_size = VkFormatSize(rsrc.Format());
         size_t image_size = static_cast<size_t>(table.at("Size").cast<int>());
         rsrc.SetMemoryRequired(format_size * image_size);
 
@@ -561,7 +767,7 @@ namespace st {
 
         for (auto& entry : resource_sets) {
             // Now accessing single "group" of resources
-            setResources.emplace(entry.first, set_resource_map_t{});
+            setResources.emplace(entry.first, std::vector<ShaderResource>{});
 
             auto per_set_resources = environment->GetTableMap(entry.second);
             for (auto& set_resource : per_set_resources) {
@@ -610,6 +816,7 @@ namespace st {
                     throw std::domain_error("Unsupported resource type used.");
                 }
 
+                resource.SetBindingIndex(setResources[entry.first].size());
                 setResources[entry.first].emplace_back(resource);
 
             }

@@ -5,6 +5,7 @@
 #include "common/UtilityStructs.hpp"
 #include "DescriptorStructs.hpp"
 #include "spirv-cross/spirv_cross.hpp"
+#include "spirv-cross/spirv_glsl.hpp"
 #include <fstream>
 #include <filesystem>
 #include <unordered_map>
@@ -44,7 +45,7 @@ namespace st {
         std::unordered_map<VkShaderStageFlags, PushConstantInfo> pushConstants;
         std::unordered_map<VkShaderStageFlags, std::map<uint32_t, VertexAttributeInfo>> inputAttributes;
         std::unordered_map<VkShaderStageFlags, std::map<uint32_t, VertexAttributeInfo>> outputAttributes;
-        std::unique_ptr<spirv_cross::Compiler> recompiler{ nullptr };
+        std::unique_ptr<spirv_cross::CompilerGLSL> recompiler{ nullptr };
         size_t getNumSets() const noexcept;
 
         decltype(sortedSets)::iterator findSetWithIdx(const uint32_t idx);

@@ -25,18 +25,25 @@ namespace st {
         ShaderResource& operator=(const ShaderResource& other) noexcept;
         ShaderResource& operator=(ShaderResource&& other) noexcept;
         
-        const size_t& GetInputAttachmentIndex() const noexcept;
-        const size_t& GetAmountOfMemoryRequired() const noexcept;
-        const VkFormat& GetFormat() const noexcept;
-        const char* GetName() const;
+        const size_t& BindingIndex() const noexcept;
+        const size_t& InputAttachmentIndex() const noexcept;
+        const size_t& MemoryRequired() const noexcept;
+        const VkFormat& Format() const noexcept;
+        // Used to indicate a binding for a texture, where the texture data is
+        // loaded from a file
+        const bool& FromFile() const noexcept;
+        const char* Name() const;
         const char* ParentGroupName() const;
-        const VkShaderStageFlags& GetStages() const noexcept;
-        const VkDescriptorType& GetType() const noexcept;
+        const VkShaderStageFlags& ShaderStages() const noexcept;
+        const VkDescriptorType& DescriptorType() const noexcept;
         const VkImageCreateInfo& ImageInfo() const noexcept;
+        const VkImageViewCreateInfo& ImageViewInfo() const noexcept;
         const VkSamplerCreateInfo& SamplerInfo() const noexcept;
         const VkBufferViewCreateInfo& BufferViewInfo() const noexcept;
         void GetMembers(size_t* num_members, ShaderResourceSubObject* dest_objects) const noexcept;
 
+        void SetBindingIndex(size_t idx);
+        void SetDataFromFile(bool from_file);
         void SetInputAttachmentIndex(size_t idx);
         void SetMemoryRequired(size_t amt);
         void SetStages(VkShaderStageFlags stages);
@@ -47,6 +54,7 @@ namespace st {
         void SetMembers(const size_t num_members, ShaderResourceSubObject* src_objects);
         void SetFormat(VkFormat fmt);
         void SetImageInfo(VkImageCreateInfo image_info);
+        void SetImageViewInfo(VkImageViewCreateInfo view_info);
         void SetSamplerInfo(VkSamplerCreateInfo sampler_info);
         void SetBufferViewInfo(VkBufferViewCreateInfo buffer_info);
 

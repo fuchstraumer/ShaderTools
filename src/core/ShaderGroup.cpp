@@ -3,14 +3,14 @@
 #include "generation/ShaderGenerator.hpp"
 #include "parser/BindingGenerator.hpp"
 #include "core/ShaderResource.hpp"
+#include "core/ResourceUsage.hpp"
 #include "../lua/LuaEnvironment.hpp"
 #include "../lua/ResourceFile.hpp"
 #include "../util/ShaderFileTracker.hpp"
-#include "util/Delegate.hpp"
-#include <unordered_set>
-#include <experimental/filesystem>
 #include "../parser/BindingGeneratorImpl.hpp"
 #include "easyloggingpp/src/easylogging++.h"
+#include <unordered_set>
+#include <experimental/filesystem>
 
 namespace st {
 
@@ -206,6 +206,25 @@ namespace st {
         }
     }
 
+    void ShaderGroup::GetResourceUsages(const size_t & _set_idx, size_t * num_resources, ResourceUsage * resources) const {
+        const BindingGeneratorImpl* b_impl = GetBindingGeneratorImpl();
+        const uint32_t set_idx = static_cast<uint32_t>(_set_idx);
+        if (b_impl->sortedSets.count(set_idx) != 0) {
+            if (b_impl->sortedSets.at(set_idx).Members.empty()) {
+                *num_resources = 0;
+                return;
+            }
+            *num_resources = b_impl->sortedSets.at(set_idx).Members.size();
+            if (resources != nullptr) {
+                std::vector<ResourceUsage> resources_vec;
+                for (const auto& rsrc : b_impl->sortedSets.at(set_idx).Members) {
+                    resources_vec.emplace_back(rsrc.second);
+                }
+                std::copy(resources_vec.begin(), resources_vec.end(), resources);
+            }   
+        }
+    }
+
     dll_retrieved_strings_t ShaderGroup::GetSetResourceNames(const uint32_t set_idx) const {
         const auto& b_impl = GetBindingGeneratorImpl();
         auto iter = b_impl->sortedSets.find(set_idx);
@@ -215,7 +234,7 @@ namespace st {
             results.SetNumStrings(iter->second.Members.size());
             size_t i = 0;
             for (auto& member : iter->second.Members) {
-                results.Strings[i] = strdup(member.second.BackingResource()->GetName());
+                results.Strings[i] = strdup(member.second.BackingResource()->Name());
                 ++i;
             }
             return results;

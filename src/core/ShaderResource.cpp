@@ -22,6 +22,17 @@ namespace st {
         VK_IMAGE_LAYOUT_UNDEFINED // most images start like this
     };
 
+    constexpr static VkImageViewCreateInfo image_view_create_info_base {
+        VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+        nullptr,
+        0,
+        VK_NULL_HANDLE,
+        VK_IMAGE_VIEW_TYPE_MAX_ENUM,
+        VK_FORMAT_UNDEFINED,
+		{ VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A },
+		{ VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 }
+    };
+
     constexpr static VkSamplerCreateInfo sampler_create_info_base{
         VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
         nullptr,
@@ -111,13 +122,16 @@ namespace st {
 
         ShaderResourceImpl() = default;
         ~ShaderResourceImpl() {};
-        ShaderResourceImpl(const ShaderResourceImpl& other) noexcept;
-        ShaderResourceImpl(ShaderResourceImpl&& other) noexcept;
-        ShaderResourceImpl& operator=(const ShaderResourceImpl& other) noexcept;
-        ShaderResourceImpl& operator=(ShaderResourceImpl&& other) noexcept;
+        ShaderResourceImpl(const ShaderResourceImpl& other) = default;
+        ShaderResourceImpl(ShaderResourceImpl&& other) noexcept = default;
+        ShaderResourceImpl& operator=(const ShaderResourceImpl& other) = default;
+        ShaderResourceImpl& operator=(ShaderResourceImpl&& other) = default;
+
+        size_t bindingIdx{ std::numeric_limits<size_t>::max() };
         std::string name{ "" };
         size_t memoryRequired{ std::numeric_limits<size_t>::max() };
         VkFormat format{ VK_FORMAT_UNDEFINED };
+        bool fromFile{ false };
         VkDescriptorType type{ VK_DESCRIPTOR_TYPE_MAX_ENUM };
         size_t inputAttachmentIdx{ std::numeric_limits<size_t>::max() };
         std::string parentSetName{ "" };
@@ -125,42 +139,12 @@ namespace st {
         VkShaderStageFlags stages{ VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM };
         std::vector<ShaderResourceSubObject> members;
         VkImageCreateInfo imageInfo{ image_create_info_base };
+        VkImageViewCreateInfo imageViewInfo{ image_view_create_info_base };
         VkSamplerCreateInfo samplerInfo{ sampler_create_info_base };
         VkBufferViewCreateInfo bufferInfo{ buffer_view_info_base };
         bool needsMipMaps{ false };
 
     };
-
-    ShaderResourceImpl::ShaderResourceImpl(const ShaderResourceImpl & other) noexcept : memoryRequired(other.memoryRequired), parentSetName(other.parentSetName),
-        name(other.name), sizeClass(other.sizeClass), stages(other.stages), type(other.type), members(other.members), format(other.format) {}
-
-    ShaderResourceImpl::ShaderResourceImpl(ShaderResourceImpl && other) noexcept : memoryRequired(std::move(other.memoryRequired)), parentSetName(std::move(other.parentSetName)),
-        name(std::move(other.name)), sizeClass(std::move(other.sizeClass)), stages(std::move(other.stages)), type(std::move(other.type)), members(std::move(other.members)),
-        format(std::move(other.format)) {}
-
-    ShaderResourceImpl & ShaderResourceImpl::operator=(const ShaderResourceImpl & other) noexcept {
-        memoryRequired = other.memoryRequired;
-        parentSetName = other.parentSetName;
-        name = other.name;
-        sizeClass = other.sizeClass;
-        stages = other.stages;
-        type = other.type;
-        members = other.members;
-        format = other.format;
-        return *this;
-    }
-
-    ShaderResourceImpl & ShaderResourceImpl::operator=(ShaderResourceImpl && other) noexcept {
-        memoryRequired = std::move(other.memoryRequired);
-        parentSetName = std::move(other.parentSetName);
-        name = std::move(other.name);
-        sizeClass = std::move(other.sizeClass);
-        stages = std::move(other.stages);
-        type = std::move(other.type);
-        members = std::move(other.members);
-        format = std::move(other.format);
-        return *this;
-    }
 
     ShaderResource::ShaderResource() : impl(std::make_unique<ShaderResourceImpl>()) {}
 
@@ -180,7 +164,11 @@ namespace st {
         return *this;
     }
 
-    const size_t & ShaderResource::GetInputAttachmentIndex() const noexcept {
+    const size_t& ShaderResource::BindingIndex() const noexcept {
+        return impl->bindingIdx;
+    }
+
+    const size_t& ShaderResource::InputAttachmentIndex() const noexcept {
         if (impl->type != VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT) {
             LOG(WARNING) << "Tried to retrieve input attachment index for resource that is not an input attachment.";
             // Default constructed value should be invalid enough to be obvious.
@@ -188,27 +176,31 @@ namespace st {
         return impl->inputAttachmentIdx;
     }
 
-    const size_t & ShaderResource::GetAmountOfMemoryRequired() const noexcept {
+    const size_t& ShaderResource::MemoryRequired() const noexcept {
         return impl->memoryRequired;
     }
 
-    const VkFormat& ShaderResource::GetFormat() const noexcept {
+    const VkFormat& ShaderResource::Format() const noexcept {
         return impl->format;
     }
 
-    const char* ShaderResource::GetName() const {
+    const bool& ShaderResource::FromFile() const noexcept {
+        return impl->fromFile;
+    }
+
+    const char* ShaderResource::Name() const {
         return impl->name.c_str();
     }
 
-    const char * ShaderResource::ParentGroupName() const {
+    const char* ShaderResource::ParentGroupName() const {
         return impl->parentSetName.c_str();
     }
 
-    const VkShaderStageFlags & ShaderResource::GetStages() const noexcept {
+    const VkShaderStageFlags& ShaderResource::ShaderStages() const noexcept {
         return impl->stages;
     }
 
-    const VkDescriptorType & ShaderResource::GetType() const noexcept {
+    const VkDescriptorType& ShaderResource::DescriptorType() const noexcept {
         return impl->type;
     }
 
@@ -222,6 +214,16 @@ namespace st {
         }
     }
 
+    const VkImageViewCreateInfo& ShaderResource::ImageViewInfo() const noexcept {
+        if (impl->type == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE || impl->type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) {
+            return impl->imageViewInfo;
+        }
+        else {
+            LOG(WARNING) << "Attempted to retrieve VkImageViewCreateInfo for invalid descriptor type. Returning invalid VkImageViewCreateInfo object.";
+            return image_view_create_info_base;
+        }
+    }
+
     const VkSamplerCreateInfo& ShaderResource::SamplerInfo() const noexcept {
         if (impl->type == VK_DESCRIPTOR_TYPE_SAMPLER || impl->type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) {
             return impl->samplerInfo;
@@ -232,7 +234,7 @@ namespace st {
         }
     }
 
-    const VkBufferViewCreateInfo & ShaderResource::BufferViewInfo() const noexcept {
+    const VkBufferViewCreateInfo& ShaderResource::BufferViewInfo() const noexcept {
         if (impl->type == VK_DESCRIPTOR_TYPE_STORAGE_IMAGE || impl->type == VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER || impl->type == VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER) {
             return impl->bufferInfo;
         }
@@ -247,6 +249,14 @@ namespace st {
         if (objects != nullptr) {
             std::copy(impl->members.cbegin(), impl->members.cend(), objects);
         }
+    }
+
+    void ShaderResource::SetBindingIndex(size_t idx) {
+        impl->bindingIdx = std::move(idx);
+    }
+
+    void ShaderResource::SetDataFromFile(bool from_file) {
+        impl->fromFile = std::move(from_file);
     }
 
     void ShaderResource::SetInputAttachmentIndex(size_t idx) {
@@ -287,6 +297,10 @@ namespace st {
 
     void ShaderResource::SetImageInfo(VkImageCreateInfo image_info) {
         impl->imageInfo = std::move(image_info);
+    }
+
+    void ShaderResource::SetImageViewInfo(VkImageViewCreateInfo view_info) {
+        impl->imageViewInfo = std::move(view_info);
     }
 
     void ShaderResource::SetSamplerInfo(VkSamplerCreateInfo sampler_info) {

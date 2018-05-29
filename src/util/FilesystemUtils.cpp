@@ -131,4 +131,5 @@ namespace st {
             throw std::domain_error("Passed invalid path to SetOutputDirectory");
         }
     }
+    
 }

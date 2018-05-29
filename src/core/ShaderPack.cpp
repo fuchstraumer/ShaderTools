@@ -126,7 +126,7 @@ namespace st {
         const auto& sets = rsrcFile->GetAllResources();
         for (const auto& resource_set : sets) {
             for (const auto& resource : resource_set.second) {
-                switch (resource.GetType()) {
+                switch (resource.DescriptorType()) {
                 case VK_DESCRIPTOR_TYPE_SAMPLER:
                     typeCounts.Samplers++;
                     break;
@@ -203,7 +203,7 @@ namespace st {
         return names;
     }
 
-    void ShaderPack::GetResourceGroupPointers(const char * name, size_t * num_resources, const ShaderResource** pointers) {
+    void ShaderPack::GetResourceGroupPointers(const char * name, size_t * num_resources, const ShaderResource** pointers) const {
         const auto& sets = impl->rsrcFile->GetAllResources();
         auto iter = sets.find(std::string(name));
         if (iter != sets.cend()) {
@@ -223,7 +223,7 @@ namespace st {
         }
     }
 
-    void ShaderPack::CopyShaderResources(const char * name, size_t * num_resources, ShaderResource * dest_array) {
+    void ShaderPack::CopyShaderResources(const char * name, size_t * num_resources, ShaderResource * dest_array) const {
         const auto& sets = impl->rsrcFile->GetAllResources();
         auto iter = sets.find(std::string(name));
         if (iter != sets.cend()) {
@@ -243,7 +243,7 @@ namespace st {
         }
     }
 
-    void ShaderPack::GetGroupSpecializationConstants(const char * group_name, size_t * num_spcs, SpecializationConstant * constants) {
+    void ShaderPack::GetGroupSpecializationConstants(const char * group_name, size_t * num_spcs, SpecializationConstant * constants) const {
         const ShaderGroup* group = GetShaderGroup(group_name);
         group->GetSpecializationConstants(num_spcs, constants);
     }
@@ -252,7 +252,7 @@ namespace st {
         return impl->typeCounts;
     }
 
-    const ShaderResource * ShaderPack::GetResource(const char* rsrc_name) {
+    const ShaderResource * ShaderPack::GetResource(const char* rsrc_name) const {
         const ShaderResource* result = impl->rsrcFile->FindResource(rsrc_name);
         LOG_IF(result == nullptr, WARNING) << "Couldn't find requested resource" << rsrc_name << " in ShaderPack's resource script data.";
         return result;

@@ -4,7 +4,7 @@ struct Material {
     vec4 diffuse; 
     vec4 specular;
     vec4 transmittance;
-    vec4 emission;
+    vec4 emissive;
     float shininess;
     float ior;
     float alpha;

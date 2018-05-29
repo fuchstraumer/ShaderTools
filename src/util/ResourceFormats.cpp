@@ -232,11 +232,6 @@ namespace st {
         }
     }
 
-    size_t SPIRTypeMemoryFootprint(const spirv_cross::SPIRType & stype)
-    {
-        return size_t();
-    }
-
     spirv_cross::SPIRType SPIR_TypeFromString(const std::string & str) {
         using namespace spirv_cross;
         SPIRType result;

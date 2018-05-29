@@ -25,10 +25,10 @@ namespace st {
         dll_retrieved_strings_t GetResourceGroupNames() const;
         const descriptor_type_counts_t& GetTotalDescriptorTypeCounts() const;
 
-        void GetResourceGroupPointers(const char* group_name, size_t* num_resources, const ShaderResource** pointers);
-        void CopyShaderResources(const char* group_name, size_t* num_resources, ShaderResource* dest_array);
-        void GetGroupSpecializationConstants(const char* group_name, size_t* num_spcs, SpecializationConstant* constants);
-        const ShaderResource* GetResource(const char* rsrc_name);
+        void GetResourceGroupPointers(const char* group_name, size_t* num_resources, const ShaderResource** pointers) const;
+        void CopyShaderResources(const char* group_name, size_t* num_resources, ShaderResource* dest_array) const;
+        void GetGroupSpecializationConstants(const char* group_name, size_t* num_spcs, SpecializationConstant* constants) const;
+        const ShaderResource* GetResource(const char* rsrc_name) const;
 
         static engine_environment_callbacks_t& RetrievalCallbacks();
 
