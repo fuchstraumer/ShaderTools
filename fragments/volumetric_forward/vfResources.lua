@@ -55,7 +55,8 @@ Resources = {
             -- Images from file don't have any info set here:
             -- all we do is generate a suitable descriptor binding
             -- for what will eventually be used
-            FromFile = true
+            FromFile = true,
+            Qualifiers = "restrict readonly"
         },
         NormalMap = {
             Type = "SampledImage",
@@ -108,7 +109,8 @@ Resources = {
                 ScreenSize = { "uvec2", 2 },
                 Near = { "float", 3 },
                 LogGridDimY = { "float", 4 }
-            }
+            },
+            Qualifiers = "restrict readonly"
         },
         ClusterAABBs = {
             Type = "StorageBuffer",

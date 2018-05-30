@@ -115,6 +115,7 @@ namespace st {
         void parseInclude(const std::string& str, bool local);
 
         size_t getBinding(size_t & active_set) const;
+        std::string getResourceQualifiers(const ShaderResource& rsrc) const;
         std::string getResourcePrefix(size_t active_set, const std::string & image_format, const ShaderResource& rsrc) const;
         std::string getBufferMembersString(const ShaderResource & resource) const;
         std::string getUniformBufferString(const size_t& active_set, const ShaderResource & buffer, const std::string & name) const;
@@ -335,6 +336,37 @@ namespace st {
 
     }
 
+    std::string ShaderGeneratorImpl::getResourceQualifiers(const ShaderResource& rsrc) const {
+        size_t num_qualifiers = 0;
+        rsrc.GetQualifiers(&num_qualifiers, nullptr);
+        std::vector<glsl_qualifier> qualifiers(num_qualifiers);
+        rsrc.GetQualifiers(&num_qualifiers, qualifiers.data());
+
+        std::string result;
+        for (const auto& qual : qualifiers) {
+            if (qual == glsl_qualifier::Coherent) {
+                result += " coherent";
+            }
+            else if (qual == glsl_qualifier::ReadOnly) {
+                result += " readonly";
+            }
+            else if (qual == glsl_qualifier::WriteOnly) {
+                result += " writeonly";
+            }
+            else if (qual == glsl_qualifier::Volatile) {
+                result += " volatile";
+            }
+            else if (qual == glsl_qualifier::Restrict) {
+                result += " restrict";
+            }
+            else if (qual == glsl_qualifier::InvalidQualifier) {
+                LOG(WARNING) << "ShaderResource had an invalid qualifier value!";
+            }
+        }
+
+        return result;
+    }
+
     std::string ShaderGeneratorImpl::getResourcePrefix(size_t active_set, const std::string& format_specifier, const ShaderResource& rsrc) const {
 
         std::string prefix{
@@ -342,11 +374,17 @@ namespace st {
         };
 
         if (!format_specifier.empty()) {
-            prefix += std::string(", " + format_specifier + ") ");
+            prefix += std::string(", " + format_specifier + ")");
         }
         else {
-            prefix += std::string(") ");
+            prefix += std::string(")");
         }
+
+        if (rsrc.HasQualifiers()) {
+            prefix += getResourceQualifiers(rsrc);
+        }
+
+        prefix += " ";
 
         return prefix;
     }
