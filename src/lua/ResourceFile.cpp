@@ -346,11 +346,12 @@ namespace st {
                 size_t idx = qualifiers_str.find_first_of(' ');
                 if (idx == std::string::npos) {
                     substrings.emplace_back(qualifiers_str);
+                    qualifiers_str.clear();
                 }
                 else {
                     substrings.emplace_back(std::string{ qualifiers_str.cbegin(), qualifiers_str.cbegin() + idx});
+                    qualifiers_str.erase(qualifiers_str.begin(), qualifiers_str.begin() + idx + 1);
                 }
-                qualifiers_str.erase(qualifiers_str.begin(), qualifiers_str.begin() + idx + 1);
             }
 
             std::vector<glsl_qualifier> result;
@@ -863,8 +864,13 @@ namespace st {
                 }
 
                 if (set_resource_data.count("Qualifiers") != 0) {
-                    std::vector<glsl_qualifier> qualifiers = qualifiersFromString(set_resource_data.at("Qualifiers").cast<std::string>());
-                    resource.SetQualifiers(qualifiers.size(), qualifiers.data());
+                    if (vk_type == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE || vk_type == VK_DESCRIPTOR_TYPE_SAMPLER || vk_type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) {
+                        LOG(WARNING) << "Attempted to set qualifiers for a sampled image, sampler, or combined image-sampler descriptor type - this would result in invalid GLSL! Skipping...";
+                    }
+                    else {
+                        std::vector<glsl_qualifier> qualifiers = qualifiersFromString(set_resource_data.at("Qualifiers").cast<std::string>());
+                        resource.SetQualifiers(qualifiers.size(), qualifiers.data());
+                    }
                 }
 
                 resource.SetBindingIndex(setResources[entry.first].size());
