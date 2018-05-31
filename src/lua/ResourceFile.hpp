@@ -21,7 +21,8 @@ namespace st {
         const std::vector<ShaderResource>& GetResources(const std::string& block_name) const;
         const std::unordered_map<std::string, std::vector<ShaderResource>>& GetAllResources() const noexcept;
         const ShaderResource* FindResource(const std::string& name) const;
-
+        void AddResourceGroup(const std::string& block_name, const std::vector<ShaderResource>& resources);
+        
     private:
 
         const ShaderResource* searchSingleGroupForResource(const std::string& group, const std::string& name) const;

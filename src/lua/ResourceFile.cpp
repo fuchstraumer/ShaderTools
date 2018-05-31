@@ -406,6 +406,14 @@ namespace st {
         parseResources();
     }
 
+    void ResourceFile::AddResourceGroup(const std::string& group_name, const std::vector<ShaderResource>& resources) {
+        auto emplaced = setResources.emplace(group_name, resources);
+        if (!emplaced.second) {
+            LOG(ERROR) << "Couldn't add new resource group to resource file: likely group already exists.";
+            throw std::runtime_error("Couldn't add new resource group to resource file.");
+        }
+    }
+
     const ShaderResource* ResourceFile::searchSingleGroupForResource(const std::string& group, const std::string& name) const {
         
         auto iter = std::find_if(setResources.at(group).cbegin(), setResources.at(group).cend(), [name](const ShaderResource& rsrc) {

@@ -214,7 +214,8 @@ Resources = {
                 NumThreadGroupsX = { "uint", 0 },
                 NumThreadGroupsY = { "uint", 1 },
                 NumThreadGroupsZ = { "uint", 2 }
-            }
+            },
+            Qualifiers = "restrict"
         }       
     },
     SortResources = {
