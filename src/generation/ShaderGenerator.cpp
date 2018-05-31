@@ -22,39 +22,16 @@ namespace st {
     std::string BasePath = "../fragments/";
     std::string LibPath = "../fragments/include";
 
-    static const std::regex vertex_main("#pragma VERT_MAIN_BEGIN\n");
-    static const std::regex end_vertex_main("#pragma VERT_MAIN_END\n");
-    static const std::regex fragment_main("#pragma FRAG_MAIN_BEGIN\n");
-    static const std::regex end_fragment_main("#pragma FRAG_MAIN_END\n");
-
     static const std::regex vertex_interface("(#pragma VERT_INTERFACE_BEGIN\n)");
     static const std::regex end_vertex_interface("#pragma VERT_INTERFACE_END\n");
     static const std::regex fragment_interface("#pragma FRAG_INTERFACE_BEGIN\n");
     static const std::regex end_fragment_interface("#pragma FRAG_INTERFACE_END\n");
-
     static const std::regex interface_var_in("in\\s+\\S+\\s+\\S+;\n");
     static const std::regex interface_var_out("out\\s+\\S+\\s+\\S+;\n");
-
-    static const std::regex lighting_model("#pragma LIGHTING_MODEL_BEGIN\n");
-    static const std::regex end_lighting_model("#pragma LIGHTING_MODEL_END\n");
-    static const std::regex feature_resources("#pragma FEATURE_RESOURCES_BEGIN\n");
-    static const std::regex end_feature_resources("#pragma FEATURE_RESOURCES_END\n");
-
     static const std::regex interface_override("#pragma INTERFACE_OVERRIDE\n");
     static const std::regex end_interface_override("#pragma END_INTERFACE_OVERRIDE");
-    
-    // $TEXTURE flag indicates texture follows. First match group is type. Second match group is name.
-    static const std::regex sampler2d_resource("SAMPLER_2D\\s+(\\S+;\n)");
-    static const std::regex texture2d_resource("TEXTURE_2D\\s+(\\S+;\n)");
-    static const std::regex uniform_resource("UNIFORM_BUFFER\\s+(\\S+)");
-    static const std::regex end_uniform_resource("\\}(\\s+\\S+;\n)");
-    static const std::regex storage_buffer_resource("STORAGE_BUFFER\\s+(\\S+)\\s+(\\S+)");
-    static const std::regex image_buffer_resource("IMAGE_BUFFER\\s+(\\S+)\\s+(\\S+;\n)");
-    static const std::regex i_image_buffer_resource("I_IMAGE_BUFFER\\s+(\\S+)\\s+(\\S+;\n)");
-    static const std::regex u_image_buffer_resource("U_IMAGE_BUFFER\\s+(\\S+)\\s+(\\S+;\n)");
-    static const std::regex sampler_buffer_resource("TEXEL_BUFFER\\s+(\\S+;\n)");
-    static const std::regex begin_set_resources("#pragma\\s+BEGIN_RESOURCES\\s+(\\S+)\n");
-    static const std::regex end_set_resources("#pragma\\s+END_RESOURCES\\s+(\\S+)\n");
+    static const std::regex inline_resources_begin("#pragma BEGIN_INLINE_RESOURCES");
+    static const std::regex inline_resources_end("#pragma END_INLINE_RESOURCES");
     static const std::regex use_set_resources("#pragma\\s+USE_RESOURCES\\s+(\\S+)\n");
     static const std::regex include_library("#include <(\\S+)>");
     static const std::regex include_local("#include \"(\\S+)\"");
@@ -135,6 +112,7 @@ namespace st {
         void processBodyStrIncludes(std::string & body_src_str);
         void processBodyStrSpecializationConstants(std::string & body_src_str);
         void processBodyStrResourceBlocks(const Shader& handle, std::string & body_str);
+        void processBodyStrInlineResources(const Shader& handle, std::string& body_str);
         void generate(const Shader& handle, const std::string& path_to_src);
 
         VkShaderStageFlagBits Stage = VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM;
@@ -749,6 +727,13 @@ namespace st {
         }
     }
 
+    void ShaderGeneratorImpl::processBodyStrInlineResources(const Shader& handle, std::string& body_str) {
+        std::smatch inline_rsrc_match;
+        if (std::regex_search(body_str, inline_rsrc_match, inline_resources_begin)) {
+            
+        }
+    }
+
     void ShaderGeneratorImpl::generate(const Shader& handle, const std::string& path_to_source) {
         std::string body_str{ fetchBodyStr(handle, path_to_source) };
         // Includes can be any of the following: resource blocks, overrides, specialization_constants. 
@@ -757,6 +742,7 @@ namespace st {
         checkInterfaceOverrides(body_str);
         processBodyStrSpecializationConstants(body_str);
         processBodyStrResourceBlocks(handle, body_str);
+        processBodyStrInlineResources(handle, body_str);
         fragments.emplace(shaderFragment{ fragment_type::Main, body_str });
     }
 
