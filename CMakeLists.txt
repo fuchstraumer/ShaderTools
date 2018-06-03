@@ -1,7 +1,8 @@
 INCLUDE(ExternalProject)
 CMAKE_MINIMUM_REQUIRED(VERSION 3.3)
 PROJECT(ShaderTools)
-
+# Hate global settings, but this just lets us pack away all those dependencies into one group
+# Much better than cluttering up an entire IDE just with our dependencies lol
 SET_PROPERTY(GLOBAL PROPERTY USE_FOLDERS ON)
 
 SET(SHADERC_SKIP_TESTS ON)
@@ -9,10 +10,13 @@ SET(SHADERC_THIRD_PARTY_ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party")
 SET(SHADERC_SPIRV_HEADERS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/spirv-headers")
 SET(SHADERC_GLSLANG_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/glslang")
 SET(SHADERC_SPIRV_TOOLS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/spirv-tools")
-SET(SPIRV_WERROR OFF)
+SET(SPIRV_SKIP_EXECUTABLES ON CACHE BOOL "Skip building the executable and tests along with the library")
+SET(SPIRV_WERROR OFF CACHE BOOL "Enable error on warning")
 ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/shaderc" EXCLUDE_FROM_ALL)
 ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/spirv-cross" EXCLUDE_FROM_ALL)
+SET(SKIP_LUA_WRAPPER ON CACHE BOOL "Do not build and install Lua executable wrappers.")
 ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/luajit" EXCLUDE_FROM_ALL)
+SET(build_static_lib ON CACHE BOOL "Build easyloggingpp as a static library")
 ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/easyloggingpp")
 
 FILE(GLOB COMMON "${CMAKE_CURRENT_SOURCE_DIR}/src/common/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/include/common/*.hpp")
@@ -46,7 +50,7 @@ TARGET_COMPILE_OPTIONS(ShaderTools PRIVATE "/bigobj" "/MP")
 ENDIF()
 TARGET_COMPILE_DEFINITIONS(ShaderTools PRIVATE -DSHADERTOOLS_BUILD_DLL)
 TARGET_LINK_LIBRARIES(ShaderTools PRIVATE shaderc spirv-cross-core spirv-cross-glsl spirv-cross-cpp)
-TARGET_LINK_LIBRARIES(ShaderTools PRIVATE liblua)
+TARGET_LINK_LIBRARIES(ShaderTools PRIVATE liblua easyloggingpp)
 TARGET_INCLUDE_DIRECTORIES(ShaderTools PUBLIC  "${CMAKE_CURRENT_SOURCE_DIR}/include" "${Vulkan_INCLUDE_DIRS}")
 TARGET_INCLUDE_DIRECTORIES(ShaderTools PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/" "${CMAKE_CURRENT_SOURCE_DIR}/ext/include" 
     "${CMAKE_CURRENT_SOURCE_DIR}/third_party/luajit/src" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/luabridge/Source")
