@@ -26,13 +26,14 @@ namespace st {
 
         void addShader(const Shader& handle, std::string src_str_path);
 
+        std::string groupName;
+        size_t idx;
         std::vector<const char*> includePaths;
         std::unordered_set<st::Shader> stHandles{};
         std::unique_ptr<ShaderGenerator> generator{ nullptr };
         std::unique_ptr<ShaderCompiler> compiler{ nullptr };
         std::unique_ptr<BindingGenerator> bindingGenerator{ nullptr };
         ResourceFile* rsrcFile{ nullptr };
-        std::string groupName;
         std::experimental::filesystem::path resourceScriptPath;
     };
 
@@ -86,6 +87,14 @@ namespace st {
 
     size_t ShaderGroup::GetNumSetsRequired() const {
         return static_cast<size_t>(impl->bindingGenerator->GetNumSets());
+    }
+
+    size_t ShaderGroup::GetIndex() const noexcept {
+        return impl->idx;
+    }
+
+    void ShaderGroup::SetIndex(size_t _idx) {
+        impl->idx = std::move(_idx);
     }
 
     BindingGeneratorImpl* ShaderGroup::GetBindingGeneratorImpl() {

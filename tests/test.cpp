@@ -37,7 +37,7 @@ int main(int argc, char* argv[]) {
     callbacks.GetZFar = &z_far;
     callbacks.GetFOVY = &fov_y;
     
-    ShaderPack pack("../fragments/volumetric_forward/ShaderPack.lua");
+    ShaderPack pack("../fragments/clustered_forward/Pack.lua");
     std::vector<std::string> group_names;
     {
         auto names = pack.GetShaderGroupNames();

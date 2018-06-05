@@ -16,6 +16,7 @@ namespace st {
 
         std::string PackName;
         std::string ResourceFileName;
+        std::unordered_map<std::string, size_t> GroupIndices;
         std::unordered_map<std::string, std::map<VkShaderStageFlagBits, std::string>> ShaderGroups;
         std::unique_ptr<LuaEnvironment> environment;
 
@@ -38,9 +39,12 @@ namespace st {
 
             LuaRef shader_groups_table = getGlobal(state, "ShaderGroups");
             auto shader_groups = environment->GetTableMap(shader_groups_table);
-
-            for (auto& group : shader_groups) {
-                auto group_entries = environment->GetTableMap(group.second);
+            for (const auto& group : shader_groups) {
+                LuaRef table_ref = group.second[2];
+                LuaRef number_ref = group.second[1];
+                size_t idx = static_cast<size_t>(group.second[1].cast<int>());
+                GroupIndices.emplace(group.first, std::move(idx));
+                auto group_entries = environment->GetTableMap(table_ref);
                 for (auto& entry : group_entries) {
                     const std::string& shader_stage = entry.first;
                     const std::string shader_name = entry.second;
@@ -66,6 +70,7 @@ namespace st {
                         throw std::domain_error("Invalid shader stage in parsed Lua script.");
                     }
                 }
+
             }
         }
         environment.reset();
