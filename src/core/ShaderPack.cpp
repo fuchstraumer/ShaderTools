@@ -67,7 +67,7 @@ namespace st {
         workingDir = fs::absolute(workingDir);
         workingDir = workingDir.remove_filename();
         const std::string dir_string = workingDir.parent_path().string();
-        ShaderGenerator::SetBasePath(dir_string.c_str());
+        //ShaderGenerator::SetBasePath(dir_string.c_str());
         createGroups();
         setDescriptorTypeCounts();
     }
