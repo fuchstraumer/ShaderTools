@@ -234,6 +234,14 @@ namespace st {
         }
     }
 
+    VkShaderStageFlags ShaderGroup::Stages() const noexcept {
+        VkShaderStageFlags result = 0;
+        for (auto& shader : impl->stHandles) {
+            result |= shader.GetStage();
+        }
+        return result;
+    }
+
     dll_retrieved_strings_t ShaderGroup::GetSetResourceNames(const uint32_t set_idx) const {
         const auto& b_impl = GetBindingGeneratorImpl();
         auto iter = b_impl->sortedSets.find(set_idx);

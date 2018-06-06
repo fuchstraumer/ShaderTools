@@ -31,6 +31,7 @@ namespace st {
         void GetSetLayoutBindings(const size_t& set_idx, size_t* num_bindings, VkDescriptorSetLayoutBinding* bindings) const;
         void GetSpecializationConstants(size_t* num_constants, SpecializationConstant* constants) const;
         void GetResourceUsages(const size_t& set_idx, size_t* num_resources, ResourceUsage* resources) const;
+        VkShaderStageFlags Stages() const noexcept;
 
         dll_retrieved_strings_t GetSetResourceNames(const uint32_t set_idx) const;
         dll_retrieved_strings_t GetUsedResourceBlocks() const;
