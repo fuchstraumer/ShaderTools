@@ -35,7 +35,7 @@ namespace st {
     static const std::regex use_set_resources("#pragma\\s+USE_RESOURCES\\s+(\\S+)\n");
     static const std::regex include_library("#include <(\\S+)>");
     static const std::regex include_local("#include \"(\\S+)\"");
-    static const std::regex specialization_constant("SPC\\s+(const\\s+\\S+\\s+\\S+\\s+=\\s+\\S+;\n)");
+    static const std::regex specialization_constant("SPC\\s+(const.*$)");
 
     enum class fragment_type : uint8_t {
         Preamble = 0,
