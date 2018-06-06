@@ -40,7 +40,7 @@ namespace st {
         size_t GetIndex() const noexcept;
 
         void SetIndex(size_t _idx);
-        void SetTags(size_t* num_tags, const char** tag_strings);
+        void SetTags(const size_t num_tags, const char** tag_strings);
 
     protected:
         friend class ShaderPackImpl;

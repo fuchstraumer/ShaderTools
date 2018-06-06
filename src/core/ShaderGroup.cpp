@@ -98,7 +98,7 @@ namespace st {
         impl->idx = std::move(_idx);
     }
 
-    void ShaderGroup::SetTags(size_t * num_tags, const char ** tag_strings) {
+    void ShaderGroup::SetTags(const size_t num_tags, const char ** tag_strings) {
         for (size_t i = 0; i < num_tags; ++i) {
             impl->tags.emplace_back(tag_strings[i]);
         }

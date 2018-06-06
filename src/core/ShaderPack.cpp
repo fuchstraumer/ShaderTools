@@ -89,6 +89,14 @@ namespace st {
             groups.emplace(group.first, std::make_unique<ShaderGroup>(group.first.c_str(), resource_path_str.c_str(), base_includes.size(), base_includes.data()));
             createSingleGroup(group.first, group.second);
             groups.at(group.first)->SetIndex(filePack->GroupIndices.at(group.first));
+            if (filePack->GroupTags.count(group.first) != 0) {
+                const auto& tags = filePack->GroupTags.at(group.first);
+                std::vector<const char*> tag_ptrs;
+                for (auto& tag : tags) {
+                    tag_ptrs.emplace_back(tag.c_str());
+                }
+                groups.at(group.first)->SetTags(tag_ptrs.size(), tag_ptrs.data());
+            }
         }
 
         resource_path = fs::absolute(resource_path);
