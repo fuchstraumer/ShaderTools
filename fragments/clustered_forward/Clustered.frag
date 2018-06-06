@@ -2,11 +2,11 @@
 #pragma USE_RESOURCES Lights
 #pragma USE_RESOURCES ClusteredForward
 #pragma USE_RESOURCES ObjMaterials
-$SPC const uint ResolutionX = 1920;
-$SPC const uint ResolutionY = 1080;
-$SPC const uint TileCountX = (1920 - 1) / 64 + 1;
-$SPC const uint TileCountY = (1080 - 1) / 64 + 1;
-$SPC const uint TileCountZ = 256;
+SPC const uint ResolutionX = 1920;
+SPC const uint ResolutionY = 1080;
+SPC const uint TileCountX = (1920 - 1) / 64 + 1;
+SPC const uint TileCountY = (1080 - 1) / 64 + 1;
+SPC const uint TileCountZ = 256;
 
 uint CoordToIdx(uint i, uint j, uint k) {
     return TileCountX * TileCountY * k + TileCountX * j + i;

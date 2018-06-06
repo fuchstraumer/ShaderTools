@@ -108,7 +108,8 @@ Resources = {
                 ScreenSize = { "uvec2", 2 },
                 Near = { "float", 3 },
                 LogGridDimY = { "float", 4 }
-            }
+            },
+            Qualifiers = "restrict readonly"
         },
         ClusterAABBs = {
             Type = "StorageBuffer",
@@ -213,7 +214,8 @@ Resources = {
                 NumThreadGroupsX = { "uint", 0 },
                 NumThreadGroupsY = { "uint", 1 },
                 NumThreadGroupsZ = { "uint", 2 }
-            }
+            },
+            Qualifiers = "restrict"
         }       
     },
     SortResources = {

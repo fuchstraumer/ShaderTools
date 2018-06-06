@@ -1,6 +1,7 @@
 #include "core/ShaderResource.hpp"
 #include "common/UtilityStructs.hpp"
 #include "easyloggingpp/src/easylogging++.h"
+#include <set>
 
 namespace st {
 
@@ -138,6 +139,7 @@ namespace st {
         size_class sizeClass{ size_class::Absolute };
         VkShaderStageFlags stages{ VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM };
         std::vector<ShaderResourceSubObject> members;
+        std::set<glsl_qualifier> qualifiers;
         VkImageCreateInfo imageInfo{ image_create_info_base };
         VkImageViewCreateInfo imageViewInfo{ image_view_create_info_base };
         VkSamplerCreateInfo samplerInfo{ sampler_create_info_base };
@@ -244,6 +246,21 @@ namespace st {
         }
     }
 
+    bool ShaderResource::HasQualifiers() const noexcept {
+        return !impl->qualifiers.empty();
+    }
+
+    void ShaderResource::GetQualifiers(size_t* num_qualifiers, glsl_qualifier* qualifiers) const noexcept {
+        *num_qualifiers = impl->qualifiers.size();
+        if (qualifiers != nullptr) {
+            std::vector<glsl_qualifier> vector_copy;
+            for (const auto& qual : impl->qualifiers) {
+                vector_copy.emplace_back(qual);
+            }
+            std::copy(vector_copy.begin(), vector_copy.end(), qualifiers);
+        }
+    }
+
     void ShaderResource::GetMembers(size_t* num_members, ShaderResourceSubObject* objects) const noexcept {
         *num_members = impl->members.size();
         if (objects != nullptr) {
@@ -285,6 +302,12 @@ namespace st {
 
     void ShaderResource::SetParentGroupName(const char * parent_group_name) {
         impl->parentSetName = parent_group_name;
+    }
+
+    void ShaderResource::SetQualifiers(const size_t num_qualifiers, glsl_qualifier* qualifiers) {
+        for (size_t i = 0; i < num_qualifiers; ++i) {
+            impl->qualifiers.emplace(qualifiers[i]);
+        }
     }
 
     void ShaderResource::SetMembers(const size_t num_members, ShaderResourceSubObject* src_objects) {

@@ -35,6 +35,8 @@ namespace st {
         dll_retrieved_strings_t GetSetResourceNames(const uint32_t set_idx) const;
         dll_retrieved_strings_t GetUsedResourceBlocks() const;
         size_t GetNumSetsRequired() const;
+        size_t GetIndex() const noexcept;
+        void SetIndex(size_t _idx);
 
     protected:
         friend class ShaderPackImpl;

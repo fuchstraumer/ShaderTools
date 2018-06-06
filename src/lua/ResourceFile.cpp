@@ -98,6 +98,14 @@ namespace st {
         { "MirroredRepeat", VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT },
         { "MirroredClampToEdge", VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE }
     };
+    
+    static const std::unordered_map<std::string, glsl_qualifier> qualifier_from_str_map = {
+        { "coherent", glsl_qualifier::Coherent },
+        { "readonly", glsl_qualifier::ReadOnly },
+        { "writeonly", glsl_qualifier::WriteOnly },
+        { "volatile", glsl_qualifier::Volatile },
+        { "restrict", glsl_qualifier::Restrict }
+    };
 
     static const std::unordered_map<std::string, VkCompareOp> compare_op_from_str_map = {
         { "Never", VK_COMPARE_OP_NEVER },
@@ -319,6 +327,45 @@ namespace st {
         return result;
     }
 
+    glsl_qualifier singleQualifierFromString(const std::string& single_qualifier) {
+        auto iter = qualifier_from_str_map.find(single_qualifier);
+        if (iter != qualifier_from_str_map.cend()) {
+            return iter->second;
+        }
+        else {
+            return glsl_qualifier::InvalidQualifier;
+        }
+    }
+
+    std::vector<glsl_qualifier> qualifiersFromString(std::string qualifiers_str) {
+        // find if we have multiple qualifiers
+        if (qualifiers_str.find_first_of(' ') != std::string::npos) {
+            std::vector<std::string> substrings;
+
+            while (!qualifiers_str.empty()) {
+                size_t idx = qualifiers_str.find_first_of(' ');
+                if (idx == std::string::npos) {
+                    substrings.emplace_back(qualifiers_str);
+                    qualifiers_str.clear();
+                }
+                else {
+                    substrings.emplace_back(std::string{ qualifiers_str.cbegin(), qualifiers_str.cbegin() + idx});
+                    qualifiers_str.erase(qualifiers_str.begin(), qualifiers_str.begin() + idx + 1);
+                }
+            }
+
+            std::vector<glsl_qualifier> result;
+            for (const auto& substr : substrings) {
+                result.emplace_back(singleQualifierFromString(substr));
+            }
+
+            return result;
+        }
+        else {
+            return std::vector<glsl_qualifier>{ singleQualifierFromString(qualifiers_str) };
+        }
+    }
+
     ResourceFile::ResourceFile() : environment(std::make_unique<LuaEnvironment>()) {
         using namespace luabridge;
         auto& callbacks = ShaderPack::RetrievalCallbacks();
@@ -330,7 +377,7 @@ namespace st {
             .addFunction("GetFieldOfViewY", callbacks.GetFOVY);
     }
 
-    const std::vector<ShaderResource>& ResourceFile::GetResources(const std::string & block_name) const {
+    const std::vector<ShaderResource>& ResourceFile::GetResources(const std::string& block_name) const {
         return setResources.at(block_name);
     }
 
@@ -338,7 +385,7 @@ namespace st {
         return setResources;
     }
 
-    const ShaderResource * ResourceFile::FindResource(const std::string & name) const {
+    const ShaderResource* ResourceFile::FindResource(const std::string& name) const {
         for (auto& group : setResources) {
             const ShaderResource* rsrc_ptr = searchSingleGroupForResource(group.first, name);
             if (rsrc_ptr != nullptr) {
@@ -359,7 +406,15 @@ namespace st {
         parseResources();
     }
 
-    const ShaderResource* ResourceFile::searchSingleGroupForResource(const std::string& group, const std::string & name) const {
+    void ResourceFile::AddResourceGroup(const std::string& group_name, const std::vector<ShaderResource>& resources) {
+        auto emplaced = setResources.emplace(group_name, resources);
+        if (!emplaced.second) {
+            LOG(ERROR) << "Couldn't add new resource group to resource file: likely group already exists.";
+            throw std::runtime_error("Couldn't add new resource group to resource file.");
+        }
+    }
+
+    const ShaderResource* ResourceFile::searchSingleGroupForResource(const std::string& group, const std::string& name) const {
         
         auto iter = std::find_if(setResources.at(group).cbegin(), setResources.at(group).cend(), [name](const ShaderResource& rsrc) {
             return name == std::string(rsrc.Name());
@@ -814,6 +869,16 @@ namespace st {
                 else {
                     LOG(ERROR) << "Requested resource type " << type_of_resource << " is currently unsupported.";
                     throw std::domain_error("Unsupported resource type used.");
+                }
+
+                if (set_resource_data.count("Qualifiers") != 0) {
+                    if (vk_type == VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE || vk_type == VK_DESCRIPTOR_TYPE_SAMPLER || vk_type == VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) {
+                        LOG(WARNING) << "Attempted to set qualifiers for a sampled image, sampler, or combined image-sampler descriptor type - this would result in invalid GLSL! Skipping...";
+                    }
+                    else {
+                        std::vector<glsl_qualifier> qualifiers = qualifiersFromString(set_resource_data.at("Qualifiers").cast<std::string>());
+                        resource.SetQualifiers(qualifiers.size(), qualifiers.data());
+                    }
                 }
 
                 resource.SetBindingIndex(setResources[entry.first].size());

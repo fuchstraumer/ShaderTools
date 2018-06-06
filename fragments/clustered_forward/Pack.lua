@@ -1,24 +1,24 @@
 PackName = "ClusteredForwardShading"
 ResourceFileName = "Resources.lua"
 ShaderGroups = {
-    DepthPrePass = {
+    { 0, DepthPrePass = {
         Vertex = "Simple.vert"
-    },
-    Clustered = {
-        Vertex = "Default.vert",
-        Fragment = "Clustered.frag"
-    },
-    Lights = {
+    } },
+    { 1, Lights = {
         Vertex = "Default.vert",
         Fragment = "Light.frag"
-    },
-    ComputeLightGrids = {
+    } },
+    { 2, ComputeLightGrids = {
         Compute = "LightGrid.comp"
-    },
-    ComputeGridOffsets = {
+    } },
+    { 3, ComputeGridOffsets = {
         Compute = "GridOffsets.comp"
-    },
-    ComputeLightLists = {
+    } },
+    { 4, ComputeLightLists = {
         Compute = "LightList.comp"
-    }
+    } },
+    { 5, Clustered = {
+        Vertex = "Default.vert",
+        Fragment = "Clustered.frag"
+    } }
 }

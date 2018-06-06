@@ -1,11 +1,11 @@
 layout(early_fragment_tests) in;
-$SPC const uint ResolutionX = 1920;
-$SPC const uint ResolutionY = 1080;
-$SPC const uint TileCountX = (1920 - 1) / 64 + 1;
-$SPC const uint TileCountY = (1080 - 1) / 64 + 1;
-$SPC const uint TileCountZ = 256;
-$SPC const uint TileWidth = 64;
-$SPC const uint TileHeight = 64;
+SPC const uint ResolutionX = 1920;
+SPC const uint ResolutionY = 1080;
+SPC const uint TileCountX = (1920 - 1) / 64 + 1;
+SPC const uint TileCountY = (1080 - 1) / 64 + 1;
+SPC const uint TileCountZ = 256;
+SPC const uint TileWidth = 64;
+SPC const uint TileHeight = 64;
 #pragma USE_RESOURCES GlobalResources
 #pragma USE_RESOURCES ClusteredForward
 

@@ -24,49 +24,58 @@ Resources = {
         flags = {
             Type = "StorageTexelBuffer",
             Format = "r8ui",
-            Size = dimensions.TotalTileCount()
+            Size = dimensions.TotalTileCount(),
+            Qualifiers = "restrict"
         },
         bounds = {
             Type = "StorageTexelBuffer",
             Format = "r32ui",
-            Size = NumLights * 6
+            Size = NumLights * 6,
+            Qualifiers = "restrict"
         },
         lightCounts = {
             Type = "StorageTexelBuffer",
             Format = "r32ui",
-            Size = dimensions.TotalTileCount()
+            Size = dimensions.TotalTileCount(),
+            Qualifiers = "restrict"
         },
         lightCountTotal = {
             Type = "StorageTexelBuffer",
             Format = "r32ui",
-            Size = 1
+            Size = 1,
+            Qualifers = "restrict"
         },
         lightCountOffsets = {
             Type = "StorageTexelBuffer",
             Format = "r32ui",
-            Size = dimensions.TotalTileCount()
+            Size = dimensions.TotalTileCount(),
+            Qualifers = "restrict"
         },
         lightList = {
             Type = "StorageTexelBuffer",
             Format = "r32ui",
-            Size = 1024 * 1024
+            Size = 1024 * 1024,
+            Qualifers = "restrict"
         },
         lightCountCompare = {
             Type = "StorageTexelBuffer",
             Format = "r32ui",
-            Size = dimensions.TotalTileCount()
+            Size = dimensions.TotalTileCount(),
+            Qualifers = "restrict"
         }
     },
     Lights = {
         positionRanges = {
             Type = "StorageTexelBuffer",
             Format = "rgba32f",
-            Size = dimensions.NumLights
+            Size = dimensions.NumLights,
+            Qualifiers = "restrict readonly"
         }
         lightColors = {
             Type = "UniformTexelBuffer",
             Format = "rgba8",
-            Size = dimensions.NumLights
+            Size = dimensions.NumLights,
+            Qualifiers = "restrict readonly"
         }
     },
     ObjMaterial = {
@@ -97,13 +106,16 @@ Resources = {
             FromFile = true
         },
         normalMap = {
-            Type = "CombinedImageSampler"
+            Type = "CombinedImageSampler",
+            FromFile = true
         },
         roughnessMap = {
-            Type = "CombinedImageSampler"
+            Type = "CombinedImageSampler",
+            FromFile = true
         },
         metallicMap = {
-            Type = "CombinedImageSampler"
+            Type = "CombinedImageSampler",
+            FromFile = true
         }
     }
 }

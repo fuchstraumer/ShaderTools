@@ -67,7 +67,7 @@ namespace st {
         workingDir = fs::absolute(workingDir);
         workingDir = workingDir.remove_filename();
         const std::string dir_string = workingDir.parent_path().string();
-        ShaderGenerator::SetBasePath(dir_string.c_str());
+        //ShaderGenerator::SetBasePath(dir_string.c_str());
         createGroups();
         setDescriptorTypeCounts();
     }
@@ -88,6 +88,7 @@ namespace st {
         for (const auto& group : filePack->ShaderGroups) {
             groups.emplace(group.first, std::make_unique<ShaderGroup>(group.first.c_str(), resource_path_str.c_str(), base_includes.size(), base_includes.data()));
             createSingleGroup(group.first, group.second);
+            groups.at(group.first)->SetIndex(filePack->GroupIndices.at(group.first));
         }
 
         resource_path = fs::absolute(resource_path);

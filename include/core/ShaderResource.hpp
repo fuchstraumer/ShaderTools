@@ -15,6 +15,15 @@ namespace st {
         Invalid = std::numeric_limits<uint32_t>::max()
     };
 
+    enum class glsl_qualifier : uint32_t {
+        Coherent = 0,
+        ReadOnly,
+        WriteOnly,
+        Volatile,
+        Restrict,
+        InvalidQualifier = std::numeric_limits<uint32_t>::max()
+    };
+
     class ST_API ShaderResource {
     public:
 
@@ -40,6 +49,8 @@ namespace st {
         const VkImageViewCreateInfo& ImageViewInfo() const noexcept;
         const VkSamplerCreateInfo& SamplerInfo() const noexcept;
         const VkBufferViewCreateInfo& BufferViewInfo() const noexcept;
+        bool HasQualifiers() const noexcept;
+        void GetQualifiers(size_t* num_qualifiers, glsl_qualifier* qualifiers) const noexcept;
         void GetMembers(size_t* num_members, ShaderResourceSubObject* dest_objects) const noexcept;
 
         void SetBindingIndex(size_t idx);
@@ -51,6 +62,7 @@ namespace st {
         void SetSizeClass(size_class _size_class);
         void SetName(const char* name);
         void SetParentGroupName(const char* parent_group_name);
+        void SetQualifiers(const size_t num_qualifiers, glsl_qualifier* qualifiers);
         void SetMembers(const size_t num_members, ShaderResourceSubObject* src_objects);
         void SetFormat(VkFormat fmt);
         void SetImageInfo(VkImageCreateInfo image_info);
