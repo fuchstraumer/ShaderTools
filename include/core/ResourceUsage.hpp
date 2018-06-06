@@ -19,6 +19,8 @@ namespace st {
     class ST_API ResourceUsage {
     public:
 
+        ResourceUsage() noexcept;
+        ~ResourceUsage();
         ResourceUsage(const Shader& used_by, const ShaderResource* backing_resource, access_modifier _access_modifier, VkDescriptorType type);
         ResourceUsage(const ResourceUsage& other) noexcept;
         ResourceUsage(ResourceUsage&& other) noexcept;
