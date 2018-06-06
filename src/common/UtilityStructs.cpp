@@ -31,6 +31,10 @@ namespace st {
         Strings = new char*[num_names];
     }
 
+    const char * dll_retrieved_strings_t::operator[](const size_t & idx) const {
+        return Strings[idx];
+    }
+
     ShaderResourceSubObject::ShaderResourceSubObject(const ShaderResourceSubObject & other) noexcept : Type(strdup(other.Type)), Name(strdup(other.Name)), NumElements(other.NumElements),
         isComplex(other.isComplex) {}
 
