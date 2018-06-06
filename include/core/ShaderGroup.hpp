@@ -33,11 +33,14 @@ namespace st {
         void GetResourceUsages(const size_t& set_idx, size_t* num_resources, ResourceUsage* resources) const;
         VkShaderStageFlags Stages() const noexcept;
 
+        dll_retrieved_strings_t GetTags() const;
         dll_retrieved_strings_t GetSetResourceNames(const uint32_t set_idx) const;
         dll_retrieved_strings_t GetUsedResourceBlocks() const;
         size_t GetNumSetsRequired() const;
         size_t GetIndex() const noexcept;
+
         void SetIndex(size_t _idx);
+        void SetTags(size_t* num_tags, const char** tag_strings);
 
     protected:
         friend class ShaderPackImpl;

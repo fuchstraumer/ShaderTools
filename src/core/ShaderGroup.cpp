@@ -34,6 +34,7 @@ namespace st {
         std::unique_ptr<ShaderCompiler> compiler{ nullptr };
         std::unique_ptr<BindingGenerator> bindingGenerator{ nullptr };
         ResourceFile* rsrcFile{ nullptr };
+        std::vector<std::string> tags;
         std::experimental::filesystem::path resourceScriptPath;
     };
 
@@ -95,6 +96,12 @@ namespace st {
 
     void ShaderGroup::SetIndex(size_t _idx) {
         impl->idx = std::move(_idx);
+    }
+
+    void ShaderGroup::SetTags(size_t * num_tags, const char ** tag_strings) {
+        for (size_t i = 0; i < num_tags; ++i) {
+            impl->tags.emplace_back(tag_strings[i]);
+        }
     }
 
     BindingGeneratorImpl* ShaderGroup::GetBindingGeneratorImpl() {
@@ -240,6 +247,15 @@ namespace st {
             result |= shader.GetStage();
         }
         return result;
+    }
+
+    dll_retrieved_strings_t ShaderGroup::GetTags() const {
+        dll_retrieved_strings_t results;
+        results.SetNumStrings(impl->tags.size());
+        for (size_t i = 0; i < impl->tags.size(); ++i) {
+            results.Strings[i] = strdup(impl->tags[i].c_str());
+        }
+        return results;
     }
 
     dll_retrieved_strings_t ShaderGroup::GetSetResourceNames(const uint32_t set_idx) const {
