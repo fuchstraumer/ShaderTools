@@ -49,6 +49,26 @@ namespace st {
         return results;
     }
 
+    std::vector<luabridge::LuaRef> LuaEnvironment::GetLinearTable(const luabridge::LuaRef & table) {
+        std::vector<luabridge::LuaRef> results;
+
+        if (table.isNil()) {
+            LOG(WARNING) << "Passed luaref to GetLinearTable was nil";
+            return results;
+        }
+
+        auto table_state = table.state();
+        push(table_state, table);
+
+        lua_pushnil(table_state);
+        while (lua_next(table_state, -2) != 0) {
+            results.emplace_back(LuaRef::fromStack(table_state, -1));
+            lua_pop(table_state, 1);
+        }
+
+        return results;
+    }
+
     lua_State * LuaEnvironment::GetState() {
         return state;
     }

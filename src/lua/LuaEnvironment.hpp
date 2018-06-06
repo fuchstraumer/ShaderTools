@@ -19,6 +19,7 @@ namespace st {
         void Execute(const char* fname);
         bool HasVariable(const std::string& var_name);
         std::unordered_map<std::string, luabridge::LuaRef> GetTableMap(const luabridge::LuaRef& table);
+        std::vector<luabridge::LuaRef> GetLinearTable(const luabridge::LuaRef& table);
         lua_State* GetState();
 
     private:
