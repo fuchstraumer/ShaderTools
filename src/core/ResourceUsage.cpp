@@ -74,4 +74,20 @@ namespace st {
         return bindingIdx;
     }
 
+    const access_modifier & ResourceUsage::AccessModifier() const noexcept {
+        return accessModifier;
+    }
+
+    bool ResourceUsage::ReadOnly() const noexcept {
+        return accessModifier == access_modifier::Read;
+    }
+
+    bool ResourceUsage::WriteOnly() const noexcept {
+        return accessModifier == access_modifier::Write;
+    }
+
+    bool ResourceUsage::ReadWrite() const noexcept {
+        return accessModifier == access_modifier::ReadWrite;
+    }
+
 }
