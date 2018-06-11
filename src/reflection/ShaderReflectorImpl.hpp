@@ -43,8 +43,8 @@ namespace st {
         std::map<uint32_t, DescriptorSetInfo> sortedSets;
         std::multimap<uint32_t, ResourceUsage> tempResources;
         std::unordered_map<VkShaderStageFlags, PushConstantInfo> pushConstants;
-        std::unordered_map<VkShaderStageFlags, std::map<uint32_t, VertexAttributeInfo>> inputAttributes;
-        std::unordered_map<VkShaderStageFlags, std::map<uint32_t, VertexAttributeInfo>> outputAttributes;
+        std::unordered_map<VkShaderStageFlags, std::vector<VertexAttributeInfo>> inputAttributes;
+        std::unordered_map<VkShaderStageFlags, std::vector<VertexAttributeInfo>> outputAttributes;
         std::unique_ptr<spirv_cross::CompilerGLSL> recompiler{ nullptr };
         size_t getNumSets() const noexcept;
 

@@ -176,7 +176,7 @@ namespace st {
             if (attributes != nullptr) {
                 std::vector<VkVertexInputAttributeDescription> descriptions;
                 for (const auto& attr : b_impl->inputAttributes.at(VK_SHADER_STAGE_VERTEX_BIT)) {
-                    descriptions.emplace_back(attr.second);
+                    descriptions.emplace_back(attr);
                 }
                 std::copy(descriptions.begin(), descriptions.end(), attributes);
             }

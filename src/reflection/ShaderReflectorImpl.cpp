@@ -57,8 +57,8 @@ namespace st {
         VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT
     };
 
-    std::map<uint32_t, VertexAttributeInfo> parseVertAttrs(const spirv_cross::Compiler& cmplr, const std::vector<spirv_cross::Resource>& rsrcs) {
-        std::map<uint32_t, VertexAttributeInfo> attributes;
+    std::vector<VertexAttributeInfo> parseVertAttrs(const spirv_cross::Compiler& cmplr, const std::vector<spirv_cross::Resource>& rsrcs) {
+        std::vector<VertexAttributeInfo> attributes;
         uint32_t idx = 0;
         uint32_t running_offset = 0;
         for (const auto& attr : rsrcs) {
@@ -69,19 +69,19 @@ namespace st {
             const spirv_cross::SPIRType attr_type = cmplr.get_type(attr.type_id);
             attr_info.SetType(std::any(attr_type));
             running_offset += attr_type.vecsize * attr_type.width;
-            attributes.emplace(attr_info.Location(), std::move(attr_info));
+            attributes.emplace_back(std::move(attr_info));
             ++idx;
         }
         return attributes;
     }
 
-    std::map<uint32_t, VertexAttributeInfo> parseInputAttributes(const spirv_cross::Compiler& cmplr) {
+    std::vector<VertexAttributeInfo> parseInputAttributes(const spirv_cross::Compiler& cmplr) {
         using namespace spirv_cross;
         const auto rsrcs = cmplr.get_shader_resources();
         return parseVertAttrs(cmplr, rsrcs.stage_inputs);
     }
 
-    std::map<uint32_t, VertexAttributeInfo> parseOutputAttributes(const spirv_cross::Compiler& cmplr) {
+    std::vector<VertexAttributeInfo> parseOutputAttributes(const spirv_cross::Compiler& cmplr) {
         using namespace spirv_cross;
         const auto rsrcs = cmplr.get_shader_resources();
         return parseVertAttrs(cmplr, rsrcs.stage_outputs);

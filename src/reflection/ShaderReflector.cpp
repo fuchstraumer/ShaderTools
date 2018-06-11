@@ -1,6 +1,8 @@
 #include "reflection/ShaderReflector.hpp"
 #include "ShaderReflectorImpl.hpp"
 #include "core/ResourceUsage.hpp"
+#include "reflection/ReflectionStructs.hpp"
+#include "easyloggingpp/src/easylogging++.h"
 namespace st {
 
     ShaderReflector::ShaderReflector() : impl(std::make_unique<ShaderReflectorImpl>()) {}
@@ -40,6 +42,45 @@ namespace st {
         }
         else {
             *num_resources = 0;
+        }
+    }
+
+    void ShaderReflector::GetInputAttributes(const VkShaderStageFlags stage, size_t * num_attrs, VertexAttributeInfo * attributes) {
+        auto iter = impl->inputAttributes.find(stage);
+        if (iter == impl->inputAttributes.end()) {
+            *num_attrs = 0;
+            return;
+        }
+        else {
+            *num_attrs = iter->second.size();
+            if (attributes != nullptr) {
+                std::copy(std::begin(iter->second), std::end(iter->second), attributes);
+            }
+        }
+    }
+
+    void ShaderReflector::GetOutputAttributes(const VkShaderStageFlags stage, size_t * num_attrs, VertexAttributeInfo * attributes) {
+        auto iter = impl->outputAttributes.find(stage);
+        if (iter == impl->outputAttributes.end()) {
+            *num_attrs = 0;
+            return;
+        }
+        else {
+            *num_attrs = iter->second.size();
+            if (attributes != nullptr) {
+                std::copy(std::begin(iter->second), std::end(iter->second), attributes);
+            }
+        }
+    }
+
+    PushConstantInfo ShaderReflector::GetStagePushConstantInfo(const VkShaderStageFlags stage) const {
+        auto iter = impl->pushConstants.find(stage);
+        if (iter != std::end(impl->pushConstants)) {
+            return iter->second;
+        }
+        else {
+            LOG(ERROR) << "Failed to find PushConstantInfo present in current stage: current stage likely lacks any push constant data.";
+            return PushConstantInfo();
         }
     }
 

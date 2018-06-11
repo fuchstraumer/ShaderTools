@@ -10,6 +10,8 @@ namespace st {
     class ShaderGroupImpl;
     class ShaderReflectorImpl;
     class ResourceUsage;
+    struct VertexAttributeInfo;
+    struct PushConstantInfo;
 
     class ShaderReflector {
         ShaderReflector(const ShaderReflector&) = delete;
@@ -25,6 +27,9 @@ namespace st {
         uint32_t GetNumSets() const noexcept;
         void Clear();
         void GetShaderResources(const size_t set_idx, size_t* num_resources, ResourceUsage* resources);
+        void GetInputAttributes(const VkShaderStageFlags stage, size_t* num_attrs, VertexAttributeInfo* attributes);
+        void GetOutputAttributes(const VkShaderStageFlags stage, size_t* num_attrs, VertexAttributeInfo* attributes);
+        PushConstantInfo GetStagePushConstantInfo(const VkShaderStageFlags stage) const;
 
         friend class ShaderGroup;
         friend class ShaderGroupImpl;
