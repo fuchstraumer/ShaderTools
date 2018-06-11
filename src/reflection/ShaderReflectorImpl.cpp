@@ -63,12 +63,13 @@ namespace st {
         uint32_t running_offset = 0;
         for (const auto& attr : rsrcs) {
             VertexAttributeInfo attr_info;
-            attr_info.Name = cmplr.get_name(attr.id);
-            attr_info.Location = cmplr.get_decoration(attr.id, spv::DecorationLocation);
-            attr_info.Offset = running_offset;
-            attr_info.Type = cmplr.get_type(attr.type_id);
-            running_offset += attr_info.Type.vecsize * attr_info.Type.width;
-            attributes.emplace(attr_info.Location, std::move(attr_info));
+            attr_info.SetName(cmplr.get_name(attr.id).c_str());
+            attr_info.SetLocation(cmplr.get_decoration(attr.id, spv::DecorationLocation));
+            attr_info.SetOffset(running_offset);
+            const spirv_cross::SPIRType attr_type = cmplr.get_type(attr.type_id);
+            attr_info.SetType(std::any(attr_type));
+            running_offset += attr_type.vecsize * attr_type.width;
+            attributes.emplace(attr_info.Location(), std::move(attr_info));
             ++idx;
         }
         return attributes;
@@ -182,16 +183,18 @@ namespace st {
         const auto& pconstant = push_constants.push_constant_buffers.front();
         auto ranges = cmplr.get_active_buffer_ranges(pconstant.id);
         PushConstantInfo result;
-        result.Stages = stage;
-        result.Name = cmplr.get_name(pconstant.id);
+        result.SetStages(stage);
+        result.SetName(cmplr.get_name(pconstant.id).c_str());
+        std::vector<ShaderResourceSubObject> members;
         for(auto& range : ranges) {
             ShaderResourceSubObject member;
             member.Name = strdup(cmplr.get_member_name(pconstant.base_type_id, range.index).c_str());
             member.Size = static_cast<uint32_t>(range.range);
             member.Offset = static_cast<uint32_t>(range.offset);
-            result.Members.push_back(std::move(member));
+            members.emplace_back(std::move(member));
         }
-        return result;
+        result.SetMembers(members.size(), members.data());
+        return std::move(result);
     }
 
     void ShaderReflectorImpl::parseBinary(const Shader& shader_handle) {
@@ -305,11 +308,15 @@ namespace st {
             if (pushConstants.size() > 1) {
                 uint32_t offset = 0;
                 for (const auto& push_block : pushConstants) {
-                    for (const auto& push_member : push_block.second.Members) {
+                    size_t num_members = 0;
+                    push_block.second.GetMembers(&num_members, nullptr);
+                    std::vector<ShaderResourceSubObject> members(num_members);
+                    push_block.second.GetMembers(&num_members, members.data());
+                    for (const auto& push_member : members) {
                         offset += push_member.Size;
                     }
                 }
-                iter.first->second.Offset = offset;
+                iter.first->second.SetOffset(offset);
             }
         }
 

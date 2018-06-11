@@ -257,7 +257,7 @@ namespace st {
     VkFormat VkFormatFromSPIRType(const spirv_cross::SPIRType & type) {
         using namespace spirv_cross;
         if (type.basetype == SPIRType::Struct || type.basetype == SPIRType::Sampler) {
-            // no real format info for structs to be extracted
+            LOG(WARNING) << "Tried to convert a structure or SPIR sampler into a VkFormat enum value!";
             return VK_FORMAT_UNDEFINED;
         }
         else if (type.basetype == SPIRType::Image || type.basetype == SPIRType::SampledImage) {
@@ -309,7 +309,8 @@ namespace st {
             case spv::ImageFormatRgba32ui:
                 return VK_FORMAT_R32G32B32A32_UINT;
             default:
-                throw std::runtime_error("Failed to match SPV image type to VkFormat enum.");
+                LOG(ERROR) << "Failed to convert an image format to a VkFormat enum.";
+                return VK_FORMAT_UNDEFINED;
             }
         }
         else if (type.vecsize == 1) {
@@ -360,7 +361,8 @@ namespace st {
                 }
             }
             else {
-                throw std::domain_error("Invalid type width for conversion to a VkFormat enum.");
+                LOG(ERROR) << "Invalid type width for conversion of SPIR-Type to VkFormat enum value!";
+                return VK_FORMAT_UNDEFINED;
             }
         }
         else if (type.vecsize == 2) {
@@ -411,7 +413,8 @@ namespace st {
                 }
             }
             else {
-                throw std::domain_error("Invalid type width for conversion to a VkFormat enum.");
+                LOG(ERROR) << "Invalid type width for conversion of SPIR-Type to VkFormat enum value!";
+                return VK_FORMAT_UNDEFINED;
             }
         }
         else if (type.vecsize == 3) {
@@ -462,7 +465,8 @@ namespace st {
                 }
             }
             else {
-                throw std::domain_error("Invalid type width for conversion to a VkFormat enum");
+                LOG(ERROR) << "Invalid type width for conversion of SPIR-Type to VkFormat enum value!";
+                return VK_FORMAT_UNDEFINED;
             }
         }
         else if (type.vecsize == 4) {
