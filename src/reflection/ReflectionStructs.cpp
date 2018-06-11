@@ -1,4 +1,4 @@
-#include "DescriptorStructs.hpp"
+#include "reflection/ReflectionStructs.hpp"
 #include "../util/ResourceFormats.hpp"
 
 namespace st {

@@ -8,18 +8,18 @@ namespace st {
 
     class ShaderGroup;
     class ShaderGroupImpl;
-    class BindingGeneratorImpl;
+    class ShaderReflectorImpl;
     class ResourceUsage;
 
-    class BindingGenerator {
-        BindingGenerator(const BindingGenerator&) = delete;
-        BindingGenerator& operator=(const BindingGenerator&) = delete;
+    class ShaderReflector {
+        ShaderReflector(const ShaderReflector&) = delete;
+        ShaderReflector& operator=(const ShaderReflector&) = delete;
     public:
 
-        BindingGenerator();
-        ~BindingGenerator();
-        BindingGenerator(BindingGenerator&& other) noexcept;
-        BindingGenerator& operator=(BindingGenerator&& other) noexcept;
+        ShaderReflector();
+        ~ShaderReflector();
+        ShaderReflector(ShaderReflector&& other) noexcept;
+        ShaderReflector& operator=(ShaderReflector&& other) noexcept;
 
         void ParseBinary(const Shader& shader);
         uint32_t GetNumSets() const noexcept;
@@ -29,9 +29,9 @@ namespace st {
         friend class ShaderGroup;
         friend class ShaderGroupImpl;
     protected:
-        BindingGeneratorImpl * GetImpl();
+        ShaderReflectorImpl* GetImpl();
     private:
-        std::unique_ptr<BindingGeneratorImpl> impl;
+        std::unique_ptr<ShaderReflectorImpl> impl;
     };
 
 }

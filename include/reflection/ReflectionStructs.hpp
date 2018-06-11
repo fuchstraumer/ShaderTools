@@ -9,6 +9,10 @@
 #include <map>
 
 namespace st {
+
+    struct PushConstantInfoImpl;
+    struct VertexAttributeInfoImpl;
+    struct StageAttributesImpl;
   
     struct PushConstantInfo {
         VkShaderStageFlags Stages;

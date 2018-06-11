@@ -1,4 +1,4 @@
-#include "BindingGeneratorImpl.hpp"
+#include "ShaderReflectorImpl.hpp"
 #include "easyloggingpp/src/easylogging++.h"
 #include "../util/ShaderFileTracker.hpp"
 #include "core/ShaderResource.hpp"
@@ -34,17 +34,17 @@ namespace st {
         }
     }
 
-    BindingGeneratorImpl::BindingGeneratorImpl(BindingGeneratorImpl&& other) noexcept : descriptorSets(std::move(other.descriptorSets)),
+    ShaderReflectorImpl::ShaderReflectorImpl(ShaderReflectorImpl&& other) noexcept : descriptorSets(std::move(other.descriptorSets)),
         sortedSets(std::move(other.sortedSets)), pushConstants(std::move(other.pushConstants)) {}
 
-    BindingGeneratorImpl& BindingGeneratorImpl::operator=(BindingGeneratorImpl&& other) noexcept {
+    ShaderReflectorImpl& ShaderReflectorImpl::operator=(ShaderReflectorImpl&& other) noexcept {
         descriptorSets = std::move(other.descriptorSets);
         sortedSets = std::move(other.sortedSets);
         pushConstants = std::move(other.pushConstants);
         return *this;
     }
 
-    size_t BindingGeneratorImpl::getNumSets() const noexcept {
+    size_t ShaderReflectorImpl::getNumSets() const noexcept {
         return sortedSets.size();
     }
 
@@ -86,7 +86,7 @@ namespace st {
         return parseVertAttrs(cmplr, rsrcs.stage_outputs);
     }
 
-    void BindingGeneratorImpl::parseResourceType(const Shader& shader_handle, const VkDescriptorType& type_being_parsed) {
+    void ShaderReflectorImpl::parseResourceType(const Shader& shader_handle, const VkDescriptorType& type_being_parsed) {
         
         auto& f_tracker = ShaderFileTracker::GetFileTracker();
         const auto& rsrc_path = f_tracker.ShaderUsedResourceScript.at(shader_handle);
@@ -194,7 +194,7 @@ namespace st {
         return result;
     }
 
-    void BindingGeneratorImpl::parseBinary(const Shader& shader_handle) {
+    void ShaderReflectorImpl::parseBinary(const Shader& shader_handle) {
         auto& FileTracker = ShaderFileTracker::GetFileTracker();
         std::vector<uint32_t> binary_vec;
         if (!FileTracker.FindShaderBinary(shader_handle, binary_vec)) {
@@ -205,7 +205,7 @@ namespace st {
         parseImpl(shader_handle, binary_vec);
     }
 
-    void BindingGeneratorImpl::collateSets() {
+    void ShaderReflectorImpl::collateSets() {
         std::set<uint32_t> unique_keys;
         for (auto iter = tempResources.begin(); iter != tempResources.end(); ++iter) {
             unique_keys.insert(iter->first);
@@ -230,7 +230,7 @@ namespace st {
         }
     }
 
-    void BindingGeneratorImpl::parseSpecializationConstants() {
+    void ShaderReflectorImpl::parseSpecializationConstants() {
         using namespace spirv_cross;
         auto constants = recompiler->get_specialization_constants();
         if (!constants.empty()) {
@@ -285,7 +285,7 @@ namespace st {
         }
     }
 
-    void BindingGeneratorImpl::parseImpl(const Shader& handle, const std::vector<uint32_t>& binary_data) {
+    void ShaderReflectorImpl::parseImpl(const Shader& handle, const std::vector<uint32_t>& binary_data) {
         using namespace spirv_cross;
         recompiler = std::make_unique<CompilerGLSL>(binary_data);
         const auto stage = handle.GetStage();

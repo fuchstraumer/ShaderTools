@@ -1,30 +1,30 @@
-#include "parser/BindingGenerator.hpp"
-#include "BindingGeneratorImpl.hpp"
+#include "reflection/ShaderReflector.hpp"
+#include "ShaderReflectorImpl.hpp"
 #include "core/ResourceUsage.hpp"
 namespace st {
 
-    BindingGenerator::BindingGenerator() : impl(std::make_unique<BindingGeneratorImpl>()) {}
+    ShaderReflector::ShaderReflector() : impl(std::make_unique<ShaderReflectorImpl>()) {}
 
-    BindingGenerator::~BindingGenerator() {}
+    ShaderReflector::~ShaderReflector() {}
 
-    BindingGenerator::BindingGenerator(BindingGenerator&& other) noexcept : impl(std::move(other.impl)) {}
+    ShaderReflector::ShaderReflector(ShaderReflector&& other) noexcept : impl(std::move(other.impl)) {}
 
-    BindingGenerator& BindingGenerator::operator=(BindingGenerator&& other) noexcept {
+    ShaderReflector& ShaderReflector::operator=(ShaderReflector&& other) noexcept {
         impl = std::move(other.impl);
         other.impl.reset();
         return *this;
     }
 
-    uint32_t BindingGenerator::GetNumSets() const noexcept {
+    uint32_t ShaderReflector::GetNumSets() const noexcept {
         return static_cast<uint32_t>(impl->getNumSets());
     }    
     
-    void BindingGenerator::Clear() {
+    void ShaderReflector::Clear() {
         impl.reset();
-        impl = std::make_unique<BindingGeneratorImpl>();
+        impl = std::make_unique<ShaderReflectorImpl>();
     }
 
-    void BindingGenerator::GetShaderResources(const size_t set_idx, size_t * num_resources, ResourceUsage * resources) {
+    void ShaderReflector::GetShaderResources(const size_t set_idx, size_t * num_resources, ResourceUsage * resources) {
         auto iter = impl->sortedSets.find(static_cast<unsigned int>(set_idx));
         if (iter != impl->sortedSets.cend()) {
             const auto& set = iter->second;
@@ -43,11 +43,11 @@ namespace st {
         }
     }
 
-    BindingGeneratorImpl * BindingGenerator::GetImpl() {
+    ShaderReflectorImpl * ShaderReflector::GetImpl() {
         return impl.get();
     }
 
-    void BindingGenerator::ParseBinary(const Shader & shader) {
+    void ShaderReflector::ParseBinary(const Shader & shader) {
         impl->parseBinary(shader);
     }
 }

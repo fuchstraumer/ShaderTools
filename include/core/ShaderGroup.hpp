@@ -8,7 +8,7 @@ namespace st {
 
     class ShaderGroupImpl;
     class ShaderPackImpl;
-    class BindingGeneratorImpl;
+    class ShaderReflectorImpl;
     class ResourceUsage;
 
     /*  Designed to be used to group shaders into the groups that they are used in
@@ -44,8 +44,8 @@ namespace st {
 
     protected:
         friend class ShaderPackImpl;
-        BindingGeneratorImpl * GetBindingGeneratorImpl();
-        const BindingGeneratorImpl * GetBindingGeneratorImpl() const;
+        ShaderReflectorImpl * GetBindingGeneratorImpl();
+        const ShaderReflectorImpl * GetBindingGeneratorImpl() const;
     private:
         std::unique_ptr<ShaderGroupImpl> impl;
     };

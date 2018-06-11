@@ -3,7 +3,7 @@
 #include "../lua/LuaEnvironment.hpp"
 #include "core/ShaderResource.hpp"
 #include "../util/ShaderFileTracker.hpp"
-#include "../parser/BindingGeneratorImpl.hpp"
+#include "../reflection/ShaderReflectorImpl.hpp"
 #include "generation/ShaderGenerator.hpp"
 #include "common/UtilityStructs.hpp"
 #include "shader_pack_file.hpp"

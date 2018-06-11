@@ -1,13 +1,13 @@
 #include "core/ShaderGroup.hpp"
 #include "generation/Compiler.hpp"
 #include "generation/ShaderGenerator.hpp"
-#include "parser/BindingGenerator.hpp"
+#include "reflection/ShaderReflector.hpp"
 #include "core/ShaderResource.hpp"
 #include "core/ResourceUsage.hpp"
 #include "../lua/LuaEnvironment.hpp"
 #include "../lua/ResourceFile.hpp"
 #include "../util/ShaderFileTracker.hpp"
-#include "../parser/BindingGeneratorImpl.hpp"
+#include "../reflection/ShaderReflectorImpl.hpp"
 #include "easyloggingpp/src/easylogging++.h"
 #include <unordered_set>
 #include <experimental/filesystem>
@@ -32,14 +32,14 @@ namespace st {
         std::unordered_set<st::Shader> stHandles{};
         std::unique_ptr<ShaderGenerator> generator{ nullptr };
         std::unique_ptr<ShaderCompiler> compiler{ nullptr };
-        std::unique_ptr<BindingGenerator> bindingGenerator{ nullptr };
+        std::unique_ptr<ShaderReflector> reflector{ nullptr };
         ResourceFile* rsrcFile{ nullptr };
         std::vector<std::string> tags;
         std::experimental::filesystem::path resourceScriptPath;
     };
 
     ShaderGroupImpl::ShaderGroupImpl(const std::string& group_name, size_t num_includes, const char* const* include_paths) : groupName(group_name), compiler(std::make_unique<ShaderCompiler>()), 
-        bindingGenerator(std::make_unique<BindingGenerator>()) {
+        reflector(std::make_unique<ShaderReflector>()) {
         for (size_t i = 0; i < num_includes; ++i) {
             includePaths.emplace_back(include_paths[i]);
         }
@@ -48,14 +48,14 @@ namespace st {
     ShaderGroupImpl::~ShaderGroupImpl() { }
 
     ShaderGroupImpl::ShaderGroupImpl(ShaderGroupImpl && other) noexcept : includePaths(std::move(other.includePaths)), stHandles(std::move(other.stHandles)), generator(std::move(other.generator)), 
-        compiler(std::move(other.compiler)), bindingGenerator(std::move(other.bindingGenerator)), rsrcFile(std::move(other.rsrcFile)), groupName(std::move(other.groupName)), resourceScriptPath(std::move(other.resourceScriptPath)) {}
+        compiler(std::move(other.compiler)), reflector(std::move(other.reflector)), rsrcFile(std::move(other.rsrcFile)), groupName(std::move(other.groupName)), resourceScriptPath(std::move(other.resourceScriptPath)) {}
 
     ShaderGroupImpl & ShaderGroupImpl::operator=(ShaderGroupImpl && other) noexcept {
         includePaths = std::move(other.includePaths);
         stHandles = std::move(other.stHandles);
         generator = std::move(other.generator);
         compiler = std::move(other.compiler);
-        bindingGenerator = std::move(other.bindingGenerator);
+        reflector = std::move(other.reflector);
         rsrcFile = std::move(other.rsrcFile);
         groupName = std::move(other.groupName);
         resourceScriptPath = std::move(other.resourceScriptPath);
@@ -80,14 +80,14 @@ namespace st {
         recompiled_src_str.resize(size);
         compiler->RecompileBinaryToGLSL(handle, &size, recompiled_src_str.data());
 
-        bindingGenerator->ParseBinary(handle);
+        reflector->ParseBinary(handle);
 
         // Need to reset generator to neutral state each time.
         generator.reset();
     }
 
     size_t ShaderGroup::GetNumSetsRequired() const {
-        return static_cast<size_t>(impl->bindingGenerator->GetNumSets());
+        return static_cast<size_t>(impl->reflector->GetNumSets());
     }
 
     size_t ShaderGroup::GetIndex() const noexcept {
@@ -104,12 +104,12 @@ namespace st {
         }
     }
 
-    BindingGeneratorImpl* ShaderGroup::GetBindingGeneratorImpl() {
-        return impl->bindingGenerator->GetImpl();
+    ShaderReflectorImpl* ShaderGroup::GetBindingGeneratorImpl() {
+        return impl->reflector->GetImpl();
     }
 
-    const BindingGeneratorImpl* ShaderGroup::GetBindingGeneratorImpl() const {
-        return impl->bindingGenerator->GetImpl();
+    const ShaderReflectorImpl* ShaderGroup::GetBindingGeneratorImpl() const {
+        return impl->reflector->GetImpl();
     }
 
     ShaderGroup::ShaderGroup(const char * group_name, const char * resource_file_path, const size_t num_includes, const char* const* paths) : impl(std::make_unique<ShaderGroupImpl>(group_name, num_includes, paths)){
@@ -170,7 +170,7 @@ namespace st {
     }
 
     void ShaderGroup::GetVertexAttributes(size_t * num_attributes, VkVertexInputAttributeDescription * attributes) const {
-        const BindingGeneratorImpl* b_impl = GetBindingGeneratorImpl();
+        const ShaderReflectorImpl* b_impl = GetBindingGeneratorImpl();
         if (!b_impl->inputAttributes.at(VK_SHADER_STAGE_VERTEX_BIT).empty()) {
             *num_attributes = b_impl->inputAttributes.at(VK_SHADER_STAGE_VERTEX_BIT).size();
             if (attributes != nullptr) {
@@ -206,7 +206,7 @@ namespace st {
     }
 
     void ShaderGroup::GetSpecializationConstants(size_t * num_constants, SpecializationConstant * constants) const {
-        const BindingGeneratorImpl* b_impl = GetBindingGeneratorImpl();
+        const ShaderReflectorImpl* b_impl = GetBindingGeneratorImpl();
         if (!b_impl->specializationConstants.empty()) {
             *num_constants = b_impl->specializationConstants.size();
             if (constants != nullptr) {
@@ -223,7 +223,7 @@ namespace st {
     }
 
     void ShaderGroup::GetResourceUsages(const size_t & _set_idx, size_t * num_resources, ResourceUsage * resources) const {
-        const BindingGeneratorImpl* b_impl = GetBindingGeneratorImpl();
+        const ShaderReflectorImpl* b_impl = GetBindingGeneratorImpl();
         const uint32_t set_idx = static_cast<uint32_t>(_set_idx);
         if (b_impl->sortedSets.count(set_idx) != 0) {
             if (b_impl->sortedSets.at(set_idx).Members.empty()) {

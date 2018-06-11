@@ -3,7 +3,7 @@
 #define SHADER_TOOLS_BINDING_GENERATOR_IMPL_HPP
 #include "common/CommonInclude.hpp"
 #include "common/UtilityStructs.hpp"
-#include "DescriptorStructs.hpp"
+#include "reflection/ReflectionStructs.hpp"
 #include "spirv-cross/spirv_cross.hpp"
 #include "spirv-cross/spirv_glsl.hpp"
 #include <fstream>
@@ -22,15 +22,15 @@ namespace st {
         std::map<uint32_t, ResourceUsage> Members;
     };
 
-    class BindingGeneratorImpl {
-        BindingGeneratorImpl(const BindingGeneratorImpl&) = delete;
-        BindingGeneratorImpl& operator=(const BindingGeneratorImpl&) = delete;
+    class ShaderReflectorImpl {
+        ShaderReflectorImpl(const ShaderReflectorImpl&) = delete;
+        ShaderReflectorImpl& operator=(const ShaderReflectorImpl&) = delete;
     public:
 
-        BindingGeneratorImpl() = default;
-        ~BindingGeneratorImpl() = default;
-        BindingGeneratorImpl(BindingGeneratorImpl&& other) noexcept;
-        BindingGeneratorImpl& operator=(BindingGeneratorImpl&& other) noexcept;
+        ShaderReflectorImpl() = default;
+        ~ShaderReflectorImpl() = default;
+        ShaderReflectorImpl(ShaderReflectorImpl&& other) noexcept;
+        ShaderReflectorImpl& operator=(ShaderReflectorImpl&& other) noexcept;
 
         void collateSets();
         void parseSpecializationConstants();
