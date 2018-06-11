@@ -67,7 +67,7 @@ namespace st {
             attr_info.SetLocation(cmplr.get_decoration(attr.id, spv::DecorationLocation));
             attr_info.SetOffset(running_offset);
             const spirv_cross::SPIRType attr_type = cmplr.get_type(attr.type_id);
-            attr_info.SetType(std::any(attr_type));
+            attr_info.SetType(&attr_type);
             running_offset += attr_type.vecsize * attr_type.width;
             attributes.emplace_back(std::move(attr_info));
             ++idx;

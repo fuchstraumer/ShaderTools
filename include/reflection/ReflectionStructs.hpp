@@ -3,7 +3,7 @@
 #define SHADER_TOOLS_DESCRIPTOR_STRUCTS_HPP
 #include "common/CommonInclude.hpp"
 #include "common/UtilityStructs.hpp"
-#include <any>
+
 namespace st {
 
     struct PushConstantInfoImpl;
@@ -33,7 +33,7 @@ namespace st {
         VertexAttributeInfo(const VertexAttributeInfo& other) noexcept;
         VertexAttributeInfo& operator=(const VertexAttributeInfo& other) noexcept;
         void SetName(const char* name);
-        void SetType(const std::any spir_type_ptr);
+        void SetType(const void* spir_type_ptr);
         void SetTypeFromText(const char* type_str);
         void SetLocation(uint32_t loc) noexcept;
         void SetOffset(uint32_t _offset) noexcept;

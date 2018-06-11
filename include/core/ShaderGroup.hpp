@@ -4,6 +4,7 @@
 #include "common/CommonInclude.hpp"
 #include "common/Shader.hpp"
 #include "common/UtilityStructs.hpp"
+#include "reflection/ReflectionStructs.hpp"
 namespace st {
 
     class ShaderGroupImpl;
@@ -26,8 +27,10 @@ namespace st {
 
         Shader AddShader(const char* shader_name, const char* body_src_file_path, const VkShaderStageFlagBits& flags);
         
+        void GetInputAttributes(const VkShaderStageFlags stage, size_t* num_attrs, VertexAttributeInfo* attributes) const;
+        void GetOutputAttributes(const VkShaderStageFlags stage, size_t* num_attrs, VertexAttributeInfo* attributes) const;
+        PushConstantInfo GetPushConstantInfo(const VkShaderStageFlags stage) const;
         void GetShaderBinary(const Shader& handle, size_t* binary_size, uint32_t* dest_binary_ptr) const;
-        void GetVertexAttributes(size_t* num_attributes, VkVertexInputAttributeDescription* attributes) const;
         void GetSetLayoutBindings(const size_t& set_idx, size_t* num_bindings, VkDescriptorSetLayoutBinding* bindings) const;
         void GetSpecializationConstants(size_t* num_constants, SpecializationConstant* constants) const;
         void GetResourceUsages(const size_t& set_idx, size_t* num_resources, ResourceUsage* resources) const;

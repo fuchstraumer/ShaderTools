@@ -93,8 +93,8 @@ namespace st {
         impl->name = _name;
     }
 
-    void VertexAttributeInfo::SetType(const std::any spir_type_ptr) {
-        impl->type = std::any_cast<spirv_cross::SPIRType>(spir_type_ptr);
+    void VertexAttributeInfo::SetType(const void* spir_type_ptr) {
+        impl->type = *reinterpret_cast<const spirv_cross::SPIRType*>(spir_type_ptr);
     }
 
     void VertexAttributeInfo::SetTypeFromText(const char* str) {

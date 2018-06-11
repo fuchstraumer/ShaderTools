@@ -150,6 +150,18 @@ namespace st {
         return handle;
     }
 
+    void ShaderGroup::GetInputAttributes(const VkShaderStageFlags stage, size_t * num_attrs, VertexAttributeInfo * attributes) const {
+        impl->reflector->GetInputAttributes(stage, num_attrs, attributes);
+    }
+
+    void ShaderGroup::GetOutputAttributes(const VkShaderStageFlags stage, size_t * num_attrs, VertexAttributeInfo * attributes) const {
+        impl->reflector->GetOutputAttributes(stage, num_attrs, attributes);
+    }
+
+    PushConstantInfo ShaderGroup::GetPushConstantInfo(const VkShaderStageFlags stage) const {
+        return impl->reflector->GetStagePushConstantInfo(stage);
+    }
+
     void ShaderGroup::GetShaderBinary(const Shader & handle, size_t * binary_size, uint32_t * dest_binary_ptr) const {
         auto& FileTracker = ShaderFileTracker::GetFileTracker();
         auto iter = impl->stHandles.find(handle);
@@ -166,23 +178,6 @@ namespace st {
         }
         else {
             *binary_size = 0;
-        }
-    }
-
-    void ShaderGroup::GetVertexAttributes(size_t * num_attributes, VkVertexInputAttributeDescription * attributes) const {
-        const ShaderReflectorImpl* b_impl = GetBindingGeneratorImpl();
-        if (!b_impl->inputAttributes.at(VK_SHADER_STAGE_VERTEX_BIT).empty()) {
-            *num_attributes = b_impl->inputAttributes.at(VK_SHADER_STAGE_VERTEX_BIT).size();
-            if (attributes != nullptr) {
-                std::vector<VkVertexInputAttributeDescription> descriptions;
-                for (const auto& attr : b_impl->inputAttributes.at(VK_SHADER_STAGE_VERTEX_BIT)) {
-                    descriptions.emplace_back(attr);
-                }
-                std::copy(descriptions.begin(), descriptions.end(), attributes);
-            }
-        }
-        else {
-            *num_attributes = 0;
         }
     }
 
