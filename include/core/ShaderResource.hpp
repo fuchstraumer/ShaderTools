@@ -2,7 +2,7 @@
 #ifndef ST_SHADER_RESOURCE_HPP
 #define ST_SHADER_RESOURCE_HPP
 #include "common/CommonInclude.hpp"
-
+#include "common/UtilityStructs.hpp"
 namespace st {
 
     class ShaderResourceImpl;
@@ -52,6 +52,7 @@ namespace st {
         bool HasQualifiers() const noexcept;
         void GetQualifiers(size_t* num_qualifiers, glsl_qualifier* qualifiers) const noexcept;
         void GetMembers(size_t* num_members, ShaderResourceSubObject* dest_objects) const noexcept;
+        dll_retrieved_strings_t GetTags() const noexcept;
 
         void SetBindingIndex(size_t idx);
         void SetDataFromFile(bool from_file);
@@ -69,6 +70,7 @@ namespace st {
         void SetImageViewInfo(VkImageViewCreateInfo view_info);
         void SetSamplerInfo(VkSamplerCreateInfo sampler_info);
         void SetBufferViewInfo(VkBufferViewCreateInfo buffer_info);
+        void SetTags(const size_t num_tags, const char** tags);
 
     private:
         std::unique_ptr<ShaderResourceImpl> impl;

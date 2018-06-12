@@ -841,6 +841,19 @@ namespace st {
                 const VkDescriptorType vk_type = type_iter->second;
                 setBaseResourceInfo(entry.first, set_resource.first, vk_type, resource);
 
+                if (set_resource_data.count("Tags") != 0) {
+                    auto tags_table = environment->GetLinearTable(set_resource_data.at("Tags"));
+                    std::vector<std::string> tag_strings;
+                    for (auto& tag : tags_table) {
+                        tag_strings.emplace_back(tag.cast<std::string>());
+                    }
+                    std::vector<const char*> tag_string_ptrs;
+                    for (auto& str : tag_strings) {
+                        tag_string_ptrs.emplace_back(str.c_str());
+                    }
+                    resource.SetTags(tag_string_ptrs.size(), tag_string_ptrs.data());
+                }
+
                 if (vk_type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER || vk_type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC) {
                     createUniformBufferResources(set_resource_data, resource);
                 }
