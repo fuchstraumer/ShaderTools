@@ -11,8 +11,41 @@
 
 namespace st {
 
+    access_modifier accessModifierFromStorageClass(const spv::StorageClass storage_class) {
+        switch (storage_class) {
+        case spv::StorageClassUniformConstant:
+            return access_modifier::Read;
+        case spv::StorageClassInput:
+            return access_modifier::Read;
+        case spv::StorageClassOutput:
+            return access_modifier::Write;
+        case spv::StorageClassUniform:
+            return access_modifier::Read;
+        case spv::StorageClassStorageBuffer:
+            return access_modifier::ReadWrite;
+        case spv::StorageClassImage:
+            return access_modifier::ReadWrite;
+        default:
+            return access_modifier::ReadWrite;
+        }
+    }
+
+
     access_modifier AccessModifierFromSPIRType(const spirv_cross::SPIRType & type) {
         using namespace spirv_cross;
+        auto handle_indeterminate_case = [&]() {
+            // Usually happens for storage images.
+            if (type.basetype == SPIRType::Image && type.image.dim == spv::Dim::DimBuffer) {
+                return access_modifier::ReadWrite;
+            }
+            else if (type.storage != spv::StorageClass::StorageClassMax) {
+                return accessModifierFromStorageClass(type.storage);
+            }
+            else {
+                throw std::domain_error("Couldn't parse objects access modifier.");
+            }
+        };
+
         if (type.basetype == SPIRType::SampledImage || type.basetype == SPIRType::Sampler || type.basetype == SPIRType::Struct || type.basetype == SPIRType::AtomicCounter) {
             return access_modifier::Read;
         }
@@ -25,8 +58,7 @@ namespace st {
             case spv::AccessQualifier::AccessQualifierReadWrite:
                 return access_modifier::ReadWrite;
             case spv::AccessQualifier::AccessQualifierMax:
-                // Usually happens for storage images.
-                return access_modifier::ReadWrite;
+                return handle_indeterminate_case();
             default:
                 LOG(ERROR) << "SPIRType somehow has invalid access qualifier enum value!";
                 throw std::domain_error("SPIRType somehow has invalid access qualifier enum value!");
@@ -172,7 +204,21 @@ namespace st {
             }
             uint32_t set_idx = recompiler->get_decoration(rsrc.id, spv::DecorationDescriptorSet);
             auto spir_type = recompiler->get_type(rsrc.type_id);
-            access_modifier modifier = AccessModifierFromSPIRType(spir_type);
+            access_modifier modifier(access_modifier::ReadWrite);
+            const bool readonly = recompiler->has_decoration(rsrc.id, spv::DecorationNonWritable);
+            const bool writeonly = recompiler->has_decoration(rsrc.id, spv::DecorationNonReadable);
+            if (readonly && !writeonly) {
+                modifier = access_modifier::Read;
+            }
+            else if (writeonly && !readonly) {
+                modifier = access_modifier::Write;
+            }
+            if (type_being_parsed == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER || type_being_parsed == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC) {
+                modifier = access_modifier::Read;
+            }
+            else if (writeonly && readonly) {
+                modifier = AccessModifierFromSPIRType(spir_type);
+            }
             tempResources.emplace(set_idx, ResourceUsage(shader_handle, parent_resource, modifier, parent_resource->DescriptorType()));
         }
 
@@ -290,7 +336,12 @@ namespace st {
 
     void ShaderReflectorImpl::parseImpl(const Shader& handle, const std::vector<uint32_t>& binary_data) {
         using namespace spirv_cross;
-        recompiler = std::make_unique<CompilerGLSL>(binary_data);
+        recompiler = std::make_unique<CompilerGLSL>(binary_data); 
+        spirv_cross::CompilerGLSL::Options options;
+        options.vulkan_semantics = true;
+        recompiler->set_common_options(options);
+        recompiler->compile();
+
         const auto stage = handle.GetStage();
         parseResourceType(handle, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
         parseResourceType(handle, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
