@@ -14,6 +14,7 @@ namespace st {
     class ResourceFile {
         ResourceFile(const ResourceFile&) = delete;
         ResourceFile& operator=(const ResourceFile&) = delete;
+        friend class ResourceGroupImpl;
     public:
 
         ResourceFile();
@@ -46,6 +47,7 @@ namespace st {
         void createStorageImageResource(const std::unordered_map<std::string, luabridge::LuaRef>& table, ShaderResource & rsrc) const;
 
         std::unordered_map<std::string, std::vector<ShaderResource>> setResources;
+        std::unordered_map<std::string, std::set<std::string>> groupTags;
         std::unique_ptr<LuaEnvironment> environment;
         void createInputAttachmentResource(const std::unordered_map<std::string, luabridge::LuaRef>& table, ShaderResource & rsrc) const;
         void parseResources();
