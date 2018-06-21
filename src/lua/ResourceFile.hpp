@@ -9,6 +9,8 @@
 #include <string>
 #include <unordered_map>
 #include <variant>
+#include <set>
+
 namespace st {
 
     class ResourceFile {

@@ -15,8 +15,6 @@ namespace st {
         std::set<std::string> usedByGroups;
     };
 
-    ResourceGroupImpl::ResourceGroupImpl(ResourceFile* resource_file, const char* group_name) :
-        name(group_name), resourcesPtr(&resource_file->setResources[group_name]), tagsPtr(&resource_file->groupTags[group_name]) {}
 
     
 }
