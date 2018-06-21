@@ -21,16 +21,16 @@ Resources = {
         }
     },
     ClusteredForward = {
-        flags = {
+        Flags = {
             Type = "StorageTexelBuffer",
             Format = "r8ui",
             Size = dimensions.TotalTileCount(),
             Qualifiers = "restrict"
         },
-        bounds = {
+        lightBounds = {
             Type = "StorageTexelBuffer",
             Format = "r32ui",
-            Size = NumLights * 6,
+            Size = dimensions.NumLights * 6,
             Qualifiers = "restrict"
         },
         lightCounts = {
@@ -43,25 +43,25 @@ Resources = {
             Type = "StorageTexelBuffer",
             Format = "r32ui",
             Size = 1,
-            Qualifers = "restrict"
+            Qualifiers = "restrict"
         },
         lightCountOffsets = {
             Type = "StorageTexelBuffer",
             Format = "r32ui",
             Size = dimensions.TotalTileCount(),
-            Qualifers = "restrict"
+            Qualifiers = "restrict"
         },
         lightList = {
             Type = "StorageTexelBuffer",
             Format = "r32ui",
             Size = 1024 * 1024,
-            Qualifers = "restrict"
+            Qualifiers = "restrict"
         },
         lightCountCompare = {
             Type = "StorageTexelBuffer",
             Format = "r32ui",
             Size = dimensions.TotalTileCount(),
-            Qualifers = "restrict"
+            Qualifiers = "restrict"
         }
     },
     Lights = {
@@ -69,16 +69,18 @@ Resources = {
             Type = "StorageTexelBuffer",
             Format = "rgba32f",
             Size = dimensions.NumLights,
-            Qualifiers = "restrict readonly"
-        }
+            Qualifiers = "restrict",
+            Tags = { "HostGeneratedData" }
+        },
         lightColors = {
-            Type = "UniformTexelBuffer",
+            Type = "StorageTexelBuffer",
             Format = "rgba8",
             Size = dimensions.NumLights,
-            Qualifiers = "restrict readonly"
+            Qualifiers = "restrict readonly",
+            Tags = { "HostGeneratedData" }
         }
     },
-    ObjMaterial = {
+    ObjMaterials = {
         Material = {
             Type = "UniformBuffer",
             Members = {
