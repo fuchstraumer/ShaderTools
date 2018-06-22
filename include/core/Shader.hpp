@@ -25,7 +25,7 @@ namespace st {
         Shader(Shader&& other) noexcept;
         Shader& operator=(Shader&& other) noexcept;
 
-        ShaderStage AddShader(const char* shader_name, const char* body_src_file_path, const VkShaderStageFlagBits& flags);
+        ShaderStage AddShaderStage(const char* shader_name, const char* body_src_file_path, const VkShaderStageFlagBits& flags);
         
         void GetInputAttributes(const VkShaderStageFlags stage, size_t* num_attrs, VertexAttributeInfo* attributes) const;
         void GetOutputAttributes(const VkShaderStageFlags stage, size_t* num_attrs, VertexAttributeInfo* attributes) const;
@@ -47,8 +47,8 @@ namespace st {
 
     protected:
         friend class ShaderPackImpl;
-        ShaderReflectorImpl * GetBindingGeneratorImpl();
-        const ShaderReflectorImpl * GetBindingGeneratorImpl() const;
+        ShaderReflectorImpl* GetBindingGeneratorImpl();
+        const ShaderReflectorImpl* GetBindingGeneratorImpl() const;
     private:
         std::unique_ptr<ShaderGroupImpl> impl;
     };

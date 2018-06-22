@@ -24,7 +24,7 @@ namespace st {
         ShaderGroupImpl(ShaderGroupImpl&& other) noexcept;
         ShaderGroupImpl& operator=(ShaderGroupImpl&& other) noexcept;
 
-        void addShader(const ShaderStage& handle, std::string src_str_path);
+        void addShaderStage(const ShaderStage& handle, std::string src_str_path);
 
         std::string groupName;
         size_t idx;
@@ -62,7 +62,7 @@ namespace st {
         return *this;
     }
 
-    void ShaderGroupImpl::addShader(const ShaderStage& handle, std::string src_str_path) {
+    void ShaderGroupImpl::addShaderStage(const ShaderStage& handle, std::string src_str_path) {
         auto& FileTracker = ShaderFileTracker::GetFileTracker();
         generator = std::make_unique<ShaderGenerator>(handle.GetStage());
        
@@ -136,7 +136,7 @@ namespace st {
         return *this;
     }
 
-    ShaderStage Shader::AddShader(const char * shader_name, const char * body_src_file_path, const VkShaderStageFlagBits & flags) {
+    ShaderStage Shader::AddShaderStage(const char * shader_name, const char * body_src_file_path, const VkShaderStageFlagBits & flags) {
         ShaderStage handle(shader_name, flags);
         auto& FileTracker = ShaderFileTracker::GetFileTracker();
         FileTracker.ShaderNames.emplace(handle, shader_name);
@@ -146,7 +146,7 @@ namespace st {
             LOG(ERROR) << "Could not add/emplace Shader to Shader - handle or shader may already exist!";
             throw std::runtime_error("Could not add shader to Shader, failed to emplace into handles set: might already exist!");
         }
-        impl->addShader(handle, body_src_file_path);
+        impl->addShaderStage(handle, body_src_file_path);
         return handle;
     }
 
