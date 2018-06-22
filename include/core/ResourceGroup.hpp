@@ -24,6 +24,8 @@ namespace st {
         const char* Name() const noexcept;
         ShaderResource* operator[](const char* name) noexcept;
         const ShaderResource* operator[](const char* name) const noexcept;
+        void GetResources(size_t* num_resources, ShaderResource* resources) const;
+        void GetResourcePtrs(size_t* num_resources, const ShaderResource** resources) const;
 
         void SetName(const char* _name);
         void UsedByGroup(const char* new_group);

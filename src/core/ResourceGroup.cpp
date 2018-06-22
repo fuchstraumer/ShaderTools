@@ -19,8 +19,8 @@ namespace st {
 
     ResourceGroupImpl::ResourceGroupImpl(ResourceFile* resource_file, const char* group_name) : name(group_name),
         resources(resource_file->setResources.at(group_name)) {
-        if (resource_file->groupTags.count(name) != 0) {
-            tags = resource_file->groupTags.at(name);
+        if (resource_file->shaderTags.count(name) != 0) {
+            tags = resource_file->shaderTags.at(name);
         }
     }
 
@@ -87,6 +87,24 @@ namespace st {
         }
         else {
             return nullptr;
+        }
+    }
+
+    void ResourceGroup::GetResources(size_t* num_resources, ShaderResource* resources) const {
+        *num_resources = impl->resources.size();
+        if (resources != nullptr) {
+            std::copy(std::begin(impl->resources), std::end(impl->resources), resources);
+        }
+    }
+
+    void ResourceGroup::GetResourcePtrs(size_t* num_resources, const ShaderResource** resources) const {
+        *num_resources = impl->resources.size();
+        if (resources != nullptr) {
+            size_t i = 0;
+            for (auto& rsrc : impl->resources) {
+                resources[i] = &rsrc;
+                ++i;
+            }
         }
     }
 
