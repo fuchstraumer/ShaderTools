@@ -6,8 +6,6 @@
 namespace st {
 
     class ShaderResource;
-    class ShaderPack;
-    class ShaderGroup;
     class ResourceGroupImpl;
     class ResourceFile;
 
@@ -22,10 +20,10 @@ namespace st {
 
         dll_retrieved_strings_t ResourceNames() const noexcept;
         dll_retrieved_strings_t UsedByGroups() const noexcept;
-        ShaderResource* operator[](const char* name);
-        const ShaderResource* operator[](const char* name) const;
-        const char* Name() const noexcept;
         dll_retrieved_strings_t GetTags() const noexcept;
+        const char* Name() const noexcept;
+        ShaderResource* operator[](const char* name) noexcept;
+        const ShaderResource* operator[](const char* name) const noexcept;
 
         void SetName(const char* _name);
         void UsedByGroup(const char* new_group);
