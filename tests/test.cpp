@@ -1,6 +1,6 @@
 #include <iostream>
 #include <vector>
-#include "core/ShaderGroup.hpp"
+#include "core/Shader.hpp"
 #include "core/ShaderPack.hpp"
 #include <array>
 #include "easyloggingpp/src/easylogging++.h"
