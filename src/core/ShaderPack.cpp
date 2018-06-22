@@ -53,8 +53,6 @@ namespace st {
         void createSingleGroup(const std::string& name, const std::map<VkShaderStageFlagBits, std::string>& shader_map);
         void setDescriptorTypeCounts() const;
 
-        std::vector<std::set<ShaderResource>> resources;
-        std::unordered_map<std::string, std::vector<size_t>> groupSetIndices;
         std::unordered_map<std::string, std::unique_ptr<Shader>> groups;
         std::unique_ptr<shader_pack_file_t> filePack;
         std::experimental::filesystem::path workingDir;
@@ -72,6 +70,7 @@ namespace st {
         workingDir = workingDir.remove_filename();
         const std::string dir_string = workingDir.parent_path().string();
         createShaders();
+        createResourceGroups();
         setDescriptorTypeCounts();
     }
 
