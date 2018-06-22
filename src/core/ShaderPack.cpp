@@ -2,6 +2,7 @@
 #include "core/Shader.hpp"
 #include "../lua/LuaEnvironment.hpp"
 #include "core/ShaderResource.hpp"
+#include "core/ResourceGroup.hpp"
 #include "../util/ShaderFileTracker.hpp"
 #include "../reflection/ShaderReflectorImpl.hpp"
 #include "generation/ShaderGenerator.hpp"
@@ -47,7 +48,8 @@ namespace st {
         ShaderPackImpl& operator=(const ShaderPackImpl&) = delete;
 
         ShaderPackImpl(const char* shader_pack_file_path);
-        void createGroups();
+        void createShaders();
+        void createResourceGroups();
         void createSingleGroup(const std::string& name, const std::map<VkShaderStageFlagBits, std::string>& shader_map);
         void setDescriptorTypeCounts() const;
 
@@ -57,8 +59,10 @@ namespace st {
         std::unique_ptr<shader_pack_file_t> filePack;
         std::experimental::filesystem::path workingDir;
         std::mutex guardMutex;
-        ResourceFile* rsrcFile;
+        std::unordered_map<std::string, std::unique_ptr<ResourceGroup>> resourceGroups;
         mutable descriptor_type_counts_t typeCounts;
+    private:
+        ResourceFile * rsrcFile;
     };
 
 
@@ -67,12 +71,11 @@ namespace st {
         workingDir = fs::absolute(workingDir);
         workingDir = workingDir.remove_filename();
         const std::string dir_string = workingDir.parent_path().string();
-        //ShaderGenerator::SetBasePath(dir_string.c_str());
-        createGroups();
+        createShaders();
         setDescriptorTypeCounts();
     }
 
-    void ShaderPackImpl::createGroups() {
+    void ShaderPackImpl::createShaders() {
         namespace fs = std::experimental::filesystem;
 
         fs::path resource_path = workingDir / fs::path(filePack->ResourceFileName);
@@ -104,6 +107,13 @@ namespace st {
         rsrcFile = ftracker.ResourceScripts.at(resource_path.string()).get();
     }
 
+    void ShaderPackImpl::createResourceGroups() {
+        const auto& rsrcs = rsrcFile->GetAllResources();
+        for (const auto& entry : rsrcs) {
+            resourceGroups.emplace(entry.first, std::make_unique<ResourceGroup>(rsrcFile, entry.first.c_str()));
+        }
+    }
+
     void ShaderPackImpl::createSingleGroup(const std::string & name, const std::map<VkShaderStageFlagBits, std::string>& shader_map) {
         namespace fs = std::experimental::filesystem;
 
@@ -127,7 +137,7 @@ namespace st {
             }
 
 
-            groups.at(name)->AddShader(shader_name_str.c_str(), shader_path_str.c_str(), shader.first);
+            groups.at(name)->AddShaderStage(shader_name_str.c_str(), shader_path_str.c_str(), shader.first);
         }
     }
 
@@ -201,70 +211,44 @@ namespace st {
 
     dll_retrieved_strings_t ShaderPack::GetResourceGroupNames() const {
         dll_retrieved_strings_t names;
-        const auto& sets = impl->rsrcFile->GetAllResources();
-        names.SetNumStrings(sets.size());
+        names.SetNumStrings(impl->resourceGroups.size());
         size_t i = 0;
-        for (const auto& set : sets) {
-            names.Strings[i] = strdup(set.first.c_str());
+        for (const auto& group : impl->resourceGroups) {
+            names.Strings[i] = strdup(group.first.c_str());
             ++i;
         }
 
         return names;
     }
 
-    void ShaderPack::GetResourceGroupPointers(const char * name, size_t * num_resources, const ShaderResource** pointers) const {
-        const auto& sets = impl->rsrcFile->GetAllResources();
-        auto iter = sets.find(std::string(name));
-        if (iter != sets.cend()) {
-            *num_resources = iter->second.size();
-            if (pointers != nullptr) {
-                size_t i = 0;
-                for (auto& resource : iter->second) {
-                    pointers[i] = &resource;
-                    ++i;
-                }
-                return;
-            }
-        }
-        else {
-            *num_resources = 0;
-            return;
-        }
-    }
-
-    void ShaderPack::CopyShaderResources(const char * name, size_t * num_resources, ShaderResource * dest_array) const {
-        const auto& sets = impl->rsrcFile->GetAllResources();
-        auto iter = sets.find(std::string(name));
-        if (iter != sets.cend()) {
-            *num_resources = iter->second.size();
-            if (dest_array != nullptr) {
-                std::vector<ShaderResource> resources;
-                for (const auto& rsrc : iter->second) {
-                    resources.emplace_back(rsrc);
-                }
-                std::copy(resources.begin(), resources.end(), dest_array);
-                return;
-            }
-        }
-        else {
-            *num_resources = 0;
-            return;
-        }
-    }
-
-    void ShaderPack::GetGroupSpecializationConstants(const char * group_name, size_t * num_spcs, SpecializationConstant * constants) const {
-        const Shader* group = GetShaderGroup(group_name);
-        group->GetSpecializationConstants(num_spcs, constants);
-    }
-
     const descriptor_type_counts_t& ShaderPack::GetTotalDescriptorTypeCounts() const {
         return impl->typeCounts;
     }
 
-    const ShaderResource * ShaderPack::GetResource(const char* rsrc_name) const {
-        const ShaderResource* result = impl->rsrcFile->FindResource(rsrc_name);
-        LOG_IF(result == nullptr, WARNING) << "Couldn't find requested resource" << rsrc_name << " in ShaderPack's resource script data.";
-        return result;
+    const ResourceGroup * ShaderPack::GetResourceGroup(const char * name) const {
+        auto iter = impl->resourceGroups.find(name);
+        if (iter != std::cend(impl->resourceGroups)) {
+            return iter->second.get();
+        }
+        else {
+            return nullptr;
+        }
+    }
+
+    const ShaderResource* ShaderPack::GetResource(const char* rsrc_name) const {
+
+        for (auto& group : impl->resourceGroups) {
+            auto find_in_group = [rsrc_name, this](const std::string& group_name)->const ShaderResource* {
+                return (*impl->resourceGroups.at(group_name))[rsrc_name];
+            };
+            const ShaderResource* result = find_in_group(group.first);
+
+            if (result != nullptr) {
+                return result;
+            }
+        }
+        
+        return nullptr;
     }
 
     engine_environment_callbacks_t & ShaderPack::RetrievalCallbacks() {

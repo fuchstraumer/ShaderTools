@@ -8,9 +8,7 @@ namespace st {
     class ShaderPackImpl;
     class Shader;
     class ShaderResource;
-
-    static void SetCacheDirectory(const char* new_cache_directory);
-    static const char* GetCacheDirectory();
+    class ResourceGroup;
 
     class ST_API ShaderPack {
         ShaderPack(const ShaderPack&) = delete;
@@ -25,9 +23,8 @@ namespace st {
         dll_retrieved_strings_t GetResourceGroupNames() const;
         const descriptor_type_counts_t& GetTotalDescriptorTypeCounts() const;
 
-        void GetResourceGroupPointers(const char* group_name, size_t* num_resources, const ShaderResource** pointers) const;
-        void CopyShaderResources(const char* group_name, size_t* num_resources, ShaderResource* dest_array) const;
-        void GetGroupSpecializationConstants(const char* group_name, size_t* num_spcs, SpecializationConstant* constants) const;
+        const ResourceGroup* GetResourceGroup(const char* name) const;
+        // Avoid using this, has to do a fair bit of searching.
         const ShaderResource* GetResource(const char* rsrc_name) const;
 
         static engine_environment_callbacks_t& RetrievalCallbacks();
