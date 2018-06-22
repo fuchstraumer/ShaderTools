@@ -1,5 +1,5 @@
 #include "core/ShaderPack.hpp"
-#include "core/ShaderGroup.hpp"
+#include "core/Shader.hpp"
 #include "../lua/LuaEnvironment.hpp"
 #include "core/ShaderResource.hpp"
 #include "../util/ShaderFileTracker.hpp"
@@ -53,7 +53,7 @@ namespace st {
 
         std::vector<std::set<ShaderResource>> resources;
         std::unordered_map<std::string, std::vector<size_t>> groupSetIndices;
-        std::unordered_map<std::string, std::unique_ptr<ShaderGroup>> groups;
+        std::unordered_map<std::string, std::unique_ptr<Shader>> groups;
         std::unique_ptr<shader_pack_file_t> filePack;
         std::experimental::filesystem::path workingDir;
         std::mutex guardMutex;
@@ -86,7 +86,7 @@ namespace st {
         static const std::array<const char*, 1> base_includes{ working_dir_str.c_str() };
 
         for (const auto& group : filePack->ShaderGroups) {
-            groups.emplace(group.first, std::make_unique<ShaderGroup>(group.first.c_str(), resource_path_str.c_str(), base_includes.size(), base_includes.data()));
+            groups.emplace(group.first, std::make_unique<Shader>(group.first.c_str(), resource_path_str.c_str(), base_includes.size(), base_includes.data()));
             createSingleGroup(group.first, group.second);
             groups.at(group.first)->SetIndex(filePack->GroupIndices.at(group.first));
             if (filePack->GroupTags.count(group.first) != 0) {
@@ -178,7 +178,7 @@ namespace st {
 
     ShaderPack::~ShaderPack() {}
 
-    const ShaderGroup* ShaderPack::GetShaderGroup(const char * name) const {
+    const Shader* ShaderPack::GetShaderGroup(const char * name) const {
         if (impl->groups.count(name) != 0) {
             return impl->groups.at(name).get();
         }
@@ -253,7 +253,7 @@ namespace st {
     }
 
     void ShaderPack::GetGroupSpecializationConstants(const char * group_name, size_t * num_spcs, SpecializationConstant * constants) const {
-        const ShaderGroup* group = GetShaderGroup(group_name);
+        const Shader* group = GetShaderGroup(group_name);
         group->GetSpecializationConstants(num_spcs, constants);
     }
 

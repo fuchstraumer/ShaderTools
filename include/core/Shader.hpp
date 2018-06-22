@@ -15,15 +15,15 @@ namespace st {
     /*  Designed to be used to group shaders into the groups that they are used in
         when bound to a pipeline, to simplify a few key things.
     */
-    class ST_API ShaderGroup {
-        ShaderGroup(const ShaderGroup&) = delete;
-        ShaderGroup& operator=(const ShaderGroup&) = delete;
+    class ST_API Shader {
+        Shader(const Shader&) = delete;
+        Shader& operator=(const Shader&) = delete;
     public:
 
-        ShaderGroup(const char* group_name, const char* resource_file_path, const size_t num_includes = 0, const char* const* paths = nullptr);
-        ~ShaderGroup();
-        ShaderGroup(ShaderGroup&& other) noexcept;
-        ShaderGroup& operator=(ShaderGroup&& other) noexcept;
+        Shader(const char* group_name, const char* resource_file_path, const size_t num_includes = 0, const char* const* paths = nullptr);
+        ~Shader();
+        Shader(Shader&& other) noexcept;
+        Shader& operator=(Shader&& other) noexcept;
 
         ShaderStage AddShader(const char* shader_name, const char* body_src_file_path, const VkShaderStageFlagBits& flags);
         

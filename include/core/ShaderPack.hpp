@@ -6,7 +6,7 @@
 namespace st {
 
     class ShaderPackImpl;
-    class ShaderGroup;
+    class Shader;
     class ShaderResource;
 
     static void SetCacheDirectory(const char* new_cache_directory);
@@ -20,7 +20,7 @@ namespace st {
         ShaderPack(const char* shader_pack_lua_script_path);
         ~ShaderPack();
 
-        const ShaderGroup* GetShaderGroup(const char* name) const;
+        const Shader* GetShaderGroup(const char* name) const;
         dll_retrieved_strings_t GetShaderGroupNames() const;
         dll_retrieved_strings_t GetResourceGroupNames() const;
         const descriptor_type_counts_t& GetTotalDescriptorTypeCounts() const;

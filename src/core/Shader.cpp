@@ -1,4 +1,4 @@
-#include "core/ShaderGroup.hpp"
+#include "core/Shader.hpp"
 #include "generation/Compiler.hpp"
 #include "generation/ShaderGenerator.hpp"
 #include "reflection/ShaderReflector.hpp"
@@ -86,33 +86,33 @@ namespace st {
         generator.reset();
     }
 
-    size_t ShaderGroup::GetNumSetsRequired() const {
+    size_t Shader::GetNumSetsRequired() const {
         return static_cast<size_t>(impl->reflector->GetNumSets());
     }
 
-    size_t ShaderGroup::GetIndex() const noexcept {
+    size_t Shader::GetIndex() const noexcept {
         return impl->idx;
     }
 
-    void ShaderGroup::SetIndex(size_t _idx) {
+    void Shader::SetIndex(size_t _idx) {
         impl->idx = std::move(_idx);
     }
 
-    void ShaderGroup::SetTags(const size_t num_tags, const char ** tag_strings) {
+    void Shader::SetTags(const size_t num_tags, const char ** tag_strings) {
         for (size_t i = 0; i < num_tags; ++i) {
             impl->tags.emplace_back(tag_strings[i]);
         }
     }
 
-    ShaderReflectorImpl* ShaderGroup::GetBindingGeneratorImpl() {
+    ShaderReflectorImpl* Shader::GetBindingGeneratorImpl() {
         return impl->reflector->GetImpl();
     }
 
-    const ShaderReflectorImpl* ShaderGroup::GetBindingGeneratorImpl() const {
+    const ShaderReflectorImpl* Shader::GetBindingGeneratorImpl() const {
         return impl->reflector->GetImpl();
     }
 
-    ShaderGroup::ShaderGroup(const char * group_name, const char * resource_file_path, const size_t num_includes, const char* const* paths) : impl(std::make_unique<ShaderGroupImpl>(group_name, num_includes, paths)){
+    Shader::Shader(const char * group_name, const char * resource_file_path, const size_t num_includes, const char* const* paths) : impl(std::make_unique<ShaderGroupImpl>(group_name, num_includes, paths)){
         const std::string file_path{ resource_file_path };
         auto& FileTracker = ShaderFileTracker::GetFileTracker();
         if (!FileTracker.FindResourceScript(file_path, impl->rsrcFile)) {
@@ -127,47 +127,47 @@ namespace st {
 
     }
 
-    ShaderGroup::~ShaderGroup() {}
+    Shader::~Shader() {}
 
-    ShaderGroup::ShaderGroup(ShaderGroup && other) noexcept : impl(std::move(other.impl)) {}
+    Shader::Shader(Shader && other) noexcept : impl(std::move(other.impl)) {}
 
-    ShaderGroup & ShaderGroup::operator=(ShaderGroup && other) noexcept {
+    Shader & Shader::operator=(Shader && other) noexcept {
         impl = std::move(other.impl);
         return *this;
     }
 
-    ShaderStage ShaderGroup::AddShader(const char * shader_name, const char * body_src_file_path, const VkShaderStageFlagBits & flags) {
+    ShaderStage Shader::AddShader(const char * shader_name, const char * body_src_file_path, const VkShaderStageFlagBits & flags) {
         ShaderStage handle(shader_name, flags);
         auto& FileTracker = ShaderFileTracker::GetFileTracker();
         FileTracker.ShaderNames.emplace(handle, shader_name);
         FileTracker.ShaderUsedResourceScript.emplace(handle, impl->resourceScriptPath.string());
         auto iter = impl->stHandles.emplace(handle);
         if (!iter.second) {
-            LOG(ERROR) << "Could not add/emplace Shader to ShaderGroup - handle or shader may already exist!";
-            throw std::runtime_error("Could not add shader to ShaderGroup, failed to emplace into handles set: might already exist!");
+            LOG(ERROR) << "Could not add/emplace Shader to Shader - handle or shader may already exist!";
+            throw std::runtime_error("Could not add shader to Shader, failed to emplace into handles set: might already exist!");
         }
         impl->addShader(handle, body_src_file_path);
         return handle;
     }
 
-    void ShaderGroup::GetInputAttributes(const VkShaderStageFlags stage, size_t * num_attrs, VertexAttributeInfo * attributes) const {
+    void Shader::GetInputAttributes(const VkShaderStageFlags stage, size_t * num_attrs, VertexAttributeInfo * attributes) const {
         impl->reflector->GetInputAttributes(stage, num_attrs, attributes);
     }
 
-    void ShaderGroup::GetOutputAttributes(const VkShaderStageFlags stage, size_t * num_attrs, VertexAttributeInfo * attributes) const {
+    void Shader::GetOutputAttributes(const VkShaderStageFlags stage, size_t * num_attrs, VertexAttributeInfo * attributes) const {
         impl->reflector->GetOutputAttributes(stage, num_attrs, attributes);
     }
 
-    PushConstantInfo ShaderGroup::GetPushConstantInfo(const VkShaderStageFlags stage) const {
+    PushConstantInfo Shader::GetPushConstantInfo(const VkShaderStageFlags stage) const {
         return impl->reflector->GetStagePushConstantInfo(stage);
     }
 
-    void ShaderGroup::GetShaderBinary(const ShaderStage & handle, size_t * binary_size, uint32_t * dest_binary_ptr) const {
+    void Shader::GetShaderBinary(const ShaderStage & handle, size_t * binary_size, uint32_t * dest_binary_ptr) const {
         auto& FileTracker = ShaderFileTracker::GetFileTracker();
         auto iter = impl->stHandles.find(handle);
         std::vector<uint32_t> binary_vec;
         if (iter == impl->stHandles.cend()) {
-            LOG(WARNING) << "Could not find requested shader binary in ShaderGroup.";
+            LOG(WARNING) << "Could not find requested shader binary in Shader.";
             *binary_size = 0;
         }
         else if (FileTracker.FindShaderBinary(handle, binary_vec)) {
@@ -181,7 +181,7 @@ namespace st {
         }
     }
 
-    void ShaderGroup::GetSetLayoutBindings(const size_t & set_idx, size_t * num_bindings, VkDescriptorSetLayoutBinding * bindings) const {
+    void Shader::GetSetLayoutBindings(const size_t & set_idx, size_t * num_bindings, VkDescriptorSetLayoutBinding * bindings) const {
         const auto& b_impl = GetBindingGeneratorImpl();
         
         auto iter = b_impl->sortedSets.find(static_cast<uint32_t>(set_idx));
@@ -200,7 +200,7 @@ namespace st {
         }
     }
 
-    void ShaderGroup::GetSpecializationConstants(size_t * num_constants, SpecializationConstant * constants) const {
+    void Shader::GetSpecializationConstants(size_t * num_constants, SpecializationConstant * constants) const {
         const ShaderReflectorImpl* b_impl = GetBindingGeneratorImpl();
         if (!b_impl->specializationConstants.empty()) {
             *num_constants = b_impl->specializationConstants.size();
@@ -217,7 +217,7 @@ namespace st {
         }
     }
 
-    void ShaderGroup::GetResourceUsages(const size_t & _set_idx, size_t * num_resources, ResourceUsage * resources) const {
+    void Shader::GetResourceUsages(const size_t & _set_idx, size_t * num_resources, ResourceUsage * resources) const {
         const ShaderReflectorImpl* b_impl = GetBindingGeneratorImpl();
         const uint32_t set_idx = static_cast<uint32_t>(_set_idx);
         if (b_impl->sortedSets.count(set_idx) != 0) {
@@ -236,7 +236,7 @@ namespace st {
         }
     }
 
-    VkShaderStageFlags ShaderGroup::Stages() const noexcept {
+    VkShaderStageFlags Shader::Stages() const noexcept {
         VkShaderStageFlags result = 0;
         for (auto& shader : impl->stHandles) {
             result |= shader.GetStage();
@@ -244,7 +244,7 @@ namespace st {
         return result;
     }
 
-    dll_retrieved_strings_t ShaderGroup::GetTags() const {
+    dll_retrieved_strings_t Shader::GetTags() const {
         dll_retrieved_strings_t results;
         results.SetNumStrings(impl->tags.size());
         for (size_t i = 0; i < impl->tags.size(); ++i) {
@@ -253,7 +253,7 @@ namespace st {
         return results;
     }
 
-    dll_retrieved_strings_t ShaderGroup::GetSetResourceNames(const uint32_t set_idx) const {
+    dll_retrieved_strings_t Shader::GetSetResourceNames(const uint32_t set_idx) const {
         const auto& b_impl = GetBindingGeneratorImpl();
         auto iter = b_impl->sortedSets.find(set_idx);
         
@@ -273,7 +273,7 @@ namespace st {
         
     }
 
-    dll_retrieved_strings_t ShaderGroup::GetUsedResourceBlocks() const {
+    dll_retrieved_strings_t Shader::GetUsedResourceBlocks() const {
         auto& ftracker = ShaderFileTracker::GetFileTracker();
         size_t num_strings = 0;
         for (auto& handle : impl->stHandles) {

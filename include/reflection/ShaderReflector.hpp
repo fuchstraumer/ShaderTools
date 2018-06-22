@@ -6,7 +6,7 @@
 
 namespace st {
 
-    class ShaderGroup;
+    class Shader;
     class ShaderGroupImpl;
     class ShaderReflectorImpl;
     class ResourceUsage;
@@ -31,7 +31,7 @@ namespace st {
         void GetOutputAttributes(const VkShaderStageFlags stage, size_t* num_attrs, VertexAttributeInfo* attributes);
         PushConstantInfo GetStagePushConstantInfo(const VkShaderStageFlags stage) const;
 
-        friend class ShaderGroup;
+        friend class Shader;
         friend class ShaderGroupImpl;
     protected:
         ShaderReflectorImpl* GetImpl();
