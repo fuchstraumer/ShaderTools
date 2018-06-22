@@ -2,7 +2,7 @@
 #include "common/CommonInclude.hpp"
 #include <string>
 #include <experimental/filesystem>
-#include "common/Shader.hpp"
+#include "common/ShaderStage.hpp"
 
 namespace st {
 

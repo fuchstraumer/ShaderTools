@@ -2,7 +2,7 @@
 #ifndef SG_SHADER_HPP
 #define SG_SHADER_HPP
 #include "common/CommonInclude.hpp"
-#include "common/Shader.hpp"
+#include "common/ShaderStage.hpp"
 namespace st {
 
     class ShaderGeneratorImpl;

@@ -2,7 +2,7 @@
 #ifndef SHADER_TOOLS_COMPILER_HPP
 #define SHADER_TOOLS_COMPILER_HPP
 #include "common/CommonInclude.hpp"
-#include "common/Shader.hpp"
+#include "common/ShaderStage.hpp"
 namespace st {
 
     class ShaderCompilerImpl;

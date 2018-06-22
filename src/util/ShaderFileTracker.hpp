@@ -2,7 +2,7 @@
 #ifndef ST_SHADER_FILE_TRACKER_HPP
 #define ST_SHADER_FILE_TRACKER_HPP
 #include "common/CommonInclude.hpp"
-#include "common/Shader.hpp"
+#include "common/ShaderStage.hpp"
 #include <unordered_map>
 #include <string>
 #include <vector>

@@ -80,7 +80,7 @@ namespace st {
 
     const ShaderResource* ResourceGroup::operator[](const char* name) const noexcept {
         auto iter = std::find_if(impl->resources.cbegin(), impl->resources.cend(), 
-            [name](ShaderResource& rsrc){ return rsrc.Name() == name; });
+            [name](const ShaderResource& rsrc){ return rsrc.Name() == name; });
         
         if (iter != std::cend(impl->resources)) {
             return &(*iter);

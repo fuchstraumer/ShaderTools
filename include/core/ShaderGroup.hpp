@@ -2,7 +2,7 @@
 #ifndef VPSK_SHADER_GROUP_HPP
 #define VPSK_SHADER_GROUP_HPP
 #include "common/CommonInclude.hpp"
-#include "common/Shader.hpp"
+#include "common/ShaderStage.hpp"
 #include "common/UtilityStructs.hpp"
 #include "reflection/ReflectionStructs.hpp"
 namespace st {

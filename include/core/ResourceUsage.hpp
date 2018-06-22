@@ -1,7 +1,7 @@
 #pragma once
 #ifndef SHADER_TOOLS_RESOURCE_USAGE_HPP
 #define SHADER_TOOLS_RESOURCE_USAGE_HPP
-#include "common/Shader.hpp"
+#include "common/ShaderStage.hpp"
 #include "common/CommonInclude.hpp"
 
 namespace st {
