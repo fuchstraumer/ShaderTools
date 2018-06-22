@@ -49,7 +49,8 @@ namespace st {
         void createStorageImageResource(const std::unordered_map<std::string, luabridge::LuaRef>& table, ShaderResource & rsrc) const;
 
         std::unordered_map<std::string, std::vector<ShaderResource>> setResources;
-        std::unordered_map<std::string, std::set<std::string>> groupTags;
+        std::unordered_map<std::string, std::set<std::string>> shaderTags;
+        std::unordered_map<std::string, std::set<std::string>> resourceGroupTags;
         std::unique_ptr<LuaEnvironment> environment;
         void createInputAttachmentResource(const std::unordered_map<std::string, luabridge::LuaRef>& table, ShaderResource & rsrc) const;
         void parseResources();
