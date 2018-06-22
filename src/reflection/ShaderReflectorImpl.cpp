@@ -119,7 +119,7 @@ namespace st {
         return parseVertAttrs(cmplr, rsrcs.stage_outputs);
     }
 
-    void ShaderReflectorImpl::parseResourceType(const Shader& shader_handle, const VkDescriptorType& type_being_parsed) {
+    void ShaderReflectorImpl::parseResourceType(const ShaderStage& shader_handle, const VkDescriptorType& type_being_parsed) {
         
         auto& f_tracker = ShaderFileTracker::GetFileTracker();
         const auto& rsrc_path = f_tracker.ShaderUsedResourceScript.at(shader_handle);
@@ -243,7 +243,7 @@ namespace st {
         return std::move(result);
     }
 
-    void ShaderReflectorImpl::parseBinary(const Shader& shader_handle) {
+    void ShaderReflectorImpl::parseBinary(const ShaderStage& shader_handle) {
         auto& FileTracker = ShaderFileTracker::GetFileTracker();
         std::vector<uint32_t> binary_vec;
         if (!FileTracker.FindShaderBinary(shader_handle, binary_vec)) {
@@ -334,7 +334,7 @@ namespace st {
         }
     }
 
-    void ShaderReflectorImpl::parseImpl(const Shader& handle, const std::vector<uint32_t>& binary_data) {
+    void ShaderReflectorImpl::parseImpl(const ShaderStage& handle, const std::vector<uint32_t>& binary_data) {
         using namespace spirv_cross;
         recompiler = std::make_unique<CompilerGLSL>(binary_data); 
         spirv_cross::CompilerGLSL::Options options;

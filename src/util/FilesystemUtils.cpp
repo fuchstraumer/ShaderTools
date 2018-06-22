@@ -8,9 +8,9 @@ namespace st {
     namespace fs = std::experimental::filesystem;
 
     fs::path OutputPath = fs::temp_directory_path();
-    std::unordered_map<Shader, std::string> shaderFiles = std::unordered_map<Shader, std::string>{ };
-    std::unordered_map<Shader, std::vector<uint32_t>> shaderBinaries = std::unordered_map<Shader, std::vector<uint32_t>>{ };
-    std::unordered_multimap<Shader, fs::path> shaderPaths = std::unordered_multimap<Shader, fs::path>{};
+    std::unordered_map<ShaderStage, std::string> shaderFiles = std::unordered_map<ShaderStage, std::string>{ };
+    std::unordered_map<ShaderStage, std::vector<uint32_t>> shaderBinaries = std::unordered_map<ShaderStage, std::vector<uint32_t>>{ };
+    std::unordered_multimap<ShaderStage, fs::path> shaderPaths = std::unordered_multimap<ShaderStage, fs::path>{};
     
     static const std::map<VkShaderStageFlagBits, std::string> stage_extension_map {
         { VK_SHADER_STAGE_VERTEX_BIT, ".vert" },
@@ -30,7 +30,7 @@ namespace st {
         { ".comp", VK_SHADER_STAGE_COMPUTE_BIT }
     };
 
-    Shader WriteAndAddShaderSource(const std::string file_name, const std::string& file_contents, const VkShaderStageFlagBits stage) {
+    ShaderStage WriteAndAddShaderSource(const std::string file_name, const std::string& file_contents, const VkShaderStageFlagBits stage) {
         const std::string output_name = file_name + stage_extension_map.at(stage);
         const fs::path output_path = OutputPath / fs::path(output_name);
         
@@ -45,12 +45,12 @@ namespace st {
         static std::mutex insertion_mutex;
         std::lock_guard<std::mutex> insertion_guard{ insertion_mutex };
         auto c_str_tmp = output_path.string();
-        auto inserted = shaderFiles.emplace(Shader{ c_str_tmp.c_str(), stage }, file_contents);
+        auto inserted = shaderFiles.emplace(ShaderStage{ c_str_tmp.c_str(), stage }, file_contents);
         if (!inserted.second) {
             throw std::runtime_error("Failed to insert Shader + shader file contents into a map.");
         }
 
-        Shader result{ c_str_tmp.c_str(), stage };
+        ShaderStage result{ c_str_tmp.c_str(), stage };
         shaderPaths.emplace(result, output_path);
 
         return result;
@@ -81,11 +81,11 @@ namespace st {
         static std::mutex insertion_mutex;
         std::lock_guard<std::mutex> insertion_guard{ insertion_mutex };
         auto c_str_tmp = output_path.string();
-        auto inserted = shaderBinaries.emplace(Shader{ c_str_tmp.c_str(), stage }, file_contents);
+        auto inserted = shaderBinaries.emplace(ShaderStage{ c_str_tmp.c_str(), stage }, file_contents);
         
     }
 
-    bool ShaderSourceNewerThanBinary(const Shader& handle) {
+    bool ShaderSourceNewerThanBinary(const ShaderStage& handle) {
         if (shaderPaths.count(handle) == 0) {
             return true;
         }

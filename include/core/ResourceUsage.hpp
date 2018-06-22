@@ -21,7 +21,7 @@ namespace st {
 
         ResourceUsage() noexcept;
         ~ResourceUsage();
-        ResourceUsage(const Shader& used_by, const ShaderResource* backing_resource, access_modifier _access_modifier, VkDescriptorType type);
+        ResourceUsage(const ShaderStage& used_by, const ShaderResource* backing_resource, access_modifier _access_modifier, VkDescriptorType type);
         ResourceUsage(const ResourceUsage& other) noexcept;
         ResourceUsage(ResourceUsage&& other) noexcept;
 
@@ -33,7 +33,7 @@ namespace st {
         bool operator==(const ResourceUsage& other) const noexcept;
 
         VkShaderStageFlags& Stages() noexcept;
-        const Shader& UsedBy() const noexcept;
+        const ShaderStage& UsedBy() const noexcept;
         const ShaderResource* BackingResource() const noexcept;
         const VkDescriptorType& Type() const noexcept;
         const uint32_t& BindingIdx() const noexcept;
@@ -47,7 +47,7 @@ namespace st {
         uint32_t bindingIdx;
         access_modifier accessModifier;
         const ShaderResource* backingResource;
-        Shader usedBy;
+        ShaderStage usedBy;
         VkDescriptorType type;
         VkShaderStageFlags stages;
     };

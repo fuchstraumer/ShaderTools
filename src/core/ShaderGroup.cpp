@@ -24,12 +24,12 @@ namespace st {
         ShaderGroupImpl(ShaderGroupImpl&& other) noexcept;
         ShaderGroupImpl& operator=(ShaderGroupImpl&& other) noexcept;
 
-        void addShader(const Shader& handle, std::string src_str_path);
+        void addShader(const ShaderStage& handle, std::string src_str_path);
 
         std::string groupName;
         size_t idx;
         std::vector<const char*> includePaths;
-        std::unordered_set<st::Shader> stHandles{};
+        std::unordered_set<st::ShaderStage> stHandles{};
         std::unique_ptr<ShaderGenerator> generator{ nullptr };
         std::unique_ptr<ShaderCompiler> compiler{ nullptr };
         std::unique_ptr<ShaderReflector> reflector{ nullptr };
@@ -62,7 +62,7 @@ namespace st {
         return *this;
     }
 
-    void ShaderGroupImpl::addShader(const Shader& handle, std::string src_str_path) {
+    void ShaderGroupImpl::addShader(const ShaderStage& handle, std::string src_str_path) {
         auto& FileTracker = ShaderFileTracker::GetFileTracker();
         generator = std::make_unique<ShaderGenerator>(handle.GetStage());
        
@@ -136,8 +136,8 @@ namespace st {
         return *this;
     }
 
-    Shader ShaderGroup::AddShader(const char * shader_name, const char * body_src_file_path, const VkShaderStageFlagBits & flags) {
-        Shader handle(shader_name, flags);
+    ShaderStage ShaderGroup::AddShader(const char * shader_name, const char * body_src_file_path, const VkShaderStageFlagBits & flags) {
+        ShaderStage handle(shader_name, flags);
         auto& FileTracker = ShaderFileTracker::GetFileTracker();
         FileTracker.ShaderNames.emplace(handle, shader_name);
         FileTracker.ShaderUsedResourceScript.emplace(handle, impl->resourceScriptPath.string());
@@ -162,7 +162,7 @@ namespace st {
         return impl->reflector->GetStagePushConstantInfo(stage);
     }
 
-    void ShaderGroup::GetShaderBinary(const Shader & handle, size_t * binary_size, uint32_t * dest_binary_ptr) const {
+    void ShaderGroup::GetShaderBinary(const ShaderStage & handle, size_t * binary_size, uint32_t * dest_binary_ptr) const {
         auto& FileTracker = ShaderFileTracker::GetFileTracker();
         auto iter = impl->stHandles.find(handle);
         std::vector<uint32_t> binary_vec;

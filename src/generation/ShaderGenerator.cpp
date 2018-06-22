@@ -16,8 +16,8 @@ namespace fs = std::experimental::filesystem;
 
 namespace st {
 
-    extern std::unordered_map<Shader, std::string> shaderFiles;
-    extern std::unordered_multimap<Shader, fs::path> shaderPaths;
+    extern std::unordered_map<ShaderStage, std::string> shaderFiles;
+    extern std::unordered_multimap<ShaderStage, fs::path> shaderPaths;
 
     std::string BasePath = "../fragments/";
     std::string LibPath = "../fragments/include";
@@ -107,13 +107,13 @@ namespace st {
         std::string getInputAttachmentString(const size_t & active_set, const ShaderResource & input_attachment, const std::string & name) const;
         void useResourceBlock(const std::string& block_name);
 
-        std::string fetchBodyStr(const Shader & handle, const std::string & path_to_source);
+        std::string fetchBodyStr(const ShaderStage & handle, const std::string & path_to_source);
         void checkInterfaceOverrides(std::string& body_src_str);
         void processBodyStrIncludes(std::string & body_src_str);
         void processBodyStrSpecializationConstants(std::string & body_src_str);
-        void processBodyStrResourceBlocks(const Shader& handle, std::string & body_str);
-        void processBodyStrInlineResources(const Shader& handle, std::string& body_str);
-        void generate(const Shader& handle, const std::string& path_to_src);
+        void processBodyStrResourceBlocks(const ShaderStage& handle, std::string & body_str);
+        void processBodyStrInlineResources(const ShaderStage& handle, std::string& body_str);
+        void generate(const ShaderStage& handle, const std::string& path_to_src);
 
         VkShaderStageFlagBits Stage = VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM;
         std::multiset<shaderFragment> fragments;
@@ -642,7 +642,7 @@ namespace st {
         ++ShaderResources.LastSetIdx;
     }
 
-    std::string ShaderGeneratorImpl::fetchBodyStr(const Shader& handle, const std::string& path_to_source) {
+    std::string ShaderGeneratorImpl::fetchBodyStr(const ShaderStage& handle, const std::string& path_to_source) {
         std::string body_str;
         auto& FileTracker = ShaderFileTracker::GetFileTracker();
         if (!FileTracker.FindShaderBody(handle, body_str)) {
@@ -710,7 +710,7 @@ namespace st {
 
     }
 
-    void ShaderGeneratorImpl::processBodyStrResourceBlocks(const Shader& handle, std::string& body_str) {
+    void ShaderGeneratorImpl::processBodyStrResourceBlocks(const ShaderStage& handle, std::string& body_str) {
 
         auto& FileTracker = ShaderFileTracker::GetFileTracker();
         bool block_found = true;
@@ -727,14 +727,14 @@ namespace st {
         }
     }
 
-    void ShaderGeneratorImpl::processBodyStrInlineResources(const Shader& handle, std::string& body_str) {
+    void ShaderGeneratorImpl::processBodyStrInlineResources(const ShaderStage& handle, std::string& body_str) {
         std::smatch inline_rsrc_match;
         if (std::regex_search(body_str, inline_rsrc_match, inline_resources_begin)) {
             
         }
     }
 
-    void ShaderGeneratorImpl::generate(const Shader& handle, const std::string& path_to_source) {
+    void ShaderGeneratorImpl::generate(const ShaderStage& handle, const std::string& path_to_source) {
         std::string body_str{ fetchBodyStr(handle, path_to_source) };
         // Includes can be any of the following: resource blocks, overrides, specialization_constants. 
         // Get them imported first so any potentially unique elements included are processed properly.
@@ -761,7 +761,7 @@ namespace st {
         impl->luaResources = rsrc_file;
     }
 
-    void ShaderGenerator::Generate(const Shader& handle, const char* path, const size_t num_includes, const char* const* paths) {
+    void ShaderGenerator::Generate(const ShaderStage& handle, const char* path, const size_t num_includes, const char* const* paths) {
         for (size_t i = 0; i < num_includes; ++i) {
             assert(paths);
             impl->addIncludePath(paths[i]);
@@ -784,7 +784,7 @@ namespace st {
         
     }
 
-    Shader ShaderGenerator::SaveCurrentToFile(const char* fname) const {
+    ShaderStage ShaderGenerator::SaveCurrentToFile(const char* fname) const {
         
         const std::string source_str = impl->getFullSource();
         std::ofstream output_file(fname);

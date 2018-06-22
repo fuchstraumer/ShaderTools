@@ -23,7 +23,7 @@ namespace st {
         ShaderReflector(ShaderReflector&& other) noexcept;
         ShaderReflector& operator=(ShaderReflector&& other) noexcept;
 
-        void ParseBinary(const Shader& shader);
+        void ParseBinary(const ShaderStage& shader);
         uint32_t GetNumSets() const noexcept;
         void Clear();
         void GetShaderResources(const size_t set_idx, size_t* num_resources, ResourceUsage* resources);

@@ -3,14 +3,14 @@
 namespace st {
 
     constexpr const char* const INVALID_SHADER_NAME = "INVALID_SHADER";
-    const static Shader INVALID_SHADER(INVALID_SHADER_NAME, VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM);
+    const static ShaderStage INVALID_SHADER(INVALID_SHADER_NAME, VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM);
 
     ResourceUsage::ResourceUsage() noexcept : usedBy(INVALID_SHADER), accessModifier(access_modifier::INVALID), stages(VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM), backingResource(nullptr),
         bindingIdx(std::numeric_limits<uint32_t>::max()), type(VK_DESCRIPTOR_TYPE_MAX_ENUM) {}
 
     ResourceUsage::~ResourceUsage() {}
 
-    ResourceUsage::ResourceUsage(const Shader& used_by, const ShaderResource * backing_resource, access_modifier _access_modifier, VkDescriptorType type) : backingResource(backing_resource),
+    ResourceUsage::ResourceUsage(const ShaderStage& used_by, const ShaderResource * backing_resource, access_modifier _access_modifier, VkDescriptorType type) : backingResource(backing_resource),
         bindingIdx(static_cast<uint32_t>(backing_resource->BindingIndex())), type(std::move(type)), usedBy(used_by), accessModifier(std::move(_access_modifier)), stages(used_by.GetStage()) {}
 
     ResourceUsage::ResourceUsage(const ResourceUsage& other) noexcept : backingResource(other.backingResource), bindingIdx(other.bindingIdx), type(other.type), usedBy(other.usedBy), accessModifier(other.accessModifier),
@@ -58,7 +58,7 @@ namespace st {
         return stages;
     }
 
-    const Shader& ResourceUsage::UsedBy() const noexcept {
+    const ShaderStage& ResourceUsage::UsedBy() const noexcept {
         return usedBy;
     }
 

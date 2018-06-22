@@ -25,11 +25,11 @@ namespace st {
 
         shaderc::CompileOptions getCompilerOptions() const;
         shaderc_shader_kind getShaderKind(const VkShaderStageFlagBits & flags) const;
-        void prepareToCompile(const Shader& handle, const char* path_to_src);
-        void prepareToCompile(const Shader& handle, const std::string& name, const std::string& src);
-        void compile(const Shader& handle, const shaderc_shader_kind& kind, const std::string& name, const std::string& src_str);
-        void recompileBinaryToGLSL(const Shader& handle, size_t* str_size, char* dest_str);
-        void getBinaryAssemblyString(const Shader & handle, size_t * str_size, char * dest_str);
+        void prepareToCompile(const ShaderStage& handle, const char* path_to_src);
+        void prepareToCompile(const ShaderStage& handle, const std::string& name, const std::string& src);
+        void compile(const ShaderStage& handle, const shaderc_shader_kind& kind, const std::string& name, const std::string& src_str);
+        void recompileBinaryToGLSL(const ShaderStage& handle, size_t* str_size, char* dest_str);
+        void getBinaryAssemblyString(const ShaderStage & handle, size_t * str_size, char * dest_str);
 
     };
 
@@ -76,12 +76,12 @@ namespace st {
         output_stream.flush(); output_stream.close();
     }
 
-    void ShaderCompilerImpl::prepareToCompile(const Shader& handle, const std::string& name, const std::string& src) {
+    void ShaderCompilerImpl::prepareToCompile(const ShaderStage& handle, const std::string& name, const std::string& src) {
         const auto shader_stage = getShaderKind(handle.GetStage());
         compile(handle, shader_stage, name, src);
     }
 
-    void ShaderCompilerImpl::prepareToCompile(const Shader& handle, const char* path_to_source_str) {
+    void ShaderCompilerImpl::prepareToCompile(const ShaderStage& handle, const char* path_to_source_str) {
         fs::path path_to_source(path_to_source_str);
 
         // First check to verify the path given exists.
@@ -104,7 +104,7 @@ namespace st {
     }
 
 
-    void ShaderCompilerImpl::compile(const Shader & handle, const shaderc_shader_kind & kind, const std::string & name, const std::string & src_str) {
+    void ShaderCompilerImpl::compile(const ShaderStage & handle, const shaderc_shader_kind & kind, const std::string & name, const std::string & src_str) {
         auto& FileTracker = ShaderFileTracker::GetFileTracker();
         shaderc::Compiler compiler;
         const auto options = getCompilerOptions();
@@ -135,7 +135,7 @@ namespace st {
         FileTracker.Binaries.emplace(handle, std::vector<uint32_t>{binary_result.begin(), binary_result.end()});
     }
 
-    void ShaderCompilerImpl::recompileBinaryToGLSL(const Shader & handle, size_t * str_size, char * dest_str) {
+    void ShaderCompilerImpl::recompileBinaryToGLSL(const ShaderStage & handle, size_t * str_size, char * dest_str) {
 
         auto& FileTracker = ShaderFileTracker::GetFileTracker();
         std::string recompiled_src_str;
@@ -183,7 +183,7 @@ namespace st {
         }
     }
 
-    void ShaderCompilerImpl::getBinaryAssemblyString(const Shader& handle, size_t* str_size, char* dest_str) {
+    void ShaderCompilerImpl::getBinaryAssemblyString(const ShaderStage& handle, size_t* str_size, char* dest_str) {
 
         auto& FileTracker = ShaderFileTracker::GetFileTracker();
         std::string recompiled_src_str;
@@ -211,15 +211,15 @@ namespace st {
         return *this;
     }
 
-    void ShaderCompiler::Compile(const Shader& handle, const char * shader_name, const char * src_str, const size_t src_len) {
+    void ShaderCompiler::Compile(const ShaderStage& handle, const char * shader_name, const char * src_str, const size_t src_len) {
         impl->prepareToCompile(handle, shader_name, std::string{ src_str, src_str + src_len });
     }
 
-    void ShaderCompiler::Compile(const Shader& handle, const char* path_to_source_str) {
+    void ShaderCompiler::Compile(const ShaderStage& handle, const char* path_to_source_str) {
         impl->prepareToCompile(handle, path_to_source_str);
     }
 
-    void ShaderCompiler::GetBinary(const Shader & shader_handle, size_t * binary_sz, uint32_t * binary_dest_ptr) const {
+    void ShaderCompiler::GetBinary(const ShaderStage & shader_handle, size_t * binary_sz, uint32_t * binary_dest_ptr) const {
 
         auto& FileTracker = ShaderFileTracker::GetFileTracker();
         std::vector<uint32_t> binary_vec;
@@ -235,11 +235,11 @@ namespace st {
         }
     }
 
-    void ShaderCompiler::GetAssembly(const Shader & shader_handle, size_t * assembly_size, char * dest_assembly_str) const {
+    void ShaderCompiler::GetAssembly(const ShaderStage & shader_handle, size_t * assembly_size, char * dest_assembly_str) const {
         impl->getBinaryAssemblyString(shader_handle, assembly_size, dest_assembly_str);
     }
 
-    void ShaderCompiler::RecompileBinaryToGLSL(const Shader & shader_handle, size_t * recompiled_size, char * dest_glsl_str) const {
+    void ShaderCompiler::RecompileBinaryToGLSL(const ShaderStage & shader_handle, size_t * recompiled_size, char * dest_glsl_str) const {
         impl->recompileBinaryToGLSL(shader_handle, recompiled_size, dest_glsl_str);
     }
 

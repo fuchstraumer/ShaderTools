@@ -88,7 +88,7 @@ namespace st {
         return impl.get();
     }
 
-    void ShaderReflector::ParseBinary(const Shader & shader) {
+    void ShaderReflector::ParseBinary(const ShaderStage & shader) {
         impl->parseBinary(shader);
     }
 }

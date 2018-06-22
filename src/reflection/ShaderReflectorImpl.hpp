@@ -34,9 +34,9 @@ namespace st {
 
         void collateSets();
         void parseSpecializationConstants();
-        void parseResourceType(const Shader& shader_handle, const VkDescriptorType & type_being_parsed);
-        void parseBinary(const Shader& shader_handle);
-        void parseImpl(const Shader& shader_handle, const std::vector<uint32_t>& binary_data);
+        void parseResourceType(const ShaderStage& shader_handle, const VkDescriptorType & type_being_parsed);
+        void parseBinary(const ShaderStage& shader_handle);
+        void parseImpl(const ShaderStage& shader_handle, const std::vector<uint32_t>& binary_data);
 
         std::unordered_multimap<VkShaderStageFlags, DescriptorSetInfo> descriptorSets;
         std::map<uint32_t, SpecializationConstant> specializationConstants;

@@ -86,7 +86,7 @@ namespace st {
 
     void ShaderFileTracker::DumpContentsToCacheDir() {
 
-        auto write_output = [&](const Shader& handle, const std::string& contents, const std::string& extension) {
+        auto write_output = [&](const ShaderStage& handle, const std::string& contents, const std::string& extension) {
             const std::string output_name = ShaderNames.at(handle) + extension;
             const fs::path output_path = cacheDir / output_name;
             std::ofstream output_stream(output_path);
@@ -112,7 +112,7 @@ namespace st {
         }
     }
 
-    bool ShaderFileTracker::FindShaderBody(const Shader & handle, std::string & dest_str) {
+    bool ShaderFileTracker::FindShaderBody(const ShaderStage & handle, std::string & dest_str) {
         if (ShaderBodies.count(handle) != 0) {
             dest_str = ShaderBodies.at(handle);
             return true;
@@ -139,7 +139,7 @@ namespace st {
         }
     }
 
-    bool ShaderFileTracker::AddShaderBodyPath(const Shader & handle, const std::string & shader_body_path) {
+    bool ShaderFileTracker::AddShaderBodyPath(const ShaderStage & handle, const std::string & shader_body_path) {
         if (BodyPaths.count(handle) != 0) {
             // Already had this path registered. Shouldn't really reach this point.
             return true;
@@ -169,7 +169,7 @@ namespace st {
         }
     }
 
-    bool ShaderFileTracker::FindShaderBinary(const Shader & handle, std::vector<uint32_t>& dest_binary_vector) {
+    bool ShaderFileTracker::FindShaderBinary(const ShaderStage & handle, std::vector<uint32_t>& dest_binary_vector) {
         if (Binaries.count(handle) != 0) {
             dest_binary_vector = Binaries.at(handle);
             return true;
@@ -233,7 +233,7 @@ namespace st {
 
     }
 
-    bool ShaderFileTracker::FindRecompiledShaderSource(const Shader & handle, std::string & destination_str) {
+    bool ShaderFileTracker::FindRecompiledShaderSource(const ShaderStage & handle, std::string & destination_str) {
         if (RecompiledSourcesFromBinaries.count(handle) != 0) {
             destination_str = RecompiledSourcesFromBinaries.at(handle);
             return true;
@@ -241,7 +241,7 @@ namespace st {
         return false;
     }
 
-    bool ShaderFileTracker::FindAssemblyString(const Shader & handle, std::string & destination_str) {
+    bool ShaderFileTracker::FindAssemblyString(const ShaderStage & handle, std::string & destination_str) {
         if (AssemblyStrings.count(handle) != 0) {
             destination_str = AssemblyStrings.at(handle);
             return true;
