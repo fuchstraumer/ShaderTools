@@ -63,6 +63,10 @@ namespace st {
         ResourceFile * rsrcFile;
     };
 
+    void SetLoggingRepository(void* repo) {
+        el::base::type::StoragePointer* storage_ptr = reinterpret_cast<el::base::type::StoragePointer*>(repo);
+        el::Helpers::setStorage(*storage_ptr);
+    }
 
     ShaderPackImpl::ShaderPackImpl(const char * shader_pack_file_path) : filePack(std::make_unique<shader_pack_file_t>(shader_pack_file_path)), workingDir(shader_pack_file_path) {
         namespace fs = std::experimental::filesystem;
