@@ -18,7 +18,8 @@ namespace st {
         ShaderGenerator& operator=(ShaderGenerator&& other) noexcept;
 
         void SetResourceFile(ResourceFile* rsrc_file);
-        void Generate(const ShaderStage& handle, const char* path_to_src, const size_t num_includes = 0, const char* const* paths = nullptr);
+        void Generate(const ShaderStage& handle, const char* path_to_src, const size_t num_extensions, const char* const* extensions, 
+            const size_t num_includes, const char* const* paths);
         void AddIncludePath(const char* path_to_include);
         void GetFullSource(size_t* len, char* dest) const;
         ShaderStage SaveCurrentToFile(const char* fname) const;

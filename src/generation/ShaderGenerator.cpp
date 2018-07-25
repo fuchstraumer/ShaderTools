@@ -39,6 +39,7 @@ namespace st {
 
     enum class fragment_type : uint8_t {
         Preamble = 0,
+        Extension,
         InterfaceBlock,
         InputAttribute,
         OutputAttribute,
@@ -109,11 +110,12 @@ namespace st {
 
         std::string fetchBodyStr(const ShaderStage & handle, const std::string & path_to_source);
         void checkInterfaceOverrides(std::string& body_src_str);
+        void addExtension(const std::string& extension_str);
         void processBodyStrIncludes(std::string & body_src_str);
         void processBodyStrSpecializationConstants(std::string & body_src_str);
         void processBodyStrResourceBlocks(const ShaderStage& handle, std::string & body_str);
         void processBodyStrInlineResources(const ShaderStage& handle, std::string& body_str);
-        void generate(const ShaderStage& handle, const std::string& path_to_src);
+        void generate(const ShaderStage& handle, const std::string& path_to_src, const size_t num_extensions, const char* const* extensions);
 
         VkShaderStageFlagBits Stage = VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM;
         std::multiset<shaderFragment> fragments;
@@ -122,6 +124,7 @@ namespace st {
         mutable shader_resources_t ShaderResources;
         ResourceFile* luaResources;
         std::vector<fs::path> includes;
+
     };
 
     std::map<fs::path, std::string> ShaderGeneratorImpl::fileContents = std::map<fs::path, std::string>{};
@@ -675,6 +678,14 @@ namespace st {
         }
     }
 
+    void ShaderGeneratorImpl::addExtension(const std::string& extension_str) {
+        const std::string extension_begin("#extension ");
+        std::string result = extension_begin + extension_str;
+        const std::string extension_close(" : enable \n");
+        result += extension_close;
+        fragments.emplace(shaderFragment{ fragment_type::Extension, result });
+    }
+
     void ShaderGeneratorImpl::processBodyStrSpecializationConstants(std::string& body_src_str) {
         bool spc_found = true;
         while (spc_found) {
@@ -734,12 +745,17 @@ namespace st {
         }
     }
 
-    void ShaderGeneratorImpl::generate(const ShaderStage& handle, const std::string& path_to_source) {
+    void ShaderGeneratorImpl::generate(const ShaderStage& handle, const std::string& path_to_source, const size_t num_extensions, const char* const* extensions) {
         std::string body_str{ fetchBodyStr(handle, path_to_source) };
         // Includes can be any of the following: resource blocks, overrides, specialization_constants. 
         // Get them imported first so any potentially unique elements included are processed properly.
         processBodyStrIncludes(body_str);
         checkInterfaceOverrides(body_str);
+        if ((num_extensions != 0) && extensions) {
+            for (size_t i = 0; i < num_extensions; ++i) {
+                addExtension(extensions[i]);
+            }
+        }
         processBodyStrSpecializationConstants(body_str);
         processBodyStrResourceBlocks(handle, body_str);
         processBodyStrInlineResources(handle, body_str);
@@ -761,12 +777,12 @@ namespace st {
         impl->luaResources = rsrc_file;
     }
 
-    void ShaderGenerator::Generate(const ShaderStage& handle, const char* path, const size_t num_includes, const char* const* paths) {
+    void ShaderGenerator::Generate(const ShaderStage& handle, const char* path, const size_t num_extensions, const char* const* extensions, const size_t num_includes, const char* const* paths) {
         for (size_t i = 0; i < num_includes; ++i) {
             assert(paths);
             impl->addIncludePath(paths[i]);
         }
-        impl->generate(handle, path);
+        impl->generate(handle, path, num_extensions, extensions);
     }
 
     void ShaderGenerator::AddIncludePath(const char * path_to_include) {

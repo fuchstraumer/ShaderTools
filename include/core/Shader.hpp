@@ -20,7 +20,8 @@ namespace st {
         Shader& operator=(const Shader&) = delete;
     public:
 
-        Shader(const char* group_name, const char* resource_file_path, const size_t num_includes = 0, const char* const* paths = nullptr);
+        Shader(const char* group_name, const char* resource_file_path, const size_t num_extensions, const char* const* extensions,
+            const size_t num_includes, const char* const* paths);
         ~Shader();
         Shader(Shader&& other) noexcept;
         Shader& operator=(Shader&& other) noexcept;

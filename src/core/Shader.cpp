@@ -19,7 +19,7 @@ namespace st {
         ShaderGroupImpl& operator=(const ShaderGroupImpl& other) = delete;
     public:
 
-        ShaderGroupImpl(const std::string& group_name, size_t num_includes, const char* const* include_paths);
+        ShaderGroupImpl(const std::string& group_name, size_t num_extensions, const char* const* extensions, size_t num_includes, const char* const* include_paths);
         ~ShaderGroupImpl();
         ShaderGroupImpl(ShaderGroupImpl&& other) noexcept;
         ShaderGroupImpl& operator=(ShaderGroupImpl&& other) noexcept;
@@ -29,19 +29,26 @@ namespace st {
         std::string groupName;
         size_t idx;
         std::vector<const char*> includePaths;
+        std::vector<std::string> extensionStrCopies;
+        std::vector<const char*> extensionStrPtrs;
         std::unordered_set<st::ShaderStage> stHandles{};
         std::unique_ptr<ShaderGenerator> generator{ nullptr };
         std::unique_ptr<ShaderCompiler> compiler{ nullptr };
         std::unique_ptr<ShaderReflector> reflector{ nullptr };
         ResourceFile* rsrcFile{ nullptr };
         std::vector<std::string> tags;
+
         std::experimental::filesystem::path resourceScriptPath;
     };
 
-    ShaderGroupImpl::ShaderGroupImpl(const std::string& group_name, size_t num_includes, const char* const* include_paths) : groupName(group_name), compiler(std::make_unique<ShaderCompiler>()), 
+    ShaderGroupImpl::ShaderGroupImpl(const std::string& group_name, size_t num_extensions, const char* const* extensions, size_t num_includes, const char* const* include_paths) : groupName(group_name), compiler(std::make_unique<ShaderCompiler>()),
         reflector(std::make_unique<ShaderReflector>()) {
         for (size_t i = 0; i < num_includes; ++i) {
             includePaths.emplace_back(include_paths[i]);
+        }
+        for (size_t i = 0; i < num_extensions; ++i) {
+            extensionStrCopies.emplace_back(std::string(extensions[i]));
+            extensionStrPtrs.emplace_back(extensionStrCopies.back().c_str());
         }
     }
 
@@ -67,7 +74,7 @@ namespace st {
         generator = std::make_unique<ShaderGenerator>(handle.GetStage());
        
         generator->SetResourceFile(rsrcFile);
-        generator->Generate(handle, src_str_path.c_str(), includePaths.size(), includePaths.data());
+        generator->Generate(handle, src_str_path.c_str(), extensionStrPtrs.size(), extensionStrPtrs.data(), includePaths.size(), includePaths.data());
         size_t completed_src_size = 0;
         generator->GetFullSource(&completed_src_size, nullptr);
         std::string completed_src_str; completed_src_str.resize(completed_src_size);
@@ -112,7 +119,8 @@ namespace st {
         return impl->reflector->GetImpl();
     }
 
-    Shader::Shader(const char * group_name, const char * resource_file_path, const size_t num_includes, const char* const* paths) : impl(std::make_unique<ShaderGroupImpl>(group_name, num_includes, paths)){
+    Shader::Shader(const char* group_name, const char* resource_file_path, const size_t num_extensions, const char* const* extensions, const size_t num_includes, const char* const* paths) 
+        : impl(std::make_unique<ShaderGroupImpl>(group_name, num_extensions, extensions, num_includes, paths)){
         const std::string file_path{ resource_file_path };
         auto& FileTracker = ShaderFileTracker::GetFileTracker();
         if (!FileTracker.FindResourceScript(file_path, impl->rsrcFile)) {

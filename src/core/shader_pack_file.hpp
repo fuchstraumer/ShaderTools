@@ -19,6 +19,7 @@ namespace st {
         std::unordered_map<std::string, size_t> GroupIndices;
         std::unordered_map<std::string, std::map<VkShaderStageFlagBits, std::string>> ShaderGroups;
         std::unordered_map<std::string, std::vector<std::string>> GroupTags;
+        std::unordered_map<std::string, std::vector<std::string>> GroupExtensions;
         std::unique_ptr<LuaEnvironment> environment;
 
         void parseScript();
@@ -78,6 +79,15 @@ namespace st {
                         tag_strings.emplace_back(ref.cast<std::string>());
                     }
                     GroupTags.emplace(group.first, tag_strings);
+                }
+
+                if (group_table.count("Extensions") != 0) {
+                    auto extensions_table = environment->GetLinearTable(group_table.at("Extensions"));
+                    std::vector<std::string> extension_strings;
+                    for (auto& ref : extensions_table) {
+                        extension_strings.emplace_back(ref.cast<std::string>());
+                    }
+                    GroupExtensions.emplace(group.first, extension_strings);
                 }
 
             }

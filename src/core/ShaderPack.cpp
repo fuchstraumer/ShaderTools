@@ -87,8 +87,19 @@ namespace st {
         const std::string working_dir_str = workingDir.string();
         static const std::array<const char*, 1> base_includes{ working_dir_str.c_str() };
 
+
         for (const auto& group : filePack->ShaderGroups) {
-            groups.emplace(group.first, std::make_unique<Shader>(group.first.c_str(), resource_path_str.c_str(), base_includes.size(), base_includes.data()));
+            std::vector<const char*> extension_strings;
+            if (filePack->GroupExtensions.count(group.first) != 0) {
+                for (auto& extension : filePack->GroupExtensions.at(group.first)) {
+                    extension_strings.emplace_back(extension.c_str());
+                }
+                groups.emplace(group.first, std::make_unique<Shader>(group.first.c_str(), resource_path_str.c_str(), extension_strings.size(), extension_strings.data(),
+                    base_includes.size(), base_includes.data()));
+            }
+            else {
+                groups.emplace(group.first, std::make_unique<Shader>(group.first.c_str(), resource_path_str.c_str(), 0, nullptr, base_includes.size(), base_includes.data()));
+            }
             createSingleGroup(group.first, group.second);
             groups.at(group.first)->SetIndex(filePack->GroupIndices.at(group.first));
             if (filePack->GroupTags.count(group.first) != 0) {
