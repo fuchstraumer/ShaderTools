@@ -33,6 +33,8 @@ namespace st {
         std::unique_ptr<ShaderPackImpl> impl;
     };
 
+    ST_API void SetLoggingRepository(void* easylogging_repo_ptr);
+
 }
 
 #endif //ST_SHADER_PACK_HPP
