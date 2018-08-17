@@ -15,8 +15,7 @@ ShaderGroups = {
         Shaders = { Vertex = "Default.vert", Fragment = "Light.frag" },
         Extensions = {
             "GL_ARB_separate_shader_objects",
-            "GL_ARB_shading_language_420pack",
-            "GL_EXT_control_flow_attributes"
+            "GL_ARB_shading_language_420pack"
         }
     },
     ComputeLightGrids = { 
@@ -24,8 +23,7 @@ ShaderGroups = {
         Shaders = { Compute = "LightGrid.comp" },
         Extensions = {
             "GL_ARB_separate_shader_objects",
-            "GL_ARB_shading_language_420pack",
-            "GL_EXT_control_flow_attributes"
+            "GL_ARB_shading_language_420pack"
         }
     },
     ComputeGridOffsets = { 
@@ -42,8 +40,7 @@ ShaderGroups = {
         Shaders = { Compute = "LightList.comp" },
         Extensions = {
             "GL_ARB_separate_shader_objects",
-            "GL_ARB_shading_language_420pack",
-            "GL_EXT_control_flow_attributes"
+            "GL_ARB_shading_language_420pack"
         }
     },
     Clustered = { 
@@ -51,8 +48,7 @@ ShaderGroups = {
         Shaders = { Vertex = "Default.vert", Fragment = "Clustered.frag" },
         Extensions = {
             "GL_ARB_separate_shader_objects",
-            "GL_ARB_shading_language_420pack",
-            "GL_EXT_control_flow_attributes"
+            "GL_ARB_shading_language_420pack"
         }
     }
 }
