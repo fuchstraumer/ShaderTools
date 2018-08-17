@@ -243,4 +243,16 @@ namespace st {
         impl->recompileBinaryToGLSL(shader_handle, recompiled_size, dest_glsl_str);
     }
 
+    void ShaderCompiler::SaveBinaryToFile(const ShaderStage & handle, const char * fname) {
+        auto& tracker = ShaderFileTracker::GetFileTracker();
+        std::vector<uint32_t> binary = tracker.Binaries.at(handle);
+        std::ofstream output_file(fname, std::ios::binary | std::ios::out);
+        if (!output_file.is_open()) {
+            throw std::runtime_error("Failed to open file for writing binary to!");
+        }
+        for (auto& word : binary) {
+            output_file.write((const char*)&word, 4);
+        }
+    }
+
 }

@@ -79,7 +79,7 @@ INSTALL(TARGETS ShaderTools RUNTIME DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/")
 
 OPTION(BUILD_TESTS "Build some test executables for shader parsing and compiliation." OFF)
 IF(BUILD_TESTS)
-    ADD_EXECUTABLE(ParseTest0 "${CMAKE_CURRENT_SOURCE_DIR}/tests/test.cpp")
+    ADD_EXECUTABLE(ParseTest0 "${CMAKE_CURRENT_SOURCE_DIR}/tests/test.cpp"  "${CMAKE_CURRENT_SOURCE_DIR}/third_party/easyloggingpp/src/easylogging++.cc")
     TARGET_COMPILE_DEFINITIONS(ParseTest0 PRIVATE "-DSHADERTOOLS_DLL")
     ADD_DEPENDENCIES(ParseTest0 ShaderTools)
     TARGET_LINK_LIBRARIES(ParseTest0 ShaderTools)
