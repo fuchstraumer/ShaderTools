@@ -1,6 +1,6 @@
 #include <iostream>
 #include <vector>
-#include "core/ShaderGroup.hpp"
+#include "core/Shader.hpp"
 #include "core/ShaderPack.hpp"
 #include <array>
 #include "easyloggingpp/src/easylogging++.h"
@@ -55,7 +55,7 @@ int main(int argc, char* argv[]) {
     pack_bindings_map_t all_bindings;
 
     for (const auto& group_name : group_names) {
-        const ShaderGroup* group = pack.GetShaderGroup(group_name.c_str());
+        const Shader* group = pack.GetShaderGroup(group_name.c_str());
         size_t num_sets = group->GetNumSetsRequired();
         bindings_map_t group_bindings;
         for (size_t i = 0; i < num_sets; ++i) {

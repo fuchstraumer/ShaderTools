@@ -12,12 +12,12 @@ SET(SHADERC_GLSLANG_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/glslang")
 SET(SHADERC_SPIRV_TOOLS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/spirv-tools")
 SET(SPIRV_SKIP_EXECUTABLES ON CACHE BOOL "Skip building the executable and tests along with the library")
 SET(SPIRV_WERROR OFF CACHE BOOL "Enable error on warning")
+SET(ENABLE_GLSLANG_BINARIES OFF CACHE BOOL "Builds glslangValidator and spirv-remap")
+SET(SKIP_GLSLANG_INSTALL ON CACHE BOOL "Skip installation")
 ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/shaderc" EXCLUDE_FROM_ALL)
 ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/spirv-cross" EXCLUDE_FROM_ALL)
 SET(SKIP_LUA_WRAPPER ON CACHE BOOL "Do not build and install Lua executable wrappers.")
 ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/luajit" EXCLUDE_FROM_ALL)
-SET(build_static_lib ON CACHE BOOL "Build easyloggingpp as a static library")
-ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/easyloggingpp")
 
 FILE(GLOB COMMON "${CMAKE_CURRENT_SOURCE_DIR}/src/common/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/include/common/*.hpp")
 FILE(GLOB UTIL "${CMAKE_CURRENT_SOURCE_DIR}/src/util/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/util/*.hpp"
@@ -25,23 +25,25 @@ FILE(GLOB UTIL "${CMAKE_CURRENT_SOURCE_DIR}/src/util/*.cpp" "${CMAKE_CURRENT_SOU
 FILE(GLOB CORE "${CMAKE_CURRENT_SOURCE_DIR}/src/core/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/include/core/*.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/core/*.hpp")
 FILE(GLOB GENERATION "${CMAKE_CURRENT_SOURCE_DIR}/src/generation/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/include/generation/*.hpp")
-FILE(GLOB PARSER "${CMAKE_CURRENT_SOURCE_DIR}/src/parser/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/include/parser/*.hpp" 
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/parser/*.hpp")
+FILE(GLOB REFLECTION "${CMAKE_CURRENT_SOURCE_DIR}/src/reflection/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/include/reflection/*.hpp" 
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/reflection/*.hpp")
 FILE(GLOB LUA "${CMAKE_CURRENT_SOURCE_DIR}/src/lua/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/lua/*.hpp")
 
 SOURCE_GROUP("common" FILES ${COMMON})
 SOURCE_GROUP("util" FILES ${UTIL})
 SOURCE_GROUP("generation" FILES ${GENERATION})
-SOURCE_GROUP("parser" FILES ${PARSER})
+SOURCE_GROUP("reflection" FILES ${REFLECTION})
 SOURCE_GROUP("core" FILES ${CORE})
 SOURCE_GROUP("lua" FILES ${LUA})
 
 FIND_PACKAGE(Vulkan REQUIRED)
 OPTION(BUILD_STATIC "Build as a static library instead of a DLL. Not recommended." OFF)
 IF(BUILD_STATIC) 
-    ADD_LIBRARY(ShaderTools STATIC ${COMMON} ${UTIL} ${GENERATION} ${PARSER} ${LUA} ${CORE})
+    ADD_LIBRARY(ShaderTools STATIC ${COMMON} ${UTIL} ${GENERATION} ${REFLECTION} ${LUA} ${CORE} 
+        "${CMAKE_CURRENT_SOURCE_DIR}/third_party/easyloggingpp/src/easylogging++.cc")
 ELSE()
-    ADD_LIBRARY(ShaderTools SHARED ${COMMON} ${UTIL} ${GENERATION} ${PARSER} ${LUA} ${CORE})
+    ADD_LIBRARY(ShaderTools SHARED ${COMMON} ${UTIL} ${GENERATION} ${REFLECTION} ${LUA} ${CORE} 
+        "${CMAKE_CURRENT_SOURCE_DIR}/third_party/easyloggingpp/src/easylogging++.cc")
     TARGET_COMPILE_DEFINITIONS(ShaderTools PUBLIC "$<BUILD_INTERFACE:SHADERTOOLS_BUILD_DLL>" "$<INSTALL_INTERFACE:SHADERTOOLS_DLL>")
 ENDIF()
 SET_PROPERTY(TARGET ShaderTools PROPERTY CXX_STANDARD 17)
@@ -56,14 +58,14 @@ TARGET_INCLUDE_DIRECTORIES(ShaderTools PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/thir
     "${CMAKE_CURRENT_SOURCE_DIR}/third_party/luajit/src" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/luabridge/Source")
     
 TARGET_COMPILE_DEFINITIONS(ShaderTools PRIVATE 
-    "-D_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS"
-    "-D_SCL_SECURE_NO_WARNINGS"
-    "-D_SCL_SECURE_NO_DEPRECATE"
-    "-D_CRT_SECURE_NO_WARNINGS"
-    "-D_CRT_SECURE_NO_DEPRECATE"
-    "-D_CRT_NONSTDC_NO_WARNINGS"
-    "-D_CRT_NONSTDC_NO_DEPRECATE"
-    "-DNOMINMAX"
+    "_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS"
+    "_SCL_SECURE_NO_WARNINGS"
+    "_SCL_SECURE_NO_DEPRECATE"
+    "_CRT_SECURE_NO_WARNINGS"
+    "_CRT_SECURE_NO_DEPRECATE"
+    "_CRT_NONSTDC_NO_WARNINGS"
+    "_CRT_NONSTDC_NO_DEPRECATE"
+    "NOMINMAX"
 )
 
 SET_TARGET_PROPERTIES(
@@ -77,7 +79,7 @@ INSTALL(TARGETS ShaderTools RUNTIME DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/")
 
 OPTION(BUILD_TESTS "Build some test executables for shader parsing and compiliation." OFF)
 IF(BUILD_TESTS)
-    ADD_EXECUTABLE(ParseTest0 "${CMAKE_CURRENT_SOURCE_DIR}/tests/test.cpp")
+    ADD_EXECUTABLE(ParseTest0 "${CMAKE_CURRENT_SOURCE_DIR}/tests/test.cpp"  "${CMAKE_CURRENT_SOURCE_DIR}/third_party/easyloggingpp/src/easylogging++.cc")
     TARGET_COMPILE_DEFINITIONS(ParseTest0 PRIVATE "-DSHADERTOOLS_DLL")
     ADD_DEPENDENCIES(ParseTest0 ShaderTools)
     TARGET_LINK_LIBRARIES(ParseTest0 ShaderTools)

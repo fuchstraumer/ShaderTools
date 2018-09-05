@@ -825,10 +825,20 @@ namespace st {
             setResources.emplace(entry.first, std::vector<ShaderResource>{});
 
             auto per_set_resources = environment->GetTableMap(entry.second);
-            for (auto& set_resource : per_set_resources) {
+            for (auto& table_entry : per_set_resources) {
+
+                if (table_entry.first == "Tags") {
+                    auto tags_vector = environment->GetLinearTable(table_entry.second);
+                    std::set<std::string> tags_set;
+                    for (auto& tag : tags_vector) {
+                        tags_set.emplace(tag.cast<std::string>());
+                    }
+                    resourceGroupTags.emplace(entry.first, tags_set);
+                    continue;
+                }
 
                 // Now accessing/parsing single resource per set
-                auto set_resource_data = environment->GetTableMap(set_resource.second);
+                auto set_resource_data = environment->GetTableMap(table_entry.second);
                 std::string type_of_resource = set_resource_data.at("Type");
                 ShaderResource resource;
 
@@ -839,7 +849,20 @@ namespace st {
                 }
 
                 const VkDescriptorType vk_type = type_iter->second;
-                setBaseResourceInfo(entry.first, set_resource.first, vk_type, resource);
+                setBaseResourceInfo(entry.first, table_entry.first, vk_type, resource);
+
+                if (set_resource_data.count("Tags") != 0) {
+                    auto tags_table = environment->GetLinearTable(set_resource_data.at("Tags"));
+                    std::vector<std::string> tag_strings;
+                    for (auto& tag : tags_table) {
+                        tag_strings.emplace_back(tag.cast<std::string>());
+                    }
+                    std::vector<const char*> tag_string_ptrs;
+                    for (auto& str : tag_strings) {
+                        tag_string_ptrs.emplace_back(str.c_str());
+                    }
+                    resource.SetTags(tag_string_ptrs.size(), tag_string_ptrs.data());
+                }
 
                 if (vk_type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER || vk_type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC) {
                     createUniformBufferResources(set_resource_data, resource);

@@ -139,6 +139,7 @@ namespace st {
         size_class sizeClass{ size_class::Absolute };
         VkShaderStageFlags stages{ VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM };
         std::vector<ShaderResourceSubObject> members;
+        std::vector<std::string> tags;
         std::set<glsl_qualifier> qualifiers;
         VkImageCreateInfo imageInfo{ image_create_info_base };
         VkImageViewCreateInfo imageViewInfo{ image_view_create_info_base };
@@ -268,6 +269,15 @@ namespace st {
         }
     }
 
+    dll_retrieved_strings_t ShaderResource::GetTags() const noexcept {
+        dll_retrieved_strings_t result;
+        result.SetNumStrings(impl->tags.size());
+        for (size_t i = 0; i < impl->tags.size(); ++i) {
+            result.Strings[i] = strdup(impl->tags[i].c_str());
+        }
+        return result;
+    }
+
     void ShaderResource::SetBindingIndex(size_t idx) {
         impl->bindingIdx = std::move(idx);
     }
@@ -332,6 +342,13 @@ namespace st {
 
     void ShaderResource::SetBufferViewInfo(VkBufferViewCreateInfo buffer_info) {
         impl->bufferInfo = std::move(buffer_info);
+    }
+
+    void ShaderResource::SetTags(const size_t num_tags, const char ** tags) {
+        impl->tags.clear(); impl->tags.shrink_to_fit();
+        for (size_t i = 0; i < num_tags; ++i) {
+            impl->tags.emplace_back(tags[i]);
+        }
     }
 
 }

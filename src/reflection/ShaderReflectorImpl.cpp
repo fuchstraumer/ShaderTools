@@ -1,4 +1,4 @@
-#include "BindingGeneratorImpl.hpp"
+#include "ShaderReflectorImpl.hpp"
 #include "easyloggingpp/src/easylogging++.h"
 #include "../util/ShaderFileTracker.hpp"
 #include "core/ShaderResource.hpp"
@@ -11,8 +11,41 @@
 
 namespace st {
 
+    access_modifier accessModifierFromStorageClass(const spv::StorageClass storage_class) {
+        switch (storage_class) {
+        case spv::StorageClassUniformConstant:
+            return access_modifier::Read;
+        case spv::StorageClassInput:
+            return access_modifier::Read;
+        case spv::StorageClassOutput:
+            return access_modifier::Write;
+        case spv::StorageClassUniform:
+            return access_modifier::Read;
+        case spv::StorageClassStorageBuffer:
+            return access_modifier::ReadWrite;
+        case spv::StorageClassImage:
+            return access_modifier::ReadWrite;
+        default:
+            return access_modifier::ReadWrite;
+        }
+    }
+
+
     access_modifier AccessModifierFromSPIRType(const spirv_cross::SPIRType & type) {
         using namespace spirv_cross;
+        auto handle_indeterminate_case = [&]() {
+            // Usually happens for storage images.
+            if (type.basetype == SPIRType::Image && type.image.dim == spv::Dim::DimBuffer) {
+                return access_modifier::ReadWrite;
+            }
+            else if (type.storage != spv::StorageClass::StorageClassMax) {
+                return accessModifierFromStorageClass(type.storage);
+            }
+            else {
+                throw std::domain_error("Couldn't parse objects access modifier.");
+            }
+        };
+
         if (type.basetype == SPIRType::SampledImage || type.basetype == SPIRType::Sampler || type.basetype == SPIRType::Struct || type.basetype == SPIRType::AtomicCounter) {
             return access_modifier::Read;
         }
@@ -25,8 +58,7 @@ namespace st {
             case spv::AccessQualifier::AccessQualifierReadWrite:
                 return access_modifier::ReadWrite;
             case spv::AccessQualifier::AccessQualifierMax:
-                // Usually happens for storage images.
-                return access_modifier::ReadWrite;
+                return handle_indeterminate_case();
             default:
                 LOG(ERROR) << "SPIRType somehow has invalid access qualifier enum value!";
                 throw std::domain_error("SPIRType somehow has invalid access qualifier enum value!");
@@ -34,17 +66,17 @@ namespace st {
         }
     }
 
-    BindingGeneratorImpl::BindingGeneratorImpl(BindingGeneratorImpl&& other) noexcept : descriptorSets(std::move(other.descriptorSets)),
+    ShaderReflectorImpl::ShaderReflectorImpl(ShaderReflectorImpl&& other) noexcept : descriptorSets(std::move(other.descriptorSets)),
         sortedSets(std::move(other.sortedSets)), pushConstants(std::move(other.pushConstants)) {}
 
-    BindingGeneratorImpl& BindingGeneratorImpl::operator=(BindingGeneratorImpl&& other) noexcept {
+    ShaderReflectorImpl& ShaderReflectorImpl::operator=(ShaderReflectorImpl&& other) noexcept {
         descriptorSets = std::move(other.descriptorSets);
         sortedSets = std::move(other.sortedSets);
         pushConstants = std::move(other.pushConstants);
         return *this;
     }
 
-    size_t BindingGeneratorImpl::getNumSets() const noexcept {
+    size_t ShaderReflectorImpl::getNumSets() const noexcept {
         return sortedSets.size();
     }
 
@@ -57,36 +89,37 @@ namespace st {
         VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT
     };
 
-    std::map<uint32_t, VertexAttributeInfo> parseVertAttrs(const spirv_cross::Compiler& cmplr, const std::vector<spirv_cross::Resource>& rsrcs) {
-        std::map<uint32_t, VertexAttributeInfo> attributes;
+    std::vector<VertexAttributeInfo> parseVertAttrs(const spirv_cross::Compiler& cmplr, const std::vector<spirv_cross::Resource>& rsrcs) {
+        std::vector<VertexAttributeInfo> attributes;
         uint32_t idx = 0;
         uint32_t running_offset = 0;
         for (const auto& attr : rsrcs) {
             VertexAttributeInfo attr_info;
-            attr_info.Name = cmplr.get_name(attr.id);
-            attr_info.Location = cmplr.get_decoration(attr.id, spv::DecorationLocation);
-            attr_info.Offset = running_offset;
-            attr_info.Type = cmplr.get_type(attr.type_id);
-            running_offset += attr_info.Type.vecsize * attr_info.Type.width;
-            attributes.emplace(attr_info.Location, std::move(attr_info));
+            attr_info.SetName(cmplr.get_name(attr.id).c_str());
+            attr_info.SetLocation(cmplr.get_decoration(attr.id, spv::DecorationLocation));
+            attr_info.SetOffset(running_offset);
+            const spirv_cross::SPIRType attr_type = cmplr.get_type(attr.type_id);
+            attr_info.SetType(&attr_type);
+            running_offset += attr_type.vecsize * attr_type.width;
+            attributes.emplace_back(std::move(attr_info));
             ++idx;
         }
         return attributes;
     }
 
-    std::map<uint32_t, VertexAttributeInfo> parseInputAttributes(const spirv_cross::Compiler& cmplr) {
+    std::vector<VertexAttributeInfo> parseInputAttributes(const spirv_cross::Compiler& cmplr) {
         using namespace spirv_cross;
         const auto rsrcs = cmplr.get_shader_resources();
         return parseVertAttrs(cmplr, rsrcs.stage_inputs);
     }
 
-    std::map<uint32_t, VertexAttributeInfo> parseOutputAttributes(const spirv_cross::Compiler& cmplr) {
+    std::vector<VertexAttributeInfo> parseOutputAttributes(const spirv_cross::Compiler& cmplr) {
         using namespace spirv_cross;
         const auto rsrcs = cmplr.get_shader_resources();
         return parseVertAttrs(cmplr, rsrcs.stage_outputs);
     }
 
-    void BindingGeneratorImpl::parseResourceType(const Shader& shader_handle, const VkDescriptorType& type_being_parsed) {
+    void ShaderReflectorImpl::parseResourceType(const ShaderStage& shader_handle, const VkDescriptorType& type_being_parsed) {
         
         auto& f_tracker = ShaderFileTracker::GetFileTracker();
         const auto& rsrc_path = f_tracker.ShaderUsedResourceScript.at(shader_handle);
@@ -171,7 +204,21 @@ namespace st {
             }
             uint32_t set_idx = recompiler->get_decoration(rsrc.id, spv::DecorationDescriptorSet);
             auto spir_type = recompiler->get_type(rsrc.type_id);
-            access_modifier modifier = AccessModifierFromSPIRType(spir_type);
+            access_modifier modifier(access_modifier::ReadWrite);
+            const bool readonly = recompiler->has_decoration(rsrc.id, spv::DecorationNonWritable);
+            const bool writeonly = recompiler->has_decoration(rsrc.id, spv::DecorationNonReadable);
+            if (readonly && !writeonly) {
+                modifier = access_modifier::Read;
+            }
+            else if (writeonly && !readonly) {
+                modifier = access_modifier::Write;
+            }
+            if (type_being_parsed == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER || type_being_parsed == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC) {
+                modifier = access_modifier::Read;
+            }
+            else if (writeonly && readonly) {
+                modifier = AccessModifierFromSPIRType(spir_type);
+            }
             tempResources.emplace(set_idx, ResourceUsage(shader_handle, parent_resource, modifier, parent_resource->DescriptorType()));
         }
 
@@ -182,19 +229,21 @@ namespace st {
         const auto& pconstant = push_constants.push_constant_buffers.front();
         auto ranges = cmplr.get_active_buffer_ranges(pconstant.id);
         PushConstantInfo result;
-        result.Stages = stage;
-        result.Name = cmplr.get_name(pconstant.id);
+        result.SetStages(stage);
+        result.SetName(cmplr.get_name(pconstant.id).c_str());
+        std::vector<ShaderResourceSubObject> members;
         for(auto& range : ranges) {
             ShaderResourceSubObject member;
             member.Name = strdup(cmplr.get_member_name(pconstant.base_type_id, range.index).c_str());
             member.Size = static_cast<uint32_t>(range.range);
             member.Offset = static_cast<uint32_t>(range.offset);
-            result.Members.push_back(std::move(member));
+            members.emplace_back(std::move(member));
         }
-        return result;
+        result.SetMembers(members.size(), members.data());
+        return std::move(result);
     }
 
-    void BindingGeneratorImpl::parseBinary(const Shader& shader_handle) {
+    void ShaderReflectorImpl::parseBinary(const ShaderStage& shader_handle) {
         auto& FileTracker = ShaderFileTracker::GetFileTracker();
         std::vector<uint32_t> binary_vec;
         if (!FileTracker.FindShaderBinary(shader_handle, binary_vec)) {
@@ -205,7 +254,7 @@ namespace st {
         parseImpl(shader_handle, binary_vec);
     }
 
-    void BindingGeneratorImpl::collateSets() {
+    void ShaderReflectorImpl::collateSets() {
         std::set<uint32_t> unique_keys;
         for (auto iter = tempResources.begin(); iter != tempResources.end(); ++iter) {
             unique_keys.insert(iter->first);
@@ -230,7 +279,7 @@ namespace st {
         }
     }
 
-    void BindingGeneratorImpl::parseSpecializationConstants() {
+    void ShaderReflectorImpl::parseSpecializationConstants() {
         using namespace spirv_cross;
         auto constants = recompiler->get_specialization_constants();
         if (!constants.empty()) {
@@ -285,9 +334,14 @@ namespace st {
         }
     }
 
-    void BindingGeneratorImpl::parseImpl(const Shader& handle, const std::vector<uint32_t>& binary_data) {
+    void ShaderReflectorImpl::parseImpl(const ShaderStage& handle, const std::vector<uint32_t>& binary_data) {
         using namespace spirv_cross;
-        recompiler = std::make_unique<CompilerGLSL>(binary_data);
+        recompiler = std::make_unique<CompilerGLSL>(binary_data); 
+        spirv_cross::CompilerGLSL::Options options;
+        options.vulkan_semantics = true;
+        recompiler->set_common_options(options);
+        recompiler->compile();
+
         const auto stage = handle.GetStage();
         parseResourceType(handle, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);
         parseResourceType(handle, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER);
@@ -305,11 +359,15 @@ namespace st {
             if (pushConstants.size() > 1) {
                 uint32_t offset = 0;
                 for (const auto& push_block : pushConstants) {
-                    for (const auto& push_member : push_block.second.Members) {
+                    size_t num_members = 0;
+                    push_block.second.GetMembers(&num_members, nullptr);
+                    std::vector<ShaderResourceSubObject> members(num_members);
+                    push_block.second.GetMembers(&num_members, members.data());
+                    for (const auto& push_member : members) {
                         offset += push_member.Size;
                     }
                 }
-                iter.first->second.Offset = offset;
+                iter.first->second.SetOffset(offset);
             }
         }
 

@@ -2,11 +2,11 @@
 #include "common/CommonInclude.hpp"
 #include <string>
 #include <experimental/filesystem>
-#include "common/Shader.hpp"
+#include "common/ShaderStage.hpp"
 
 namespace st {
 
-    Shader WriteAndAddShaderSource(const std::string file_name, const std::string& file_contents, const VkShaderStageFlagBits stage);
+    ShaderStage WriteAndAddShaderSource(const std::string file_name, const std::string& file_contents, const VkShaderStageFlagBits stage);
     void WriteAndAddShaderBinary(const std::string base_name, const std::vector<uint32_t>& file_contents, const VkShaderStageFlagBits stage);
     std::string GetOutputDirectory();
     void SetOutputDirectory(const std::string& output_dir);

@@ -18,6 +18,8 @@ namespace st {
         std::string ResourceFileName;
         std::unordered_map<std::string, size_t> GroupIndices;
         std::unordered_map<std::string, std::map<VkShaderStageFlagBits, std::string>> ShaderGroups;
+        std::unordered_map<std::string, std::vector<std::string>> GroupTags;
+        std::unordered_map<std::string, std::vector<std::string>> GroupExtensions;
         std::unique_ptr<LuaEnvironment> environment;
 
         void parseScript();
@@ -40,11 +42,10 @@ namespace st {
             LuaRef shader_groups_table = getGlobal(state, "ShaderGroups");
             auto shader_groups = environment->GetTableMap(shader_groups_table);
             for (const auto& group : shader_groups) {
-                LuaRef table_ref = group.second[2];
-                LuaRef number_ref = group.second[1];
-                size_t idx = static_cast<size_t>(group.second[1].cast<int>());
+                auto group_table = environment->GetTableMap(group.second);
+                size_t idx = static_cast<size_t>(group_table.at("Idx").cast<int>());
                 GroupIndices.emplace(group.first, std::move(idx));
-                auto group_entries = environment->GetTableMap(table_ref);
+                auto group_entries = environment->GetTableMap(group_table.at("Shaders"));
                 for (auto& entry : group_entries) {
                     const std::string& shader_stage = entry.first;
                     const std::string shader_name = entry.second;
@@ -69,6 +70,24 @@ namespace st {
                     else {
                         throw std::domain_error("Invalid shader stage in parsed Lua script.");
                     }
+                }
+
+                if (group_table.count("Tags") != 0) {
+                    auto tags_table = environment->GetLinearTable(group_table.at("Tags"));
+                    std::vector<std::string> tag_strings;
+                    for (auto& ref : tags_table) {
+                        tag_strings.emplace_back(ref.cast<std::string>());
+                    }
+                    GroupTags.emplace(group.first, tag_strings);
+                }
+
+                if (group_table.count("Extensions") != 0) {
+                    auto extensions_table = environment->GetLinearTable(group_table.at("Extensions"));
+                    std::vector<std::string> extension_strings;
+                    for (auto& ref : extensions_table) {
+                        extension_strings.emplace_back(ref.cast<std::string>());
+                    }
+                    GroupExtensions.emplace(group.first, extension_strings);
                 }
 
             }
