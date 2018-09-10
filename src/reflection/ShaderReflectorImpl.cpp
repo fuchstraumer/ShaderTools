@@ -11,61 +11,6 @@
 
 namespace st {
 
-    access_modifier accessModifierFromStorageClass(const spv::StorageClass storage_class) {
-        switch (storage_class) {
-        case spv::StorageClassUniformConstant:
-            return access_modifier::Read;
-        case spv::StorageClassInput:
-            return access_modifier::Read;
-        case spv::StorageClassOutput:
-            return access_modifier::Write;
-        case spv::StorageClassUniform:
-            return access_modifier::Read;
-        case spv::StorageClassStorageBuffer:
-            return access_modifier::ReadWrite;
-        case spv::StorageClassImage:
-            return access_modifier::ReadWrite;
-        default:
-            return access_modifier::ReadWrite;
-        }
-    }
-
-
-    access_modifier AccessModifierFromSPIRType(const spirv_cross::SPIRType & type) {
-        using namespace spirv_cross;
-        auto handle_indeterminate_case = [&]() {
-            // Usually happens for storage images.
-            if (type.basetype == SPIRType::Image && type.image.dim == spv::Dim::DimBuffer) {
-                return access_modifier::ReadWrite;
-            }
-            else if (type.storage != spv::StorageClass::StorageClassMax) {
-                return accessModifierFromStorageClass(type.storage);
-            }
-            else {
-                throw std::domain_error("Couldn't parse objects access modifier.");
-            }
-        };
-
-        if (type.basetype == SPIRType::SampledImage || type.basetype == SPIRType::Sampler || type.basetype == SPIRType::Struct || type.basetype == SPIRType::AtomicCounter) {
-            return access_modifier::Read;
-        }
-        else {
-            switch (type.image.access) {
-            case spv::AccessQualifier::AccessQualifierReadOnly:
-                return access_modifier::Read;
-            case spv::AccessQualifier::AccessQualifierWriteOnly:
-                return access_modifier::Write;
-            case spv::AccessQualifier::AccessQualifierReadWrite:
-                return access_modifier::ReadWrite;
-            case spv::AccessQualifier::AccessQualifierMax:
-                return handle_indeterminate_case();
-            default:
-                LOG(ERROR) << "SPIRType somehow has invalid access qualifier enum value!";
-                throw std::domain_error("SPIRType somehow has invalid access qualifier enum value!");
-            }
-        }
-    }
-
     ShaderReflectorImpl::ShaderReflectorImpl(ShaderReflectorImpl&& other) noexcept : descriptorSets(std::move(other.descriptorSets)),
         sortedSets(std::move(other.sortedSets)), pushConstants(std::move(other.pushConstants)) {}
 
@@ -202,24 +147,19 @@ namespace st {
                 LOG(ERROR) << "Binding index of generated shader code, and binding of the actual resource, did not match!";
                 throw std::runtime_error("Binding index of generated shader code, and binding of the actual resource, did not match!");
             }
-            uint32_t set_idx = recompiler->get_decoration(rsrc.id, spv::DecorationDescriptorSet);
-            auto spir_type = recompiler->get_type(rsrc.type_id);
+            // If following logic fails, we just use read-write as it's a perfectly fine fallback
             access_modifier modifier(access_modifier::ReadWrite);
-            const bool readonly = recompiler->has_decoration(rsrc.id, spv::DecorationNonWritable);
-            const bool writeonly = recompiler->has_decoration(rsrc.id, spv::DecorationNonReadable);
-            if (readonly && !writeonly) {
-                modifier = access_modifier::Read;
-            }
-            else if (writeonly && !readonly) {
-                modifier = access_modifier::Write;
-            }
             if (type_being_parsed == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER || type_being_parsed == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC) {
                 modifier = access_modifier::Read;
             }
-            else if (writeonly && readonly) {
-                modifier = AccessModifierFromSPIRType(spir_type);
+            else if (recompiler->has_decoration(rsrc.id, spv::DecorationNonWritable)) {
+                modifier = access_modifier::Read;
             }
-            tempResources.emplace(set_idx, ResourceUsage(shader_handle, parent_resource, modifier, parent_resource->DescriptorType()));
+            else if (recompiler->has_decoration(rsrc.id, spv::DecorationNonReadable)) {
+                modifier = access_modifier::Write;
+            }
+            tempResources.emplace(recompiler->get_decoration(rsrc.id, spv::DecorationDescriptorSet), 
+                ResourceUsage(shader_handle, parent_resource, modifier, parent_resource->DescriptorType()));
         }
 
     }
