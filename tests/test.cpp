@@ -49,7 +49,7 @@ int main(int argc, char* argv[]) {
 
     using bindings_map_t = std::map<uint32_t, std::vector<VkDescriptorSetLayoutBinding>>;
     using pack_bindings_map_t = std::unordered_map<std::string, bindings_map_t>;
-    using pack_resources_per_group_t = std::unordered_map<std::string, std::vector<std::string>>;
+    using pack_resource_per_group_names_t = std::unordered_map<std::string, std::vector<std::string>>;
     using pack_specialization_constants_map_t = std::unordered_map<std::string, std::vector<SpecializationConstant>>;
     pack_specialization_constants_map_t constants_map;
     pack_bindings_map_t all_bindings;
