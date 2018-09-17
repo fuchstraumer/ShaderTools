@@ -37,7 +37,7 @@ namespace st {
         shaderc::CompileOptions options;
         options.SetGenerateDebugInfo();
         options.SetOptimizationLevel(shaderc_optimization_level_performance);
-        options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_1);
+        options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_0);
         options.SetSourceLanguage(shaderc_source_language_glsl);
         return options;
     }
