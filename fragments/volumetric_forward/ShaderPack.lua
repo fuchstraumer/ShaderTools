@@ -2,32 +2,90 @@ PackName = "VolumetricForwardCore"
 ResourceFileName = "vfResources.lua"
 ShaderGroups = {
     AssignLightsToClusters = {
-        Compute = "compute/AssignLightsToClustersBVH.comp"
+        Idx = 0,
+        Shaders = { Compute = "compute/AssignLightsToClustersBVH.comp" },
+
     },
     BuildBVH = {
-        Compute = "compute/BuildBVH.comp"
+        Idx = 1,
+        Shaders = {
+            Compute = "compute/BuildBVH.comp"
+        },
+        Extensions = {
+            "GL_ARB_separate_shader_objects",
+            "GL_ARB_shading_language_420pack"
+        }
     },
     ComputeMortonCodes = {
-        Compute = "compute/ComputeMortonCodes.comp"
+        Idx = 2,
+        Shaders = {
+            Compute = "compute/ComputeMortonCodes.comp"
+        },
+        Extensions = {
+            "GL_ARB_separate_shader_objects",
+            "GL_ARB_shading_language_420pack"
+        }
     },
     FindUniqueClusters = {
-        Compute = "compute/FindUniqueClusters.comp"
+        Idx = 3,
+        Shaders = {
+            Compute = "compute/FindUniqueClusters.comp"
+        },
+        Extensions = {
+            "GL_ARB_separate_shader_objects",
+            "GL_ARB_shading_language_420pack"
+        }
     },
     ReduceLights = {
-        Compute = "compute/ReduceLightsAABB.comp"
+        Idx = 4,
+        Shaders = {
+            Compute = "compute/ReduceLightsAABB.comp"
+        },
+        Extensions = {
+            "GL_ARB_separate_shader_objects",
+            "GL_ARB_shading_language_420pack"
+        }
     },
     UpdateClusterIndirectArgs = {
-        Compute = "compute/UpdateClusterIndirectArgs.comp"
+        Idx = 5,
+        Shaders = {
+            Compute = "compute/UpdateClusterIndirectArgs.comp"
+        },
+        Extensions = {
+            "GL_ARB_separate_shader_objects",
+            "GL_ARB_shading_language_420pack"
+        }
     },
     UpdateLights = {
-        Compute = "compute/UpdateLights.comp"
+        Idx = 6,
+        Shaders = {
+            Compute = "compute/UpdateLights.comp"
+        },
+        Extensions = {
+            "GL_ARB_separate_shader_objects",
+            "GL_ARB_shading_language_420pack"
+        }
     },
     DepthPrePass = {
-        Vertex = "Default.vert",
-        Fragment = "ClusterSamples.frag"
+        Idx = 7,
+        Shaders = {
+            Vertex = "Default.vert",
+            Fragment = "ClusterSamples.frag"
+        },
+        Extensions = {
+            "GL_ARB_separate_shader_objects",
+            "GL_ARB_shading_language_420pack"
+        }
     },
     DrawPass = {
-        Vertex = "Default.vert",
-        Fragment = "Clustered.frag"
+        Idx = 8,
+        Shaders = {
+            Vertex = "Default.vert",
+            Fragment = "Clustered.frag"
+        },
+        Extensions = {
+            "GL_ARB_separate_shader_objects",
+            "GL_ARB_shading_language_420pack"
+        }
     }
 }

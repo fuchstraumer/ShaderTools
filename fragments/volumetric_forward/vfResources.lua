@@ -50,7 +50,7 @@ Resources = {
                 Data = { "Material", 0 }
             }
         },
-        DiffuseMap = {
+        AlbedoMap = {
             Type = "SampledImage",
             -- Images from file don't have any info set here:
             -- all we do is generate a suitable descriptor binding
@@ -65,11 +65,7 @@ Resources = {
             Type = "SampledImage",
             FromFile = true
         },
-        RoughnessMap = {
-            Type = "SampledImage",
-            FromFile = true
-        },
-        MetallicMap = {
+        MetallicRoughnessMap = {
             Type = "SampledImage",
             FromFile = true
         },
@@ -124,47 +120,56 @@ Resources = {
         ClusterFlags = {
             Type = "StorageTexelBuffer",
             Format = "r8ui",
-            Size = dimensions.NumClusters()
+            Size = dimensions.NumClusters(),
+            Qualifiers = "restrict"
         },
         PointLightIndexList = {
             Type = "StorageTexelBuffer",
             Format = "r32ui",
-            Size = dimensions.LightIndexListSize()
+            Size = dimensions.LightIndexListSize(),
+            Qualifiers = "restrict"
         },
         SpotLightIndexList = {
             Type = "StorageTexelBuffer",
             Format = "r32ui",
-            Size = dimensions.LightIndexListSize()
+            Size = dimensions.LightIndexListSize(),
+            Qualifiers = "restrict"
         },
         PointLightGrid = {
             Type = "StorageTexelBuffer",
             Format = "rg32ui",
-            Size = dimensions.LightGridSize()
+            Size = dimensions.LightGridSize(),
+            Qualifiers = "restrict"
         },
         SpotLightGrid = {
             Type = "StorageTexelBuffer",
             Format = "rg32ui",
-            Size = dimensions.LightGridSize()
+            Size = dimensions.LightGridSize(),
+            Qualifiers = "restrict"
         },
         PointLightIndexCounter = {
             Type = "StorageTexelBuffer",
             Format = "r32ui",
-            Size = 1
+            Size = 1,
+            Qualifiers = "restrict"
         },
         SpotLightIndexCounter = {
             Type = "StorageTexelBuffer",
             Format = "r32ui",
-            Size = 1
+            Size = 1,
+            Qualifiers = "restrict"
         },
         UniqueClustersCounter = {
             Type = "StorageTexelBuffer",
             Format = "r32ui",
-            Size = 1
+            Size = 1,
+            Qualifiers = "restrict"
         },
         UniqueClusters = {
             Type = "StorageTexelBuffer",
             Format = "r32ui",
-            Size = dimensions.NumClusters()
+            Size = dimensions.NumClusters(),
+            Qualifiers = "restrict"
         }
     },
     VolumetricForwardLights = {
@@ -184,7 +189,8 @@ Resources = {
                     ElementType = "PointLight",
                     NumElements = dimensions.NumPointLights()
                 }, 0 }
-            }
+            },
+            Qualifiers = "restrict"
         },
         SpotLights = {
             Type = "StorageBuffer",
@@ -194,7 +200,8 @@ Resources = {
                     ElementType = "SpotLight",
                     NumElements = dimensions.NumSpotLights()
                 }, 0 }
-            }
+            },
+            Qualifiers = "restrict"
         },
         DirectionalLights = {
             Type = "StorageBuffer",
@@ -204,7 +211,8 @@ Resources = {
                     ElementType = "DirectionalLight",
                     NumElements = dimensions.NumDirectionalLights()
                 }, 0 }
-            }
+            },
+            Qualifiers = "restrict"
         }
     },
     IndirectArgsSet = {
@@ -247,27 +255,32 @@ Resources = {
                     ElementType = "AABB",
                     NumElements = dimensions.NumLightAABBs()
                 }, 0 }
-            }
+            },
+            Qualifiers = "restrict"
         },
         PointLightMortonCodes = {
             Type = "StorageTexelBuffer",
             Format = "r32ui",
-            Size = dimensions.NumPointLights()
+            Size = dimensions.NumPointLights(),
+            Qualifiers = "restrict"
         },
         SpotLightMortonCodes = {
             Type = "StorageTexelBuffer",
             Format = "r32ui",
-            Size = dimensions.NumSpotLights()
+            Size = dimensions.NumSpotLights(),
+            Qualifiers = "restrict"
         },
         PointLightIndices = {
             Type = "StorageTexelBuffer",
             Format = "r32ui",
-            Size = dimensions.NumPointLights()
+            Size = dimensions.NumPointLights(),
+            Qualifiers = "restrict"
         },
         SpotLightIndices = {
             Type = "StorageTexelBuffer",
             Format = "r32ui",
-            Size = dimensions.NumSpotLights()
+            Size = dimensions.NumSpotLights(),
+            Qualifiers = "restrict"
         }
     },
     BVHResources = {
@@ -287,7 +300,8 @@ Resources = {
                     ElementType = "AABB",
                     NumElements = dimensions.NumPointLights()
                 }, 0 }
-            }
+            },
+            Qualifiers = "restrict"
         },
         SpotLightBVH = {
             Type = "StorageBuffer",
@@ -297,7 +311,8 @@ Resources = {
                     ElementType = "AABB",
                     NumElements = dimensions.NumSpotLights()
                 }, 0 }
-            }
+            },
+            Qualifiers = "restrict"
         }
     }
 }

@@ -65,15 +65,23 @@ namespace st {
         }
     }
 
-    void dump_bad_source_to_file(const std::string& name, const std::string& src, const std::string& err_text) {
-        const std::string output_name = name + std::string{ "_failed_compile.glsl" };
+    enum class dump_reason {
+        failed_compile = 0,
+        failed_recompile = 1,
+    };
+
+    void dump_bad_source_to_file(const std::string& name, const std::string& src, const std::string& err_text, dump_reason reason) {
+        std::string suffix = (reason == dump_reason::failed_compile) ? std::string{ "_failed_compile.glsl" } : std::string{ "_failed_recompile.glsl" };
+        const std::string output_name = name + suffix;
         std::ofstream output_stream(output_name);
         output_stream << src;
         output_stream.flush(); output_stream.close();
-        const std::string err_msg_output = name + std::string{ "_compiliation_errors.txt" };
-        output_stream.open(err_msg_output);
-        output_stream << err_text;
-        output_stream.flush(); output_stream.close();
+        if (reason == dump_reason::failed_compile) {
+            const std::string err_msg_output = name + std::string{ "_compiliation_errors.txt" };
+            output_stream.open(err_msg_output);
+            output_stream << err_text;
+            output_stream.flush(); output_stream.close();
+        }
     }
 
     void ShaderCompilerImpl::prepareToCompile(const ShaderStage& handle, const std::string& name, const std::string& src) {
@@ -114,7 +122,7 @@ namespace st {
             LOG(ERROR) << "Shader compiliation to assembly failed: " << err_msg.c_str() << "\n";
 #ifndef NDEBUG
             LOG(ERROR) << "Dumping shader source to file...";
-            dump_bad_source_to_file(name, src_str, err_msg);
+            dump_bad_source_to_file(name, src_str, err_msg, dump_reason::failed_compile);
 #endif
             const std::string except_msg = std::string("Failed to compile shader to assembly: ") + err_msg + std::string("\n");
             throw std::runtime_error(except_msg.c_str());
@@ -156,6 +164,7 @@ namespace st {
                     LOG(WARNING) << "Failed to fully parse/recompile SPIR-V binary back to GLSL text. Outputting partial source thus far.";
                     LOG(WARNING) << "spirv_cross::CompilerError.what(): " << e.what() << "\n";
                     recompiled_source = recompiler.get_partial_source();
+                    dump_bad_source_to_file(FileTracker.ShaderNames.at(handle), recompiled_source, "", dump_reason::failed_recompile);
                 }
 
                 auto iter = FileTracker.RecompiledSourcesFromBinaries.emplace(handle, recompiled_source);

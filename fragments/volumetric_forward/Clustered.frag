@@ -62,7 +62,7 @@ void main() {
 
     vec4 diffuse = mtl.diffuse;
     if (HasDiffuse) {
-        vec4 diffuse_sample = texture(sampler2D(DiffuseMap, LinearRepeatSampler), vUV);
+        vec4 diffuse_sample = texture(sampler2D(AlbedoMap, LinearRepeatSampler), vUV);
         if (any(notEqual(diffuse.rgb, zero_vec))) {
             diffuse *= diffuse_sample;
         }
@@ -97,7 +97,7 @@ void main() {
 
     float metallic = mtl.metallic;
     if (HasMetallic) {
-        float metallic_sample = texture(sampler2D(MetallicMap, LinearRepeatSampler), vUV).r;
+        float metallic_sample = texture(sampler2D(MetallicRoughnessMap, LinearRepeatSampler), vUV).r;
         if (metallic != 0.0f) {
             metallic *= metallic_sample;
         }
@@ -108,7 +108,7 @@ void main() {
 
     float roughness = mtl.roughness;
     if (HasRoughness) {
-        float roughness_sample = texture(sampler2D(RoughnessMap, LinearRepeatSampler), vUV).r;
+        float roughness_sample = texture(sampler2D(MetallicRoughnessMap, LinearRepeatSampler), vUV).g;
         if (roughness != 0.0f) {
             roughness *= roughness_sample;
         }
