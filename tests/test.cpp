@@ -3,7 +3,7 @@
 #include "core/Shader.hpp"
 #include "core/ShaderPack.hpp"
 #include <array>
-#include "easyloggingpp/src/easylogging++.h"
+#include "easylogging++.h"
 INITIALIZE_EASYLOGGINGPP
 
 static int screen_x() {
@@ -37,7 +37,7 @@ int main(int argc, char* argv[]) {
     callbacks.GetZFar = &z_far;
     callbacks.GetFOVY = &fov_y;
     
-    ShaderPack pack("../fragments/clustered_forward/Pack.lua");
+    ShaderPack pack("../fragments/volumetric_forward/ShaderPack.lua");
     std::vector<std::string> group_names;
     {
         auto names = pack.GetShaderGroupNames();

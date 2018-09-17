@@ -69,36 +69,34 @@ LightingResult CalculateSpotLight(SpotLight light, Material material, vec4 V, ve
     return result;
 }
 
-vec4 ClipToView(vec4 clip_pos, mat4 projection_matrix) {
+vec4 ClipToView(in vec4 clip_pos, in mat4 projection_matrix) {
     vec4 view = inverse(projection_matrix) * clip_pos;
     view /= view.w;
     return view;
 }
 
-Plane ComputePlane(vec3 p0, vec3 p1, vec3 p2) {
+Plane ComputePlane(in vec3 p0, in vec3 p1, in vec3 p2) {
     Plane result;
-    vec3 v0 = p1 - p0;
-    vec3 v1 = p2 - p0;
-    result.N = normalize(cross(v0,v1));
+    result.N = normalize(cross(p1 - p0, p2 - p0));
     result.d = dot(result.N, p0);
     return result;
 }
 
-bool SphereInsidePlane(Sphere sph, Plane p) {
+bool SphereInsidePlane(in Sphere sph, in Plane p) {
     return dot(p.N, sph.c) - p.d < -sph.r;
 }
 
-bool PointInsidePlane(vec3 pt, Plane pl) {
+bool PointInsidePlane(in vec3 pt, in Plane pl) {
     return dot(pl.N, pt) - pl.d < 0.0f;
 }
 
-bool ConeInsidePlane(Cone cone, Plane plane) {
+bool ConeInsidePlane(in Cone cone, in Plane plane) {
     vec3 m = cross(cross(plane.N, cone.d), cone.d);
     vec3 Q = cone.T + cone.d * cone.h - m * cone.r;
     return PointInsidePlane(cone.T, plane) && PointInsidePlane(Q, plane);
 }
 
-bool SphereInsideFrustum(Sphere sphere, Frustum frustum, vec2 depth_range) {
+bool SphereInsideFrustum(in Sphere sphere, in Frustum frustum, in vec2 depth_range) {
     if (sphere.c.z - sphere.r > depth_range.x || sphere.c.z + sphere.r < depth_range.y) {
         return false;
     }
@@ -112,22 +110,17 @@ bool SphereInsideFrustum(Sphere sphere, Frustum frustum, vec2 depth_range) {
     return true;
 }
 
-float SqDistanceFromPtToAABB(vec3 p, AABB b) {
+bool SphereInsideAABB(in Sphere sphere, in AABB b) {
     float result = 0.0f;
-    for (int i = 0; i < 3; ++i) {
-        if (p[i] < b.Min[i]) {
-            result += pow(b.Min[i] - p[i], 2.0f);
+    for (uint i = 0; i < 3; ++i) {
+        if (sphere.c[i] < b.Min[i]) {
+            result += (sphere.c[i] - b.Min[i]) * (sphere.c[i] - b.Min[i]);
         }
-        if (p[i] > b.Max[i]) {
-            result += pow(p[i] - b.Max[i], 2.0f);
+        else if (sphere.c[i] > b.Max[i]) {
+            result += (sphere.c[i] - b.Max[i]) * (sphere.c[i] - b.Max[i]);
         }
     }
-    return result;
-}
-
-bool SphereInsideAABB(Sphere sphere, AABB b) {
-    float sq_distance = SqDistanceFromPtToAABB(sphere.c, b);
-    return sq_distance <= sphere.r * sphere.r;
+    return (result <= sphere.r * sphere.r);
 }
 
 bool AABBIntersectAABB(AABB a, AABB b) {
@@ -136,7 +129,7 @@ bool AABBIntersectAABB(AABB a, AABB b) {
     return all(result0) && all(result1);
 }
 
-bool ConeInsideFrustum(Cone cone, Frustum frustum, vec2 depth_range) {
+bool ConeInsideFrustum(in Cone cone, in Frustum frustum, in vec2 depth_range) {
     Plane near_plane;
     near_plane.N = vec3(0.0f, 0.0f,-1.0f);
     near_plane.d = -depth_range.x;
@@ -157,7 +150,7 @@ bool ConeInsideFrustum(Cone cone, Frustum frustum, vec2 depth_range) {
     return true;
 }
 
-bool IntersectLinePlane(vec3 a, vec3 b, Plane plane, out vec3 q) {
+bool IntersectLinePlane(in vec3 a, in vec3 b, in Plane plane, out vec3 q) {
     vec3 ab = b - a;
     float t  = (plane.d - dot(plane.N, a)) / dot(plane.N, ab);
     bool intersect = ( t >= 0.0f && t <= 1.0f);

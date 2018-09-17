@@ -15,7 +15,7 @@ function dimensions.ClusterDimensions()
 end
 
 function dimensions.NumClusters()
-    x, y, z = dimensions.NumClusters();
+    x, y, z = dimensions.ClusterDimensions();
     return x * y * z;
 end
 

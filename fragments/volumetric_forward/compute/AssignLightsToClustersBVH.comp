@@ -43,13 +43,6 @@ void AppendSpotLight(uint light_index) {
     }
 }
 
-void AppendPointLight(uint light_index) {
-    uint idx = atomicAdd(gs_PointLightCount, 1);
-    if (idx < MaxLights) {
-        gs_PointLightList[idx] = light_index;
-    }
-}
-
 void PushNode(uint node_index) {
     uint stack_idx = atomicAdd(gs_StackPtr, 1);
     if (stack_idx < 1024) {
@@ -68,34 +61,33 @@ uint PopNode() {
 }
 
 // Gets the index of the first node in the current bvh
-uint GetFirstChild(uint parent_index, uint num_levels) {
-    return (num_levels > 0) ? parent_index * 32 + 1 : 0;
+uint GetFirstChild(in uint num_levels) {
+    return (num_levels > 0) ? gs_ParentIdx * 32 + 1 : 0;
 }
 
-bool IsLeafNode(uint child_index, uint num_levels) {
+bool IsLeafNode(in uint child_index, in uint num_levels) {
     return (num_levels > 0) ? child_index > (NumChildNodes[num_levels - 1]) : true;
 }
 
-uint GetLeafIndex(uint node_index, uint num_levels) {
+uint GetLeafIndex(in uint node_index, in uint num_levels) {
     return (num_levels > 0) ? node_index - NumChildNodes[num_levels - 1] : node_index;
 }
 
 void main() {
 
-    if (gl_LocalInvocationIndex == 0) {
-        gs_PointLightCount = 0;
-        gs_SpotLightCount = 0;
-        gs_StackPtr = 0;
-        gs_ParentIdx = 0;
+    if (gl_LocalInvocationIndex == 0u) {
+        gs_ParentIdx = 0u;
         gs_ClusterIndex1D = imageLoad(UniqueClusters, int(gl_WorkGroupID.x)).r;
-        gs_ClusterAABB = ClusterAABBs.Data[gs_ClusterIndex1D];
-        PushNode(0); // pushing root node.
+        gs_ClusterAABB.Min = ClusterAABBs.Data[gs_ClusterIndex1D].Min;
+        gs_ClusterAABB.Max = ClusterAABBs.Data[gs_ClusterIndex1D].Max;
+        gs_NodeStack[0] = 0u;
+        gs_NodeStack[1] = 0u;
     }
-
-    groupMemoryBarrier();
+    
+    memoryBarrierShared();
 
     do {
-        uint child_index = GetFirstChild(gs_ParentIdx, BVHParams.PointLightLevels) + gl_LocalInvocationIndex;
+        uint child_index = GetFirstChild(BVHParams.PointLightLevels) + gl_LocalInvocationIndex;
         if (IsLeafNode(child_index, BVHParams.PointLightLevels)) {
             uint leaf_index = GetLeafIndex(child_index, BVHParams.PointLightLevels);
             if (leaf_index < LightCounts.NumPointLights) {
@@ -104,35 +96,41 @@ void main() {
                 sphere.c = PointLights.Data[light_index].PositionViewSpace.xyz; 
                 sphere.r = PointLights.Data[light_index].Range;
 
-                if (PointLights.Data[light_index].Enabled && SphereInsideAABB(sphere, gs_ClusterAABB)) {
-                    AppendPointLight(light_index);
+                if (SphereInsideAABB(sphere, gs_ClusterAABB)) {
+                    uint idx = uint(atomicAdd(gs_PointLightCount, 1));
+                    if (idx < MaxLights) {
+                        gs_PointLightList[idx] = light_index;
+                    }
                 }
             }
         }
-        else if (AABBIntersectAABB(gs_ClusterAABB, PointLightBVH.Data[child_index])) {
-            PushNode(child_index);
+        if (AABBIntersectAABB(gs_ClusterAABB, PointLightBVH.Data[child_index])) {
+            uint stack_idx = atomicAdd(gs_StackPtr, 1);
+            if (stack_idx < 1024) {
+                gs_NodeStack[stack_idx] = child_index;
+            }
         }
 
-        groupMemoryBarrier();
+        memoryBarrierShared();
 
-        if (gl_LocalInvocationIndex == 0) {
+        if (gl_LocalInvocationIndex == 0u) {
             gs_ParentIdx = PopNode();
         }
 
-        groupMemoryBarrier();
+        memoryBarrierShared();
 
     } while (gs_ParentIdx > 0);
 
-    groupMemoryBarrier();
+    memoryBarrierShared();
 
     if (gl_LocalInvocationIndex == 0) {
         gs_StackPtr = 0;
         gs_ParentIdx = 0;
         PushNode(0);
     }
-
     groupMemoryBarrier();
 
+    
     do {
 
         uint child_index = GetFirstChild(gs_ParentIdx, BVHParams.SpotLightLevels) + gl_LocalInvocationIndex;
@@ -180,4 +178,5 @@ void main() {
     for (int i = int(gl_LocalInvocationIndex); i < gs_SpotLightCount; i += 32) {
         imageStore(SpotLightIndexList, int(gs_SpotLightStartOffset + i), uvec4(gs_SpotLightList[i], 0, 0, 0));
     }
+    
 }
