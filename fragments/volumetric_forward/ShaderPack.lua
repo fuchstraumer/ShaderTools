@@ -1,6 +1,7 @@
 PackName = "VolumetricForwardCore"
 ResourceFileName = "vfResources.lua"
 ShaderGroups = {
+    --[[
     AssignLightsToClusters = {
         Idx = 0,
         Shaders = { Compute = "compute/AssignLightsToClustersBVH.comp" },
@@ -16,6 +17,7 @@ ShaderGroups = {
             "GL_ARB_shading_language_420pack"
         }
     },
+    ]]
     ComputeMortonCodes = {
         Idx = 2,
         Shaders = {
