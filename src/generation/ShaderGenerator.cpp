@@ -692,7 +692,7 @@ namespace st {
             std::smatch match;
             if (std::regex_search(body_src_str, match, specialization_constant)) {
                 const std::string prefix("layout (constant_id = " + std::to_string(ShaderResources.LastConstantIndex++) + ") ");
-                fragments.emplace(shaderFragment{ fragment_type::SpecConstant, std::string(prefix + match[1].str()) });
+                fragments.emplace(shaderFragment{ fragment_type::SpecConstant, std::string(prefix + match[1].str() + "\n") });
                 body_src_str.erase(body_src_str.begin() + match.position(), body_src_str.begin() + match.position() + match.length());
             }
             else {
