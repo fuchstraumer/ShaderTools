@@ -45,8 +45,9 @@ namespace st {
         void createCombinedImageSamplerResource(const std::unordered_map<std::string, luabridge::LuaRef>& table, ShaderResource& rsrc) const;
         void createSampledImageResource(const std::unordered_map<std::string, luabridge::LuaRef>& table, ShaderResource& rsrc) const;
         void createSamplerResource(const std::unordered_map<std::string, luabridge::LuaRef>& table, ShaderResource& rsrc) const;
-
         void createStorageImageResource(const std::unordered_map<std::string, luabridge::LuaRef>& table, ShaderResource & rsrc) const;
+
+        void setPerUsageQualifiers(ShaderResource & rsrc, luabridge::LuaRef & table);
 
         std::unordered_map<std::string, std::vector<ShaderResource>> setResources;
         std::unordered_map<std::string, std::set<std::string>> shaderTags;

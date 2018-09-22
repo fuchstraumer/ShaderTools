@@ -113,6 +113,7 @@ namespace st {
         void useResourceBlock(const std::string& block_name);
 
         std::string fetchBodyStr(const ShaderStage & handle, const std::string & path_to_source);
+        void findShaderName(const ShaderStage & handle);
         void checkInterfaceOverrides(std::string& body_src_str);
         void addExtension(const std::string& extension_str);
         void processBodyStrIncludes(std::string & body_src_str);
@@ -128,6 +129,7 @@ namespace st {
         mutable shader_resources_t ShaderResources;
         ResourceFile* luaResources;
         std::vector<fs::path> includes;
+        std::string currentShaderName;
 
     };
 
@@ -326,6 +328,14 @@ namespace st {
         rsrc.GetQualifiers(&num_qualifiers, nullptr);
         std::vector<glsl_qualifier> qualifiers(num_qualifiers);
         rsrc.GetQualifiers(&num_qualifiers, qualifiers.data());
+
+        size_t offset = num_qualifiers;
+        num_qualifiers = 0;
+        rsrc.GetPerUsageQualifiers(currentShaderName.c_str(), &num_qualifiers, nullptr);
+        if (num_qualifiers != 0) {
+            qualifiers.resize(qualifiers.size() + num_qualifiers);
+            rsrc.GetPerUsageQualifiers(currentShaderName.c_str(), &num_qualifiers, qualifiers.data() + offset);
+        }
 
         std::string result;
         for (const auto& qual : qualifiers) {
@@ -666,6 +676,15 @@ namespace st {
         return body_str;
     }
 
+    void ShaderGeneratorImpl::findShaderName(const ShaderStage& handle) {
+        auto& tracker = ShaderFileTracker::GetFileTracker();
+        auto iter = tracker.ShaderNames.find(handle);
+        if (iter == std::end(tracker.ShaderNames)) {
+            throw std::runtime_error("Couldn't find name of current shader being generated!");
+        }
+        currentShaderName = iter->second;
+    }
+
     void ShaderGeneratorImpl::checkInterfaceOverrides(std::string& body_src_str) {
         std::smatch match;
         if (std::regex_search(body_src_str, match, interface_override)) {
@@ -765,6 +784,7 @@ namespace st {
 
     void ShaderGeneratorImpl::generate(const ShaderStage& handle, const std::string& path_to_source, const size_t num_extensions, const char* const* extensions) {
         std::string body_str{ fetchBodyStr(handle, path_to_source) };
+        findShaderName(handle);
         // Includes can be any of the following: resource blocks, overrides, specialization_constants. 
         // Get them imported first so any potentially unique elements included are processed properly.
         processBodyStrIncludes(body_str);

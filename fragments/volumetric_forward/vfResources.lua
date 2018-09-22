@@ -186,7 +186,12 @@ Resources = {
                     NumElements = dimensions.NumPointLights()
                 }, 0 }
             },
-            Qualifiers = "restrict"
+            -- PerUsageQualifers: qualifiers to apply only to single shaders in the pack
+            -- Other qualifiers are applied pack-wide
+            Qualifiers = "restrict",
+            PerUsageQualifiers = {
+                Clustered = "readonly"
+            }
         },
         SpotLights = {
             Type = "StorageBuffer",
@@ -197,7 +202,10 @@ Resources = {
                     NumElements = dimensions.NumSpotLights()
                 }, 0 }
             },
-            Qualifiers = "restrict"
+            Qualifiers = "restrict",
+            PerUsageQualifiers = {
+                Clustered = "readonly"
+            }
         },
         DirectionalLights = {
             Type = "StorageBuffer",
@@ -208,7 +216,10 @@ Resources = {
                     NumElements = dimensions.NumDirectionalLights()
                 }, 0 }
             },
-            Qualifiers = "restrict"
+            Qualifiers = "restrict",
+            PerUsageQualifiers = {
+                Clustered = "readonly"
+            }
         }
     },
     IndirectArgsSet = {

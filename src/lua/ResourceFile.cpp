@@ -802,6 +802,15 @@ namespace st {
         rsrc.SetInputAttachmentIndex(idx);
     }
 
+    void ResourceFile::setPerUsageQualifiers(ShaderResource& rsrc, luabridge::LuaRef& table) {
+        auto qualifiers_table = environment->GetTableMap(table);
+        for (const auto& entry : qualifiers_table) {
+            std::vector<glsl_qualifier> qualifiers = qualifiersFromString(entry.second.cast<std::string>());
+            rsrc.AddPerUsageQualifiers(entry.first.c_str(), qualifiers.size(), qualifiers.data());
+        }
+    }
+
+
     void ResourceFile::parseResources() {
         using namespace luabridge;
 
@@ -901,6 +910,10 @@ namespace st {
                         std::vector<glsl_qualifier> qualifiers = qualifiersFromString(set_resource_data.at("Qualifiers").cast<std::string>());
                         resource.SetQualifiers(qualifiers.size(), qualifiers.data());
                     }
+                }
+
+                if (set_resource_data.count("PerUsageQualifiers") != 0) {
+                    setPerUsageQualifiers(resource, set_resource_data.at("PerUsageQualifiers"));
                 }
 
                 resource.SetBindingIndex(setResources[entry.first].size());

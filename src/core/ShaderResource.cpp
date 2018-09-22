@@ -2,6 +2,7 @@
 #include "common/UtilityStructs.hpp"
 #include "easyloggingpp/src/easylogging++.h"
 #include <set>
+#include <unordered_map>
 
 namespace st {
 
@@ -141,6 +142,7 @@ namespace st {
         std::vector<ShaderResourceSubObject> members;
         std::vector<std::string> tags;
         std::set<glsl_qualifier> qualifiers;
+        std::unordered_map<std::string, std::set<glsl_qualifier>> perUsageQualifiers;
         VkImageCreateInfo imageInfo{ image_create_info_base };
         VkImageViewCreateInfo imageViewInfo{ image_view_create_info_base };
         VkSamplerCreateInfo samplerInfo{ sampler_create_info_base };
@@ -262,6 +264,19 @@ namespace st {
         }
     }
 
+    void ShaderResource::GetPerUsageQualifiers(const char * shader_name, size_t * num_qualifiers, glsl_qualifier * qualifiers) const noexcept {
+        if (auto iter = impl->perUsageQualifiers.find(shader_name); iter != std::end(impl->perUsageQualifiers)) {
+            *num_qualifiers = iter->second.size();
+            if (qualifiers != nullptr) {
+                std::vector<glsl_qualifier> vector_copy;
+                for (const auto& qual : iter->second) {
+                    vector_copy.emplace_back(qual);
+                }
+                std::copy(vector_copy.begin(), vector_copy.end(), qualifiers);
+            }
+        }
+    }
+
     void ShaderResource::GetMembers(size_t* num_members, ShaderResourceSubObject* objects) const noexcept {
         *num_members = impl->members.size();
         if (objects != nullptr) {
@@ -317,6 +332,17 @@ namespace st {
     void ShaderResource::SetQualifiers(const size_t num_qualifiers, glsl_qualifier* qualifiers) {
         for (size_t i = 0; i < num_qualifiers; ++i) {
             impl->qualifiers.emplace(qualifiers[i]);
+        }
+    }
+
+    void ShaderResource::AddPerUsageQualifier(const char * shader_name, glsl_qualifier qualifier) {
+        impl->perUsageQualifiers[std::string(shader_name)].emplace(qualifier);
+    }
+
+    void ShaderResource::AddPerUsageQualifiers(const char * shader_name, const size_t num_qualifiers, const glsl_qualifier * qualifiers) {
+        auto& qualifier_set = impl->perUsageQualifiers[std::string(shader_name)];
+        for (size_t i = 0; i < num_qualifiers; ++i) {
+            qualifier_set.emplace(qualifiers[i]);
         }
     }
 
