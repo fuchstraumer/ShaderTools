@@ -125,6 +125,7 @@ namespace st {
         const auto& rsrcs = rsrcFile->GetAllResources();
         for (const auto& entry : rsrcs) {
             resourceGroups.emplace(entry.first, std::make_unique<ResourceGroup>(rsrcFile, entry.first.c_str()));
+            
         }
     }
 

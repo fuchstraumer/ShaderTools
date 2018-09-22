@@ -19,7 +19,7 @@ ShaderGroups = {
     },
     ]]
     ComputeMortonCodes = {
-        Idx = 2,
+        Idx = 0,
         Shaders = {
             Compute = "compute/ComputeMortonCodes.comp"
         },
@@ -29,7 +29,7 @@ ShaderGroups = {
         }
     },
     FindUniqueClusters = {
-        Idx = 3,
+        Idx = 1,
         Shaders = {
             Compute = "compute/FindUniqueClusters.comp"
         },
@@ -39,7 +39,7 @@ ShaderGroups = {
         }
     },
     ReduceLights = {
-        Idx = 4,
+        Idx = 2,
         Shaders = {
             Compute = "compute/ReduceLightsAABB.comp"
         },
@@ -49,7 +49,7 @@ ShaderGroups = {
         }
     },
     UpdateClusterIndirectArgs = {
-        Idx = 5,
+        Idx = 3,
         Shaders = {
             Compute = "compute/UpdateClusterIndirectArgs.comp"
         },
@@ -59,7 +59,7 @@ ShaderGroups = {
         }
     },
     UpdateLights = {
-        Idx = 6,
+        Idx = 4,
         Shaders = {
             Compute = "compute/UpdateLights.comp"
         },
@@ -69,7 +69,7 @@ ShaderGroups = {
         }
     },
     DepthPrePass = {
-        Idx = 7,
+        Idx = 5,
         Shaders = {
             Vertex = "Default.vert",
             Fragment = "ClusterSamples.frag"
@@ -80,7 +80,7 @@ ShaderGroups = {
         }
     },
     DrawPass = {
-        Idx = 8,
+        Idx = 6,
         Shaders = {
             Vertex = "Default.vert",
             Fragment = "Clustered.frag"

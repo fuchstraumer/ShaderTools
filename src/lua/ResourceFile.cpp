@@ -430,7 +430,6 @@ namespace st {
     }
 
     VkImageCreateInfo ResourceFile::parseImageOptions(ShaderResource& rsrc, const std::unordered_map<std::string, luabridge::LuaRef>& image_info_table) const {
-        // TODO: Flags, usage flags, format, extent
         VkImageCreateInfo results = image_create_info_base;
 
         auto has_member = [image_info_table](const std::string& name)->bool {
