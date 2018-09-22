@@ -30,6 +30,7 @@ namespace st {
     static const std::regex interface_var_out("out\\s+\\S+\\s+\\S+;\n");
     static const std::regex interface_override("#pragma INTERFACE_OVERRIDE\n");
     static const std::regex end_interface_override("#pragma END_INTERFACE_OVERRIDE");
+    static const std::regex fragment_shader_no_output("#pragma NO_FRAGMENT_OUTPUT");
     static const std::regex inline_resources_begin("#pragma BEGIN_INLINE_RESOURCES");
     static const std::regex inline_resources_end("#pragma END_INLINE_RESOURCES");
     static const std::regex use_set_resources("#pragma\\s+USE_RESOURCES\\s+(\\S+)\n");
@@ -53,6 +54,9 @@ namespace st {
     };
 
     struct shaderFragment {
+        shaderFragment() = default;
+        shaderFragment(const shaderFragment&) = default;
+        shaderFragment& operator=(const shaderFragment&) = default;
         fragment_type Type = fragment_type::Invalid;
         std::string Data;
         bool operator==(const shaderFragment& other) const noexcept {
@@ -673,6 +677,20 @@ namespace st {
             body_src_str.erase(body_src_str.begin() + match.position(), body_src_str.begin() + match.position() + match.length());
             if (!std::regex_search(body_src_str, match, end_interface_override)) {
                 throw std::runtime_error("Found opening of an override interface block, but couldn't find closing #pragma.");
+            }
+            body_src_str.erase(body_src_str.begin() + match.position(), body_src_str.begin() + match.position() + match.length());
+        }
+
+        if (std::regex_search(body_src_str, match, fragment_shader_no_output) && (Stage == VK_SHADER_STAGE_FRAGMENT_BIT)) {
+            // shader doesn't write to color output, potentially only the backbuffer
+            auto iter = std::begin(fragments);
+            while (iter != std::end(fragments)) {
+                if (iter->Type == fragment_type::OutputAttribute) {
+                    fragments.erase(iter++);
+                }
+                else {
+                    ++iter;
+                }
             }
             body_src_str.erase(body_src_str.begin() + match.position(), body_src_str.begin() + match.position() + match.length());
         }
