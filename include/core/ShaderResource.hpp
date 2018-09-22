@@ -52,6 +52,8 @@ namespace st {
         bool HasQualifiers() const noexcept;
         void GetQualifiers(size_t* num_qualifiers, glsl_qualifier* qualifiers) const noexcept;
         void GetPerUsageQualifiers(const char* shader_name, size_t* num_qualifiers, glsl_qualifier* qualifiers) const noexcept;
+        // Returns readonly/writeonly, if available. If not available or not applied to resource, returns glsl_qualifier::Invalid
+        glsl_qualifier GetReadWriteQualifierForShader(const char* shader_name) const noexcept;
         void GetMembers(size_t* num_members, ShaderResourceSubObject* dest_objects) const noexcept;
         dll_retrieved_strings_t GetTags() const noexcept;
 

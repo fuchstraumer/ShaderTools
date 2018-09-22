@@ -277,6 +277,24 @@ namespace st {
         }
     }
 
+    glsl_qualifier ShaderResource::GetReadWriteQualifierForShader(const char * shader_name) const noexcept {
+        // First just check general qualifiers for R/W options
+        for (const auto& qual : impl->qualifiers) {
+            if (qual == glsl_qualifier::ReadOnly || qual == glsl_qualifier::WriteOnly) {
+                return qual;
+            }
+        }
+
+        auto& stage_qualifiers = impl->perUsageQualifiers[std::string(shader_name)];
+        for (const auto& qual : stage_qualifiers) {
+            if (qual == glsl_qualifier::ReadOnly || qual == glsl_qualifier::WriteOnly) {
+                return qual;
+            }
+        }
+
+        return glsl_qualifier::InvalidQualifier;
+    }
+
     void ShaderResource::GetMembers(size_t* num_members, ShaderResourceSubObject* objects) const noexcept {
         *num_members = impl->members.size();
         if (objects != nullptr) {

@@ -135,9 +135,12 @@ namespace st {
             throw std::runtime_error("Passed invalid resource type.");
         };
 
+        const std::string& shader_name = f_tracker.ShaderNames.at(shader_handle);
+
         for (const auto& rsrc : resources) {
             const std::string rsrc_name = get_actual_name(recompiler->get_name(rsrc.id));
             const ShaderResource* parent_resource = rsrc_script->FindResource(rsrc_name);
+            glsl_qualifier curr_qualifier = parent_resource->GetReadWriteQualifierForShader(shader_name.c_str());
             if (parent_resource == nullptr) {
                 LOG(ERROR) << "Couldn't find parent resource of resource usage object!";
                 throw std::runtime_error("Couldn't find parent resource for resource usage object.");
@@ -157,6 +160,15 @@ namespace st {
             }
             else if (recompiler->has_decoration(rsrc.id, spv::DecorationNonReadable)) {
                 modifier = access_modifier::Write;
+            }
+            else if (curr_qualifier != glsl_qualifier::InvalidQualifier) {
+                if (curr_qualifier == glsl_qualifier::ReadOnly) {
+                    modifier = access_modifier::Read;
+                }
+                else {
+                    // if we get this far, the only other option is writeonly
+                    modifier = access_modifier::Write;
+                }
             }
             tempResources.emplace(recompiler->get_decoration(rsrc.id, spv::DecorationDescriptorSet), 
                 ResourceUsage(shader_handle, parent_resource, modifier, parent_resource->DescriptorType()));
