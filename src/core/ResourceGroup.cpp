@@ -19,8 +19,8 @@ namespace st {
 
     ResourceGroupImpl::ResourceGroupImpl(ResourceFile* resource_file, const char* group_name) : name(group_name),
         resources(resource_file->setResources.at(group_name)) {
-        if (resource_file->shaderTags.count(name) != 0) {
-            tags = resource_file->shaderTags.at(name);
+        if (resource_file->resourceGroupTags.count(name) != 0) {
+            tags = resource_file->resourceGroupTags.at(name);
         }
     }
 
