@@ -14,7 +14,7 @@ float GetDiffuse(vec4 n, vec4 l) {
     return NdotL;
 }
 
-float GetSpecular(Material material, vec4 V, vec4 L, vec4 N) {
+float GetSpecular(in Material material, vec4 V, vec4 L, vec4 N) {
     vec4 r = normalize(reflect(-L,N));
     float RdotV = max(dot(r,V),0.0f);
     return pow(RdotV, material.reflectance);
@@ -24,14 +24,14 @@ float Attenuation(float range, float d) {
     return 1.0f - smoothstep(range * 0.75f, range, d);
 }
 
-float GetSpotLightCone(SpotLight light, vec4 L) {
+float GetSpotLightCone(in SpotLight light, vec4 L) {
     float minCos = cos(radians(light.SpotLightAngle));
     float maxCos = mix(minCos, 1.0f, 0.0f);
     float cosAngle = dot(light.Direction, -L);
     return smoothstep(minCos, maxCos, cosAngle);
 }
 
-LightingResult CalculatePointLight(PointLight light, Material material, vec4 V, vec4 P, vec4 N) {
+LightingResult CalculatePointLight(in const PointLight light, in Material material, vec4 V, vec4 P, vec4 N) {
     LightingResult result;
     vec4 L = light.PositionViewSpace - P;
     float dist = length(L);
@@ -45,7 +45,7 @@ LightingResult CalculatePointLight(PointLight light, Material material, vec4 V, 
     return result;
 }
 
-LightingResult CalculateDirectionalLight(DirectionalLight light, Material material, vec4 V, vec4 P, vec4 N) {
+LightingResult CalculateDirectionalLight(in const DirectionalLight light, in Material material, vec4 V, vec4 P, vec4 N) {
     LightingResult result;
     vec4 L = normalize(-light.DirectionViewSpace);
     result.Diffuse = light.Color * GetDiffuse(N, L) * light.Intensity;
@@ -53,7 +53,7 @@ LightingResult CalculateDirectionalLight(DirectionalLight light, Material materi
     return result;
 }
 
-LightingResult CalculateSpotLight(SpotLight light, Material material, vec4 V, vec4 P, vec4 N) {
+LightingResult CalculateSpotLight(in const SpotLight light, in Material material, vec4 V, vec4 P, vec4 N) {
     LightingResult result;
 
     vec4 L = light.PositionViewSpace - P;

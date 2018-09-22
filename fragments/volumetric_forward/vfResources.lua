@@ -46,21 +46,7 @@ Resources = {
         MaterialParameters = {
             Type = "UniformBuffer",
             Members = {
-                baseColor = { "vec4",  0 },
-                emissive = { "vec4", 1 },
-                roughness = { "float", 2 },
-                metallic = { "float", 3 },
-                reflectance = { "float", 4 },
-                ambientOcclusion = { "float", 5 },
-                clearCoat = { "float", 6 },
-                clearCoatRoughness = { "float", 7 },
-                anisotropy = { "float", 8 },
-                anisotropyDirection = { "vec3", 9 },
-                thickness = { "float", 10 },
-                subsurfacePower = { "float", 11 },
-                subsurfaceColor = { "vec4", 12 },
-                sheenColor = { "vec4", 13 },
-                normal = { "vec4", 14 }
+                Data = { "Material", 0 }
             }
         },
         AlbedoMap = {
