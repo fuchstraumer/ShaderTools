@@ -212,7 +212,7 @@ namespace st {
             return impl->imageInfo;
         }
         else {
-            LOG(WARNING) << "Attempted to retrive VkImageCreateInfo for invalid descriptor type. Invalid VkImageCreateInfo structure returned.";
+            LOG(WARNING) << "Attempted to retrieve VkImageCreateInfo for invalid descriptor type. Invalid VkImageCreateInfo structure returned.";
             return invalid_image_create_info;
         }
     }
@@ -232,7 +232,7 @@ namespace st {
             return impl->samplerInfo;
         }
         else {
-            LOG(WARNING) << "Attempted to retrive VkSamplerCreateInfo for invalid descriptor type. Invalid VkSamplerCreateInfo structure returned.";
+            LOG(WARNING) << "Attempted to retrieve VkSamplerCreateInfo for invalid descriptor type. Invalid VkSamplerCreateInfo structure returned.";
             return invalid_sampler_create_info;
         }
     }
