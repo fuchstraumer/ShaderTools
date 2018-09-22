@@ -116,6 +116,7 @@ namespace st {
         auto& FileTracker = ShaderFileTracker::GetFileTracker();
         shaderc::Compiler compiler;
         const auto options = getCompilerOptions();
+
         shaderc::AssemblyCompilationResult assembly_result = compiler.CompileGlslToSpvAssembly(src_str, kind, name.c_str(), options);
         if (assembly_result.GetCompilationStatus() != shaderc_compilation_status_success) {
             const std::string err_msg = assembly_result.GetErrorMessage();

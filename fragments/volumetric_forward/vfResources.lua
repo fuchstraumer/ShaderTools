@@ -32,29 +32,39 @@ Resources = {
                 mousePosition = { "vec2", 1 },
                 windowSize = { "vec2", 2 },
                 depthRange = { "vec2", 3 },
-                frame = { "uint", 4 }
-            }
-        },
-        lightingData = {
-            Type = "UniformBuffer",
-            Members = {
-                Exposure = { "float", 0 },
-                Gamma = { "float", 1 }
+                frame = { "uint", 4 },
+                exposure = { "float", 5 },
+                gamma = { "float", 6 },
+                brightness = { "float", 7 }
             }
         }
     },
-    MaterialResources = {
+    Material = {
+        Tags = {
+            "MaterialGroup"
+        },
         MaterialParameters = {
             Type = "UniformBuffer",
             Members = {
-                Data = { "Material", 0 }
+                baseColor = { "vec4",  0 },
+                emissive = { "vec4", 1 },
+                roughness = { "float", 2 },
+                metallic = { "float", 3 },
+                reflectance = { "float", 4 },
+                ambientOcclusion = { "float", 5 },
+                clearCoat = { "float", 6 },
+                clearCoatRoughness = { "float", 7 },
+                anisotropy = { "float", 8 },
+                anisotropyDirection = { "vec3", 9 },
+                thickness = { "float", 10 },
+                subsurfacePower = { "float", 11 },
+                subsurfaceColor = { "vec4", 12 },
+                sheenColor = { "vec4", 13 },
+                normal = { "vec4", 14 }
             }
         },
         AlbedoMap = {
             Type = "SampledImage",
-            -- Images from file don't have any info set here:
-            -- all we do is generate a suitable descriptor binding
-            -- for what will eventually be used
             FromFile = true
         },
         NormalMap = {
@@ -76,7 +86,7 @@ Resources = {
         LinearRepeatSampler = {
             Type = "Sampler",
             SamplerInfo = {
-
+    
             }
         },
         LinearClampSampler = {

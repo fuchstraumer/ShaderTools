@@ -1,22 +1,20 @@
 
 struct Material {
-    vec4 ambient;
-    vec4 diffuse; 
-    vec4 specular;
-    vec4 transmittance;
+    vec4 baseColor;
     vec4 emissive;
-    float shininess;
-    float ior;
-    float alpha;
-    int illuminationModel;
     float roughness;
     float metallic;
-    float sheen;
-    float clearcoatThickness;
-    float clearcoatRoughness;
+    float reflectance;
+    float ambientOcclusion;
+    float clearCoat;
+    float clearCoatRoughness;
     float anisotropy;
-    float anisotropyRotation;
-    float globalAmbient;
+    vec3 anisotropyDirection;
+    float thickness;
+    float subsurfacePower;
+    vec4 subsurfaceColor;
+    vec4 sheenColor;
+    vec4 normal;
 };
 
 struct PointLight {

@@ -17,7 +17,7 @@ float GetDiffuse(vec4 n, vec4 l) {
 float GetSpecular(Material material, vec4 V, vec4 L, vec4 N) {
     vec4 r = normalize(reflect(-L,N));
     float RdotV = max(dot(r,V),0.0f);
-    return pow(RdotV, material.shininess);
+    return pow(RdotV, material.reflectance);
 }
 
 float Attenuation(float range, float d) {

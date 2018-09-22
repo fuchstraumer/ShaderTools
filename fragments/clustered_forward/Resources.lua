@@ -1,9 +1,6 @@
 
 local dimensions = require("Functions")
-
-ObjectSizes = {
-    Material = 128
-}
+local mtl = require("Material")
 
 Resources = {
     GlobalResources = {
@@ -84,44 +81,67 @@ Resources = {
             Tags = { "HostGeneratedData" }
         }
     },
-    ObjMaterials = {
-        Material = {
+    Material = {
+        MaterialParameters = {
             Type = "UniformBuffer",
             Members = {
-                ambient = { "vec4", 0 },
-                diffuse = { "vec4", 1 },
-                specular = { "vec4", 2 },
-                transmittance = { "vec4", 3 },
-                emission = { "vec4", 4 },
-                shininess = { "float", 5 },
-                ior = { "float", 6 },
-                alpha = { "float", 7 },
-                illuminationModel = { "int", 8 },
-                roughness = { "float", 9 },
-                metallic = { "float", 10 },
-                sheen = { "float", 11 },
-                clearcoatThickness = { "float", 12 },
-                clearcoatRoughness = { "float", 13 },
-                anisotropy = { "float", 14 },
-                anisotropyRotation = { "float", 15 },
-                padding = { "float", 16 }
+                baseColor = { "vec4",  0 },
+                emissive = { "vec4", 1 },
+                roughness = { "float", 2 },
+                metallic = { "float", 3 },
+                reflectance = { "float", 4 },
+                ambientOcclusion = { "float", 5 },
+                clearCoat = { "float", 6 },
+                clearCoatRoughness = { "float", 7 },
+                anisotropy = { "float", 8 },
+                anisotropyDirection = { "vec3", 9 },
+                thickness = { "float", 10 },
+                subsurfacePower = { "float", 11 },
+                subsurfaceColor = { "vec4", 12 },
+                sheenColor = { "vec4", 13 },
+                normal = { "vec4", 14 }
             }
         },
-        diffuseMap = {
-            Type = "CombinedImageSampler",
+        AlbedoMap = {
+            Type = "SampledImage",
             FromFile = true
         },
-        normalMap = {
-            Type = "CombinedImageSampler",
+        NormalMap = {
+            Type = "SampledImage",
+            FromFile = true
+        },        
+        AmbientOcclusionMap = {
+            Type = "SampledImage",
             FromFile = true
         },
-        roughnessMap = {
-            Type = "CombinedImageSampler",
+        MetallicRoughnessMap = {
+            Type = "SampledImage",
             FromFile = true
         },
-        metallicMap = {
-            Type = "CombinedImageSampler",
+        EmissiveMap = {
+            Type = "SampledImage",
             FromFile = true
+        },
+        LinearRepeatSampler = {
+            Type = "Sampler",
+            SamplerInfo = {
+    
+            }
+        },
+        LinearClampSampler = {
+            Type = "Sampler",
+            SamplerInfo = {
+                AddressModeU = "ClampToEdge",
+                AddressModeV = "ClampToEdge",
+                AddressModeW = "ClampToEdge"
+            }
+        },
+        AnisotropicSampler = {
+            Type = "Sampler",
+            AnisotropicSampler = {
+                EnableAnisotropy = true,
+                MaxAnisotropy = 8.0
+            }
         }
     }
 }

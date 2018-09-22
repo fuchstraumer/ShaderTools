@@ -14,7 +14,7 @@ SPC const bool HasEmissive = false;
 #pragma USE_RESOURCES GlobalResources
 #pragma USE_RESOURCES VolumetricForward
 #pragma USE_RESOURCES VolumetricForwardLights
-#pragma USE_RESOURCES MaterialResources
+#pragma USE_RESOURCES Material
 
 LightingResult Lighting(in Material mtl, vec4 eye_pos, vec4 p, vec4 n) {
     vec4 v = normalize(eye_pos - p);
@@ -58,9 +58,7 @@ void main() {
 
     const vec3 zero_vec = vec3(0.0f, 0.0f, 0.0f);
 
-    Material mtl = MaterialParameters.Data;
-
-    vec4 diffuse = mtl.diffuse;
+    vec4 diffuse = MaterialParameters.baseColor;
     if (HasDiffuse) {
         vec4 diffuse_sample = texture(sampler2D(AlbedoMap, LinearRepeatSampler), vUV);
         if (any(notEqual(diffuse.rgb, zero_vec))) {
@@ -71,7 +69,7 @@ void main() {
         }
     }
 
-    vec4 ambient = mtl.ambient;
+    vec4 ambient = vec4(MaterialParameters.ambientOcclusion);
     if (HasAmbientOcclusion) {
         vec4 ambient_sample = vec4(texture(sampler2D(AmbientOcclusionMap, LinearRepeatSampler), vUV).r);
         if (any(notEqual(ambient.rgb, zero_vec))) {
@@ -82,9 +80,9 @@ void main() {
         }
     }
 
-    ambient *= mtl.globalAmbient;
+    ambient *= globals.brightness;
 
-    vec4 emissive = mtl.emissive;
+    vec4 emissive = MaterialParameters.emissive;
     if (HasEmissive) {
         vec4 emissive_sample = vec4(texture(sampler2D(EmissiveMap, LinearRepeatSampler), vUV).r);
         if (any(notEqual(emissive.rgb, zero_vec))) {
@@ -95,7 +93,7 @@ void main() {
         }
     }
 
-    float metallic = mtl.metallic;
+    float metallic = MaterialParameters.metallic;
     if (HasMetallic) {
         float metallic_sample = texture(sampler2D(MetallicRoughnessMap, LinearRepeatSampler), vUV).r;
         if (metallic != 0.0f) {
@@ -106,7 +104,7 @@ void main() {
         }
     }
 
-    float roughness = mtl.roughness;
+    float roughness = MaterialParameters.roughness;
     if (HasRoughness) {
         float roughness_sample = texture(sampler2D(MetallicRoughnessMap, LinearRepeatSampler), vUV).g;
         if (roughness != 0.0f) {
