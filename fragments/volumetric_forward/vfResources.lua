@@ -190,7 +190,9 @@ Resources = {
             -- Other qualifiers are applied pack-wide
             Qualifiers = "restrict",
             PerUsageQualifiers = {
-                Clustered = "readonly"
+                Clustered = "readonly",
+                ReduceLightsAABB = "readonly",
+                ComputeMortonCodes = "readonly"
             }
         },
         SpotLights = {
@@ -204,7 +206,9 @@ Resources = {
             },
             Qualifiers = "restrict",
             PerUsageQualifiers = {
-                Clustered = "readonly"
+                Clustered = "readonly",
+                ReduceLightsAABB = "readonly",
+                ComputeMortonCodes = "readonly"
             }
         },
         DirectionalLights = {
@@ -218,7 +222,9 @@ Resources = {
             },
             Qualifiers = "restrict",
             PerUsageQualifiers = {
-                Clustered = "readonly"
+                Clustered = "readonly",
+                ReduceLightsAABB = "readonly",
+                ComputeMortonCodes = "readonly"
             }
         }
     },
@@ -263,7 +269,10 @@ Resources = {
                     NumElements = dimensions.NumLightAABBs()
                 }, 0 }
             },
-            Qualifiers = "restrict"
+            Qualifiers = "restrict",
+            PerUsageQualifers = {
+                ComputeMortonCodes = "readonly"
+            }
         },
         PointLightMortonCodes = {
             Type = "StorageTexelBuffer",
