@@ -9,6 +9,9 @@
 #ifdef FindResource
 #undef FindResource
 #endif // FindResource
+#ifdef SHADERTOOLS_PROFILING_ENABLED
+#include <chrono>
+#endif // SHADERTOOLS_PROFILING_ENABLED
 
 namespace st {
 
@@ -396,6 +399,9 @@ namespace st {
     }
 
     void ResourceFile::Execute(const char* fname)  {
+#ifdef SHADERTOOLS_PROFILING_ENABLED
+        std::chrono::high_resolution_clock::time_point beforeExec = std::chrono::high_resolution_clock::now();
+#endif // SHADERTOOLS_PROFILING_ENABLED
 
         if (luaL_dofile(environment->GetState(), fname)) {
             std::string err = lua_tostring(environment->GetState(), -1);
@@ -403,7 +409,18 @@ namespace st {
             throw std::logic_error(err.c_str());
         }
 
+#ifdef SHADERTOOLS_PROFILING_ENABLED
+        std::chrono::duration<double, std::milli> work_time = std::chrono::high_resolution_clock::now() - beforeExec;
+        LOG(INFO) << "Execution of resource Lua script took " << work_time.count() << "ms";
+        beforeExec = std::chrono::high_resolution_clock::now();
+#endif // SHADERTOOLS_PROFILING_ENABLED
+
         parseResources();
+
+#ifdef SHADERTOOLS_PROFILING_ENABLED
+        work_time = std::chrono::high_resolution_clock::now() - beforeExec;
+        LOG(INFO) << "Parsing of executed resource script took " << work_time.count() << "ms";
+#endif // SHADERTOOLS_PROFILING_ENABLED
     }
 
     void ResourceFile::AddResourceGroup(const std::string& group_name, const std::vector<ShaderResource>& resources) {
@@ -656,7 +673,8 @@ namespace st {
             if (iter != f_tracker.ObjectSizes.cend()) {
                 offset_total += static_cast<uint32_t>(iter->second * num_elements);
             }
-            object.Name = strdup(std::string(name + std::string("[]")).c_str());
+            std::string array_expr_str = "[" + std::to_string(num_elements) + "]";
+            object.Name = strdup(std::string(name + array_expr_str).c_str());
             object.Type = strdup(element_type.c_str());
             
         }

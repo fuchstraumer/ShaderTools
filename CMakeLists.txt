@@ -19,6 +19,8 @@ ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/spirv-cross" EXCLUDE_F
 SET(SKIP_LUA_WRAPPER ON CACHE BOOL "Do not build and install Lua executable wrappers.")
 ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/luajit" EXCLUDE_FROM_ALL)
 
+OPTION(SHADERTOOLS_PROFILING "Profile key steps in the execution of ShaderTools, and log timing info to the console" OFF)
+
 FILE(GLOB COMMON "${CMAKE_CURRENT_SOURCE_DIR}/src/common/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/include/common/*.hpp")
 FILE(GLOB UTIL "${CMAKE_CURRENT_SOURCE_DIR}/src/util/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/util/*.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/include/util/*.hpp")
@@ -49,6 +51,9 @@ ENDIF()
 SET_PROPERTY(TARGET ShaderTools PROPERTY CXX_STANDARD 17)
 IF(MSVC)
 TARGET_COMPILE_OPTIONS(ShaderTools PRIVATE "/bigobj" "/MP")
+ENDIF()
+IF(SHADERTOOLS_PROFILING)
+    TARGET_COMPILE_DEFINITIONS(ShaderTools PRIVATE "SHADERTOOLS_PROFILING_ENABLED")
 ENDIF()
 TARGET_COMPILE_DEFINITIONS(ShaderTools PRIVATE -DSHADERTOOLS_BUILD_DLL)
 TARGET_LINK_LIBRARIES(ShaderTools PRIVATE shaderc spirv-cross-core spirv-cross-glsl spirv-cross-cpp)

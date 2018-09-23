@@ -6,6 +6,10 @@
 #include <map>
 #include <string>
 #include <unordered_map>
+#include "easyloggingpp/src/easylogging++.h"
+#ifdef SHADERTOOLS_PROFILING_ENABLED
+#include <chrono>
+#endif
 namespace st {
 
     
@@ -26,8 +30,16 @@ namespace st {
     };
 
     shader_pack_file_t::shader_pack_file_t(const char * fname) : environment(std::make_unique<LuaEnvironment>()) {
+#ifdef SHADERTOOLS_PROFILING_ENABLED
+        std::chrono::high_resolution_clock::time_point beforeExec;
+        beforeExec = std::chrono::high_resolution_clock::now();
+#endif // SHADERTOOLS_PROFILING_ENABLED
         environment->Execute(fname);
         parseScript();
+#ifdef SHADERTOOLS_PROFILING_ENABLED
+        std::chrono::duration<double, std::milli> work_time = std::chrono::high_resolution_clock::now() - beforeExec;
+        LOG(INFO) << "Execution and parsing of ShaderPack Lua script took " << work_time.count() << "ms";
+#endif // SHADERTOOLS_PROFILING_ENABLED
     }
 
     void shader_pack_file_t::parseScript() {
