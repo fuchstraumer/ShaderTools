@@ -72,15 +72,31 @@ ShaderGroups = {
         Idx = 5,
         Shaders = {
             Vertex = "Default.vert",
+            Fragment = "PrePass.frag"
+        },
+        Extensions = {
+            "GL_ARB_separate_shader_objects",
+            "GL_ARB_shading_language_420pack"
+        }, 
+        -- Use DepthOnly tag to force front-end to attach a depth stencil output
+        -- These shaders probably don't write to the backbuffer for color, but
+        -- we want to keep depth info.
+        Tags = { "DepthOnly" }
+    },
+    ClusterSamples = {
+        Idx = 6,
+        Shaders = {
+            Vertex = "Default.vert",
             Fragment = "ClusterSamples.frag"
         },
         Extensions = {
             "GL_ARB_separate_shader_objects",
             "GL_ARB_shading_language_420pack"
-        }
+        }, 
+        Tags = { "DepthOnlyAsInput" }
     },
     DrawPass = {
-        Idx = 6,
+        Idx = 7,
         Shaders = {
             Vertex = "Default.vert",
             Fragment = "Clustered.frag"
@@ -88,6 +104,8 @@ ShaderGroups = {
         Extensions = {
             "GL_ARB_separate_shader_objects",
             "GL_ARB_shading_language_420pack"
-        }
+        }, 
+        -- Draw pass reads depth but has no ability to write to it
+        Tags = { "DepthOnlyAsInput" }
     }
 }
