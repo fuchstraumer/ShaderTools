@@ -130,7 +130,7 @@ Resources = {
             Size = dimensions.LightIndexListSize(),
             Qualifiers = "restrict",
             PerUsageQualifers = {
-                AssignLightsToClusters = "writeonly",
+                AssignLightsToClustersBVH = "writeonly",
                 Clustered = "readonly"
             }
         },
@@ -140,7 +140,7 @@ Resources = {
             Size = dimensions.LightIndexListSize(),
             Qualifiers = "restrict",
             PerUsageQualifers = {
-                AssignLightsToClusters = "writeonly",
+                AssignLightsToClustersBVH = "writeonly",
                 Clustered = "readonly"
             }
         },
@@ -150,7 +150,7 @@ Resources = {
             Size = dimensions.LightGridSize(),
             Qualifiers = "restrict",
             PerUsageQualifers = {
-                AssignLightsToClusters = "writeonly",
+                AssignLightsToClustersBVH = "writeonly",
                 Clustered = "readonly"
             }
         },
@@ -160,7 +160,7 @@ Resources = {
             Size = dimensions.LightGridSize(),
             Qualifiers = "restrict",
             PerUsageQualifers = {
-                AssignLightsToClusters = "writeonly",
+                AssignLightsToClustersBVHBVH = "writeonly",
                 Clustered = "readonly"
             }
         },
@@ -188,7 +188,7 @@ Resources = {
             Size = dimensions.NumClusters(),
             Qualifiers = "restrict",
             PerUsageQualifers = {
-                AssignLightsToClusters = "readonly",
+                AssignLightsToClustersBVHBVH = "readonly",
                 FindUniqueClusters = "writeonly"
             }
         }
@@ -218,7 +218,7 @@ Resources = {
                 Clustered = "readonly",
                 ReduceLightsAABB = "readonly",
                 ComputeMortonCodes = "readonly",
-                AssignLightsToClusters = "readonly"
+                AssignLightsToClustersBVH = "readonly"
             }
         },
         SpotLights = {
@@ -235,7 +235,7 @@ Resources = {
                 Clustered = "readonly",
                 ReduceLightsAABB = "readonly",
                 ComputeMortonCodes = "readonly",
-                AssignLightsToClusters = "readonly"
+                AssignLightsToClustersBVH = "readonly"
             }
         },
         DirectionalLights = {
