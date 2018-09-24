@@ -3,11 +3,14 @@
 #define ST_SHADER_FILE_TRACKER_HPP
 #include "common/CommonInclude.hpp"
 #include "common/ShaderStage.hpp"
+#include "ShaderPackBinary.hpp"
 #include <unordered_map>
 #include <string>
 #include <vector>
 #include <experimental/filesystem>
 #include <unordered_set>
+#include <memory>
+
 namespace st {
 
     class ResourceFile;
@@ -28,6 +31,7 @@ namespace st {
         static ShaderFileTracker& GetFileTracker();
 
         std::experimental::filesystem::path cacheDir{ std::experimental::filesystem::temp_directory_path() };
+        std::unordered_map<ShaderStage, std::experimental::filesystem::file_time_type> LastWriteTimes;
         std::unordered_map<ShaderStage, std::string> ShaderNames;
         std::unordered_map<ShaderStage, std::string> ShaderBodies;
         std::unordered_map<ShaderStage, std::string> RecompiledSourcesFromBinaries;
@@ -40,6 +44,7 @@ namespace st {
         std::unordered_map<ShaderStage, std::experimental::filesystem::path> BodyPaths;
         std::unordered_map<ShaderStage, std::experimental::filesystem::path> BinaryPaths;
         std::unordered_map<std::string, size_t> ObjectSizes;
+        std::unordered_map<std::string, std::unique_ptr<ShaderPackBinary, decltype(DestroyShaderPackBinary)>> ShaderPackBinaries;
     };
 
 }
