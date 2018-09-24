@@ -1,4 +1,5 @@
 #include "ShaderPackImpl.hpp"
+#include "ShaderImpl.hpp"
 #include "../../lua/LuaEnvironment.hpp"
 #include "../../util/ShaderFileTracker.hpp"
 #include "../../reflection/impl/ShaderReflectorImpl.hpp"
@@ -54,6 +55,7 @@ namespace st {
                 groups.emplace(group.first, std::make_unique<Shader>(group.first.c_str(), resource_path_str.c_str(), 0, nullptr, base_includes.size(), base_includes.data()));
             }
             createSingleGroup(group.first, group.second);
+            //groups.at(group.first)->impl-
             groups.at(group.first)->SetIndex(filePack->GroupIndices.at(group.first));
             if (filePack->GroupTags.count(group.first) != 0) {
                 const auto& tags = filePack->GroupTags.at(group.first);

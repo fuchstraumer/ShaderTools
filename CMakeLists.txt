@@ -43,6 +43,8 @@ SET(ST_CORE_SRCS
     "${CMAKE_CURRENT_SOURCE_DIR}/src/core/impl/shader_pack_file.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/core/impl/ShaderPackImpl.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/core/impl/ShaderPackImpl.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/core/impl/ShaderImpl.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/core/impl/ShaderImpl.cpp"
 )
 
 SET(ST_GENERATION_SRCS
