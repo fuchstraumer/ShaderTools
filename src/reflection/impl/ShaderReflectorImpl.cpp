@@ -1,13 +1,13 @@
 #include "ShaderReflectorImpl.hpp"
 #include "easyloggingpp/src/easylogging++.h"
-#include "../util/ShaderFileTracker.hpp"
+#include "../../util/ShaderFileTracker.hpp"
 #include "core/ShaderResource.hpp"
 #include "core/ResourceUsage.hpp"
 #include <array>
 #ifdef FindResource
 #undef FindResource
 #endif // FindResource
-#include "../lua/ResourceFile.hpp"
+#include "../../lua/ResourceFile.hpp"
 
 namespace st {
 

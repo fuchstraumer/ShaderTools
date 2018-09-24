@@ -11,7 +11,7 @@
 #include <unordered_map>
 #include <map>
 #include <set>
-#include "../util/ShaderFileTracker.hpp"
+#include "../../util/ShaderFileTracker.hpp"
 
 namespace st {
 

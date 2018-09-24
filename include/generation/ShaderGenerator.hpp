@@ -12,6 +12,7 @@ namespace st {
         ShaderGenerator(const ShaderGenerator&) = delete;
         ShaderGenerator& operator=(const ShaderGenerator&) = delete;
     public:
+
         ShaderGenerator(const VkShaderStageFlagBits& stage = VK_SHADER_STAGE_VERTEX_BIT);
         ~ShaderGenerator();
         ShaderGenerator(ShaderGenerator&& other) noexcept;
@@ -27,6 +28,7 @@ namespace st {
         VkShaderStageFlagBits GetStage() const;
         static void SetBasePath(const char* new_base_path);
         static const char* GetBasePath();
+
     private:
         std::unique_ptr<ShaderGeneratorImpl> impl;
     };

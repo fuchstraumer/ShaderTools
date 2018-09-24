@@ -1,8 +1,9 @@
 #include "reflection/ShaderReflector.hpp"
-#include "ShaderReflectorImpl.hpp"
+#include "impl/ShaderReflectorImpl.hpp"
 #include "core/ResourceUsage.hpp"
 #include "reflection/ReflectionStructs.hpp"
 #include "easyloggingpp/src/easylogging++.h"
+
 namespace st {
 
     ShaderReflector::ShaderReflector() : impl(std::make_unique<ShaderReflectorImpl>()) {}

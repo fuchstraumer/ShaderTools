@@ -30,6 +30,7 @@ namespace st {
         static engine_environment_callbacks_t& RetrievalCallbacks();
 
     private:
+        friend struct ShaderFileTracker;
         std::unique_ptr<ShaderPackImpl> impl;
     };
 

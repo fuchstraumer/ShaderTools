@@ -1,7 +1,6 @@
 #pragma once
 #ifndef SHADER_PACK_BINARY_FILE_HPP
 #define SHADER_PACK_BINARY_FILE_HPP
-#include "ShaderStage.hpp"
 #include <cstdint>
 
 namespace st {

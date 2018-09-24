@@ -7,10 +7,10 @@
 #include "../lua/LuaEnvironment.hpp"
 #include "../lua/ResourceFile.hpp"
 #include "../util/ShaderFileTracker.hpp"
-#include "../reflection/ShaderReflectorImpl.hpp"
-#include "easyloggingpp/src/easylogging++.h"
+#include "../reflection/impl/ShaderReflectorImpl.hpp"
 #include <unordered_set>
 #include <experimental/filesystem>
+#include "easyloggingpp/src/easylogging++.h"
 
 namespace st {
 

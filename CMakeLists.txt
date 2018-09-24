@@ -21,43 +21,111 @@ ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/luajit" EXCLUDE_FROM_A
 
 OPTION(SHADERTOOLS_PROFILING "Profile key steps in the execution of ShaderTools, and log timing info to the console" OFF)
 
-FILE(GLOB COMMON "${CMAKE_CURRENT_SOURCE_DIR}/src/common/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/include/common/*.hpp")
-FILE(GLOB UTIL "${CMAKE_CURRENT_SOURCE_DIR}/src/util/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/util/*.hpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/include/util/*.hpp")
-FILE(GLOB CORE "${CMAKE_CURRENT_SOURCE_DIR}/src/core/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/include/core/*.hpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/core/*.hpp")
-FILE(GLOB GENERATION "${CMAKE_CURRENT_SOURCE_DIR}/src/generation/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/include/generation/*.hpp")
-FILE(GLOB REFLECTION "${CMAKE_CURRENT_SOURCE_DIR}/src/reflection/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/include/reflection/*.hpp" 
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/reflection/*.hpp")
-FILE(GLOB LUA "${CMAKE_CURRENT_SOURCE_DIR}/src/lua/*.cpp" "${CMAKE_CURRENT_SOURCE_DIR}/src/lua/*.hpp")
+SET(ST_COMMON_SRCS
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/common/CommonInclude.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/common/ShaderStage.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/common/UtilityStructs.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/common/ShaderStage.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/common/UtilityStructs.cpp"
+)
 
-SOURCE_GROUP("common" FILES ${COMMON})
-SOURCE_GROUP("util" FILES ${UTIL})
-SOURCE_GROUP("generation" FILES ${GENERATION})
-SOURCE_GROUP("reflection" FILES ${REFLECTION})
-SOURCE_GROUP("core" FILES ${CORE})
-SOURCE_GROUP("lua" FILES ${LUA})
+SET(ST_CORE_SRCS
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/core/ResourceGroup.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/core/ResourceUsage.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/core/Shader.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/core/ShaderPack.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/core/ShaderResource.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/core/ResourceGroup.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/core/ResourceUsage.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/core/Shader.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/core/ShaderPack.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/core/ShaderResource.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/core/impl/shader_pack_file.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/core/impl/ShaderPackImpl.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/core/impl/ShaderPackImpl.cpp"
+)
+
+SET(ST_GENERATION_SRCS
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/generation/Compiler.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/generation/ShaderGenerator.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/generation/BuiltIns.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/generation/Compiler.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/generation/ShaderGenerator.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/generation/impl/CompilerImpl.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/generation/impl/CompilerImpl.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/generation/impl/ShaderGeneratorImpl.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/generation/impl/ShaderGeneratorImpl.cpp"
+)
+
+SET(ST_LUA_SRCS
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/lua/LuaEnvironment.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/lua/LuaEnvironment.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/lua/ResourceFile.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/lua/ResourceFile.cpp"
+)
+
+SET(ST_REFLECTION_SRCS
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/reflection/ReflectionStructs.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/reflection/ShaderReflector.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/reflection/ReflectionStructs.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/reflection/ShaderReflector.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/reflection/impl/ShaderReflectorImpl.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/reflection/impl/ShaderReflectorImpl.cpp"
+)
+
+SET(ST_UTIL_SRCS
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/util/FilesystemUtils.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/util/FilesystemUtils.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/util/ResourceFormats.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/util/ResourceFormats.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/util/ShaderFileTracker.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/util/ShaderFileTracker.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/util/ShaderPackBinary.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/util/ShaderPackBinary.cpp"
+)
+
+SOURCE_GROUP("common" FILES ${ST_COMMON_SRCS})
+SOURCE_GROUP("util" FILES ${ST_UTIL_SRCS})
+SOURCE_GROUP("generation" FILES ${ST_GENERATION_SRCS})
+SOURCE_GROUP("reflection" FILES ${ST_REFLECTION_SRCS})
+SOURCE_GROUP("core" FILES ${ST_CORE_SRCS})
+SOURCE_GROUP("lua" FILES ${ST_LUA_SRCS})
 
 FIND_PACKAGE(Vulkan REQUIRED)
+
 OPTION(BUILD_STATIC "Build as a static library instead of a DLL. Not recommended." OFF)
+
 IF(BUILD_STATIC) 
-    ADD_LIBRARY(ShaderTools STATIC ${COMMON} ${UTIL} ${GENERATION} ${REFLECTION} ${LUA} ${CORE} 
+    ADD_LIBRARY(ShaderTools STATIC ${ST_COMMON_SRCS} ${ST_UTIL_SRCS} ${ST_GENERATION_SRCS} 
+        ${ST_REFLECTION_SRCS} ${ST_LUA_SRCS} ${ST_CORE_SRCS}  
         "${CMAKE_CURRENT_SOURCE_DIR}/third_party/easyloggingpp/src/easylogging++.cc")
+    # Used to avoid initializing easyloggingpp when built as static library. Causes 
+    # duplicate symbol errors otherwise
+    TARGET_COMPILE_DEFINITIONS(ShaderTools PRIVATE "ST_BUILDING_STATIC")
 ELSE()
-    ADD_LIBRARY(ShaderTools SHARED ${COMMON} ${UTIL} ${GENERATION} ${REFLECTION} ${LUA} ${CORE} 
+    ADD_LIBRARY(ShaderTools SHARED ${ST_COMMON_SRCS} ${ST_UTIL_SRCS} ${ST_GENERATION_SRCS} 
+        ${ST_REFLECTION_SRCS} ${ST_LUA_SRCS} ${ST_CORE_SRCS} 
         "${CMAKE_CURRENT_SOURCE_DIR}/third_party/easyloggingpp/src/easylogging++.cc")
     TARGET_COMPILE_DEFINITIONS(ShaderTools PUBLIC "$<BUILD_INTERFACE:SHADERTOOLS_BUILD_DLL>" "$<INSTALL_INTERFACE:SHADERTOOLS_DLL>")
 ENDIF()
+
+# Require CXX17 for all compilers
 SET_PROPERTY(TARGET ShaderTools PROPERTY CXX_STANDARD 17)
+
 IF(MSVC)
-TARGET_COMPILE_OPTIONS(ShaderTools PRIVATE "/bigobj" "/MP")
+    # Set some MSVC-specific compiler options that we need
+    TARGET_COMPILE_OPTIONS(ShaderTools PRIVATE "/bigobj" "/MP")
 ENDIF()
+
 IF(SHADERTOOLS_PROFILING)
     TARGET_COMPILE_DEFINITIONS(ShaderTools PRIVATE "SHADERTOOLS_PROFILING_ENABLED")
 ENDIF()
+
 TARGET_COMPILE_DEFINITIONS(ShaderTools PRIVATE -DSHADERTOOLS_BUILD_DLL)
+
 TARGET_LINK_LIBRARIES(ShaderTools PRIVATE shaderc spirv-cross-core spirv-cross-glsl spirv-cross-cpp)
 TARGET_LINK_LIBRARIES(ShaderTools PRIVATE liblua)
+
 TARGET_INCLUDE_DIRECTORIES(ShaderTools PUBLIC  "${CMAKE_CURRENT_SOURCE_DIR}/include" "${Vulkan_INCLUDE_DIRS}")
 TARGET_INCLUDE_DIRECTORIES(ShaderTools PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/" "${CMAKE_CURRENT_SOURCE_DIR}/ext/include" 
     "${CMAKE_CURRENT_SOURCE_DIR}/third_party/luajit/src" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/luabridge/Source")
@@ -73,15 +141,18 @@ TARGET_COMPILE_DEFINITIONS(ShaderTools PRIVATE
     "NOMINMAX"
 )
 
+# Group all our dependencies together so they don't clutter up the IDE, or the IDE of users
 SET_TARGET_PROPERTIES(
     liblua shaderc spirv-cross-core spirv-cross-glsl spirv-cross-cpp glslang
     HLSL buildvm minilua shaderc_util OGLCompiler OSDependent SPIRV SPIRV-Tools SPIRV-Tools-opt
     PROPERTIES FOLDER "ShaderTools Dependencies")
 
+## 
 INSTALL(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include/" DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/ShaderTools/")
 INSTALL(TARGETS ShaderTools RUNTIME DESTINATION "bin" LIBRARY DESTINATION "lib" ARCHIVE DESTINATION "lib")
 INSTALL(TARGETS ShaderTools RUNTIME DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/")
 
+##
 OPTION(BUILD_TESTS "Build some test executables for shader parsing and compiliation." OFF)
 IF(BUILD_TESTS)
     ADD_EXECUTABLE(ParseTest0 "${CMAKE_CURRENT_SOURCE_DIR}/tests/test.cpp"  "${CMAKE_CURRENT_SOURCE_DIR}/third_party/easyloggingpp/src/easylogging++.cc")

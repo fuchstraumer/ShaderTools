@@ -2,7 +2,7 @@
 #ifndef ST_SHADER_PACK_FILE_HPP
 #define ST_SHADER_PACK_FILE_HPP
 #include "common/CommonInclude.hpp"
-#include "../lua/LuaEnvironment.hpp"
+#include "../../lua/LuaEnvironment.hpp"
 #include <map>
 #include <string>
 #include <unordered_map>
@@ -10,6 +10,7 @@
 #ifdef SHADERTOOLS_PROFILING_ENABLED
 #include <chrono>
 #endif
+
 namespace st {
 
     
@@ -29,7 +30,7 @@ namespace st {
         void parseScript();
     };
 
-    shader_pack_file_t::shader_pack_file_t(const char * fname) : environment(std::make_unique<LuaEnvironment>()) {
+    inline shader_pack_file_t::shader_pack_file_t(const char * fname) : environment(std::make_unique<LuaEnvironment>()) {
 #ifdef SHADERTOOLS_PROFILING_ENABLED
         std::chrono::high_resolution_clock::time_point beforeExec;
         beforeExec = std::chrono::high_resolution_clock::now();
@@ -42,7 +43,7 @@ namespace st {
 #endif // SHADERTOOLS_PROFILING_ENABLED
     }
 
-    void shader_pack_file_t::parseScript() {
+    inline void shader_pack_file_t::parseScript() {
         using namespace luabridge;
         lua_State* state = environment->GetState();
         {

@@ -44,7 +44,7 @@ namespace st {
         std::unordered_map<ShaderStage, std::experimental::filesystem::path> BodyPaths;
         std::unordered_map<ShaderStage, std::experimental::filesystem::path> BinaryPaths;
         std::unordered_map<std::string, size_t> ObjectSizes;
-        std::unordered_map<std::string, std::unique_ptr<ShaderPackBinary, decltype(DestroyShaderPackBinary)>> ShaderPackBinaries;
+        std::unordered_map<std::string, std::unique_ptr<ShaderPackBinary, decltype(&DestroyShaderPackBinary)>> ShaderPackBinaries;
     };
 
 }
