@@ -1,0 +1,80 @@
+layout(local_size_x = 1024, local_size_y = 1, local_size_z = 1) in;
+#include "Structures.glsl"
+#include "Functions.glsl"
+SPC const uint MAX_LIGHTS = 1024;
+shared uint gs_ClusterIndex1D;
+shared AABB gs_ClusterAABB;
+shared uint gs_PointLightCount;
+shared uint gs_SpotLightCount;
+shared uint gs_PointLightStartOffset;
+shared uint gs_SpotLightStartOffset;
+shared uint gs_PointLightList[1024];
+shared uint gs_SpotLightList[1024];
+
+#pragma USE_RESOURCES VolumetricForward
+#pragma USE_RESOURCES VolumetricForwardLights
+
+void main() {
+    uint i, index;
+
+    if (gl_LocalInvocationIndex == 0u) {
+        gs_PointLightCount = 0u;
+        gs_SpotLightCount = 0u;
+        gs_ClusterIndex1D = imageLoad(UniqueClusters, int(gl_WorkGroupID.x)).r;
+        gs_ClusterAABB.Min = ClusterAABBs.Data[gs_ClusterIndex1D].Min;
+        gs_ClusterAABB.Max = ClusterAABBs.Data[gs_ClusterIndex1D].Max;
+    }
+
+    memoryBarrierShared();
+
+    [[unroll]]
+    for (i = gl_LocalInvocationIndex; i < LightCounts.NumPointLights; i += 1024) {
+        [[flatten]]
+        if (PointLights.Data[i].Enabled) {
+            Sphere sphere;
+            sphere.c = PointLights.Data[i].PositionViewSpace.xyz;
+            sphere.r = PointLights.Data[i].Range;
+            [[flatten]]
+            if (SphereInsideAABB(sphere, gs_ClusterAABB)) {
+                uint idx = atomicAdd(gs_PointLightCount, 1);
+                gs_PointLightList[idx] = i;
+            }
+        }
+    }
+
+    [[unroll]]
+    for (i = gl_LocalInvocationIndex; i < LightCounts.NumSpotLights; i += 1024) {
+        [[flatten]]
+        if (SpotLights.Data[i].Enabled) {
+            Sphere sphere;
+            sphere.c = SpotLights.Data[i].PositionViewSpace.xyz;
+            sphere.r = SpotLights.Data[i].Range;
+            [[flatten]]
+            if (SphereInsideAABB(sphere, gs_ClusterAABB)) {
+                uint idx = atomicAdd(gs_SpotLightCount, 1);
+                gs_SpotLightList[idx] = i;
+            }
+        }
+    }
+
+    memoryBarrierShared();
+
+    if (gl_LocalInvocationIndex == 0u) {
+        gs_PointLightStartOffset = imageAtomicAdd(PointLightIndexCounter, 0, gs_PointLightCount);
+        imageStore(PointLightGrid, int(gs_ClusterIndex1D), uvec4(
+            gs_PointLightStartOffset, gs_PointLightCount, 0, 0
+        ));
+        gs_SpotLightStartOffset = imageAtomicAdd(SpotLightIndexCounter, 0, gs_SpotLightCount);
+        imageStore(SpotLightGrid, int(gs_ClusterIndex1D), uvec4(
+            gs_SpotLightStartOffset, gs_SpotLightCount, 0, 0
+        ));
+    }
+
+    memoryBarrierShared();
+
+    for (i = gl_LocalInvocationIndex; i < gs_PointLightCount; i += 1024) {
+        imageStore(PointLightIndexList, int(gs_PointLightStartOffset + i), uvec4(gs_PointLightList[i], 0, 0, 0));
+        imageStore(SpotLightIndexList, int(gs_PointLightStartOffset + i), uvec4(gs_SpotLightList[i], 0, 0, 0));
+    }
+    
+}

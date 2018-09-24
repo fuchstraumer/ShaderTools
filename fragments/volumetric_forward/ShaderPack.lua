@@ -68,8 +68,19 @@ ShaderGroups = {
             "GL_ARB_shading_language_420pack"
         }
     },
-    DepthPrePass = {
+    AssignLightsToClusters = {
         Idx = 5,
+        Shaders = {
+            Compute = "compute/AssignLightsToClusters.comp"
+        },
+        Extensions = {
+            "GL_ARB_separate_shader_objects",
+            "GL_ARB_shading_language_420pack",
+            "GL_EXT_control_flow_attributes"
+        }
+    },
+    DepthPrePass = {
+        Idx = 6,
         Shaders = {
             Vertex = "Default.vert",
             Fragment = "PrePass.frag"
@@ -84,7 +95,7 @@ ShaderGroups = {
         Tags = { "DepthOnly" }
     },
     ClusterSamples = {
-        Idx = 6,
+        Idx = 7,
         Shaders = {
             Vertex = "Default.vert",
             Fragment = "ClusterSamples.frag"
@@ -96,7 +107,7 @@ ShaderGroups = {
         Tags = { "DepthOnlyAsInput" }
     },
     DrawPass = {
-        Idx = 7,
+        Idx = 8,
         Shaders = {
             Vertex = "Default.vert",
             Fragment = "Clustered.frag"

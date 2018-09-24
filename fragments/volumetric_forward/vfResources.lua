@@ -111,37 +111,58 @@ Resources = {
                     ElementType = "AABB",
                     NumElements = dimensions.NumClusters()
                 }, 0 }
-            }
+            },
+            Qualifiers = "restrict readonly",
         },
         ClusterFlags = {
             Type = "StorageTexelBuffer",
             Format = "r8ui",
             Size = dimensions.NumClusters(),
-            Qualifiers = "restrict"
+            Qualifiers = "restrict",
+            PerUsageQualifers = {
+                FindUniqueClusters = "readonly",
+                ClusterSamples = "writeonly"
+            }
         },
         PointLightIndexList = {
             Type = "StorageTexelBuffer",
             Format = "r32ui",
             Size = dimensions.LightIndexListSize(),
-            Qualifiers = "restrict"
+            Qualifiers = "restrict",
+            PerUsageQualifers = {
+                AssignLightsToClusters = "writeonly",
+                Clustered = "readonly"
+            }
         },
         SpotLightIndexList = {
             Type = "StorageTexelBuffer",
             Format = "r32ui",
             Size = dimensions.LightIndexListSize(),
-            Qualifiers = "restrict"
+            Qualifiers = "restrict",
+            PerUsageQualifers = {
+                AssignLightsToClusters = "writeonly",
+                Clustered = "readonly"
+            }
         },
         PointLightGrid = {
             Type = "StorageTexelBuffer",
             Format = "rg32ui",
             Size = dimensions.LightGridSize(),
-            Qualifiers = "restrict"
+            Qualifiers = "restrict",
+            PerUsageQualifers = {
+                AssignLightsToClusters = "writeonly",
+                Clustered = "readonly"
+            }
         },
         SpotLightGrid = {
             Type = "StorageTexelBuffer",
             Format = "rg32ui",
             Size = dimensions.LightGridSize(),
-            Qualifiers = "restrict"
+            Qualifiers = "restrict",
+            PerUsageQualifers = {
+                AssignLightsToClusters = "writeonly",
+                Clustered = "readonly"
+            }
         },
         PointLightIndexCounter = {
             Type = "StorageTexelBuffer",
@@ -165,7 +186,11 @@ Resources = {
             Type = "StorageTexelBuffer",
             Format = "r32ui",
             Size = dimensions.NumClusters(),
-            Qualifiers = "restrict"
+            Qualifiers = "restrict",
+            PerUsageQualifers = {
+                AssignLightsToClusters = "readonly",
+                FindUniqueClusters = "writeonly"
+            }
         }
     },
     VolumetricForwardLights = {
@@ -192,7 +217,8 @@ Resources = {
             PerUsageQualifiers = {
                 Clustered = "readonly",
                 ReduceLightsAABB = "readonly",
-                ComputeMortonCodes = "readonly"
+                ComputeMortonCodes = "readonly",
+                AssignLightsToClusters = "readonly"
             }
         },
         SpotLights = {
@@ -208,7 +234,8 @@ Resources = {
             PerUsageQualifiers = {
                 Clustered = "readonly",
                 ReduceLightsAABB = "readonly",
-                ComputeMortonCodes = "readonly"
+                ComputeMortonCodes = "readonly",
+                AssignLightsToClusters = "readonly"
             }
         },
         DirectionalLights = {
