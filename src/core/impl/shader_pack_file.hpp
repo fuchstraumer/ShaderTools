@@ -25,7 +25,6 @@ namespace st {
         std::unordered_map<std::string, std::map<VkShaderStageFlagBits, std::string>> ShaderGroups;
         std::unordered_map<std::string, std::vector<std::string>> GroupTags;
         std::unordered_map<std::string, std::vector<std::string>> GroupExtensions;
-        std::unordered_map<std::string, bool> optimizations;
         std::unique_ptr<LuaEnvironment> environment;
 
         void parseScript();
@@ -102,13 +101,6 @@ namespace st {
                         extension_strings.emplace_back(ref.cast<std::string>());
                     }
                     GroupExtensions.emplace(group.first, extension_strings);
-                }
-
-                if (group_table.count("DisableOptimization") != 0) {
-                    optimizations.emplace(group.first, group_table.at("DisableOptimizations").cast<bool>());
-                }
-                else {
-                    optimizations.emplace(group.first, true);
                 }
 
             }
