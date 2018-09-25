@@ -77,8 +77,7 @@ ShaderGroups = {
             "GL_ARB_separate_shader_objects",
             "GL_ARB_shading_language_420pack",
             "GL_EXT_control_flow_attributes"
-        },
-        DisableOptimization = true
+        }
     },
     DepthPrePass = {
         Idx = 6,
