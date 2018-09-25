@@ -97,17 +97,42 @@ bool ConeInsidePlane(in Cone cone, in Plane plane) {
 }
 
 bool SphereInsideFrustum(in Sphere sphere, in Frustum frustum, in vec2 depth_range) {
+    vec2 sphere_zz = vec2(sphere.c.z - sphere.r, sphere.c.z + sphere.r);
     if (sphere.c.z - sphere.r > depth_range.x || sphere.c.z + sphere.r < depth_range.y) {
         return false;
     }
 
-    for (int i = 0; i < 4; ++i) {
-        if (SphereInsidePlane(sphere, frustum.planes[i])) {
-            return false;
-        }
-    }
+    bvec4 sphere_inside_planes = bvec4(
+        SphereInsidePlane(sphere, frustum.planes[0]),
+        SphereInsidePlane(sphere, frustum.planes[1]),
+        SphereInsidePlane(sphere, frustum.planes[2]),
+        SphereInsidePlane(sphere, frustum.planes[3])
+    );
 
-    return true;
+    return any(sphere_inside_planes) ? false : true;
+}
+
+vec3 when_lt(in vec3 x, in vec3 y) {
+    return max(sign(y - x), vec3(0.0f));
+}
+
+vec3 when_gt(in vec3 x, in vec3 y) {
+    return max(sign(x - y), vec3(0.0f));
+}
+
+vec3 when_ge(in vec3 x, in vec3 y) {
+    return 1.0f - when_lt(x, y);
+}
+
+vec3 when_le(in vec3 x, in vec3 y) {
+    return 1.0f - when_gt(x, y);
+}
+
+bool SphereInsideAABB_Fast(in Sphere sphere, in AABB b) {
+    vec3 result = vec3(0.0f);
+    result += when_lt(sphere.c, b.Min.xyz) * (sphere.c - b.Min.xyz) * (sphere.c - b.Min.xyz);
+    result += when_gt(sphere.c, b.Max.xyz) * (sphere.c - b.Max.xyz) * (sphere.c - b.Max.xyz);
+    return (result.x + result.y + result.z) <= (sphere.r * sphere.r);
 }
 
 bool SphereInsideAABB(in Sphere sphere, in AABB b) {
@@ -123,10 +148,8 @@ bool SphereInsideAABB(in Sphere sphere, in AABB b) {
     return (result <= sphere.r * sphere.r);
 }
 
-bool AABBIntersectAABB(AABB a, AABB b) {
-    bvec4 result0 = greaterThan(a.Max,b.Min);
-    bvec4 result1 = lessThan(a.Min,b.Max);
-    return all(result0) && all(result1);
+bool AABBIntersectAABB(in AABB a, in AABB b) {
+    return all(greaterThanEqual(a.Max,b.Min)) && all(lessThanEqual(a.Min,b.Max));
 }
 
 bool ConeInsideFrustum(in Cone cone, in Frustum frustum, in vec2 depth_range) {
