@@ -75,6 +75,13 @@ vec4 ClipToView(in vec4 clip_pos, in mat4 projection_matrix) {
     return view;
 }
 
+vec4 ScreenToView(vec4 screen, in vec2 screen_dim, in mat4 projection_matrix) {
+    vec2 tex_coord = screen.xy / screen_dim;
+    vec4 clip = vec4(vec2(tex_coord.x, 1.0f - tex_coord.y) * 2.0f - 1.0f, screen.z, screen.w);
+    return ClipToView(clip, projection_matrix);
+}
+
+
 Plane ComputePlane(in vec3 p0, in vec3 p1, in vec3 p2) {
     Plane result;
     result.N = normalize(cross(p1 - p0, p2 - p0));

@@ -99,7 +99,8 @@ Resources = {
                 ViewNear = { "float", 1 },
                 ScreenSize = { "uvec2", 2 },
                 Near = { "float", 3 },
-                LogGridDimY = { "float", 4 }
+                LogGridDimY = { "float", 4 },
+                NearK = { "float", 5 }
             },
             Qualifiers = "restrict readonly"
         },
@@ -112,14 +113,17 @@ Resources = {
                     NumElements = dimensions.NumClusters()
                 }, 0 }
             },
-            Qualifiers = "restrict readonly",
+            Qualifiers = "restrict",
+            PerUsageQualifiers = {
+                AssignLightsToClustersBVH = "readonly"
+            }
         },
         ClusterFlags = {
             Type = "StorageTexelBuffer",
             Format = "r8ui",
             Size = dimensions.NumClusters(),
             Qualifiers = "restrict",
-            PerUsageQualifers = {
+            PerUsageQualifiers = {
                 FindUniqueClusters = "readonly",
                 ClusterSamples = "writeonly"
             }
@@ -129,7 +133,7 @@ Resources = {
             Format = "r32ui",
             Size = dimensions.LightIndexListSize(),
             Qualifiers = "restrict",
-            PerUsageQualifers = {
+            PerUsageQualifiers = {
                 AssignLightsToClustersBVH = "writeonly",
                 Clustered = "readonly"
             }
@@ -139,7 +143,7 @@ Resources = {
             Format = "r32ui",
             Size = dimensions.LightIndexListSize(),
             Qualifiers = "restrict",
-            PerUsageQualifers = {
+            PerUsageQualifiers = {
                 AssignLightsToClustersBVH = "writeonly",
                 Clustered = "readonly"
             }
@@ -149,7 +153,7 @@ Resources = {
             Format = "rg32ui",
             Size = dimensions.LightGridSize(),
             Qualifiers = "restrict",
-            PerUsageQualifers = {
+            PerUsageQualifiers = {
                 AssignLightsToClustersBVH = "writeonly",
                 Clustered = "readonly"
             }
@@ -159,8 +163,8 @@ Resources = {
             Format = "rg32ui",
             Size = dimensions.LightGridSize(),
             Qualifiers = "restrict",
-            PerUsageQualifers = {
-                AssignLightsToClustersBVHBVH = "writeonly",
+            PerUsageQualifiers = {
+                AssignLightsToClustersBVH = "writeonly",
                 Clustered = "readonly"
             }
         },
@@ -180,15 +184,18 @@ Resources = {
             Type = "StorageTexelBuffer",
             Format = "r32ui",
             Size = 1,
-            Qualifiers = "restrict"
+            Qualifiers = "restrict",
+            PerUsageQualifiers = {
+                UpdateClusterIndirectArgs = "readonly"
+            }
         },
         UniqueClusters = {
             Type = "StorageTexelBuffer",
             Format = "r32ui",
             Size = dimensions.NumClusters(),
             Qualifiers = "restrict",
-            PerUsageQualifers = {
-                AssignLightsToClustersBVHBVH = "readonly",
+            PerUsageQualifiers = {
+                AssignLightsToClustersBVH = "readonly",
                 FindUniqueClusters = "writeonly"
             }
         }
@@ -211,7 +218,7 @@ Resources = {
                     NumElements = dimensions.NumPointLights()
                 }, 0 }
             },
-            -- PerUsageQualifers: qualifiers to apply only to single shaders in the pack
+            -- PerUsageQualifiers: qualifiers to apply only to single shaders in the pack
             -- Other qualifiers are applied pack-wide
             Qualifiers = "restrict",
             PerUsageQualifiers = {
@@ -297,7 +304,7 @@ Resources = {
                 }, 0 }
             },
             Qualifiers = "restrict",
-            PerUsageQualifers = {
+            PerUsageQualifiers = {
                 ComputeMortonCodes = "readonly"
             }
         },
@@ -326,6 +333,42 @@ Resources = {
             Qualifiers = "restrict"
         }
     },
+    MergeSortResources = {
+        InputKeys = {
+            Type = "StorageTexelBuffer",
+            Format = "r32ui",
+            Size = 8 * 256,
+            Qualifiers = "restrict readonly",
+            Tags = { "DoNotCreate" }
+        },
+        InputValues = {
+            Type = "StorageTexelBuffer",
+            Format = "r32ui",
+            Size = 8 * 256,
+            Qualifiers = "restrict readonly",
+            Tags = { "DoNotCreate" }
+        },
+        OutputKeys = {
+            Type = "StorageTexelBuffer",
+            Format = "r32ui",
+            Size = 8 * 256,
+            Qualifiers = "restrict writeonly",
+            Tags = { "DoNotCreate" }
+        },
+        OutputValues = {
+            Type = "StorageTexelBuffer",
+            Format = "r32ui",
+            Size = 8 * 256,
+            Qualifiers = "restrict writeonly",
+            Tags = { "DoNotCreate" }
+        }, 
+        MergePathPartitions = {
+            Type = "StorageTexelBuffer",
+            Format = "r32i",
+            Size = dimensions.MaxMergePathPartitions(),
+            Qualifiers = "restrict"
+        }
+    },
     BVHResources = {
         BVHParams = {
             Type = "UniformBuffer",
@@ -344,7 +387,10 @@ Resources = {
                     NumElements = dimensions.NumPointLights()
                 }, 0 }
             },
-            Qualifiers = "restrict"
+            Qualifiers = "restrict",
+            PerUsageQualifiers = {
+                AssignLightsToClustersBVH = "readonly"
+            }
         },
         SpotLightBVH = {
             Type = "StorageBuffer",
@@ -355,7 +401,10 @@ Resources = {
                     NumElements = dimensions.NumSpotLights()
                 }, 0 }
             },
-            Qualifiers = "restrict"
+            Qualifiers = "restrict",
+            PerUsageQualifiers = {
+                AssignLightsToClustersBVH = "readonly"
+            }
         }
     }
 }

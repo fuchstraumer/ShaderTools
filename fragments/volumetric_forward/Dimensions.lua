@@ -2,12 +2,26 @@ local dimensions = {
     LightGridBlockSize = 32;
     ClusterGridBlockSize = 64;
     AverageLightsPerTile = 100;
+    SortNumThreadsPerThreadGroup = 256;
+    SortElementsPerThread = 8;
+    MaxSpotLights = 4096;
+    MaxPointLights = 4096;
+    NearK = 0.0;
 };
 
-function dimensions.ClusterDimensions()
+function dimensions.get_sD()
     cluster_x = math.ceil(GetWindowX() / dimensions.ClusterGridBlockSize);
     cluster_y = math.ceil(GetWindowY() / dimensions.ClusterGridBlockSize);
-    s_d = 2.0 * math.tan(math.rad(GetFieldOfViewY()) * 0.50) / cluster_y;
+    return 2.0 * math.tan(math.rad(GetFieldOfViewY()) * 0.50) / cluster_y;
+end
+
+function dimensions.SetNearK()
+    s_d = dimensions.get_sD();
+    dimensions.NearK = 1.0 + s_d;
+end
+
+function dimensions.ClusterDimensions()
+    s_d = dimensions.get_sD();
     log_dim_y = 1.0 / math.log(1.0 + s_d);
     log_depth = math.abs(math.log(GetZNear() / GetZFar()));
     cluster_z = math.floor(log_depth * log_dim_y);
@@ -35,6 +49,14 @@ end
 function dimensions.LightIndexListSize()
     tx, ty, tz = dimensions.NumThreads();
     return tx * ty * tz * dimensions.AverageLightsPerTile;
+end
+
+function dimensions.MaxMergePathPartitions()
+    num_chunks = math.ceil(dimensions.MaxPointLights / dimensions.SortNumThreadsPerThreadGroup);
+    max_sort_groups = num_chunks / 2;
+    merge_path_partitions = math.ceil(dimensions.SortNumThreadsPerThreadGroup * 2) / 
+        (dimensions.SortElementsPerThread * dimensions.SortNumThreadsPerThreadGroup) + 1;
+    return merge_path_partitions * max_sort_groups;
 end
 
 function dimensions.LightGridSize()

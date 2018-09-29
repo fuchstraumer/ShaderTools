@@ -1,65 +1,8 @@
 PackName = "VolumetricForwardCore"
 ResourceFileName = "vfResources.lua"
 ShaderGroups = {
-    --[[
-    AssignLightsToClusters = {
-        Idx = 0,
-        Shaders = { Compute = "compute/AssignLightsToClustersBVH.comp" },
-
-    },
-    BuildBVH = {
-        Idx = 1,
-        Shaders = {
-            Compute = "compute/BuildBVH.comp"
-        },
-        Extensions = {
-            "GL_ARB_separate_shader_objects",
-            "GL_ARB_shading_language_420pack"
-        }
-    },
-    ]]
-    ComputeMortonCodes = {
-        Idx = 0,
-        Shaders = {
-            Compute = "compute/ComputeMortonCodes.comp"
-        },
-        Extensions = {
-            "GL_ARB_separate_shader_objects",
-            "GL_ARB_shading_language_420pack"
-        }
-    },
-    FindUniqueClusters = {
-        Idx = 1,
-        Shaders = {
-            Compute = "compute/FindUniqueClusters.comp"
-        },
-        Extensions = {
-            "GL_ARB_separate_shader_objects",
-            "GL_ARB_shading_language_420pack"
-        }
-    },
-    ReduceLights = {
-        Idx = 2,
-        Shaders = {
-            Compute = "compute/ReduceLightsAABB.comp"
-        },
-        Extensions = {
-            "GL_ARB_separate_shader_objects",
-            "GL_ARB_shading_language_420pack"
-        }
-    },
-    UpdateClusterIndirectArgs = {
-        Idx = 3,
-        Shaders = {
-            Compute = "compute/UpdateClusterIndirectArgs.comp"
-        },
-        Extensions = {
-            "GL_ARB_separate_shader_objects",
-            "GL_ARB_shading_language_420pack"
-        }
-    },
     UpdateLights = {
-        Idx = 4,
+        Idx = 0,
         Shaders = {
             Compute = "compute/UpdateLights.comp"
         },
@@ -68,15 +11,46 @@ ShaderGroups = {
             "GL_ARB_shading_language_420pack"
         }
     },
-    AssignLightsToClusters = {
-        Idx = 5,
+    ReduceLights = {
+        Idx = 1,
         Shaders = {
-            Compute = "compute/AssignLightsToClustersBVH.comp"
+            Compute = "compute/ReduceLightsAABB.comp"
         },
         Extensions = {
             "GL_ARB_separate_shader_objects",
-            "GL_ARB_shading_language_420pack",
-            "GL_EXT_control_flow_attributes"
+            "GL_ARB_shading_language_420pack"
+        }
+    },
+    ComputeMortonCodes = {
+        Idx = 2,
+        Shaders = {
+            Compute = "compute/ComputeMortonCodes.comp"
+        },
+        Extensions = {
+            "GL_ARB_separate_shader_objects",
+            "GL_ARB_shading_language_420pack"
+        }
+    },
+    RadixSort = {
+        Idx = 3,
+        Shaders = {
+            Compute = "compute/RadixSort.comp"
+        }
+    },
+    MergeSort = {
+        Idx = 4,
+        Shaders = {
+            Compute = "compute/MergeSort.comp"
+        }
+    },
+    BuildBVH = {
+        Idx = 5,
+        Shaders = {
+            Compute = "compute/BuildBVH.comp"
+        },
+        Extensions = {
+            "GL_ARB_separate_shader_objects",
+            "GL_ARB_shading_language_420pack"
         }
     },
     DepthPrePass = {
@@ -106,8 +80,39 @@ ShaderGroups = {
         }, 
         Tags = { "DepthOnlyAsInput" }
     },
-    DrawPass = {
+    FindUniqueClusters = {
         Idx = 8,
+        Shaders = {
+            Compute = "compute/FindUniqueClusters.comp"
+        },
+        Extensions = {
+            "GL_ARB_separate_shader_objects",
+            "GL_ARB_shading_language_420pack"
+        }
+    },
+    UpdateClusterIndirectArgs = {
+        Idx = 9,
+        Shaders = {
+            Compute = "compute/UpdateClusterIndirectArgs.comp"
+        },
+        Extensions = {
+            "GL_ARB_separate_shader_objects",
+            "GL_ARB_shading_language_420pack"
+        }
+    },
+    AssignLightsToClusters = {
+        Idx = 10,
+        Shaders = {
+            Compute = "compute/AssignLightsToClustersBVH.comp"
+        },
+        Extensions = {
+            "GL_ARB_separate_shader_objects",
+            "GL_ARB_shading_language_420pack",
+            "GL_EXT_control_flow_attributes"
+        }
+    },
+    DrawPass = {
+        Idx = 11,
         Shaders = {
             Vertex = "Default.vert",
             Fragment = "Clustered.frag"
@@ -118,5 +123,13 @@ ShaderGroups = {
         }, 
         -- Draw pass reads depth but has no ability to write to it
         Tags = { "DepthOnlyAsInput" }
+    },
+    -- Run before everything else, but only once per window resizing
+    -- So I'm putting it down here
+    ComputeClusterAABBs = {
+        Idx = 12,
+        Shaders = {
+            Compute = "compute/ComputeClusterAABBs.comp"
+        }
     }
 }
