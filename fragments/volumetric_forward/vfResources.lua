@@ -21,8 +21,12 @@ Resources = {
             Members = {
                 model = { "mat4", 0 },
                 view = { "mat4", 1 },
-                projection = { "mat4", 2 },
-                normal = { "mat4", 3 }
+                inverseView = { "mat4", 2 },
+                projection = { "mat4", 3 },
+                modelView = { "mat4", 4 },
+                modelViewProjection = { "mat4", 5 },
+                inverseTransposeModel = { "mat4", 6 },
+                inverseTransposeModelView = { "mat4", 7 }
             }
         },
         globals = {
@@ -98,9 +102,8 @@ Resources = {
                 GridDim = { "uvec3", 0 },
                 ViewNear = { "float", 1 },
                 ScreenSize = { "uvec2", 2 },
-                Near = { "float", 3 },
-                LogGridDimY = { "float", 4 },
-                NearK = { "float", 5 }
+                NearK = { "float", 3 },
+                LogGridDimY = { "float", 4 }
             },
             Qualifiers = "restrict readonly"
         },
@@ -278,7 +281,9 @@ Resources = {
             Type = "UniformBuffer",
             Members = {
                 NumThreadGroups = { "uvec3", 0 },
-                NumThreads = { "uvec3", 1 }
+                Padding0 = { "uint", 1 },
+                NumThreads = { "uvec3", 2 },
+                Padding1 = { "uint", 3 }
             }
         },
         ReductionParams = {

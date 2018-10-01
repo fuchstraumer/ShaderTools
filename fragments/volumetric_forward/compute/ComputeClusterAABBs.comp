@@ -19,10 +19,10 @@ void main() {
 
     Plane near_plane;
     near_plane.N = vec3(0.0f, 0.0f, 1.0f);
-    near_plane.d = -ClusterData.Near * pow(abs(ClusterData.NearK), cluster_3d.z);
+    near_plane.d = -ClusterData.ViewNear * pow(abs(ClusterData.NearK), cluster_3d.z);
     Plane far_plane;
     far_plane.N = vec3(0.0f, 0.0f, 1.0f);
-    far_plane.d = -ClusterData.Near * pow(abs(ClusterData.NearK), cluster_3d.z + 1);
+    far_plane.d = -ClusterData.ViewNear * pow(abs(ClusterData.NearK), cluster_3d.z + 1);
 
     vec4 p_min = vec4(vec2(cluster_3d.xy) * ClusterData.ScreenSize.xy, 1.0f, 1.0f);
     vec4 p_max = vec4(vec2(cluster_3d.xy + 1) * ClusterData.ScreenSize.xy, 1.0f, 1.0f);
