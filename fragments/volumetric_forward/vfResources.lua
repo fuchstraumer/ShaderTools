@@ -411,5 +411,13 @@ Resources = {
                 AssignLightsToClustersBVH = "readonly"
             }
         }
+    },
+    Debug = {
+        ClusterColors = {
+            Type = "UniformTexelBuffer",
+            Type = "rgba8",
+            Size = dimensions.NumClusters(),
+            Qualifiers = "restrict readonly"
+        }
     }
 }
