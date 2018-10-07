@@ -90,6 +90,17 @@ namespace st {
         return impl->reflector->GetStagePushConstantInfo(stage);
     }
 
+    void Shader::GetShaderStages(size_t * num_stages, ShaderStage * stages) const {
+        *num_stages = impl->stHandles.size();
+        if (stages != nullptr) {
+            std::vector<ShaderStage> stages_buffer;
+            for (const auto& stage : impl->stHandles) {
+                stages_buffer.emplace_back(stage);
+            }
+            std::copy(std::begin(stages_buffer), std::end(stages_buffer), stages);
+        }
+    }
+
     void Shader::GetShaderBinary(const ShaderStage & handle, size_t * binary_size, uint32_t * dest_binary_ptr) const {
         auto& FileTracker = ShaderFileTracker::GetFileTracker();
         auto iter = impl->stHandles.find(handle);
