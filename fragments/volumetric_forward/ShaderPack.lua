@@ -131,5 +131,13 @@ ShaderGroups = {
         Shaders = {
             Compute = "compute/ComputeClusterAABBs.comp"
         }
+    },
+    DebugClusters = {
+        Idx = 13,
+        Shaders = {
+            Vertex = "debug/DebugClusters.vert",
+            Geometry = "debug/DebugClusters.geom",
+            Fragment = "debug/DebugClusters.frag"
+        }
     }
 }
