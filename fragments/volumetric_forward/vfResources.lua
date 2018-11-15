@@ -412,6 +412,7 @@ Resources = {
             }
         }
     },
+    --[[
     Debug = {
         ClusterColors = {
             Type = "UniformTexelBuffer",
@@ -420,4 +421,5 @@ Resources = {
             Qualifiers = "restrict readonly"
         }
     }
+    ]]
 }
