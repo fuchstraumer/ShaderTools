@@ -10,9 +10,9 @@ layout (location = 2) out vec4 vColor;
 #pragma USE_RESOURCES Debug
 
 void main() {
-    uint cluster_index = imageLoad(UniqueClusters, int(gl_VertexID));
+    uint cluster_index = imageLoad(UniqueClusters, int(gl_VertexIndex)).r;
     vMin = ClusterAABBs.Data[cluster_index].Min;
     vMax = ClusterAABBs.Data[cluster_index].Max;
-    vec4 out_color = imageLoad(ClusterColors, cluster_index);
+    vec4 out_color = imageLoad(ClusterColors, int(cluster_index));
     vColor = out_color;
 }
