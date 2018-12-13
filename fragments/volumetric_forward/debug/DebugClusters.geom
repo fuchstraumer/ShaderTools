@@ -24,7 +24,7 @@ const vec4 base_colors[8] = {
     vec4( 1.01, 1.0f, 1.0f, 1.0f )        // White
 };
 
-const uint Index[18] = {
+const uint indices[18] = {
     0, 1, 2,
     3, 6, 7,
     4, 5, -1,
