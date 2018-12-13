@@ -580,11 +580,8 @@ namespace st {
     void ShaderGeneratorImpl::checkInterfaceOverrides(std::string& body_src_str) {
         std::smatch match;
         if (std::regex_search(body_src_str, match, interface_override)) {
-            auto iter = std::find_if(fragments.begin(), fragments.end(), [](const shaderFragment& fragment) { return fragment.Type == fragment_type::InterfaceBlock; });
-            if (iter != fragments.cend()) {
-                // Remove pre-existing interface block, use one defined inline in source string.
-                fragments.erase(iter);
-            }
+            fragments.erase(shaderFragment{ fragment_type::InputAttribute });
+            fragments.erase(shaderFragment{ fragment_type::OutputAttribute });
             body_src_str.erase(body_src_str.begin() + match.position(), body_src_str.begin() + match.position() + match.length());
             if (!std::regex_search(body_src_str, match, end_interface_override)) {
                 throw std::runtime_error("Found opening of an override interface block, but couldn't find closing #pragma.");

@@ -673,7 +673,7 @@ namespace st {
             if (iter != f_tracker.ObjectSizes.cend()) {
                 offset_total += static_cast<uint32_t>(iter->second * num_elements);
             }
-            std::string array_expr_str = "[" + std::to_string(num_elements) + "]";
+            std::string array_expr_str = "[]";
             object.Name = strdup(std::string(name + array_expr_str).c_str());
             object.Type = strdup(element_type.c_str());
             

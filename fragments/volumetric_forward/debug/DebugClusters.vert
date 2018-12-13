@@ -5,9 +5,9 @@ layout (location = 1) out vec4 vMax;
 layout (location = 2) out vec4 vColor;
 #pragma END_INTERFACE_OVERRIDE
 
-#pragma USE_RESOURCES GLOBAL_RESOURCES
-#pragma USE_RESOURCES VOLUMETRIC_FORWARD
-#pragma USE_RESOURCES DEBUG
+#pragma USE_RESOURCES GlobalResources
+#pragma USE_RESOURCES VolumetricForward
+#pragma USE_RESOURCES Debug
 
 void main() {
     uint cluster_index = imageLoad(UniqueClusters, int(gl_VertexID));

@@ -132,7 +132,6 @@ ShaderGroups = {
             Compute = "compute/ComputeClusterAABBs.comp"
         }
     },
-    --[[
     DebugClusters = {
         Idx = 13,
         Shaders = {
@@ -141,5 +140,4 @@ ShaderGroups = {
             Fragment = "debug/DebugClusters.frag"
         }
     }
-    ]]
 }

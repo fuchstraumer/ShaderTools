@@ -7,7 +7,7 @@ layout (location = 2) in vec4 vColor;
 layout (location = 0) out vec4 gColor;
 #pragma END_INTERFACE_OVERRIDE
 
-#pragma USE_RESOURCES GLOBAL_RESOURCES
+#pragma USE_RESOURCES GlobalResources
 
 out gl_PerVertex {
     vec4 gl_Position;
