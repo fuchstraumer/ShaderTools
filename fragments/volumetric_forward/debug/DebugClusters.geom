@@ -14,14 +14,14 @@ out gl_PerVertex {
 };
 
 const vec4 base_colors[8] = {
-    float4( 0.0f, 0.0f, 0.0f, 1.0f ),       // Black
-    float4( 0.0f, 0.0f, 1.0f, 1.0f ),       // Blue
-    float4( 0.0f, 1.0f, 0.0f, 1.0f ),       // Green
-    float4( 0.0f, 1.0f, 1.0f, 1.0f ),       // Cyan
-    float4( 1.0f, 0.0f, 0.0f, 1.0f ),       // Red
-    float4( 1.0f, 0.0f, 1.0f, 1.0f ),       // Magenta
-    float4( 1.0f, 1.0f, 0.0f, 1.0f ),       // Yellow
-    float4( 1.01, 1.0f, 1.0f, 1.0f )        // White
+    vec4( 0.0f, 0.0f, 0.0f, 1.0f ),       // Black
+    vec4( 0.0f, 0.0f, 1.0f, 1.0f ),       // Blue
+    vec4( 0.0f, 1.0f, 0.0f, 1.0f ),       // Green
+    vec4( 0.0f, 1.0f, 1.0f, 1.0f ),       // Cyan
+    vec4( 1.0f, 0.0f, 0.0f, 1.0f ),       // Red
+    vec4( 1.0f, 0.0f, 1.0f, 1.0f ),       // Magenta
+    vec4( 1.0f, 1.0f, 0.0f, 1.0f ),       // Yellow
+    vec4( 1.01, 1.0f, 1.0f, 1.0f )        // White
 };
 
 const uint Index[18] = {
