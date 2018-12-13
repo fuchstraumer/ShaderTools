@@ -1,9 +1,9 @@
 layout (points) in;
 layout (triangle_strip, max_vertices = 16) out;
 #pragma INTERFACE_OVERRIDE
-layout (location = 0) in vec4 vMin;
-layout (location = 1) in vec4 vMax;
-layout (location = 2) in vec4 vColor;
+layout (location = 0) in vec4 vMin[1];
+layout (location = 1) in vec4 vMax[1];
+layout (location = 2) in vec4 vColor[1];
 layout (location = 0) out vec4 gColor;
 #pragma END_INTERFACE_OVERRIDE
 
@@ -37,14 +37,14 @@ void main() {
 
     // AABB vertices
     const vec4 Pos[8] = {
-        vec4( vMin.x, vMin.y, vMin.z, 1.0f ),    // 0
-        vec4( vMin.x, vMin.y, vMax.z, 1.0f ),    // 1
-        vec4( vMin.x, vMax.y, vMin.z, 1.0f ),    // 2
-        vec4( vMin.x, vMax.y, vMax.z, 1.0f ),    // 3
-        vec4( vMax.x, vMin.y, vMin.z, 1.0f ),    // 4
-        vec4( vMax.x, vMin.y, vMax.z, 1.0f ),    // 5
-        vec4( vMax.x, vMax.y, vMin.z, 1.0f ),    // 6
-        vec4( vMax.x, vMax.y, vMax.z, 1.0f )     // 7
+        vec4( vMin[0].x, vMin[0].y, vMin[0].z, 1.0f ),    // 0
+        vec4( vMin[0].x, vMin[0].y, vMax[0].z, 1.0f ),    // 1
+        vec4( vMin[0].x, vMax[0].y, vMin[0].z, 1.0f ),    // 2
+        vec4( vMin[0].x, vMax[0].y, vMax[0].z, 1.0f ),    // 3
+        vec4( vMax[0].x, vMin[0].y, vMin[0].z, 1.0f ),    // 4
+        vec4( vMax[0].x, vMin[0].y, vMax[0].z, 1.0f ),    // 5
+        vec4( vMax[0].x, vMax[0].y, vMin[0].z, 1.0f ),    // 6
+        vec4( vMax[0].x, vMax[0].y, vMax[0].z, 1.0f )     // 7
     };
 
     [[unroll]]
