@@ -4,7 +4,7 @@ layout (location = 0) out vec4 vMin;
 layout (location = 1) out vec4 vMax;
 layout (location = 2) out vec4 vColor;
 #pragma END_INTERFACE_OVERRIDE
-
+#include "Structures.glsl"
 #pragma USE_RESOURCES GlobalResources
 #pragma USE_RESOURCES VolumetricForward
 #pragma USE_RESOURCES Debug
