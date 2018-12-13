@@ -27,7 +27,7 @@ namespace st {
             // MoltenVK cannot yet use the geometry or tesselation shaders.
 #ifndef __APPLE__ 
         case VK_SHADER_STAGE_GEOMETRY_BIT:
-            return shaderc_glsl_default_geometry_shader;
+            return shaderc_glsl_geometry_shader;
         case VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT:
             return shaderc_glsl_tess_control_shader;
         case VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT:
@@ -91,7 +91,11 @@ namespace st {
     void ShaderCompilerImpl::compile(const ShaderStage & handle, const shaderc_shader_kind & kind, const std::string & name, const std::string & src_str) {
         auto& FileTracker = ShaderFileTracker::GetFileTracker();
         shaderc::Compiler compiler;
-        const auto options = getCompilerOptions();
+        auto options = getCompilerOptions();
+
+        if (kind == shaderc_glsl_geometry_shader) {
+            options.SetOptimizationLevel(shaderc_optimization_level_zero);
+        }
 
         shaderc::AssemblyCompilationResult assembly_result = compiler.CompileGlslToSpvAssembly(src_str, kind, name.c_str(), options);
         if (assembly_result.GetCompilationStatus() != shaderc_compilation_status_success) {
