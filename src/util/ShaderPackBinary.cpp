@@ -18,7 +18,7 @@ namespace st {
         std::vector<st::ShaderStage> stages(num_stages, st::ShaderStage("NULL", VK_SHADER_STAGE_ALL));
         src->GetShaderStages(&num_stages, stages.data());
 
-        binary_dst->NumShaderStages = num_stages;
+        binary_dst->NumShaderStages = static_cast<uint32_t>(num_stages);
 
         // can now allocate a bunch of our arrays in the ShaderBinary struct
         binary_dst->StageIDs = new uint64_t[num_stages];
@@ -47,9 +47,9 @@ namespace st {
             binary_dst->LastWriteTimes[i] = uint64_t(file_write_time);
 
             // get lengths of paths and source strings, so we can allocate memory, then write strings
-            binary_dst->PathLengths[i] = stage_path.string().length();
-            binary_dst->SrcStringLengths[i] = ftracker.FullSourceStrings.at(stages[i]).length();
-            binary_dst->BinaryLengths[i] = ftracker.Binaries.at(stages[i]).size();
+            binary_dst->PathLengths[i] = static_cast<uint32_t>(stage_path.string().length());
+            binary_dst->SrcStringLengths[i] = static_cast<uint32_t>(ftracker.FullSourceStrings.at(stages[i]).length());
+            binary_dst->BinaryLengths[i] = static_cast<uint32_t>(ftracker.Binaries.at(stages[i]).size());
 
             total_req_path_length += binary_dst->PathLengths[i] + 1;
             total_req_src_length += binary_dst->SrcStringLengths[i] + 1;
@@ -68,15 +68,15 @@ namespace st {
 
             const std::string path_str = ftracker.BodyPaths.at(stages[i]).string();
             std::memcpy(binary_dst->Paths + current_path_offset, path_str.data(), path_str.length());
-            current_path_offset += path_str.length();
+            current_path_offset += static_cast<uint32_t>(path_str.length());
 
             const std::string& full_src_str = ftracker.FullSourceStrings.at(stages[i]);
             std::memcpy(binary_dst->SourceStrings + current_src_offset, full_src_str.data(), full_src_str.length());
-            current_src_offset += full_src_str.length();
+            current_src_offset += static_cast<uint32_t>(full_src_str.length());
 
             const auto& stage_binary = ftracker.Binaries.at(stages[i]);
             std::memcpy(binary_dst->Binaries + current_binary_offset, stage_binary.data(), stage_binary.size());
-            current_binary_offset += stage_binary.size();
+            current_binary_offset += static_cast<uint32_t>(stage_binary.size());
 
         }
 
