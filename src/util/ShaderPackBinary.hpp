@@ -59,7 +59,7 @@ namespace st {
     void CreateShaderPackBinary(const ShaderPack* src, ShaderPackBinary* binary_dst);
     void DestroyShaderPackBinary(ShaderPackBinary* shader_pack);
     ShaderPackBinary* LoadShaderPackBinary(const char* fname);
-    void SaveBinaryToFile(const char* fname);
+    void SaveBinaryToFile(ShaderPackBinary* binary, const char* fname);
 
 }
 

@@ -1,6 +1,9 @@
 #include "ShaderPackBinary.hpp"
 #include "ShaderFileTracker.hpp"
 #include "core/Shader.hpp"
+#include "core/ShaderPack.hpp"
+#include "../core/impl/ShaderImpl.hpp"
+#include "../core/impl/ShaderPackImpl.hpp"
 #include <vector>
 #include <string>
 
@@ -101,8 +104,33 @@ namespace st {
         delete binary;
     }
 
-    void CreateShaderPackBinary(const ShaderPack * src, ShaderPackBinary * binary_dst)
-    {
+    void CreateShaderPackBinary(const ShaderPack* src, ShaderPackBinary* binary_dst) {
+        const ShaderPackImpl* src_impl = src->impl.get();
+        
+        const fs::path absolute_script_path = fs::absolute(src_impl->workingDir);
+        const std::string absolute_script_path_string = absolute_script_path.string();
+        binary_dst->PackPathLength = absolute_script_path_string.length();
+        binary_dst->PackPath = new char[absolute_script_path_string.length()];
+        std::memcpy(binary_dst->PackPath, absolute_script_path_string.c_str(), absolute_script_path_string.length());
+
+        binary_dst->NumShaders = src_impl->groups.size();
+        binary_dst->Shaders = new ShaderBinary[binary_dst->NumShaders];
+        binary_dst->OffsetsToShaders = new uint64_t[binary_dst->NumShaders];
+
+
+        size_t idx{ 0 };
+        for (const auto& shader_group : src_impl->groups) {
+            const st::Shader* curr_shader = shader_group.second.get();
+            CreateShaderBinary(curr_shader, &binary_dst->Shaders[idx]);
+            ++idx;
+        }
+
+        uint64_t running_offset{ 0 };
+        for (size_t i = 0; i <= idx; ++i) {
+            binary_dst->OffsetsToShaders[i] = running_offset;
+            running_offset += binary_dst->Shaders[i].TotalLength;
+        }
+
     }
 
     void DestroyShaderPackBinary(ShaderPackBinary * shader_pack) {
