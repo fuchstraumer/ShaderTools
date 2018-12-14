@@ -120,11 +120,17 @@ namespace st {
         
         binary_dst->ShaderToolsVersion = SHADER_TOOLS_VERSION;
 
-        const std::string absolute_script_path_string = src_impl->resourceScriptAbsolutePath;
+        const std::string& absolute_script_path_string = src_impl->packScriptPath;
         binary_dst->PackPathLength = static_cast<uint32_t>(absolute_script_path_string.length());
         binary_dst->PackPath = new char[absolute_script_path_string.length() + 1];
         std::memcpy(binary_dst->PackPath, absolute_script_path_string.c_str(), absolute_script_path_string.length());
         binary_dst->PackPath[binary_dst->PackPathLength] = '\0';
+
+        const std::string& canonical_rsrc_script_str = src_impl->resourceScriptPath;
+        binary_dst->ResourceScriptPathLength = static_cast<uint32_t>(canonical_rsrc_script_str.length());
+        binary_dst->ResourceScriptPath = new char[binary_dst->ResourceScriptPathLength + 1];
+        std::memcpy(binary_dst->ResourceScriptPath, canonical_rsrc_script_str.c_str(), canonical_rsrc_script_str.length());
+        binary_dst->ResourceScriptPath[binary_dst->ResourceScriptPathLength] = '\0';
 
         binary_dst->NumShaders = static_cast<uint32_t>(src_impl->groups.size());
         binary_dst->Shaders = new ShaderBinary[binary_dst->NumShaders];

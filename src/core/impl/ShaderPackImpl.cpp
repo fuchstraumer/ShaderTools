@@ -21,7 +21,7 @@ namespace st {
     ShaderPackImpl::ShaderPackImpl(const char * shader_pack_file_path) : filePack(std::make_unique<shader_pack_file_t>(shader_pack_file_path)), workingDir(shader_pack_file_path) {
         namespace fs = std::experimental::filesystem;
         workingDir = fs::canonical(workingDir);
-        resourceScriptAbsolutePath = workingDir.string();
+        packScriptPath = workingDir.string();
         workingDir = workingDir.remove_filename();
         const std::string dir_string = workingDir.parent_path().string();
         createShaders();
@@ -37,6 +37,7 @@ namespace st {
             LOG(ERROR) << "Resource Lua script could not be found using specified path.";
             throw std::runtime_error("Couldn't find resource file using given path.");
         }
+        resourceScriptPath = fs::canonical(resource_path).string();
         const std::string resource_path_str = resource_path.string();
 
         const std::string working_dir_str = workingDir.string();

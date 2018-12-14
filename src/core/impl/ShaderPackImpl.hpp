@@ -26,7 +26,8 @@ namespace st {
         void createSingleGroup(const std::string& name, const std::map<VkShaderStageFlagBits, std::string>& shader_map);
         void setDescriptorTypeCounts() const;
 
-        std::string resourceScriptAbsolutePath;
+        std::string packScriptPath;
+        std::string resourceScriptPath;
         std::unordered_map<std::string, std::unique_ptr<Shader>> groups;
         std::unique_ptr<shader_pack_file_t> filePack;
         std::experimental::filesystem::path workingDir;
