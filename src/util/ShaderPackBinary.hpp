@@ -41,13 +41,16 @@ namespace st {
 
     };
 
+    constexpr static uint32_t SHADER_PACK_BINARY_MAGIC_VALUE{ 0x9db3bb66 };
+
     struct ST_API ShaderPackBinary {
-        uint64_t MagicBits;
-        uint64_t ShaderToolsVersion;
+        uint32_t MagicBits{ SHADER_PACK_BINARY_MAGIC_VALUE };
+        uint32_t ShaderToolsVersion;
+        uint32_t TotalLength;
         uint32_t PackPathLength;
-        char* PackPath;
+        char* PackPath{ nullptr };
         uint32_t ResourceScriptPathLength;
-        char* ResourceScriptPath;
+        char* ResourceScriptPath{ nullptr };
         uint32_t NumShaders;
         // Where ShaderBinary entries begin
         uint64_t* OffsetsToShaders;
@@ -58,8 +61,8 @@ namespace st {
     void ST_API DestroyShaderBinary(ShaderBinary* binary);
     void ST_API CreateShaderPackBinary(const ShaderPack* src, ShaderPackBinary* binary_dst);
     void ST_API DestroyShaderPackBinary(ShaderPackBinary* shader_pack);
-    ShaderPackBinary* LoadShaderPackBinary(const char* fname);
-    void SaveBinaryToFile(ShaderPackBinary* binary, const char* fname);
+    ST_API ShaderPackBinary* LoadShaderPackBinary(const char* fname);
+    void ST_API SaveBinaryToFile(ShaderPackBinary* binary, const char* fname);
 
 }
 

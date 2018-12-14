@@ -6,10 +6,14 @@
 #include "../core/impl/ShaderPackImpl.hpp"
 #include <vector>
 #include <string>
+#include <fstream>
+#include "easyloggingpp/src/easylogging++.h"
 
 namespace st {
 
     namespace fs = std::experimental::filesystem;
+
+    constexpr static uint32_t SHADER_TOOLS_VERSION = VK_MAKE_VERSION(0, 4, 0);
 
     void CreateShaderBinary(const Shader* src, ShaderBinary* binary_dst) {
 
@@ -114,6 +118,8 @@ namespace st {
     void CreateShaderPackBinary(const ShaderPack* src, ShaderPackBinary* binary_dst) {
         const ShaderPackImpl* src_impl = src->impl.get();
         
+        binary_dst->ShaderToolsVersion = SHADER_TOOLS_VERSION;
+
         const std::string absolute_script_path_string = src_impl->resourceScriptAbsolutePath;
         binary_dst->PackPathLength = static_cast<uint32_t>(absolute_script_path_string.length());
         binary_dst->PackPath = new char[absolute_script_path_string.length() + 1];
@@ -123,7 +129,6 @@ namespace st {
         binary_dst->NumShaders = static_cast<uint32_t>(src_impl->groups.size());
         binary_dst->Shaders = new ShaderBinary[binary_dst->NumShaders];
         binary_dst->OffsetsToShaders = new uint64_t[binary_dst->NumShaders];
-
 
         size_t idx{ 0 };
         for (const auto& shader_group : src_impl->groups) {
@@ -138,6 +143,7 @@ namespace st {
             running_offset += binary_dst->Shaders[i].TotalLength;
         }
 
+        binary_dst->TotalLength = static_cast<uint32_t>(running_offset);
     }
 
     void DestroyShaderPackBinary(ShaderPackBinary * shader_pack) {
@@ -148,6 +154,94 @@ namespace st {
         }
         delete[] shader_pack->Shaders;
         delete[] shader_pack->OffsetsToShaders;
+        delete shader_pack;
+    }
+
+    ShaderPackBinary* LoadShaderPackBinary(const char * fname) {
+        return nullptr;
+    }
+
+    void SaveBinaryToFile(ShaderPackBinary * binary, const char * fname) {
+
+        fs::path output_path(fname);
+        if (!fs::exists(output_path.remove_filename())) {
+            // try to create directories
+            LOG(WARNING) << "Requested directory for binarization doesn't exist, creating...";
+            if (!fs::create_directories(output_path.remove_filename())) {
+                LOG(ERROR) << "Cannot create output directories: can't write binarized shader pack!";
+                throw std::runtime_error("Failed to create output directories");
+            }
+        }
+
+        std::ofstream output_stream(output_path, std::ios::binary);
+        if (!output_stream.is_open()) {
+            LOG(ERROR) << "Failed to open output stream for writing binarized shader pack!";
+            throw std::runtime_error("Failed to open output stream.");
+        }
+
+        output_stream << binary->MagicBits;
+        output_stream << binary->ShaderToolsVersion;
+        output_stream << binary->TotalLength;
+
+        output_stream << binary->PackPathLength;
+        if (binary->PackPath) {
+            output_stream << binary->PackPath;
+        }
+
+        output_stream << binary->ResourceScriptPathLength;
+        if (binary->ResourceScriptPath) {
+            output_stream << binary->ResourceScriptPath;
+        }
+
+        output_stream << binary->NumShaders;
+        for (uint32_t i = 0; i < binary->NumShaders; ++i) {
+            output_stream << binary->OffsetsToShaders[i];
+        }
+
+        for (uint32_t i = 0; i < binary->NumShaders; ++i) {
+            const ShaderBinary* curr_shader = &binary->Shaders[i];
+
+            output_stream << curr_shader->ShaderBinaryMagic;
+            output_stream << curr_shader->TotalLength;
+            output_stream << curr_shader->NumShaderStages;
+
+            const uint32_t& stages = curr_shader->NumShaderStages;
+            for (uint32_t j = 0; j < stages; ++j) {
+                output_stream << curr_shader->StageIDs[j];
+            }
+            for (uint32_t j = 0; j < stages; ++j) {
+                output_stream << curr_shader->LastWriteTimes[j];
+            }
+
+            size_t path_length{ 1 };
+            for (uint32_t j = 0; j < stages; ++j) {
+                output_stream << curr_shader->PathLengths[j];
+                path_length += curr_shader->PathLengths[j];
+            }
+            for (size_t j = 0; j < path_length; ++j) {
+                output_stream << curr_shader->Paths[j];
+            }
+
+            size_t str_length{ 1 };
+            for (uint32_t j = 0; j < stages; ++j) {
+                output_stream << curr_shader->SrcStringLengths[j];
+                str_length += curr_shader->SrcStringLengths[j];
+            }
+            for (size_t j = 0; j < str_length; ++j) {
+                output_stream << curr_shader->SourceStrings[j];
+            }
+
+            size_t bin_length{ 0 };
+            for (uint32_t j = 0; j < stages; ++j) {
+                output_stream << curr_shader->BinaryLengths[j];
+                bin_length += curr_shader->BinaryLengths[j];
+            }
+            for (size_t j = 0; j < bin_length; ++j) {
+                output_stream << curr_shader->Binaries[j];
+            }
+        }
+
+        output_stream.close();
     }
 
 }
