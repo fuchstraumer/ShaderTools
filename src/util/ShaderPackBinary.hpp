@@ -48,7 +48,7 @@ namespace st {
         char* PackPath;
         uint32_t ResourceScriptPathLength;
         char* ResourceScriptPath;
-        uint32_t* NumShaders;
+        uint32_t NumShaders;
         // Where ShaderBinary entries begin
         uint64_t* OffsetsToShaders;
         ShaderBinary* Shaders;
@@ -56,8 +56,9 @@ namespace st {
 
     void CreateShaderBinary(const Shader* src, ShaderBinary* binary_dst);
     void DestroyShaderBinary(ShaderBinary* binary);
-    ShaderPackBinary* LoadShaderPackBinary(const char* fname);
+    void CreateShaderPackBinary(const ShaderPack* src, ShaderPackBinary* binary_dst);
     void DestroyShaderPackBinary(ShaderPackBinary* shader_pack);
+    ShaderPackBinary* LoadShaderPackBinary(const char* fname);
     void SaveBinaryToFile(const char* fname);
 
 }

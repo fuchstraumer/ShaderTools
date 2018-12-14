@@ -101,4 +101,19 @@ namespace st {
         delete binary;
     }
 
+    void CreateShaderPackBinary(const ShaderPack * src, ShaderPackBinary * binary_dst)
+    {
+    }
+
+    void DestroyShaderPackBinary(ShaderPackBinary * shader_pack) {
+        delete[] shader_pack->PackPath;
+        delete[] shader_pack->ResourceScriptPath;
+        for (uint32_t i = 0; i < shader_pack->NumShaders; ++i) {
+            DestroyShaderBinary(&shader_pack->Shaders[i]);
+        }
+        delete[] shader_pack->Shaders;
+        delete[] shader_pack->OffsetsToShaders;
+        delete shader_pack;
+    }
+
 }
