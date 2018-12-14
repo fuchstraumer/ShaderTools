@@ -171,6 +171,7 @@ namespace st {
         input_stream.read((char*)&result->ShaderToolsVersion, sizeof(result->ShaderToolsVersion));
         input_stream.read((char*)&result->TotalLength, sizeof(result->TotalLength));
         input_stream.read((char*)&result->PackPathLength, sizeof(result->PackPathLength));
+        result->PackPath = new char[result->PackPathLength + 1];
         input_stream.read((char*)&result->PackPath, sizeof(char) * (result->PackPathLength + 1));
 
         return result;
@@ -190,7 +191,6 @@ namespace st {
         };
 
         output_stream.write((const char*)&binary->MagicBits, sizeof(uint32_t));
-        //output_stream << binary->MagicBits;
         output_stream.write((const char*)&binary->ShaderToolsVersion, sizeof(binary->ShaderToolsVersion));
         output_stream.write((const char*)&binary->TotalLength, sizeof(binary->TotalLength));
 
@@ -214,32 +214,27 @@ namespace st {
             write_fn((void*)&curr_shader->StageIDs, sizeof(uint64_t) * stages);
             write_fn((void*)&curr_shader->LastWriteTimes, sizeof(uint64_t) * stages);
 
+            write_fn((void*)&curr_shader->PathLengths, sizeof(uint32_t) * stages);
             size_t path_length{ 1 };
             for (uint32_t j = 0; j < stages; ++j) {
-                output_stream << curr_shader->PathLengths[j];
                 path_length += curr_shader->PathLengths[j];
             }
-            for (size_t j = 0; j < path_length; ++j) {
-                output_stream << curr_shader->Paths[j];
-            }
+            write_fn((void*)&curr_shader->Paths, sizeof(char) * path_length);
 
+            write_fn((void*)&curr_shader->SrcStringLengths, sizeof(uint32_t) * stages);
             size_t str_length{ 1 };
             for (uint32_t j = 0; j < stages; ++j) {
-                output_stream << curr_shader->SrcStringLengths[j];
                 str_length += curr_shader->SrcStringLengths[j];
             }
-            for (size_t j = 0; j < str_length; ++j) {
-                output_stream << curr_shader->SourceStrings[j];
-            }
+            write_fn((void*)&curr_shader->SourceStrings, sizeof(char) * str_length);
 
+            write_fn((void*)&curr_shader->BinaryLengths, sizeof(uint32_t) * stages);
             size_t bin_length{ 0 };
             for (uint32_t j = 0; j < stages; ++j) {
-                output_stream << curr_shader->BinaryLengths[j];
                 bin_length += curr_shader->BinaryLengths[j];
             }
-            for (size_t j = 0; j < bin_length; ++j) {
-                output_stream << curr_shader->Binaries[j];
-            }
+            write_fn((void*)&curr_shader->Binaries, sizeof(uint32_t) * bin_length);
+
         }
 
         output_stream.close();
