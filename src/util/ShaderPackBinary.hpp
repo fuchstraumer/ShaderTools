@@ -2,8 +2,12 @@
 #ifndef SHADER_PACK_BINARY_FILE_HPP
 #define SHADER_PACK_BINARY_FILE_HPP
 #include <cstdint>
+#include "common/CommonInclude.hpp"
 
 namespace st {
+
+    class Shader;
+    class ShaderPack;
 
     /*
         Single shader binary data.
@@ -16,8 +20,10 @@ namespace st {
         arrays.
     */
 
-    struct ShaderBinary {
-        uint32_t ShaderBinaryMagic;
+    constexpr static uint32_t SHADER_BINARY_MAGIC_VALUE{ 0x70cd20ae };
+
+    struct ST_API ShaderBinary {
+        uint32_t ShaderBinaryMagic{ SHADER_BINARY_MAGIC_VALUE };
         uint64_t TotalLength;
         uint32_t NumShaderStages;
         uint64_t* StageIDs;
@@ -30,7 +36,7 @@ namespace st {
         uint32_t* Binaries;
     };
 
-    struct ShaderPackBinary {
+    struct ST_API ShaderPackBinary {
         uint64_t MagicBits;
         uint64_t ShaderToolsVersion;
         uint32_t PackPathLength;
@@ -43,6 +49,7 @@ namespace st {
         ShaderBinary* Shaders;
     };
 
+    void CreateShaderBinary(const Shader* src, ShaderBinary* binary_dst);
     ShaderPackBinary* LoadShaderPackBinary(const char* fname);
     void DestroyShaderPackBinary(ShaderPackBinary* shader_pack);
     void SaveBinaryToFile(const char* fname);
