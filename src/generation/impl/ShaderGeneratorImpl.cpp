@@ -58,7 +58,7 @@ namespace st {
     }
 
     void ShaderGeneratorImpl::addPreamble(const fs::path& path) {
-        if (fileContents.count(fs::absolute(path)) == 0) {
+        if (fileContents.count(fs::canonical(path)) == 0) {
             std::ifstream file_stream(path);
             if (!file_stream.is_open()) {
                 LOG(ERROR) << "Couldn't find shader preamble file. Workding directory is probably set incorrectly!";
@@ -66,7 +66,7 @@ namespace st {
             }
             std::string preamble{ std::istreambuf_iterator<char>(file_stream), std::istreambuf_iterator<char>() };
 
-            auto fc_iter = fileContents.emplace(fs::absolute(path), preamble);
+            auto fc_iter = fileContents.emplace(fs::canonical(path), preamble);
             if (!fc_iter.second) {
                 LOG(WARNING) << "Failed to emplace loaded source string into fileContents map.";
             }
@@ -79,7 +79,7 @@ namespace st {
 
         }
         else {
-            auto frag_iter = fragments.emplace(shaderFragment{ fragment_type::Preamble, fileContents.at(fs::absolute(path)) });
+            auto frag_iter = fragments.emplace(shaderFragment{ fragment_type::Preamble, fileContents.at(fs::canonical(path)) });
             if (frag_iter == fragments.end()) {
                 throw std::runtime_error("Failed to add preamble to generator's fragments multimap!");
             }
@@ -87,7 +87,7 @@ namespace st {
     }
 
     const std::string& ShaderGeneratorImpl::addFragment(const fs::path& src_path) {
-        fs::path source_file(fs::absolute(src_path));
+        fs::path source_file(fs::canonical(src_path));
 
         if (!fs::exists(source_file)) {
             const std::string exception_str = std::string("Given shader fragment path \"") + source_file.string() + std::string("\" does not exist!");

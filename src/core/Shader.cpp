@@ -49,8 +49,8 @@ namespace st {
         }
         else {
             namespace fs = std::experimental::filesystem;
-            impl->rsrcFile = FileTracker.ResourceScripts.at(fs::path(fs::absolute(fs::path(file_path))).string()).get();
-            impl->resourceScriptPath = fs::absolute(fs::path(file_path));
+            impl->rsrcFile = FileTracker.ResourceScripts.at(fs::path(fs::canonical(fs::path(file_path))).string()).get();
+            impl->resourceScriptPath = fs::canonical(fs::path(file_path));
         }
 
     }

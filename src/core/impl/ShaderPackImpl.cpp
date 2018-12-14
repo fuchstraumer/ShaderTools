@@ -68,7 +68,7 @@ namespace st {
             }
         }
 
-        resource_path = fs::absolute(resource_path);
+        resource_path = fs::canonical(resource_path);
         auto& ftracker = ShaderFileTracker::GetFileTracker();
         rsrcFile = ftracker.ResourceScripts.at(resource_path.string()).get();
     }
