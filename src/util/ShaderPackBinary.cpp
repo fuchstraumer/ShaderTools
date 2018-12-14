@@ -164,15 +164,6 @@ namespace st {
     void SaveBinaryToFile(ShaderPackBinary * binary, const char * fname) {
 
         fs::path output_path(fname);
-        if (!fs::exists(output_path.remove_filename())) {
-            // try to create directories
-            LOG(WARNING) << "Requested directory for binarization doesn't exist, creating...";
-            if (!fs::create_directories(output_path.remove_filename())) {
-                LOG(ERROR) << "Cannot create output directories: can't write binarized shader pack!";
-                throw std::runtime_error("Failed to create output directories");
-            }
-        }
-
         std::ofstream output_stream(output_path, std::ios::binary);
         if (!output_stream.is_open()) {
             LOG(ERROR) << "Failed to open output stream for writing binarized shader pack!";
