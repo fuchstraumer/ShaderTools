@@ -31,7 +31,6 @@ namespace st {
         static ShaderFileTracker& GetFileTracker();
 
         std::experimental::filesystem::path cacheDir{ std::experimental::filesystem::temp_directory_path() };
-        std::unordered_map<ShaderStage, std::experimental::filesystem::file_time_type> LastWriteTimes;
         std::unordered_map<ShaderStage, std::string> ShaderNames;
         std::unordered_map<ShaderStage, std::string> ShaderBodies;
         std::unordered_map<ShaderStage, std::string> RecompiledSourcesFromBinaries;

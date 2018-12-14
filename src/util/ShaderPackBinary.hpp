@@ -54,10 +54,10 @@ namespace st {
         ShaderBinary* Shaders;
     };
 
-    void CreateShaderBinary(const Shader* src, ShaderBinary* binary_dst);
-    void DestroyShaderBinary(ShaderBinary* binary);
-    void CreateShaderPackBinary(const ShaderPack* src, ShaderPackBinary* binary_dst);
-    void DestroyShaderPackBinary(ShaderPackBinary* shader_pack);
+    void ST_API CreateShaderBinary(const Shader* src, ShaderBinary* binary_dst);
+    void ST_API DestroyShaderBinary(ShaderBinary* binary);
+    void ST_API CreateShaderPackBinary(const ShaderPack* src, ShaderPackBinary* binary_dst);
+    void ST_API DestroyShaderPackBinary(ShaderPackBinary* shader_pack);
     ShaderPackBinary* LoadShaderPackBinary(const char* fname);
     void SaveBinaryToFile(ShaderPackBinary* binary, const char* fname);
 
