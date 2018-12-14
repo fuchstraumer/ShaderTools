@@ -31,6 +31,7 @@ namespace st {
 
     private:
         friend struct ShaderFileTracker;
+        friend void CreateShaderPackBinary(const ShaderPack * src, struct ShaderPackBinary* binary_dst);
         std::unique_ptr<ShaderPackImpl> impl;
     };
 
