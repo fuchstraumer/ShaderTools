@@ -158,7 +158,22 @@ namespace st {
     }
 
     ShaderPackBinary* LoadShaderPackBinary(const char * fname) {
-        return nullptr;
+        ShaderPackBinary* result = new ShaderPackBinary;
+
+        std::ifstream input_stream(fname, std::ios::binary | std::ios::ate);
+        size_t total_length = input_stream.tellg();
+        input_stream.seekg(0, std::ios::beg);
+        if (!input_stream.is_open()) {
+            throw std::runtime_error("Failed to open input file for reading!");
+        }
+
+        input_stream.read((char*)&result->MagicBits, sizeof(result->MagicBits));
+        input_stream.read((char*)&result->ShaderToolsVersion, sizeof(result->ShaderToolsVersion));
+        input_stream.read((char*)&result->TotalLength, sizeof(result->TotalLength));
+        input_stream.read((char*)&result->PackPathLength, sizeof(result->PackPathLength));
+        input_stream.read((char*)&result->PackPath, sizeof(char) * (result->PackPathLength + 1));
+
+        return result;
     }
 
     void SaveBinaryToFile(ShaderPackBinary * binary, const char * fname) {
@@ -170,39 +185,34 @@ namespace st {
             throw std::runtime_error("Failed to open output stream.");
         }
 
-        output_stream << binary->MagicBits;
-        output_stream << binary->ShaderToolsVersion;
-        output_stream << binary->TotalLength;
+        auto write_fn = [&output_stream](void* ptr, size_t len) {
+            output_stream.write((const char*)ptr, len);
+        };
 
-        output_stream << binary->PackPathLength;
-        if (binary->PackPath) {
-            output_stream << binary->PackPath;
-        }
+        output_stream.write((const char*)&binary->MagicBits, sizeof(uint32_t));
+        //output_stream << binary->MagicBits;
+        output_stream.write((const char*)&binary->ShaderToolsVersion, sizeof(binary->ShaderToolsVersion));
+        output_stream.write((const char*)&binary->TotalLength, sizeof(binary->TotalLength));
 
-        output_stream << binary->ResourceScriptPathLength;
-        if (binary->ResourceScriptPath) {
-            output_stream << binary->ResourceScriptPath;
-        }
+        write_fn(&binary->PackPathLength, sizeof(binary->PackPathLength));
+        write_fn(&binary->PackPath, sizeof(char) * (binary->PackPathLength + 1));
 
-        output_stream << binary->NumShaders;
-        for (uint32_t i = 0; i < binary->NumShaders; ++i) {
-            output_stream << binary->OffsetsToShaders[i];
-        }
+        write_fn(&binary->ResourceScriptPathLength, sizeof(binary->ResourceScriptPathLength));
+        write_fn(&binary->ResourceScriptPath, sizeof(char) * (binary->ResourceScriptPathLength + 1));
+
+        write_fn(&binary->NumShaders, sizeof(binary->NumShaders));
+        write_fn(&binary->OffsetsToShaders, sizeof(uint64_t) * binary->NumShaders);
 
         for (uint32_t i = 0; i < binary->NumShaders; ++i) {
             const ShaderBinary* curr_shader = &binary->Shaders[i];
 
-            output_stream << curr_shader->ShaderBinaryMagic;
-            output_stream << curr_shader->TotalLength;
-            output_stream << curr_shader->NumShaderStages;
+            write_fn((void*)&curr_shader->ShaderBinaryMagic, sizeof(curr_shader->ShaderBinaryMagic));
+            write_fn((void*)&curr_shader->TotalLength, sizeof(curr_shader->TotalLength));
+            write_fn((void*)&curr_shader->NumShaderStages, sizeof(curr_shader->NumShaderStages));
 
             const uint32_t& stages = curr_shader->NumShaderStages;
-            for (uint32_t j = 0; j < stages; ++j) {
-                output_stream << curr_shader->StageIDs[j];
-            }
-            for (uint32_t j = 0; j < stages; ++j) {
-                output_stream << curr_shader->LastWriteTimes[j];
-            }
+            write_fn((void*)&curr_shader->StageIDs, sizeof(uint64_t) * stages);
+            write_fn((void*)&curr_shader->LastWriteTimes, sizeof(uint64_t) * stages);
 
             size_t path_length{ 1 };
             for (uint32_t j = 0; j < stages; ++j) {

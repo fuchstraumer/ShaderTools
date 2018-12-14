@@ -45,16 +45,16 @@ namespace st {
 
     struct ST_API ShaderPackBinary {
         uint32_t MagicBits{ SHADER_PACK_BINARY_MAGIC_VALUE };
-        uint32_t ShaderToolsVersion;
-        uint32_t TotalLength;
-        uint32_t PackPathLength;
+        uint32_t ShaderToolsVersion{ 0 };
+        uint32_t TotalLength{ 0 };
+        uint32_t PackPathLength{ 0 };
         char* PackPath{ nullptr };
-        uint32_t ResourceScriptPathLength;
+        uint32_t ResourceScriptPathLength{ 0 };
         char* ResourceScriptPath{ nullptr };
-        uint32_t NumShaders;
+        uint32_t NumShaders{ 0 };
         // Where ShaderBinary entries begin
-        uint64_t* OffsetsToShaders;
-        ShaderBinary* Shaders;
+        uint64_t* OffsetsToShaders{ nullptr };
+        ShaderBinary* Shaders{ nullptr };
     };
 
     void ST_API CreateShaderBinary(const Shader* src, ShaderBinary* binary_dst);
