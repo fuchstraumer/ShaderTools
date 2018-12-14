@@ -7,6 +7,7 @@ namespace st {
 
     struct ST_API ShaderStage {
         ShaderStage(const char* shader_name, const VkShaderStageFlagBits stages);
+        ShaderStage(uint64_t id_val) noexcept;
         ShaderStage(const ShaderStage& other) noexcept;
         ShaderStage& operator=(const ShaderStage& other) noexcept;
         ShaderStage(ShaderStage&& other) noexcept;
