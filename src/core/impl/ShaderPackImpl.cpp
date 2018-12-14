@@ -21,6 +21,7 @@ namespace st {
     ShaderPackImpl::ShaderPackImpl(const char * shader_pack_file_path) : filePack(std::make_unique<shader_pack_file_t>(shader_pack_file_path)), workingDir(shader_pack_file_path) {
         namespace fs = std::experimental::filesystem;
         workingDir = fs::absolute(workingDir);
+        resourceScriptAbsolutePath = workingDir.string();
         workingDir = workingDir.remove_filename();
         const std::string dir_string = workingDir.parent_path().string();
         createShaders();

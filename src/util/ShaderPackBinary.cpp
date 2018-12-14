@@ -107,13 +107,13 @@ namespace st {
     void CreateShaderPackBinary(const ShaderPack* src, ShaderPackBinary* binary_dst) {
         const ShaderPackImpl* src_impl = src->impl.get();
         
-        const fs::path absolute_script_path = fs::absolute(src_impl->workingDir);
-        const std::string absolute_script_path_string = absolute_script_path.string();
-        binary_dst->PackPathLength = absolute_script_path_string.length();
-        binary_dst->PackPath = new char[absolute_script_path_string.length()];
+        const std::string absolute_script_path_string = src_impl->resourceScriptAbsolutePath;
+        binary_dst->PackPathLength = static_cast<uint32_t>(absolute_script_path_string.length());
+        binary_dst->PackPath = new char[absolute_script_path_string.length() + 1];
         std::memcpy(binary_dst->PackPath, absolute_script_path_string.c_str(), absolute_script_path_string.length());
+        binary_dst->PackPath[binary_dst->PackPathLength] = '\0';
 
-        binary_dst->NumShaders = src_impl->groups.size();
+        binary_dst->NumShaders = static_cast<uint32_t>(src_impl->groups.size());
         binary_dst->Shaders = new ShaderBinary[binary_dst->NumShaders];
         binary_dst->OffsetsToShaders = new uint64_t[binary_dst->NumShaders];
 
