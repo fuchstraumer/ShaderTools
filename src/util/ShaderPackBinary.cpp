@@ -60,8 +60,10 @@ namespace st {
             total_req_binary_length += binary_dst->BinaryLengths[i];
         }
 
-        binary_dst->Paths = new char[total_req_path_length];
-        binary_dst->SourceStrings = new char[total_req_src_length];
+        binary_dst->Paths = new char[total_req_path_length + 1];
+        binary_dst->Paths[total_req_path_length] = '\0';
+        binary_dst->SourceStrings = new char[total_req_src_length + 1];
+        binary_dst->SourceStrings[total_req_src_length] = '\0';
         binary_dst->Binaries = new uint32_t[total_req_binary_length];
 
         uint32_t current_path_offset{ 0 };
@@ -119,12 +121,14 @@ namespace st {
 
         const std::string& absolute_script_path_string = src_impl->packScriptPath;
         binary_dst->PackPathLength = static_cast<uint32_t>(absolute_script_path_string.length());
-        binary_dst->PackPath = new char[absolute_script_path_string.length()];
+        binary_dst->PackPath = new char[absolute_script_path_string.length() + 1];
+        binary_dst->PackPath[absolute_script_path_string.length()] = '\0';
         std::memcpy(binary_dst->PackPath, absolute_script_path_string.c_str(), absolute_script_path_string.length());
 
         const std::string& canonical_rsrc_script_str = src_impl->resourceScriptPath;
         binary_dst->ResourceScriptPathLength = static_cast<uint32_t>(canonical_rsrc_script_str.length());
-        binary_dst->ResourceScriptPath = new char[binary_dst->ResourceScriptPathLength];
+        binary_dst->ResourceScriptPath = new char[binary_dst->ResourceScriptPathLength + 1];
+        binary_dst->ResourceScriptPath[binary_dst->ResourceScriptPathLength] = '\0';
         std::memcpy(binary_dst->ResourceScriptPath, canonical_rsrc_script_str.c_str(), canonical_rsrc_script_str.length());
 
         binary_dst->NumShaders = static_cast<uint32_t>(src_impl->groups.size());
@@ -155,8 +159,8 @@ namespace st {
     }
 
     void DestroyShaderPackBinary(ShaderPackBinary * shader_pack) {
-        delete[] shader_pack->PackPath;
-        delete[] shader_pack->ResourceScriptPath;
+        delete[] shader_pack->PackPath; shader_pack->PackPath = nullptr;
+        delete[] shader_pack->ResourceScriptPath; shader_pack->PackPath = nullptr;
         for (uint32_t i = 0; i < shader_pack->NumShaders; ++i) {
             CleanupShaderBinaryMembers(&shader_pack->Shaders[i]);
         }
@@ -185,12 +189,12 @@ namespace st {
         input_stream.read((char*)&result->TotalLength, sizeof(result->TotalLength));
 
         input_stream.read((char*)&result->PackPathLength, sizeof(result->PackPathLength));
-        result->PackPath = new char[result->PackPathLength];
-        input_stream.read((char*)&result->PackPath, sizeof(char) * (result->PackPathLength));
+        result->PackPath = new char[result->PackPathLength + 1];
+        input_stream.read((char*)&result->PackPath, sizeof(char) * (result->PackPathLength + 1));
 
         input_stream.read((char*)&result->ResourceScriptPathLength, sizeof(result->ResourceScriptPathLength));
-        result->ResourceScriptPath = new char[result->ResourceScriptPathLength];
-        input_stream.read((char*)&result->ResourceScriptPath, sizeof(char) * (result->ResourceScriptPathLength));
+        result->ResourceScriptPath = new char[result->ResourceScriptPathLength + 1];
+        input_stream.read((char*)&result->ResourceScriptPath, sizeof(char) * (result->ResourceScriptPathLength + 1));
 
         input_stream.read((char*)&result->NumShaders, sizeof(result->NumShaders));
         result->OffsetsToShaders = new uint64_t[result->NumShaders];
@@ -217,7 +221,7 @@ namespace st {
 
             curr_shader->PathLengths = new uint32_t[curr_shader->NumShaderStages];
             input_stream.read((char*)&curr_shader->PathLengths, sizeof(uint32_t) * curr_shader->NumShaderStages);
-            uint32_t total_len{ 0 };
+            uint32_t total_len{ 1 };
             for (uint32_t j = 0; j < curr_shader->NumShaderStages; ++j) {
                 total_len += curr_shader->PathLengths[j];
             }
@@ -226,7 +230,7 @@ namespace st {
 
             curr_shader->SrcStringLengths = new uint32_t[curr_shader->NumShaderStages];
             input_stream.read((char*)&curr_shader->SrcStringLengths, sizeof(uint32_t) * curr_shader->NumShaderStages);
-            total_len = 0;
+            total_len = 1;
             for (uint32_t j = 0; j < curr_shader->NumShaderStages; ++j) {
                 total_len += curr_shader->SrcStringLengths[j];
             }
@@ -265,10 +269,10 @@ namespace st {
         output_stream.write((const char*)&binary->TotalLength, sizeof(binary->TotalLength));
 
         write_fn(&binary->PackPathLength, sizeof(binary->PackPathLength));
-        write_fn(&binary->PackPath, sizeof(char) * (binary->PackPathLength));
+        write_fn(&binary->PackPath, sizeof(char) * (binary->PackPathLength + 1));
 
         write_fn(&binary->ResourceScriptPathLength, sizeof(binary->ResourceScriptPathLength));
-        write_fn(&binary->ResourceScriptPath, sizeof(char) * (binary->ResourceScriptPathLength));
+        write_fn(&binary->ResourceScriptPath, sizeof(char) * (binary->ResourceScriptPathLength + 1));
 
         write_fn(&binary->NumShaders, sizeof(binary->NumShaders));
         write_fn(&binary->OffsetsToShaders, sizeof(uint64_t) * binary->NumShaders);
@@ -285,14 +289,14 @@ namespace st {
             write_fn((void*)&curr_shader->LastWriteTimes, sizeof(uint64_t) * stages);
 
             write_fn((void*)&curr_shader->PathLengths, sizeof(uint32_t) * stages);
-            size_t path_length{ 0 };
+            size_t path_length{ 1 };
             for (uint32_t j = 0; j < stages; ++j) {
                 path_length += curr_shader->PathLengths[j];
             }
             write_fn((void*)&curr_shader->Paths, sizeof(char) * path_length);
 
             write_fn((void*)&curr_shader->SrcStringLengths, sizeof(uint32_t) * stages);
-            size_t str_length{ 0 };
+            size_t str_length{ 1 };
             for (uint32_t j = 0; j < stages; ++j) {
                 str_length += curr_shader->SrcStringLengths[j];
             }
