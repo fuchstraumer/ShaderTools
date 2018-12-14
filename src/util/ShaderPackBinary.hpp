@@ -36,6 +36,11 @@ namespace st {
         uint32_t* Binaries;
     };
 
+    // Need to identify how to store resource metadata
+    struct ST_API ResourceScriptBinary {
+
+    };
+
     struct ST_API ShaderPackBinary {
         uint64_t MagicBits;
         uint64_t ShaderToolsVersion;
@@ -50,6 +55,7 @@ namespace st {
     };
 
     void CreateShaderBinary(const Shader* src, ShaderBinary* binary_dst);
+    void DestroyShaderBinary(ShaderBinary* binary);
     ShaderPackBinary* LoadShaderPackBinary(const char* fname);
     void DestroyShaderPackBinary(ShaderPackBinary* shader_pack);
     void SaveBinaryToFile(const char* fname);
