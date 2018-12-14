@@ -44,9 +44,8 @@ int main(int argc, char* argv[]) {
 
     CreateShaderPackBinary(&pack, binarization_of_pack);
     SaveBinaryToFile(binarization_of_pack, "VolumetricForwardPack.stbin");
-    ShaderPackBinary* reloaded_binarization = LoadShaderPackBinary("VolumetricForwardPack.stbin");
-
     DestroyShaderPackBinary(binarization_of_pack);
+    ShaderPackBinary* reloaded_binarization = LoadShaderPackBinary("VolumetricForwardPack.stbin");
 
     std::cerr << "Tests complete.\n";
     return 0;

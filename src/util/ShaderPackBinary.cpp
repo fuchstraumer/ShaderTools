@@ -144,7 +144,14 @@ namespace st {
             running_offset += binary_dst->Shaders[i].TotalLength;
         }
 
-        binary_dst->TotalLength = static_cast<uint32_t>(running_offset);
+        binary_dst->TotalLength = static_cast<uint32_t>(running_offset); // total size of shader data written
+        binary_dst->TotalLength += binary_dst->NumShaders * sizeof(uint64_t); // shader offsets
+        binary_dst->TotalLength += sizeof(uint32_t); // num shaders
+        binary_dst->TotalLength += sizeof(char) * binary_dst->ResourceScriptPathLength;
+        binary_dst->TotalLength += sizeof(uint32_t); // resource script path length
+        binary_dst->TotalLength += sizeof(char) * binary_dst->PackPathLength;
+        binary_dst->TotalLength += sizeof(uint32_t); // pack path length
+        binary_dst->TotalLength += sizeof(uint32_t) * 3; // first three fields
     }
 
     void DestroyShaderPackBinary(ShaderPackBinary * shader_pack) {
