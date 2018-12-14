@@ -159,15 +159,17 @@ namespace st {
         binary_dst->TotalLength += sizeof(uint32_t) * 3; // first three fields
     }
 
-    void DestroyShaderPackBinary(ShaderPackBinary * shader_pack) {
-        delete[] shader_pack->PackPath; shader_pack->PackPath = nullptr;
-        delete[] shader_pack->ResourceScriptPath; shader_pack->PackPath = nullptr;
+    void DestroyShaderPackBinary(ShaderPackBinary* shader_pack) {
+        delete[] shader_pack->PackPath; 
+        shader_pack->PackPath = nullptr;
+        delete[] shader_pack->ResourceScriptPath; 
+        shader_pack->PackPath = nullptr;
+        delete[] shader_pack->OffsetsToShaders;
         for (uint32_t i = 0; i < shader_pack->NumShaders; ++i) {
             CleanupShaderBinaryMembers(&shader_pack->Shaders[i]);
         }
         delete[] shader_pack->Shaders;
-        delete[] shader_pack->OffsetsToShaders;
-        delete shader_pack;
+        //delete shader_pack;
     }
 
     ShaderPackBinary* LoadShaderPackBinary(const char * fname) {
