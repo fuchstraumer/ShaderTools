@@ -132,8 +132,8 @@ namespace st {
         std::memcpy(binary_dst->ResourceScriptPath, canonical_rsrc_script_str.c_str(), canonical_rsrc_script_str.length());
 
         binary_dst->NumShaders = static_cast<uint32_t>(src_impl->groups.size());
-        binary_dst->Shaders = new ShaderBinary[binary_dst->NumShaders];
         binary_dst->OffsetsToShaders = new uint64_t[binary_dst->NumShaders];
+        binary_dst->Shaders = new ShaderBinary[binary_dst->NumShaders];
 
         size_t idx{ 0 };
         for (const auto& shader_group : src_impl->groups) {
@@ -142,8 +142,9 @@ namespace st {
             ++idx;
         }
 
+
         uint64_t running_offset{ 0 };
-        for (size_t i = 0; i <= idx; ++i) {
+        for (size_t i = 0; i < binary_dst->NumShaders; ++i) {
             binary_dst->OffsetsToShaders[i] = running_offset;
             running_offset += binary_dst->Shaders[i].TotalLength;
         }
