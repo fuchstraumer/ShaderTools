@@ -87,9 +87,9 @@ namespace st {
         binary_dst->TotalLength += sizeof(uint64_t) * num_stages; // stage handles
         binary_dst->TotalLength += sizeof(uint64_t) * num_stages; // last write times
         binary_dst->TotalLength += sizeof(uint32_t) * num_stages; // path length count
-        binary_dst->TotalLength += total_req_path_length * sizeof(char); // path strings
+        binary_dst->TotalLength += (total_req_path_length + 1) * sizeof(char); // path strings
         binary_dst->TotalLength += sizeof(uint32_t) * num_stages; // source string count
-        binary_dst->TotalLength += total_req_src_length * sizeof(char); // source strings
+        binary_dst->TotalLength += (total_req_src_length + 1) * sizeof(char); // source strings
         binary_dst->TotalLength += sizeof(uint32_t) * num_stages; // binary count
         binary_dst->TotalLength += total_req_binary_length * sizeof(uint32_t); // binaries
 
