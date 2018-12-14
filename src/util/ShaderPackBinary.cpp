@@ -95,7 +95,7 @@ namespace st {
 
     }
 
-    void DestroyShaderBinary(ShaderBinary * binary) {
+    void CleanupShaderBinaryMembers(ShaderBinary* binary) {
         delete[] binary->StageIDs;
         delete[] binary->LastWriteTimes;
         delete[] binary->PathLengths;
@@ -104,6 +104,10 @@ namespace st {
         delete[] binary->SourceStrings;
         delete[] binary->BinaryLengths;
         delete[] binary->Binaries;
+    }
+
+    void DestroyShaderBinary(ShaderBinary * binary) {
+        CleanupShaderBinaryMembers(binary);
         delete binary;
     }
 
@@ -140,11 +144,10 @@ namespace st {
         delete[] shader_pack->PackPath;
         delete[] shader_pack->ResourceScriptPath;
         for (uint32_t i = 0; i < shader_pack->NumShaders; ++i) {
-            DestroyShaderBinary(&shader_pack->Shaders[i]);
+            CleanupShaderBinaryMembers(&shader_pack->Shaders[i]);
         }
         delete[] shader_pack->Shaders;
         delete[] shader_pack->OffsetsToShaders;
-        delete shader_pack;
     }
 
 }
