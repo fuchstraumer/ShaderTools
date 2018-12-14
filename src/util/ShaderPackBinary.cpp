@@ -51,13 +51,13 @@ namespace st {
             binary_dst->SrcStringLengths[i] = static_cast<uint32_t>(ftracker.FullSourceStrings.at(stages[i]).length());
             binary_dst->BinaryLengths[i] = static_cast<uint32_t>(ftracker.Binaries.at(stages[i]).size());
 
-            total_req_path_length += binary_dst->PathLengths[i] + 1;
-            total_req_src_length += binary_dst->SrcStringLengths[i] + 1;
+            total_req_path_length += binary_dst->PathLengths[i];
+            total_req_src_length += binary_dst->SrcStringLengths[i];
             total_req_binary_length += binary_dst->BinaryLengths[i];
         }
 
-        binary_dst->Paths = new char[total_req_path_length];
-        binary_dst->SourceStrings = new char[total_req_src_length];
+        binary_dst->Paths = new char[total_req_path_length + 1];
+        binary_dst->SourceStrings = new char[total_req_src_length + 1];
         binary_dst->Binaries = new uint32_t[total_req_binary_length];
 
         uint32_t current_path_offset{ 0 };
@@ -79,6 +79,9 @@ namespace st {
             current_binary_offset += static_cast<uint32_t>(stage_binary.size());
 
         }
+
+        binary_dst->Paths[total_req_path_length] = '\0';
+        binary_dst->SourceStrings[total_req_src_length] = '\0';
 
         binary_dst->TotalLength = sizeof(uint32_t) + sizeof(uint64_t) + sizeof(uint32_t); // magic + length field + num_stages field
         binary_dst->TotalLength += sizeof(uint64_t) * num_stages; // stage handles
