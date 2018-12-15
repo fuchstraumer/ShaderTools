@@ -192,6 +192,20 @@ namespace st {
         }
     }
 
+    size_t Shader::ResourceGroupSetIdx(const char * name) const {
+        auto iter = impl->resourceGroupBindingIndices.find(name);
+        if (iter != std::cend(impl->resourceGroupBindingIndices)) {
+            return iter->second;
+        }
+        else {
+            return std::numeric_limits<size_t>::max();
+        }
+    }
+
+    void Shader::SetResourceGroupIdx(const char * name, size_t idx) {
+        impl->resourceGroupBindingIndices[name] = std::move(idx);
+    }
+
     dll_retrieved_strings_t Shader::GetTags() const {
         dll_retrieved_strings_t results;
         results.SetNumStrings(impl->tags.size());

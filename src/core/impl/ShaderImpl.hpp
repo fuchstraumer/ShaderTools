@@ -39,6 +39,7 @@ namespace st {
         std::unique_ptr<ShaderReflector> reflector{ nullptr };
         ResourceFile* rsrcFile{ nullptr };
         std::vector<std::string> tags;
+        std::unordered_map<std::string, size_t> resourceGroupBindingIndices;
 
         std::experimental::filesystem::path resourceScriptPath;
     };
