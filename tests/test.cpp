@@ -27,6 +27,10 @@ static double fov_y() {
     return 75.0;
 }
 
+void VerifyLoadedPack(st::ShaderPackBinary* bin0, st::ShaderPackBinary* bin1) {
+
+}
+
 int main(int argc, char* argv[]) {
     using namespace st; 
 
@@ -40,12 +44,13 @@ int main(int argc, char* argv[]) {
     
     ShaderPack pack("../fragments/volumetric_forward/ShaderPack.lua");
 
-    ShaderPackBinary* binarization_of_pack = new ShaderPackBinary();
-
-    CreateShaderPackBinary(&pack, binarization_of_pack);
+    ShaderPackBinary* binarization_of_pack = CreateShaderPackBinary(&pack);
     SaveBinaryToFile(binarization_of_pack, "VolumetricForwardPack.stbin");
+
+    ShaderPackBinary* reloaded_pack = LoadShaderPackBinary("VolumetricForwardPack.stbin");
+
     DestroyShaderPackBinary(binarization_of_pack);
-    ShaderPackBinary* reloaded_binarization = LoadShaderPackBinary("VolumetricForwardPack.stbin");
+    DestroyShaderPackBinary(reloaded_pack);
 
     std::cerr << "Tests complete.\n";
     return 0;

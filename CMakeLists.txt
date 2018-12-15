@@ -129,8 +129,13 @@ TARGET_LINK_LIBRARIES(ShaderTools PRIVATE shaderc spirv-cross-core spirv-cross-g
 TARGET_LINK_LIBRARIES(ShaderTools PRIVATE liblua)
 
 TARGET_INCLUDE_DIRECTORIES(ShaderTools PUBLIC  "${CMAKE_CURRENT_SOURCE_DIR}/include" "${Vulkan_INCLUDE_DIRS}")
-TARGET_INCLUDE_DIRECTORIES(ShaderTools PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/third_party/" "${CMAKE_CURRENT_SOURCE_DIR}/ext/include" 
-    "${CMAKE_CURRENT_SOURCE_DIR}/third_party/luajit/src" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/luabridge/Source")
+TARGET_INCLUDE_DIRECTORIES(ShaderTools PRIVATE 
+    "${CMAKE_CURRENT_SOURCE_DIR}/third_party/" 
+    "${CMAKE_CURRENT_SOURCE_DIR}/ext/include" 
+    "${CMAKE_CURRENT_SOURCE_DIR}/third_party/luajit/src" 
+    "${CMAKE_CURRENT_SOURCE_DIR}/third_party/luabridge/Source"
+    "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bitsery/include/"
+)
     
 TARGET_COMPILE_DEFINITIONS(ShaderTools PRIVATE 
     "_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS"
