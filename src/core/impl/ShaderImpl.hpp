@@ -27,6 +27,8 @@ namespace st {
 
         void addShaderStage(const ShaderStage& handle, std::string src_str_path);
 
+        void generateFullShaderSource(const ShaderStage& handle, const std::string& src_path, size_t& dest_src_sz, std::string& src_str);
+
         std::string groupName;
         size_t idx;
         std::vector<const char*> includePaths;
