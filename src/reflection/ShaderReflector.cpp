@@ -80,7 +80,6 @@ namespace st {
             return iter->second;
         }
         else {
-            LOG(ERROR) << "Failed to find PushConstantInfo present in current stage: current stage likely lacks any push constant data.";
             return PushConstantInfo();
         }
     }
