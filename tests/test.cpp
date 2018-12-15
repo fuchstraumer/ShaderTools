@@ -42,14 +42,16 @@ int main(int argc, char* argv[]) {
     callbacks.GetZFar = &z_far;
     callbacks.GetFOVY = &fov_y;
     
-    ShaderPack pack("../fragments/volumetric_forward/ShaderPack.lua");
+    //ShaderPack pack("../fragments/volumetric_forward/ShaderPack.lua");
 
-    ShaderPackBinary* binarization_of_pack = CreateShaderPackBinary(&pack);
-    SaveBinaryToFile(binarization_of_pack, "VolumetricForwardPack.stbin");
+    //ShaderPackBinary* binarization_of_pack = CreateShaderPackBinary(&pack);
+    //SaveBinaryToFile(binarization_of_pack, "VolumetricForwardPack.stbin");
 
     ShaderPackBinary* reloaded_pack = LoadShaderPackBinary("VolumetricForwardPack.stbin");
 
-    DestroyShaderPackBinary(binarization_of_pack);
+    ShaderPack binary_loaded_pack(reloaded_pack);
+
+    //DestroyShaderPackBinary(binarization_of_pack);
     DestroyShaderPackBinary(reloaded_pack);
 
     std::cerr << "Tests complete.\n";

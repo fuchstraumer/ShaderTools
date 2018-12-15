@@ -10,6 +10,9 @@
 #include <unordered_map>
 #include <variant>
 #include <set>
+#ifdef FindResource
+#undef FindResource
+#endif
 
 namespace st {
 

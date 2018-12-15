@@ -152,6 +152,7 @@ namespace st {
             }
 
             BodyPaths.emplace(handle, fs::canonical(source_body_path));
+            StageLastModificationTimes.emplace(handle, fs::last_write_time(BodyPaths.at(handle)));
 
             std::ifstream input_stream(source_body_path);
             if (!input_stream.is_open()) {
