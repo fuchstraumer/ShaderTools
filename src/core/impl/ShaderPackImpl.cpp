@@ -2,6 +2,7 @@
 #include "ShaderImpl.hpp"
 #include "../../lua/LuaEnvironment.hpp"
 #include "../../util/ShaderFileTracker.hpp"
+#include "../../util/ShaderPackBinary.hpp"
 #include "../../reflection/impl/ShaderReflectorImpl.hpp"
 #include "../../lua/ResourceFile.hpp"
 #include "core/ResourceGroup.hpp"
@@ -29,6 +30,13 @@ namespace st {
         setDescriptorTypeCounts();
     }
 
+    ShaderPackImpl::ShaderPackImpl(ShaderPackBinary * binary_data) {
+        detail::LoadPackFromBinary(this, binary_data);
+        createShaders();
+        createResourceGroups();
+        setDescriptorTypeCounts();
+    }
+
     void ShaderPackImpl::createShaders() {
         namespace fs = std::experimental::filesystem;
 
@@ -41,7 +49,7 @@ namespace st {
         const std::string resource_path_str = resource_path.string();
 
         const std::string working_dir_str = workingDir.string();
-        static const std::array<const char*, 1> base_includes{ working_dir_str.c_str() };
+        const std::array<const char*, 1> base_includes{ working_dir_str.c_str() };
 
 
         for (const auto& group : filePack->ShaderGroups) {

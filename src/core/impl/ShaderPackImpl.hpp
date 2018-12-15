@@ -14,6 +14,7 @@ namespace st {
 
     class ResourceFile;
     class ResourceGroup;
+    struct ShaderPackBinary;
 
     class ShaderPackImpl {
     public:
@@ -21,6 +22,7 @@ namespace st {
         ShaderPackImpl& operator=(const ShaderPackImpl&) = delete;
 
         ShaderPackImpl(const char* shader_pack_file_path);
+        ShaderPackImpl(ShaderPackBinary* binary_data);
         void createShaders();
         void createResourceGroups();
         void createSingleGroup(const std::string& name, const std::map<VkShaderStageFlagBits, std::string>& shader_map);
@@ -35,6 +37,7 @@ namespace st {
         std::unordered_map<std::string, std::unique_ptr<ResourceGroup>> resourceGroups;
         mutable descriptor_type_counts_t typeCounts;
     private:
+        friend struct ShaderPackBinary;
         ResourceFile* rsrcFile;
     };
 
