@@ -49,6 +49,8 @@ namespace st {
         LastWriteTimes.resize(num_stages);
         Paths.resize(num_stages);
         SourceStrings.resize(num_stages);
+        AssemblyStrs.resize(num_stages);
+        RecompiledStrs.resize(num_stages);
         Binaries.resize(num_stages);
 
         auto& ftracker = ShaderFileTracker::GetFileTracker();
@@ -61,10 +63,37 @@ namespace st {
             LastWriteTimes[i] = uint64_t(file_write_time);
 
             SourceStrings[i] = ftracker.FullSourceStrings.at(stages[i]);
+            AssemblyStrs[i] = ftracker.AssemblyStrings.at(stages[i]);
+            RecompiledStrs[i] = ftracker.RecompiledSourcesFromBinaries.at(stages[i]);
             Binaries[i] = ftracker.Binaries.at(stages[i]);
         }
 
     }
+
+    struct ShaderPackBinary {
+        ShaderPackBinary() = default;
+        ShaderPackBinary(const ShaderPack* src);
+        uint32_t MagicBits{ SHADER_PACK_BINARY_MAGIC_VALUE };
+        uint32_t ShaderToolsVersion{ 0 };
+        std::string PackPath{};
+        std::string ResourceScriptPath{};
+        uint32_t NumShaders{ 0 };
+        std::vector<ShaderBinary> Shaders{};
+    };
+
+    ShaderPackBinary::ShaderPackBinary(const ShaderPack * initial_pack) : ShaderToolsVersion{ SHADER_TOOLS_VERSION } {
+        const ShaderPackImpl* src = initial_pack->impl.get();
+        PackPath = src->packScriptPath;
+        ResourceScriptPath = src->resourceScriptPath;
+
+        for (const auto& shader_group : src->groups) {
+            Shaders.emplace_back(ShaderBinary(shader_group.second.get()));
+        }
+
+        NumShaders = static_cast<uint32_t>(Shaders.size());
+
+    }
+
 
     template<typename S>
     void serialize(S& s, std::vector<std::string>& strs) {
@@ -87,17 +116,20 @@ namespace st {
         s.container8b(bin.StageIDs, 8);
         s.container8b(bin.LastWriteTimes, 8);
         s.container(bin.Paths, 8, [&s](std::string& str) { s.text1b(str, 512); });
-        s.container(bin.SourceStrings, 8, [&s](std::string& str) { 
+        s.container(bin.SourceStrings, 8, [&s](std::string& str) {
             LOG_IF(str.size() > 16384, WARNING) << "Warning! Serializing a large source string of over 16384 characters - " << str.size() << " characters in current string!";
-            s.text1b(str, 65536); 
+            s.text1b(str, 65536);
+        });
+        s.container(bin.AssemblyStrs, 8, [&s](std::string& str) {
+            LOG_IF(str.size() > 16384, WARNING) << "Warning! Serializing a large source string of over 16384 characters - " << str.size() << " characters in current string!";
+            s.text1b(str, 65536);
+        });
+        s.container(bin.RecompiledStrs, 8, [&s](std::string& str) {
+            LOG_IF(str.size() > 16384, WARNING) << "Warning! Serializing a large source string of over 16384 characters - " << str.size() << " characters in current string!";
+            s.text1b(str, 65536);
         });
         s.container(bin.Binaries, 8, [&s](std::vector<uint32_t>& bin) { s.container4b(bin, 32768); });
     }
-
-    // Need to identify how to store resource metadata
-    struct ResourceScriptBinary {
-
-    };
 
     template<typename S>
     void serialize(S& s, ShaderPackBinary& pack) {
@@ -107,30 +139,6 @@ namespace st {
         s.text1b(pack.ResourceScriptPath, 512);
         s.value4b(pack.NumShaders);
         s.container(pack.Shaders, 32, [&s](ShaderBinary& bin) { serialize<S>(s, bin); });
-    }
-
-    struct ShaderPackBinary {
-        ShaderPackBinary() = default;
-        ShaderPackBinary(const ShaderPack* src);
-        uint32_t MagicBits{ SHADER_PACK_BINARY_MAGIC_VALUE };
-        uint32_t ShaderToolsVersion{ 0 };
-        std::string PackPath{};
-        std::string ResourceScriptPath{};
-        uint32_t NumShaders{ 0 };
-        std::vector<ShaderBinary> Shaders{};
-    };
-
-    ShaderPackBinary::ShaderPackBinary(const ShaderPack * initial_pack) : ShaderToolsVersion{ SHADER_TOOLS_VERSION } {
-        const ShaderPackImpl* src = initial_pack->impl.get();
-        PackPath = src->packScriptPath;
-        ResourceScriptPath = src->resourceScriptPath;
-
-        for (const auto& shader_group : src->groups) {
-            Shaders.emplace_back(ShaderBinary(shader_group.second.get()));
-        }
-        
-        NumShaders = static_cast<uint32_t>(Shaders.size());
-
     }
 
     ShaderBinary* CreateShaderBinary(const Shader* src) {
