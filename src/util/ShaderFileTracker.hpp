@@ -27,12 +27,12 @@ namespace st {
         bool FindResourceScript(const std::string& fname, const ResourceFile* dest_ptr);
         bool FindRecompiledShaderSource(const ShaderStage& handle, std::string& destination_str);
         bool FindAssemblyString(const ShaderStage& handle, std::string& destination_str);
+        std::string GetShaderName(const ShaderStage& handle);
 
         static ShaderFileTracker& GetFileTracker();
 
         std::experimental::filesystem::path cacheDir{ std::experimental::filesystem::temp_directory_path() };
         std::unordered_map<ShaderStage, std::experimental::filesystem::file_time_type> StageLastModificationTimes;
-        std::unordered_map<ShaderStage, std::string> ShaderNames;
         std::unordered_map<ShaderStage, std::string> ShaderBodies;
         std::unordered_map<ShaderStage, std::string> RecompiledSourcesFromBinaries;
         std::unordered_map<ShaderStage, std::string> AssemblyStrings;

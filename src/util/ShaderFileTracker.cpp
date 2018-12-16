@@ -250,6 +250,22 @@ namespace st {
         return false;
     }
 
+    std::string ShaderFileTracker::GetShaderName(const ShaderStage & handle) {
+        auto iter = BodyPaths.find(handle);
+        if (iter == std::cend(BodyPaths)) {
+            return std::string{};
+        }
+        
+        std::string filename = iter->second.filename().string();
+        // now strip .(stage) if found
+        size_t idx = filename.find_first_of('.');
+        if (idx != std::string::npos) {
+            filename = filename.substr(0, idx);
+        }
+
+        return filename;
+    }
+
     ShaderFileTracker & ShaderFileTracker::GetFileTracker() {
         static ShaderFileTracker fileTracker;
         return fileTracker;
