@@ -19,6 +19,8 @@ namespace st {
 #endif // SHADERTOOLS_PROFILING_ENABLED
     }
 
+    ShaderPackScript::~ShaderPackScript() {}
+
     void ShaderPackScript::parseScript() {
         using namespace luabridge;
         lua_State* state = environment->GetState();
@@ -30,34 +32,48 @@ namespace st {
 
             LuaRef shader_groups_table = getGlobal(state, "ShaderGroups");
             auto shader_groups = environment->GetTableMap(shader_groups_table);
+
             for (const auto& group : shader_groups) {
                 auto group_table = environment->GetTableMap(group.second);
                 size_t idx = static_cast<size_t>(group_table.at("Idx").cast<int>());
+
                 GroupIndices.emplace(group.first, std::move(idx));
                 auto group_entries = environment->GetTableMap(group_table.at("Shaders"));
+
                 for (auto& entry : group_entries) {
                     const std::string& shader_stage = entry.first;
                     const std::string shader_name = entry.second;
-                    if (shader_stage == "Vertex") {
-                        ShaderGroups[group.first].emplace(VK_SHADER_STAGE_VERTEX_BIT, shader_name);
-                    }
-                    else if (shader_stage == "Fragment") {
-                        ShaderGroups[group.first].emplace(VK_SHADER_STAGE_FRAGMENT_BIT, shader_name);
-                    }
-                    else if (shader_stage == "Geometry") {
-                        ShaderGroups[group.first].emplace(VK_SHADER_STAGE_GEOMETRY_BIT, shader_name);
-                    }
-                    else if (shader_stage == "TessEval") {
-                        ShaderGroups[group.first].emplace(VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT, shader_name);
-                    }
-                    else if (shader_stage == "TessControl") {
-                        ShaderGroups[group.first].emplace(VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT, shader_name);
-                    }
-                    else if (shader_stage == "Compute") {
-                        ShaderGroups[group.first].emplace(VK_SHADER_STAGE_COMPUTE_BIT, shader_name);
+
+                    if (Stages.count(shader_name) == 0) {
+                        VkShaderStageFlagBits flags{};
+                        if (shader_stage == "Vertex") {
+                            flags = VK_SHADER_STAGE_VERTEX_BIT;
+                        }
+                        else if (shader_stage == "Fragment") {
+                            flags = VK_SHADER_STAGE_FRAGMENT_BIT;
+                        }
+                        else if (shader_stage == "Geometry") {
+                            flags = VK_SHADER_STAGE_GEOMETRY_BIT;
+                        }
+                        else if (shader_stage == "TessEval") {
+                            flags = VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
+                        }
+                        else if (shader_stage == "TessControl") {
+                            flags = VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
+                        }
+                        else if (shader_stage == "Compute") {
+                            flags = VK_SHADER_STAGE_COMPUTE_BIT;
+                        }
+                        else {
+                            throw std::domain_error("Invalid shader stage in parsed Lua script.");
+                        }
+
+                        auto iter = Stages.emplace(shader_name, ShaderStage{ shader_name.c_str(), flags });
+                        ShaderGroups[group.first].emplace(iter.first->second);
+
                     }
                     else {
-                        throw std::domain_error("Invalid shader stage in parsed Lua script.");
+                        ShaderGroups[group.first].emplace(Stages.at(shader_name));
                     }
                 }
 
@@ -81,6 +97,7 @@ namespace st {
 
             }
         }
+
         environment.reset();
     }
 
