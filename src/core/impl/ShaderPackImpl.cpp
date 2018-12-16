@@ -19,12 +19,17 @@ INITIALIZE_EASYLOGGINGPP
 
 namespace st {
 
-    ShaderPackImpl::ShaderPackImpl(const char * shader_pack_file_path) : filePack(std::make_unique<shader_pack_file_t>(shader_pack_file_path)), workingDir(shader_pack_file_path) {
-        namespace fs = std::experimental::filesystem;
+    namespace fs = std::experimental::filesystem;
+
+    ShaderPackImpl::ShaderPackImpl(const char * shader_pack_file_path) : filePack(std::make_unique<ShaderPackScript>(shader_pack_file_path)), workingDir(shader_pack_file_path) {
+
         workingDir = fs::canonical(workingDir);
         packScriptPath = workingDir.string();
         workingDir = workingDir.remove_filename();
-        const std::string dir_string = workingDir.parent_path().string();
+
+        executeResourceScript();
+        processShaderStages();
+
         createShaders();
         createResourceGroups();
         setDescriptorTypeCounts();
@@ -37,19 +42,32 @@ namespace st {
         setDescriptorTypeCounts();
     }
 
-    void ShaderPackImpl::createShaders() {
-        namespace fs = std::experimental::filesystem;
+    void ShaderPackImpl::executeResourceScript() {
 
         fs::path resource_path = workingDir / fs::path(filePack->ResourceFileName);
+        
         if (!fs::exists(resource_path)) {
             LOG(ERROR) << "Resource Lua script could not be found using specified path.";
             throw std::runtime_error("Couldn't find resource file using given path.");
         }
+
         resourceScriptPath = fs::canonical(resource_path).string();
         const std::string resource_path_str = resource_path.string();
+        auto& ftracker = ShaderFileTracker::GetFileTracker();
+        ftracker.FindResourceScript(resource_path_str, rsrcFile);
+
+    }
+
+    void ShaderPackImpl::processShaderStages() {
+
+    }
+
+    void ShaderPackImpl::createShaders() {
 
         const std::string working_dir_str = workingDir.string();
         const std::array<const char*, 1> base_includes{ working_dir_str.c_str() };
+
+
 
 
         for (const auto& group : filePack->ShaderGroups) {

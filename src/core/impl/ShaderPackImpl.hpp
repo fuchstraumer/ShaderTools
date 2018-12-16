@@ -4,8 +4,7 @@
 #include "core/Shader.hpp"
 #include "core/ShaderResource.hpp"
 #include "generation/ShaderGenerator.hpp"
-#include "shader_pack_file.hpp"
-#include <unordered_map>
+#include "ShaderPackScript.hpp"
 #include <experimental/filesystem>
 #include <future>
 #include <memory>
@@ -23,6 +22,9 @@ namespace st {
 
         ShaderPackImpl(const char* shader_pack_file_path);
         ShaderPackImpl(ShaderPackBinary* binary_data);
+
+        void executeResourceScript();
+        void processShaderStages();
         void createShaders();
         void createResourceGroups();
         void createSingleGroup(const std::string& name, const std::map<VkShaderStageFlagBits, std::string>& shader_map);
@@ -31,7 +33,7 @@ namespace st {
         std::string packScriptPath;
         std::string resourceScriptPath;
         std::unordered_map<std::string, std::unique_ptr<Shader>> groups;
-        std::unique_ptr<shader_pack_file_t> filePack;
+        std::unique_ptr<ShaderPackScript> filePack{ nullptr };
         std::experimental::filesystem::path workingDir;
         std::mutex guardMutex;
         std::unordered_map<std::string, std::unique_ptr<ResourceGroup>> resourceGroups;

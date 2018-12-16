@@ -40,12 +40,14 @@ SET(ST_CORE_SRCS
     "${CMAKE_CURRENT_SOURCE_DIR}/src/core/Shader.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/core/ShaderPack.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/core/ShaderResource.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/core/impl/ShaderPackScript.hpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/core/impl/ShaderPackScript.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/core/impl/ShaderPackImpl.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/core/impl/ShaderPackImpl.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/core/impl/ShaderImpl.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/core/impl/ShaderImpl.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/core/impl/ShaderPackScript.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/core/impl/ShaderPackScript.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/core/impl/ShaderStageProcessor.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/core/impl/ShaderStageProcessor.cpp"
 )
 
 SET(ST_GENERATION_SRCS
