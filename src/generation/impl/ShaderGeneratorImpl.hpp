@@ -61,7 +61,7 @@ namespace st {
     class ShaderGeneratorImpl {
     public:
 
-        ShaderGeneratorImpl(const VkShaderStageFlagBits& stage);
+        ShaderGeneratorImpl(ShaderStage _stage);
         ~ShaderGeneratorImpl();
 
         ShaderGeneratorImpl(ShaderGeneratorImpl&& other) noexcept;
@@ -102,14 +102,14 @@ namespace st {
         void processBodyStrInlineResources(const ShaderStage& handle, std::string& body_str);
         void generate(const ShaderStage& handle, const std::string& path_to_src, const size_t num_extensions, const char* const* extensions);
 
-        VkShaderStageFlagBits Stage = VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM;
+        ShaderStage Stage{ 0u };
         std::multiset<shaderFragment> fragments;
         static std::map<fs::path, std::string> fileContents;
         std::map<std::string, std::string> resourceBlocks;
         mutable shader_resources_t ShaderResources;
         ResourceFile* luaResources;
         std::vector<fs::path> includes;
-        std::string currentShaderName;
+        
 
         inline static std::string BasePath = "../fragments/";
         inline static std::string LibPath = "../fragments/include";

@@ -26,16 +26,16 @@ namespace st {
 
     std::map<fs::path, std::string> ShaderGeneratorImpl::fileContents = std::map<fs::path, std::string>{};
 
-    ShaderGeneratorImpl::ShaderGeneratorImpl(const VkShaderStageFlagBits& stage) : Stage(stage) {
+    ShaderGeneratorImpl::ShaderGeneratorImpl(ShaderStage _stage) : Stage(std::move(_stage)) {
         fs::path preamble(std::string(BasePath) + "/builtins/preamble450.glsl");
         addPreamble(preamble);
-        if (Stage == VK_SHADER_STAGE_VERTEX_BIT) {
+        if (Stage.GetStage() == VK_SHADER_STAGE_VERTEX_BIT) {
             fs::path vertex_interface_base(std::string(BasePath) + "/builtins/vertexInterface.glsl");
             const auto& interface_str = addFragment(vertex_interface_base);
             parseInterfaceBlock(interface_str);
             addPerVertex();
         }
-        else if (Stage == VK_SHADER_STAGE_FRAGMENT_BIT) {
+        else if (Stage.GetStage() == VK_SHADER_STAGE_FRAGMENT_BIT) {
             fs::path fragment_interface_base(std::string(BasePath) + "/builtins/fragmentInterface.glsl");
             const auto& interface_str = addFragment(fragment_interface_base);
             parseInterfaceBlock(interface_str);
@@ -104,10 +104,10 @@ namespace st {
 
     void ShaderGeneratorImpl::parseInterfaceBlock(const std::string& str) {
         std::smatch match;
-        if (Stage == VK_SHADER_STAGE_VERTEX_BIT) {
+        if (Stage.GetStage() == VK_SHADER_STAGE_VERTEX_BIT) {
             std::regex_search(str, match, vertex_interface);
         }
-        else if (Stage == VK_SHADER_STAGE_FRAGMENT_BIT) {
+        else if (Stage.GetStage() == VK_SHADER_STAGE_FRAGMENT_BIT) {
             std::regex_search(str, match, fragment_interface);
         }
 
@@ -221,12 +221,19 @@ namespace st {
         std::vector<glsl_qualifier> qualifiers(num_qualifiers);
         rsrc.GetQualifiers(&num_qualifiers, qualifiers.data());
 
+        auto& f_tracker = ShaderFileTracker::GetFileTracker();
+        std::string curr_shader_name = f_tracker.GetShaderName(Stage);
+        if (curr_shader_name.empty()) {
+            LOG(ERROR) << "Couldn't find name of current shader!";
+            throw std::runtime_error("Error finding shader name during generation process.");
+        }
+
         size_t offset = num_qualifiers;
         num_qualifiers = 0;
-        rsrc.GetPerUsageQualifiers(currentShaderName.c_str(), &num_qualifiers, nullptr);
+        rsrc.GetPerUsageQualifiers(curr_shader_name.c_str(), &num_qualifiers, nullptr);
         if (num_qualifiers != 0) {
             qualifiers.resize(qualifiers.size() + num_qualifiers);
-            rsrc.GetPerUsageQualifiers(currentShaderName.c_str(), &num_qualifiers, qualifiers.data() + offset);
+            rsrc.GetPerUsageQualifiers(curr_shader_name.c_str(), &num_qualifiers, qualifiers.data() + offset);
         }
 
         std::string result;
@@ -568,15 +575,6 @@ namespace st {
         return body_str;
     }
 
-    void ShaderGeneratorImpl::findShaderName(const ShaderStage& handle) {
-        auto& tracker = ShaderFileTracker::GetFileTracker();
-        auto iter = tracker.ShaderNames.find(handle);
-        if (iter == std::end(tracker.ShaderNames)) {
-            throw std::runtime_error("Couldn't find name of current shader being generated!");
-        }
-        currentShaderName = iter->second;
-    }
-
     void ShaderGeneratorImpl::checkInterfaceOverrides(std::string& body_src_str) {
         std::smatch match;
         if (std::regex_search(body_src_str, match, interface_override)) {
@@ -589,7 +587,7 @@ namespace st {
             body_src_str.erase(body_src_str.begin() + match.position(), body_src_str.begin() + match.position() + match.length());
         }
 
-        if (std::regex_search(body_src_str, match, fragment_shader_no_output) && (Stage == VK_SHADER_STAGE_FRAGMENT_BIT)) {
+        if (std::regex_search(body_src_str, match, fragment_shader_no_output) && (Stage.GetStage() == VK_SHADER_STAGE_FRAGMENT_BIT)) {
             // shader doesn't write to color output, potentially only the backbuffer
             auto iter = std::begin(fragments);
             while (iter != std::end(fragments)) {
