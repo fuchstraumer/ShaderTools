@@ -40,7 +40,7 @@ namespace st {
         std::unordered_map<ShaderStage, std::vector<uint32_t>> Binaries;
         std::unordered_map<ShaderStage, std::string> ShaderUsedResourceScript;
         std::unordered_multimap<ShaderStage, std::string> ShaderUsedResourceBlocks;
-        std::unordered_map<std::string, std::unordered_map<std::string, size_t>> GroupResourceGroupsOrdered;
+        std::unordered_map<std::string, std::unordered_map<std::string, size_t>> ShaderGroupResourceGroupsOrdered;
         std::unordered_map<std::string, std::unique_ptr<ResourceFile>> ResourceScripts;
         std::unordered_map<ShaderStage, std::experimental::filesystem::path> BodyPaths;
         std::unordered_map<ShaderStage, std::experimental::filesystem::path> BinaryPaths;

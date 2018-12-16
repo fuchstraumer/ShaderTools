@@ -170,7 +170,9 @@ namespace st {
                     modifier = access_modifier::Write;
                 }
             }
-            tempResources.emplace(recompiler->get_decoration(rsrc.id, spv::DecorationDescriptorSet), 
+            const uint32_t set_idx = recompiler->get_decoration(rsrc.id, spv::DecorationDescriptorSet);
+ 
+            tempResources.emplace(set_idx, 
                 ResourceUsage(shader_handle, parent_resource, modifier, parent_resource->DescriptorType()));
         }
 
