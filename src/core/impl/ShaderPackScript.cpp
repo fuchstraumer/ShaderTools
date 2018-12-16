@@ -1,11 +1,4 @@
-#pragma once
-#ifndef ST_SHADER_PACK_FILE_HPP
-#define ST_SHADER_PACK_FILE_HPP
-#include "common/CommonInclude.hpp"
-#include "../../lua/LuaEnvironment.hpp"
-#include <map>
-#include <string>
-#include <unordered_map>
+#include "ShaderPackScript.hpp"
 #include "easyloggingpp/src/easylogging++.h"
 #ifdef SHADERTOOLS_PROFILING_ENABLED
 #include <chrono>
@@ -13,24 +6,7 @@
 
 namespace st {
 
-    
-    struct shader_pack_file_t {
-
-        shader_pack_file_t(const char* fname);
-        ~shader_pack_file_t() {};
-
-        std::string PackName;
-        std::string ResourceFileName;
-        std::unordered_map<std::string, size_t> GroupIndices;
-        std::unordered_map<std::string, std::map<VkShaderStageFlagBits, std::string>> ShaderGroups;
-        std::unordered_map<std::string, std::vector<std::string>> GroupTags;
-        std::unordered_map<std::string, std::vector<std::string>> GroupExtensions;
-        std::unique_ptr<LuaEnvironment> environment;
-
-        void parseScript();
-    };
-
-    inline shader_pack_file_t::shader_pack_file_t(const char * fname) : environment(std::make_unique<LuaEnvironment>()) {
+    ShaderPackScript::ShaderPackScript(const char * fname) : environment(std::make_unique<LuaEnvironment>()) {
 #ifdef SHADERTOOLS_PROFILING_ENABLED
         std::chrono::high_resolution_clock::time_point beforeExec;
         beforeExec = std::chrono::high_resolution_clock::now();
@@ -43,7 +19,7 @@ namespace st {
 #endif // SHADERTOOLS_PROFILING_ENABLED
     }
 
-    inline void shader_pack_file_t::parseScript() {
+    void ShaderPackScript::parseScript() {
         using namespace luabridge;
         lua_State* state = environment->GetState();
         {
@@ -109,5 +85,3 @@ namespace st {
     }
 
 }
-
-#endif //!ST_SHADER_PACK_FILE_HPP
