@@ -55,7 +55,7 @@ namespace st {
             throw std::runtime_error("Could not open file to write completed plaintext shader to!");
         }
 
-        fs::path file_path(fs::absolute(fname));
+        fs::path file_path(fs::canonical(fname));
         const std::string path_str = file_path.string();
         
        

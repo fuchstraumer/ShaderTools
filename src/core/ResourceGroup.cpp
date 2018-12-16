@@ -11,6 +11,8 @@ namespace st {
     public:
         ResourceGroupImpl(ResourceFile* resource_file, const char* group_name);
         ~ResourceGroupImpl() = default;
+
+        bool hasResource(const char* str) const;
         std::string name;
         std::vector<ShaderResource> resources;
         std::set<std::string> tags;
@@ -22,6 +24,15 @@ namespace st {
         if (resource_file->resourceGroupTags.count(name) != 0) {
             tags = resource_file->resourceGroupTags.at(name);
         }
+    }
+
+    bool ResourceGroupImpl::hasResource(const char* str) const {
+        for (const auto& rsrc : resources) {
+            if (strcmp(str, rsrc.Name()) == 0) {
+                return true;
+            }
+        }
+        return false;
     }
 
     ResourceGroup::ResourceGroup(ResourceFile* resource_file, const char* group_name) : 

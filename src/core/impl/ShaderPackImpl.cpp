@@ -2,6 +2,7 @@
 #include "ShaderImpl.hpp"
 #include "../../lua/LuaEnvironment.hpp"
 #include "../../util/ShaderFileTracker.hpp"
+#include "../../util/ShaderPackBinary.hpp"
 #include "../../reflection/impl/ShaderReflectorImpl.hpp"
 #include "../../lua/ResourceFile.hpp"
 #include "core/ResourceGroup.hpp"
@@ -20,9 +21,17 @@ namespace st {
 
     ShaderPackImpl::ShaderPackImpl(const char * shader_pack_file_path) : filePack(std::make_unique<shader_pack_file_t>(shader_pack_file_path)), workingDir(shader_pack_file_path) {
         namespace fs = std::experimental::filesystem;
-        workingDir = fs::absolute(workingDir);
+        workingDir = fs::canonical(workingDir);
+        packScriptPath = workingDir.string();
         workingDir = workingDir.remove_filename();
         const std::string dir_string = workingDir.parent_path().string();
+        createShaders();
+        createResourceGroups();
+        setDescriptorTypeCounts();
+    }
+
+    ShaderPackImpl::ShaderPackImpl(ShaderPackBinary * binary_data) {
+        detail::LoadPackFromBinary(this, binary_data);
         createShaders();
         createResourceGroups();
         setDescriptorTypeCounts();
@@ -36,10 +45,11 @@ namespace st {
             LOG(ERROR) << "Resource Lua script could not be found using specified path.";
             throw std::runtime_error("Couldn't find resource file using given path.");
         }
+        resourceScriptPath = fs::canonical(resource_path).string();
         const std::string resource_path_str = resource_path.string();
 
         const std::string working_dir_str = workingDir.string();
-        static const std::array<const char*, 1> base_includes{ working_dir_str.c_str() };
+        const std::array<const char*, 1> base_includes{ working_dir_str.c_str() };
 
 
         for (const auto& group : filePack->ShaderGroups) {
@@ -67,7 +77,7 @@ namespace st {
             }
         }
 
-        resource_path = fs::absolute(resource_path);
+        resource_path = fs::canonical(resource_path);
         auto& ftracker = ShaderFileTracker::GetFileTracker();
         rsrcFile = ftracker.ResourceScripts.at(resource_path.string()).get();
     }

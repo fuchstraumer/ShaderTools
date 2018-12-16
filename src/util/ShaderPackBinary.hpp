@@ -2,8 +2,13 @@
 #ifndef SHADER_PACK_BINARY_FILE_HPP
 #define SHADER_PACK_BINARY_FILE_HPP
 #include <cstdint>
+#include "common/CommonInclude.hpp"
 
 namespace st {
+
+    class Shader;
+    class ShaderPack;
+    class ShaderPackImpl;
 
     /*
         Single shader binary data.
@@ -16,36 +21,19 @@ namespace st {
         arrays.
     */
 
-    struct ShaderBinary {
-        uint32_t ShaderBinaryMagic;
-        uint64_t TotalLength;
-        uint32_t NumShaderStages;
-        uint64_t* StageIDs;
-        uint64_t* LastWriteTimes;
-        uint32_t* PathLengths;
-        char* Paths;
-        uint32_t* SrcStringLengths;
-        char* SourceStrings;
-        uint32_t* BinaryLengths;
-        uint32_t* Binaries;
-    };
+    struct ShaderBinary;
+    struct ShaderPackBinary;
 
-    struct ShaderPackBinary {
-        uint64_t MagicBits;
-        uint64_t ShaderToolsVersion;
-        uint32_t PackPathLength;
-        char* PackPath;
-        uint32_t ResourceScriptPathLength;
-        char* ResourceScriptPath;
-        uint32_t* NumShaders;
-        // Where ShaderBinary entries begin
-        uint64_t* OffsetsToShaders;
-        ShaderBinary* Shaders;
-    };
+    ST_API ShaderBinary* CreateShaderBinary(const Shader* src);
+    void ST_API DestroyShaderBinary(ShaderBinary* binary);
+    ST_API ShaderPackBinary* CreateShaderPackBinary(const ShaderPack* src);
+    void ST_API DestroyShaderPackBinary(ShaderPackBinary* shader_pack);
+    ST_API ShaderPackBinary* LoadShaderPackBinary(const char* fname);
+    void ST_API SaveBinaryToFile(ShaderPackBinary* binary, const char* fname);
 
-    ShaderPackBinary* LoadShaderPackBinary(const char* fname);
-    void DestroyShaderPackBinary(ShaderPackBinary* shader_pack);
-    void SaveBinaryToFile(const char* fname);
+    namespace detail {
+        void LoadPackFromBinary(ShaderPackImpl* pack, ShaderPackBinary* bin);
+    }
 
 }
 

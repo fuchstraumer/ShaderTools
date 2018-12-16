@@ -125,7 +125,7 @@ namespace st {
         fs::path new_output_path(output_dir);
 
         if (fs::exists(new_output_path)) {
-            OutputPath = fs::absolute(new_output_path);
+            OutputPath = fs::canonical(new_output_path);
         }
         else {
             throw std::domain_error("Passed invalid path to SetOutputDirectory");

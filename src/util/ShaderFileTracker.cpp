@@ -65,7 +65,7 @@ namespace st {
 
     ShaderFileTracker::ShaderFileTracker(const std::string & initial_directory) {
         if (!initial_directory.empty()) {
-            cacheDir = fs::absolute(fs::path(initial_directory));
+            cacheDir = fs::canonical(fs::path(initial_directory));
         }
         else {
             cacheDir = fs::temp_directory_path() / fs::path("ShaderToolsCache");
@@ -151,7 +151,8 @@ namespace st {
                 throw std::runtime_error("Failed to open given file: invalid path.");
             }
 
-            BodyPaths.emplace(handle, fs::absolute(source_body_path));
+            BodyPaths.emplace(handle, fs::canonical(source_body_path));
+            StageLastModificationTimes.emplace(handle, fs::last_write_time(BodyPaths.at(handle)));
 
             std::ifstream input_stream(source_body_path);
             if (!input_stream.is_open()) {
@@ -208,7 +209,7 @@ namespace st {
     bool ShaderFileTracker::FindResourceScript(const std::string & fname, const ResourceFile * dest_ptr) {
         namespace fs = std::experimental::filesystem;
         if (fs::exists(fs::path(fname))) {
-            std::string absolute_file_path = fs::absolute(fs::path(fname)).string();
+            std::string absolute_file_path = fs::canonical(fs::path(fname)).string();
             if (ResourceScripts.count(absolute_file_path) != 0) {
                 dest_ptr = ResourceScripts.at(absolute_file_path).get();
                 return true;
