@@ -8,6 +8,7 @@ namespace st {
     class ShaderResource;
     class ResourceGroupImpl;
     class ResourceFile;
+    struct ShaderStage;
 
     class ST_API ResourceGroup {
         ResourceGroup(const ResourceGroup&) = delete;
@@ -22,6 +23,7 @@ namespace st {
         dll_retrieved_strings_t UsedByGroups() const noexcept;
         dll_retrieved_strings_t GetTags() const noexcept;
         const char* Name() const noexcept;
+        uint32_t DescriptorSetIdxInStage(const ShaderStage& handle) const;
         ShaderResource* operator[](const char* name) noexcept;
         const ShaderResource* operator[](const char* name) const noexcept;
         void GetResources(size_t* num_resources, ShaderResource* resources) const;

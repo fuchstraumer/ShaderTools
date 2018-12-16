@@ -17,6 +17,7 @@ namespace st {
         bool operator==(const ShaderStage& other) const noexcept {
             return ID == other.ID;
         }
+
     };
 
 }

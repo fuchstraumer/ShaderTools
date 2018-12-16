@@ -40,7 +40,8 @@ namespace st {
         std::unordered_map<ShaderStage, std::vector<uint32_t>> Binaries;
         std::unordered_map<ShaderStage, std::string> ShaderUsedResourceScript;
         std::unordered_multimap<ShaderStage, std::string> ShaderUsedResourceBlocks;
-        std::unordered_map<std::string, std::unordered_map<std::string, size_t>> ShaderGroupResourceGroupsOrdered;
+        // first key is resource group, second map is stage and index of group in that stage
+        std::unordered_map<std::string, std::unordered_map<ShaderStage, uint32_t>> ResourceGroupSetIndexMaps;
         std::unordered_map<std::string, std::unique_ptr<ResourceFile>> ResourceScripts;
         std::unordered_map<ShaderStage, std::experimental::filesystem::path> BodyPaths;
         std::unordered_map<ShaderStage, std::experimental::filesystem::path> BinaryPaths;
