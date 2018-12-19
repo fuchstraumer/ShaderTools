@@ -16,7 +16,7 @@ namespace st {
     class ShaderStageProcessor {
     public:
 
-        ShaderStageProcessor(ShaderStage stage, ResourceFile* rfile, std::string name);
+        ShaderStageProcessor(ShaderStage stage, ResourceFile* rfile);
         ~ShaderStageProcessor();
 
         const std::string& Generate(const std::string& body_path, const std::vector<std::string>& extensions, const std::vector<std::string>& includes);
