@@ -93,11 +93,13 @@ namespace st {
         shaderc::Compiler compiler;
         auto options = getCompilerOptions();
 
+        // Note: optimizer seems to behave weird and generally break for geometry shaders. Currently safest to just disable it.
         if (kind == shaderc_glsl_geometry_shader) {
             options.SetOptimizationLevel(shaderc_optimization_level_zero);
         }
 
         shaderc::AssemblyCompilationResult assembly_result = compiler.CompileGlslToSpvAssembly(src_str, kind, name.c_str(), options);
+
         if (assembly_result.GetCompilationStatus() != shaderc_compilation_status_success) {
             const std::string err_msg = assembly_result.GetErrorMessage();
             LOG(ERROR) << "Shader compiliation to assembly failed: " << err_msg.c_str() << "\n";
@@ -109,8 +111,18 @@ namespace st {
             throw std::runtime_error(except_msg.c_str());
         }
 
+        if (FileTracker.AssemblyStrings.count(handle) != 0) {
+            // Erase pre-existing
+            FileTracker.AssemblyStrings.erase(handle);
+        }
+
         auto iter = FileTracker.AssemblyStrings.emplace(handle, std::string{ assembly_result.cbegin(), assembly_result.cend() });
-        // Now compiler to binary.
+        if (!iter.second) {
+            LOG(ERROR) << "Failed to emplace generated assembly string into program's storage!";
+            throw std::runtime_error("Emplacement of shader assembly string failed!");
+        }
+
+        // Now compile to binary.
         shaderc::SpvCompilationResult binary_result = compiler.AssembleToSpv(iter.first->second, options);
         if (binary_result.GetCompilationStatus() != shaderc_compilation_status_success) {
             const std::string err_msg = binary_result.GetErrorMessage();
@@ -120,8 +132,17 @@ namespace st {
             throw std::runtime_error(except_msg.c_str());
         }
 
-        FileTracker.FullSourceStrings.emplace(handle, src_str);
-        FileTracker.Binaries.emplace(handle, std::vector<uint32_t>{binary_result.begin(), binary_result.end()});
+        if (FileTracker.Binaries.count(handle) != 0) {
+            // erase as we're gonna replace with an updated binary
+            FileTracker.Binaries.erase(handle);
+        }
+
+        auto iter = FileTracker.Binaries.emplace(handle, std::vector<uint32_t>{binary_result.begin(), binary_result.end()});
+        if (!iter.second) {
+            LOG(ERROR) << "Failed to emplace compiled SPIR-V binary into program's storage!";
+            throw std::runtime_error("Emplacement of shader SPIR-V binary failed.");
+        }
+
     }
 
     void ShaderCompilerImpl::recompileBinaryToGLSL(const ShaderStage & handle, size_t * str_size, char * dest_str) {
@@ -145,7 +166,7 @@ namespace st {
                     LOG(WARNING) << "Failed to fully parse/recompile SPIR-V binary back to GLSL text. Outputting partial source thus far.";
                     LOG(WARNING) << "spirv_cross::CompilerError.what(): " << e.what() << "\n";
                     recompiled_source = recompiler.get_partial_source();
-                    dump_bad_source_to_file(FileTracker.ShaderNames.at(handle), recompiled_source, "", dump_reason::failed_recompile);
+                    dump_bad_source_to_file(FileTracker.GetShaderName(handle), recompiled_source, "", dump_reason::failed_recompile);
                 }
 
                 auto iter = FileTracker.RecompiledSourcesFromBinaries.emplace(handle, recompiled_source);
