@@ -18,7 +18,7 @@
 namespace st {
 
     namespace fs = std::experimental::filesystem;
-    constexpr static uint32_t SHADER_TOOLS_VERSION = VK_MAKE_VERSION(0, 4, 1);
+    constexpr static uint32_t SHADER_TOOLS_VERSION = VK_MAKE_VERSION(0, 4, 2);
     constexpr static uint32_t SHADER_BINARY_MAGIC_VALUE{ 0x70cd20ae };
     constexpr static uint32_t SHADER_PACK_BINARY_MAGIC_VALUE{ 0x9db3bb66 };
 
@@ -203,45 +203,5 @@ namespace st {
 }
 
 void st::detail::LoadPackFromBinary(ShaderPackImpl * pack, ShaderPackBinary * bin) {
-
-    pack->filePack = std::make_unique<shader_pack_file_t>(bin->PackPath.c_str());
-    pack->packScriptPath = bin->PackPath;
-    pack->workingDir = fs::canonical(fs::path(bin->PackPath).remove_filename());
-
-    auto& ftracker = ShaderFileTracker::GetFileTracker();
-    for (size_t i = 0; i < bin->NumShaders; ++i) {
-
-        const ShaderBinary& curr_shader = bin->Shaders[i];
-        for (size_t j = 0; j < curr_shader.NumShaderStages; ++j) {
-            ShaderStage curr_stage{ curr_shader.StageIDs[j] };
-
-            auto stored_last_write_time = fs::file_time_type::clock::duration{ curr_shader.LastWriteTimes[j] };
-            fs::path stage_path{ curr_shader.Paths[j] };
-            if (!fs::exists(stage_path)) {
-                throw std::runtime_error("Given path in binary for a shader body string does not exist!");
-            }
-            auto actual_last_write_time = fs::last_write_time(stage_path).time_since_epoch();
-
-            if (actual_last_write_time == stored_last_write_time) {
-                ftracker.StageLastModificationTimes.emplace(curr_stage, stored_last_write_time);
-                ftracker.FullSourceStrings.emplace(curr_stage, curr_shader.SourceStrings[j]);
-                ftracker.Binaries.emplace(curr_stage, curr_shader.Binaries[j]);
-                ftracker.AssemblyStrings.emplace(curr_stage, curr_shader.AssemblyStrs[j]);
-                ftracker.RecompiledSourcesFromBinaries.emplace(curr_stage, curr_shader.RecompiledStrs[j]);
-                ftracker.BodyPaths.emplace(curr_stage, stage_path);
-            }
-            else {
-                LOG(WARNING) << "Loaded binary cannot be entirely used, as shader has been updated!";
-                // need to also clear this item from the map
-                ftracker.ShaderBodies.erase(curr_stage);
-                ftracker.FullSourceStrings.erase(curr_stage);
-                ftracker.Binaries.erase(curr_stage);
-                ftracker.AssemblyStrings.erase(curr_stage);
-                ftracker.RecompiledSourcesFromBinaries.erase(curr_stage);
-                ftracker.StageLastModificationTimes[curr_stage] = fs::last_write_time(stage_path);
-            }
-        }
-
-    }
 
 }

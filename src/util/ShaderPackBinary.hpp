@@ -9,6 +9,7 @@ namespace st {
     class Shader;
     class ShaderPack;
     class ShaderPackImpl;
+    struct ShaderStage;
 
     /*
         Single shader binary data.
@@ -23,7 +24,10 @@ namespace st {
 
     struct ShaderBinary;
     struct ShaderPackBinary;
+    struct ShaderStageBinary;
 
+    ST_API ShaderStageBinary* CreateShaderStageBinary(const ShaderStage& src);
+    void ST_API DestroyShaderStageBinary(ShaderStageBinary* binary);
     ST_API ShaderBinary* CreateShaderBinary(const Shader* src);
     void ST_API DestroyShaderBinary(ShaderBinary* binary);
     ST_API ShaderPackBinary* CreateShaderPackBinary(const ShaderPack* src);
