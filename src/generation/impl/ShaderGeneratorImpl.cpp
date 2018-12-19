@@ -141,12 +141,26 @@ namespace st {
         fragments.insert(shaderFragment{ fragment_type::glPerVertex, per_vertex });
     }
 
-    std::string ShaderGeneratorImpl::getFullSource() const {
-        std::stringstream result_stream;
-        for (auto& fragment : fragments) {
-            result_stream << fragment.Data;
+    const std::string& ShaderGeneratorImpl::getFullSource() const {
+        auto& ftracker = ShaderFileTracker::GetFileTracker();
+        if (ftracker.FullSourceStrings.count(Stage) != 0) {
+            return ftracker.FullSourceStrings.at(Stage);
         }
-        return result_stream.str();
+        else {
+            // generate final result
+            std::stringstream result_stream;
+            for (auto& fragment : fragments) {
+                result_stream << fragment.Data;
+            }
+            
+            auto iter = ftracker.FullSourceStrings.emplace(Stage, result_stream.str());
+            if (!iter.second) {
+                LOG(ERROR) << "Failed to emplace freshly-generated shader complete source string!";
+                throw std::runtime_error("Failed to emplace full source string for shader.");
+            }
+
+            return iter.first->second;
+        }
     }
 
     void ShaderGeneratorImpl::addIncludePath(const char * include_path) {

@@ -68,7 +68,7 @@ namespace st {
         ShaderGeneratorImpl& operator=(ShaderGeneratorImpl&& other) noexcept;
 
         const std::string& addFragment(const fs::path& path_to_source);
-        std::string getFullSource() const;
+        const std::string& getFullSource() const;
         void addPerVertex();
         void addIncludePath(const char* include_path);
         void addPreamble(const fs::path& str);
@@ -76,7 +76,6 @@ namespace st {
         void parseConstantBlock(const std::string& str);
         void parseInclude(const std::string& str, bool local);
 
-        size_t getBinding(size_t & active_set) const;
         std::string getResourceQualifiers(const ShaderResource& rsrc) const;
         std::string getResourcePrefix(size_t active_set, const std::string & image_format, const ShaderResource& rsrc) const;
         std::string getBufferMembersString(const ShaderResource & resource) const;
@@ -93,7 +92,6 @@ namespace st {
         void useResourceBlock(const std::string& block_name);
 
         std::string fetchBodyStr(const ShaderStage & handle, const std::string & path_to_source);
-        void findShaderName(const ShaderStage & handle);
         void checkInterfaceOverrides(std::string& body_src_str);
         void addExtension(const std::string& extension_str);
         void processBodyStrIncludes(std::string & body_src_str);
