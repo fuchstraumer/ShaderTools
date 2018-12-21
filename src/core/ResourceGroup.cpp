@@ -1,5 +1,7 @@
 #include "core/ResourceGroup.hpp"
 #include "../lua/ResourceFile.hpp"
+#include "../util/ShaderFileTracker.hpp"
+#include "common/ShaderStage.hpp"
 #include <unordered_map>
 #include <string>
 #include <set>
@@ -15,6 +17,8 @@ namespace st {
         bool hasResource(const char* str) const;
         std::string name;
         std::vector<ShaderResource> resources;
+        // what index this group is bound at in the given shader
+        std::unordered_map<ShaderStage, uint32_t> stageSetIndices;
         std::set<std::string> tags;
         std::set<std::string> usedByShaders;
     };
@@ -75,6 +79,22 @@ namespace st {
 
     const char* ResourceGroup::Name() const noexcept {
         return impl->name.c_str();
+    }
+
+    uint32_t ResourceGroup::DescriptorSetIdxInStage(const ShaderStage & handle) const {
+        if (impl->stageSetIndices.empty()) {
+            // grab the map from the file tracker
+            auto& f_tracker = ShaderFileTracker::GetFileTracker();
+            impl->stageSetIndices = f_tracker.ResourceGroupSetIndexMaps.at(impl->name);
+        }
+
+        auto iter = impl->stageSetIndices.find(handle);
+        if (iter != std::cend(impl->stageSetIndices)) {
+            return iter->second;
+        }
+        else {
+            return std::numeric_limits<uint32_t>::max();
+        }
     }
 
     ShaderResource* ResourceGroup::operator[](const char* name) noexcept {

@@ -3,6 +3,7 @@
 #include "core/Shader.hpp"
 #include "core/ShaderPack.hpp"
 #include "../src/util/ShaderPackBinary.hpp"
+#include "../src/util/ShaderFileTracker.hpp"
 #include <array>
 #include "easylogging++.h"
 INITIALIZE_EASYLOGGINGPP
@@ -43,14 +44,22 @@ int main(int argc, char* argv[]) {
     callbacks.GetFOVY = &fov_y;
     
     for (size_t i = 0; i < 100; ++i) {
-        ShaderPack pack("../fragments/volumetric_forward/ShaderPack.lua");
 
+        std::chrono::high_resolution_clock::time_point beforeExec;
+        beforeExec = std::chrono::high_resolution_clock::now();
+        ShaderPack pack("../fragments/volumetric_forward/ShaderPack.lua");
+        std::chrono::duration<double, std::milli> work_time = std::chrono::high_resolution_clock::now() - beforeExec;
+        LOG(INFO) << "Conventional creation of ShaderPack took: " << work_time.count() << "ms";
         ShaderPackBinary* binarization_of_pack = CreateShaderPackBinary(&pack);
         SaveBinaryToFile(binarization_of_pack, "VolumetricForwardPack.stbin");
 
-        ShaderPackBinary* reloaded_pack = LoadShaderPackBinary("VolumetricForwardPack.stbin");
+        ClearProgramState();
 
+        ShaderPackBinary* reloaded_pack = LoadShaderPackBinary("VolumetricForwardPack.stbin");
+        beforeExec = std::chrono::high_resolution_clock::now();
         ShaderPack binary_loaded_pack(reloaded_pack);
+        work_time = std::chrono::high_resolution_clock::now() - beforeExec;
+        LOG(INFO) << "Creation of ShaderPack using saved binary took: " << work_time.count() << "ms";
 
         DestroyShaderPackBinary(binarization_of_pack);
         DestroyShaderPackBinary(reloaded_pack);

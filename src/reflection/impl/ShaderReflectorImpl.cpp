@@ -135,7 +135,7 @@ namespace st {
             throw std::runtime_error("Passed invalid resource type.");
         };
 
-        const std::string& shader_name = f_tracker.ShaderNames.at(shader_handle);
+        const std::string shader_name = f_tracker.GetShaderName(shader_handle);
 
         for (const auto& rsrc : resources) {
             const std::string rsrc_name = get_actual_name(recompiler->get_name(rsrc.id));
@@ -171,9 +171,11 @@ namespace st {
                 }
             }
             const uint32_t set_idx = recompiler->get_decoration(rsrc.id, spv::DecorationDescriptorSet);
- 
-            tempResources.emplace(set_idx, 
+            f_tracker.ResourceGroupSetIndexMaps[parent_resource->ParentGroupName()].emplace(shader_handle, set_idx);
+            auto iter = tempResources.emplace(set_idx, 
                 ResourceUsage(shader_handle, parent_resource, modifier, parent_resource->DescriptorType()));
+            iter->second.bindingIdx = binding_idx;
+            iter->second.setIdx = set_idx;
         }
 
     }

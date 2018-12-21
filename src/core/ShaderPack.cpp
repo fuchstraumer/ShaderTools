@@ -2,6 +2,7 @@
 #include "impl/ShaderPackImpl.hpp"
 #include "common/UtilityStructs.hpp"
 #include "core/ResourceGroup.hpp"
+#include "easyloggingpp/src/easylogging++.h"
 
 namespace st {
 
@@ -73,7 +74,7 @@ namespace st {
         return impl->typeCounts;
     }
 
-    const ResourceGroup * ShaderPack::GetResourceGroup(const char * name) const {
+    const ResourceGroup* ShaderPack::GetResourceGroup(const char * name) const {
         auto iter = impl->resourceGroups.find(name);
         if (iter != std::cend(impl->resourceGroups)) {
             return iter->second.get();

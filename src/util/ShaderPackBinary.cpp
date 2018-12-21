@@ -18,7 +18,7 @@
 namespace st {
 
     namespace fs = std::experimental::filesystem;
-    constexpr static uint32_t SHADER_TOOLS_VERSION = VK_MAKE_VERSION(0, 4, 1);
+    constexpr static uint32_t SHADER_TOOLS_VERSION = VK_MAKE_VERSION(0, 4, 2);
     constexpr static uint32_t SHADER_BINARY_MAGIC_VALUE{ 0x70cd20ae };
     constexpr static uint32_t SHADER_PACK_BINARY_MAGIC_VALUE{ 0x9db3bb66 };
 
@@ -26,18 +26,35 @@ namespace st {
     using OutputAdapter = bitsery::OutputBufferAdapter<BitseryBuffer>;
     using InputAdapter = bitsery::InputBufferAdapter<BitseryBuffer>;
 
+    struct ShaderStageBinary {
+        ShaderStageBinary() = default;
+        ShaderStageBinary(const ShaderStage& stage);
+        uint64_t ID{ std::numeric_limits<uint64_t>::max() };
+        int64_t LastWriteTime{ std::numeric_limits<int64_t>::max() };
+        std::string BodyPath;
+        std::string SourceStr;
+        std::vector<uint32_t> Binary;
+    };
+
+    ShaderStageBinary::ShaderStageBinary(const ShaderStage& stage) : ID(stage.ID) {
+        auto& ftracker = ShaderFileTracker::GetFileTracker();
+        const fs::path& stage_path = ftracker.BodyPaths.at(stage);
+        BodyPath = stage_path.string();
+
+        fs::file_time_type full_last_write_time = fs::last_write_time(stage_path);
+        auto true_time = full_last_write_time.time_since_epoch();
+        LastWriteTime = int64_t(true_time.count());
+
+        SourceStr = ftracker.FullSourceStrings.at(stage);
+        Binary = ftracker.Binaries.at(stage);
+    }
+
     struct ShaderBinary {
         ShaderBinary() = default;
         ShaderBinary(const Shader* src);
         uint32_t ShaderBinaryMagic{ SHADER_BINARY_MAGIC_VALUE };
         uint32_t NumShaderStages;
         std::vector<uint64_t> StageIDs;
-        std::vector<long long> LastWriteTimes;
-        std::vector<std::string> Paths;
-        std::vector<std::string> SourceStrings;
-        std::vector<std::string> AssemblyStrs;
-        std::vector<std::string> RecompiledStrs;
-        std::vector<std::vector<uint32_t>> Binaries;
     };
 
     ShaderBinary::ShaderBinary(const Shader * src) {
@@ -49,27 +66,10 @@ namespace st {
 
         NumShaderStages = static_cast<uint32_t>(num_stages);
         StageIDs.resize(num_stages, 0u);
-        LastWriteTimes.resize(num_stages);
-        Paths.resize(num_stages);
-        SourceStrings.resize(num_stages);
-        AssemblyStrs.resize(num_stages);
-        RecompiledStrs.resize(num_stages);
-        Binaries.resize(num_stages);
 
         auto& ftracker = ShaderFileTracker::GetFileTracker();
         for (size_t i = 0; i < num_stages; ++i) {
             StageIDs[i] = stages[i].ID;
-            const fs::path& stage_path = ftracker.BodyPaths.at(stages[i]);
-            Paths[i] = stage_path.string();
-
-            fs::file_time_type full_last_write_time = fs::last_write_time(stage_path);
-            auto true_time = full_last_write_time.time_since_epoch();
-            LastWriteTimes[i] = int64_t(true_time.count());
-
-            SourceStrings[i] = ftracker.FullSourceStrings.at(stages[i]);
-            AssemblyStrs[i] = ftracker.AssemblyStrings.at(stages[i]);
-            RecompiledStrs[i] = ftracker.RecompiledSourcesFromBinaries.at(stages[i]);
-            Binaries[i] = ftracker.Binaries.at(stages[i]);
         }
 
     }
@@ -81,7 +81,9 @@ namespace st {
         uint32_t ShaderToolsVersion{ 0 };
         std::string PackPath{};
         std::string ResourceScriptPath{};
-        uint32_t NumShaders{ 0 };
+        uint32_t NumStages{ 0u };
+        std::vector<ShaderStageBinary> Stages{};
+        uint32_t NumShaders{ 0u };
         std::vector<ShaderBinary> Shaders{};
     };
 
@@ -89,6 +91,11 @@ namespace st {
         const ShaderPackImpl* src = initial_pack->impl.get();
         PackPath = src->packScriptPath;
         ResourceScriptPath = src->resourceScriptPath;
+
+        NumStages = static_cast<uint32_t>(src->filePack->Stages.size());
+        for (const auto& stage : src->filePack->Stages) {
+            Stages.emplace_back(stage.second);
+        }
 
         for (const auto& shader_group : src->groups) {
             Shaders.emplace_back(ShaderBinary(shader_group.second.get()));
@@ -98,19 +105,14 @@ namespace st {
 
     }
 
-
     template<typename S>
-    void serialize(S& s, std::vector<std::string>& strs) {
-        for (auto& str : strs) {
-            s.text1b(str, 512);
-        }
-    }
-
-    template<typename S>
-    void serialize(S& s, std::vector<std::vector<uint32_t>>& binaries) {
-        for (auto& bin : binaries) {
-            s.container4b(bin, 4092);
-        }
+    void serialize(S& s, ShaderStageBinary& stage) {
+        s.value8b(stage.ID);
+        s.value8b(stage.LastWriteTime);
+        s.text1b(stage.BodyPath, 512);
+        LOG_IF(stage.SourceStr.size() > 32768, WARNING) << "Stage full source string is over 32768 characters, half the max available size!";
+        s.text1b(stage.SourceStr, 65536);
+        s.container4b(stage.Binary, 65536);
     }
 
     template<typename S>
@@ -118,21 +120,6 @@ namespace st {
         s.value4b(bin.ShaderBinaryMagic);
         s.value4b(bin.NumShaderStages);
         s.container8b(bin.StageIDs, 8);
-        s.container8b(bin.LastWriteTimes, 8);
-        s.container(bin.Paths, 8, [&s](std::string& str) { s.text1b(str, 512); });
-        s.container(bin.SourceStrings, 8, [&s](std::string& str) {
-            LOG_IF(str.size() > 16384, WARNING) << "Warning! Serializing a large source string of over 16384 characters - " << str.size() << " characters in current string!";
-            s.text1b(str, 65536);
-        });
-        s.container(bin.AssemblyStrs, 8, [&s](std::string& str) {
-            LOG_IF(str.size() > 16384, WARNING) << "Warning! Serializing a large source string of over 16384 characters - " << str.size() << " characters in current string!";
-            s.text1b(str, 65536);
-        });
-        s.container(bin.RecompiledStrs, 8, [&s](std::string& str) {
-            LOG_IF(str.size() > 16384, WARNING) << "Warning! Serializing a large source string of over 16384 characters - " << str.size() << " characters in current string!";
-            s.text1b(str, 65536);
-        });
-        s.container(bin.Binaries, 8, [&s](std::vector<uint32_t>& bin) { s.container4b(bin, 32768); });
     }
 
     template<typename S>
@@ -141,6 +128,8 @@ namespace st {
         s.value4b(pack.ShaderToolsVersion);
         s.text1b(pack.PackPath, 512);
         s.text1b(pack.ResourceScriptPath, 512);
+        s.value4b(pack.NumStages);
+        s.container(pack.Stages, 64, [&s](ShaderStageBinary& stg) { serialize<S>(s, stg); });
         s.value4b(pack.NumShaders);
         s.container(pack.Shaders, 32, [&s](ShaderBinary& bin) { serialize<S>(s, bin); });
     }
@@ -200,44 +189,28 @@ namespace st {
 
 void st::detail::LoadPackFromBinary(ShaderPackImpl * pack, ShaderPackBinary * bin) {
 
-    pack->filePack = std::make_unique<shader_pack_file_t>(bin->PackPath.c_str());
+    if (bin->ShaderToolsVersion != SHADER_TOOLS_VERSION) {
+        LOG(WARNING) << "ShaderToolsVersion in loaded binary does not match: loading may fault or cause errors!";
+    }
+
     pack->packScriptPath = bin->PackPath;
-    pack->workingDir = fs::canonical(fs::path(bin->PackPath).remove_filename());
+
+    if (!fs::exists(fs::path(pack->packScriptPath))) {
+        LOG(WARNING) << "Path script path stored in binary doesn't exist!";
+    }
+
+    pack->createPackScript(pack->packScriptPath.c_str());
+    fs::path working_dir{ pack->packScriptPath };
+    pack->workingDir = fs::canonical(working_dir.remove_filename());
+
+    pack->resourceScriptPath = bin->ResourceScriptPath;
 
     auto& ftracker = ShaderFileTracker::GetFileTracker();
-    for (size_t i = 0; i < bin->NumShaders; ++i) {
-
-        const ShaderBinary& curr_shader = bin->Shaders[i];
-        for (size_t j = 0; j < curr_shader.NumShaderStages; ++j) {
-            ShaderStage curr_stage{ curr_shader.StageIDs[j] };
-
-            auto stored_last_write_time = fs::file_time_type::clock::duration{ curr_shader.LastWriteTimes[j] };
-            fs::path stage_path{ curr_shader.Paths[j] };
-            if (!fs::exists(stage_path)) {
-                throw std::runtime_error("Given path in binary for a shader body string does not exist!");
-            }
-            auto actual_last_write_time = fs::last_write_time(stage_path).time_since_epoch();
-
-            if (actual_last_write_time == stored_last_write_time) {
-                ftracker.StageLastModificationTimes.emplace(curr_stage, stored_last_write_time);
-                ftracker.FullSourceStrings.emplace(curr_stage, curr_shader.SourceStrings[j]);
-                ftracker.Binaries.emplace(curr_stage, curr_shader.Binaries[j]);
-                ftracker.AssemblyStrings.emplace(curr_stage, curr_shader.AssemblyStrs[j]);
-                ftracker.RecompiledSourcesFromBinaries.emplace(curr_stage, curr_shader.RecompiledStrs[j]);
-                ftracker.BodyPaths.emplace(curr_stage, stage_path);
-            }
-            else {
-                LOG(WARNING) << "Loaded binary cannot be entirely used, as shader has been updated!";
-                // need to also clear this item from the map
-                ftracker.ShaderBodies.erase(curr_stage);
-                ftracker.FullSourceStrings.erase(curr_stage);
-                ftracker.Binaries.erase(curr_stage);
-                ftracker.AssemblyStrings.erase(curr_stage);
-                ftracker.RecompiledSourcesFromBinaries.erase(curr_stage);
-                ftracker.StageLastModificationTimes[curr_stage] = fs::last_write_time(stage_path);
-            }
-        }
-
+    for (auto&& stage : bin->Stages) {
+        ftracker.BodyPaths.emplace(stage.ID, std::move(stage.BodyPath));
+        ftracker.StageLastModificationTimes.emplace(stage.ID, fs::file_time_type::clock::duration{ stage.LastWriteTime });
+        ftracker.FullSourceStrings.emplace(stage.ID, std::move(stage.SourceStr));
+        ftracker.Binaries.emplace(stage.ID, std::move(stage.Binary));
     }
 
 }

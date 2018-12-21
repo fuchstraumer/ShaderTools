@@ -30,4 +30,12 @@ namespace st {
         return VkShaderStageFlagBits((uint32_t)ID);
     }
 
+    bool ShaderStage::operator==(const ShaderStage & other) const noexcept {
+        return ID == other.ID;
+    }
+
+    bool ShaderStage::operator<(const ShaderStage & other) const noexcept {
+        return GetStage() <= other.GetStage();
+    }
+
 }

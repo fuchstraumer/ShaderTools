@@ -39,11 +39,11 @@ namespace st {
         return impl->reflector->GetImpl();
     }
 
-    Shader::Shader(const char* group_name, const char* resource_file_path, const size_t num_extensions, const char* const* extensions, const size_t num_includes, const char* const* paths) 
-        : impl(std::make_unique<ShaderGroupImpl>(group_name, num_extensions, extensions, num_includes, paths)){
-        const std::string file_path{ resource_file_path };
+    Shader::Shader(const char* group_name, const size_t num_stages, const ShaderStage * stages, const char* resource_file_path) : impl(std::make_unique<ShaderGroupImpl>(group_name)) {
+
         auto& FileTracker = ShaderFileTracker::GetFileTracker();
-        if (!FileTracker.FindResourceScript(file_path, impl->rsrcFile)) {
+        const std::string file_path{ resource_file_path };
+        if (!FileTracker.FindResourceScript(file_path, &impl->rsrcFile)) {
             LOG(ERROR) << "Failed to execute or find resource script.";
             throw std::runtime_error("Failed to execute resource script: check error log.");
         }
@@ -51,6 +51,11 @@ namespace st {
             namespace fs = std::experimental::filesystem;
             impl->rsrcFile = FileTracker.ResourceScripts.at(fs::path(fs::canonical(fs::path(file_path))).string()).get();
             impl->resourceScriptPath = fs::canonical(fs::path(file_path));
+        }
+
+        for (size_t i = 0; i < num_stages; ++i) {
+            FileTracker.ShaderUsedResourceScript.emplace(stages[i], impl->resourceScriptPath.string());
+            impl->addShaderStage(stages[i]);
         }
 
     }
@@ -64,17 +69,16 @@ namespace st {
         return *this;
     }
 
-    ShaderStage Shader::AddShaderStage(const char * shader_name, const char * body_src_file_path, const VkShaderStageFlagBits & flags) {
+    ShaderStage Shader::AddShaderStage(const char * shader_name, const VkShaderStageFlagBits & flags) {
         ShaderStage handle(shader_name, flags);
         auto& FileTracker = ShaderFileTracker::GetFileTracker();
-        FileTracker.ShaderNames.emplace(handle, shader_name);
         FileTracker.ShaderUsedResourceScript.emplace(handle, impl->resourceScriptPath.string());
         auto iter = impl->stHandles.emplace(handle);
         if (!iter.second) {
             LOG(ERROR) << "Could not add/emplace Shader to Shader - handle or shader may already exist!";
             throw std::runtime_error("Could not add shader to Shader, failed to emplace into handles set: might already exist!");
         }
-        impl->addShaderStage(handle, body_src_file_path);
+        impl->addShaderStage(handle);
         return handle;
     }
 

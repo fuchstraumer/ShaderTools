@@ -74,6 +74,10 @@ namespace st {
         return bindingIdx;
     }
 
+    const uint32_t& ResourceUsage::SetIdx() const noexcept {
+        return setIdx;
+    }
+
     const access_modifier & ResourceUsage::AccessModifier() const noexcept {
         return accessModifier;
     }

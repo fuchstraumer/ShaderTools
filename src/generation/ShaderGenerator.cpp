@@ -59,11 +59,11 @@ namespace st {
         const std::string path_str = file_path.string();
         
        
-        return WriteAndAddShaderSource(fname, source_str, impl->Stage);
+        return WriteAndAddShaderSource(fname, source_str, impl->Stage.GetStage());
     }
 
     VkShaderStageFlagBits ShaderGenerator::GetStage() const {
-        return impl->Stage;
+        return impl->Stage.GetStage();
     }
 
     void ShaderGenerator::SetBasePath(const char * new_base_path) {
