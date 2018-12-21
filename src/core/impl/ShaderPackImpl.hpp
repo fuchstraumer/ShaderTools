@@ -14,6 +14,7 @@ namespace st {
     class ResourceFile;
     class ResourceGroup;
     struct ShaderPackBinary;
+    class ShaderStageProcessor;
 
     class ShaderPackImpl {
     public:
@@ -22,17 +23,21 @@ namespace st {
 
         ShaderPackImpl(const char* shader_pack_file_path);
         ShaderPackImpl(ShaderPackBinary* binary_data);
+        ~ShaderPackImpl();
 
         void executeResourceScript();
         void processShaderStages();
+        void loadShaderStages(ShaderPackBinary * bin);
         void createShaders();
         void createResourceGroups();
-        void createSingleGroup(const std::string& name, const std::map<VkShaderStageFlagBits, std::string>& shader_map);
+        void createSingleGroup(const std::string& name, const std::vector<ShaderStage> shaders);
         void setDescriptorTypeCounts() const;
 
         std::string packScriptPath;
         std::string resourceScriptPath;
         std::unordered_map<std::string, std::unique_ptr<Shader>> groups;
+        std::unordered_map<ShaderStage, std::future<void>> processorFutures;
+        std::unordered_map<ShaderStage, std::unique_ptr<ShaderStageProcessor>> processors;
         std::unique_ptr<ShaderPackScript> filePack{ nullptr };
         std::experimental::filesystem::path workingDir;
         std::mutex guardMutex;

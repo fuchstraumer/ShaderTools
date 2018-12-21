@@ -5,6 +5,7 @@
 #include "../../util/ShaderPackBinary.hpp"
 #include "../../reflection/impl/ShaderReflectorImpl.hpp"
 #include "../../lua/ResourceFile.hpp"
+#include "ShaderStageProcessor.hpp"
 #include "core/ResourceGroup.hpp"
 #include "easyloggingpp/src/easylogging++.h"
 #include <array>
@@ -37,10 +38,14 @@ namespace st {
 
     ShaderPackImpl::ShaderPackImpl(ShaderPackBinary * binary_data) {
         detail::LoadPackFromBinary(this, binary_data);
+        executeResourceScript();
+        loadShaderStages(binary_data);
         createShaders();
         createResourceGroups();
         setDescriptorTypeCounts();
     }
+
+    ShaderPackImpl::~ShaderPackImpl() {}
 
     void ShaderPackImpl::executeResourceScript() {
 
@@ -54,85 +59,64 @@ namespace st {
         resourceScriptPath = fs::canonical(resource_path).string();
         const std::string resource_path_str = resource_path.string();
         auto& ftracker = ShaderFileTracker::GetFileTracker();
-        ftracker.FindResourceScript(resource_path_str, rsrcFile);
+        if (!ftracker.FindResourceScript(resource_path_str, &rsrcFile)) {
+            LOG(ERROR) << "Failed to fully execute or find executed resource script!";
+            throw std::runtime_error("Couldn't find or execute resource script.");
+        }
 
     }
 
     void ShaderPackImpl::processShaderStages() {
 
+        auto& ftracker = ShaderFileTracker::GetFileTracker();
+        const std::string working_dir_str = workingDir.string();
+        const std::vector<std::string> base_includes{ working_dir_str };
+
+        for (auto& stage : filePack->Stages) {
+            processors.emplace(stage.second, std::make_unique<ShaderStageProcessor>(stage.second, rsrcFile));
+            fs::path body_path = fs::canonical(workingDir / fs::path(stage.first));
+            if (!fs::exists(body_path)) {
+                throw std::runtime_error("Path for shader stage to be generated does not exist!");
+            }
+            ftracker.BodyPaths.emplace(stage.second, body_path);
+            processorFutures.emplace(stage.second, std::async(std::launch::async, &ShaderStageProcessor::Process, processors.at(stage.second).get(), body_path.string(), filePack->StageExtensions[stage.second], base_includes));
+        }
+
+    }
+
+    void ShaderPackImpl::loadShaderStages(ShaderPackBinary* bin) {
+
     }
 
     void ShaderPackImpl::createShaders() {
 
-        const std::string working_dir_str = workingDir.string();
-        const std::array<const char*, 1> base_includes{ working_dir_str.c_str() };
-
-
-
 
         for (const auto& group : filePack->ShaderGroups) {
-            std::vector<const char*> extension_strings;
-            if (filePack->GroupExtensions.count(group.first) != 0) {
-                for (auto& extension : filePack->GroupExtensions.at(group.first)) {
-                    extension_strings.emplace_back(extension.c_str());
-                }
-                groups.emplace(group.first, std::make_unique<Shader>(group.first.c_str(), resource_path_str.c_str(), extension_strings.size(), extension_strings.data(),
-                    base_includes.size(), base_includes.data()));
-            }
-            else {
-                groups.emplace(group.first, std::make_unique<Shader>(group.first.c_str(), resource_path_str.c_str(), 0, nullptr, base_includes.size(), base_includes.data()));
-            }
-            createSingleGroup(group.first, group.second);
-            //groups.at(group.first)->impl-
-            groups.at(group.first)->SetIndex(filePack->GroupIndices.at(group.first));
-            if (filePack->GroupTags.count(group.first) != 0) {
-                const auto& tags = filePack->GroupTags.at(group.first);
-                std::vector<const char*> tag_ptrs;
-                for (auto& tag : tags) {
-                    tag_ptrs.emplace_back(tag.c_str());
-                }
-                groups.at(group.first)->SetTags(tag_ptrs.size(), tag_ptrs.data());
-            }
+            std::vector<ShaderStage> stages{};
+            std::unique_copy(group.second.cbegin(), group.second.cend(), std::back_inserter(stages));
+            createSingleGroup(group.first, stages);
         }
 
-        resource_path = fs::canonical(resource_path);
-        auto& ftracker = ShaderFileTracker::GetFileTracker();
-        rsrcFile = ftracker.ResourceScripts.at(resource_path.string()).get();
     }
 
     void ShaderPackImpl::createResourceGroups() {
         const auto& rsrcs = rsrcFile->GetAllResources();
         for (const auto& entry : rsrcs) {
             resourceGroups.emplace(entry.first, std::make_unique<ResourceGroup>(rsrcFile, entry.first.c_str()));
-
         }
     }
 
-    void ShaderPackImpl::createSingleGroup(const std::string & name, const std::map<VkShaderStageFlagBits, std::string>& shader_map) {
-        namespace fs = std::experimental::filesystem;
-
-        for (const auto& shader : shader_map) {
-            std::string shader_name_str = shader.second;
-            fs::path shader_path = workingDir / fs::path(shader_name_str);
-            if (!fs::exists(shader_path)) {
-                LOG(ERROR) << "Shader path given could not be found.";
-                throw std::runtime_error("Failed to find shader using given path.");
+    void ShaderPackImpl::createSingleGroup(const std::string& name, const std::vector<ShaderStage> shaders) {
+        
+        for (const auto& shader : shaders) {
+            // make sure processing is done
+            if (processorFutures.count(shader)) {
+                processorFutures.at(shader).get();
+                processorFutures.erase(shader);
             }
-            const std::string shader_path_str = shader_path.string();
-
-            size_t name_prefix_idx = shader_name_str.find_last_of('/');
-            if (name_prefix_idx != std::string::npos) {
-                shader_name_str.erase(shader_name_str.begin(), shader_name_str.begin() + name_prefix_idx + 1);
-            }
-
-            size_t name_suffix_idx = shader_name_str.find_first_of('.');
-            if (name_suffix_idx != std::string::npos) {
-                shader_name_str.erase(shader_name_str.begin() + name_suffix_idx, shader_name_str.end());
-            }
-
-
-            groups.at(name)->AddShaderStage(shader_name_str.c_str(), shader_path_str.c_str(), shader.first);
         }
+
+        groups.emplace(name, std::make_unique<Shader>(name.c_str(), shaders.size(), shaders.data(), resourceScriptPath.c_str()));
     }
 
     void ShaderPackImpl::setDescriptorTypeCounts() const {
