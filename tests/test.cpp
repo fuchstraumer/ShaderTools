@@ -3,6 +3,7 @@
 #include "core/Shader.hpp"
 #include "core/ShaderPack.hpp"
 #include "../src/util/ShaderPackBinary.hpp"
+#include "../src/util/ShaderFileTracker.hpp"
 #include <array>
 #include "easylogging++.h"
 INITIALIZE_EASYLOGGINGPP
@@ -43,13 +44,14 @@ int main(int argc, char* argv[]) {
     callbacks.GetFOVY = &fov_y;
     
     for (size_t i = 0; i < 100; ++i) {
-        ShaderPack pack("../fragments/volumetric_forward/ShaderPack.lua");
 
+        ShaderPack pack("../fragments/volumetric_forward/ShaderPack.lua");
         ShaderPackBinary* binarization_of_pack = CreateShaderPackBinary(&pack);
         SaveBinaryToFile(binarization_of_pack, "VolumetricForwardPack.stbin");
 
-        ShaderPackBinary* reloaded_pack = LoadShaderPackBinary("VolumetricForwardPack.stbin");
+        ClearProgramState();
 
+        ShaderPackBinary* reloaded_pack = LoadShaderPackBinary("VolumetricForwardPack.stbin");
         ShaderPack binary_loaded_pack(reloaded_pack);
 
         DestroyShaderPackBinary(binarization_of_pack);

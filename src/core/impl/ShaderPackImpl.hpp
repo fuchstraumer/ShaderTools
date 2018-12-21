@@ -45,7 +45,7 @@ namespace st {
         std::unordered_map<std::string, std::unique_ptr<ResourceGroup>> resourceGroups;
         mutable descriptor_type_counts_t typeCounts;
     private:
-        friend void detail::LoadPackFromBinary(ShaderPackImpl* pack, ShaderPackBinary* bin);
+        friend void LoadPackFromBinary(ShaderPackImpl* pack, ShaderPackBinary* bin);
         friend struct ShaderPackBinary;
         ResourceFile* rsrcFile;
     };
