@@ -61,7 +61,7 @@ namespace st {
     class ShaderGeneratorImpl {
     public:
 
-        ShaderGeneratorImpl(ShaderStage _stage);
+        explicit ShaderGeneratorImpl(ShaderStage _stage);
         ~ShaderGeneratorImpl();
 
         ShaderGeneratorImpl(ShaderGeneratorImpl&& other) noexcept;

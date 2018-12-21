@@ -116,14 +116,14 @@ namespace st {
             FileTracker.AssemblyStrings.erase(handle);
         }
 
-        auto iter = FileTracker.AssemblyStrings.emplace(handle, std::string{ assembly_result.cbegin(), assembly_result.cend() });
-        if (!iter.second) {
+        auto assembly_iter = FileTracker.AssemblyStrings.emplace(handle, std::string{ assembly_result.cbegin(), assembly_result.cend() });
+        if (!assembly_iter.second) {
             LOG(ERROR) << "Failed to emplace generated assembly string into program's storage!";
             throw std::runtime_error("Emplacement of shader assembly string failed!");
         }
 
         // Now compile to binary.
-        shaderc::SpvCompilationResult binary_result = compiler.AssembleToSpv(iter.first->second, options);
+        shaderc::SpvCompilationResult binary_result = compiler.AssembleToSpv(assembly_iter.first->second, options);
         if (binary_result.GetCompilationStatus() != shaderc_compilation_status_success) {
             const std::string err_msg = binary_result.GetErrorMessage();
             LOG(ERROR) << "Shader assembly into final SPIR-V result failed.\n";
@@ -137,8 +137,8 @@ namespace st {
             FileTracker.Binaries.erase(handle);
         }
 
-        auto iter = FileTracker.Binaries.emplace(handle, std::vector<uint32_t>{binary_result.begin(), binary_result.end()});
-        if (!iter.second) {
+        auto binary_iter = FileTracker.Binaries.emplace(handle, std::vector<uint32_t>{binary_result.begin(), binary_result.end()});
+        if (!binary_iter.second) {
             LOG(ERROR) << "Failed to emplace compiled SPIR-V binary into program's storage!";
             throw std::runtime_error("Emplacement of shader SPIR-V binary failed.");
         }
