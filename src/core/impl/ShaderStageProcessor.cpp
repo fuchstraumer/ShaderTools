@@ -9,14 +9,24 @@ namespace st {
     namespace fs = std::experimental::filesystem;
 
     ShaderStageProcessor::ShaderStageProcessor(ShaderStage _stage, ResourceFile* rfile) : stage(std::move(_stage)), rsrcFile(rfile),
-        generator(std::make_unique<ShaderGeneratorImpl>(_stage.GetStage())), compiler(std::make_unique<ShaderCompilerImpl>()) {
+        generator(std::make_unique<ShaderGeneratorImpl>(_stage)), compiler(std::make_unique<ShaderCompilerImpl>()) {
         generator->luaResources = rsrcFile;
     }
 
     ShaderStageProcessor::~ShaderStageProcessor() {}
 
+    void ShaderStageProcessor::Process(std::string body_path, const std::vector<std::string>& extensions, const std::vector<std::string>& includes) {
+        bodyPath = std::move(body_path);
+        Generate(bodyPath, extensions, includes);
+        Compile();
+    }
+
     const std::string& ShaderStageProcessor::Generate(const std::string& body_path_str, const std::vector<std::string>& extensions, const std::vector<std::string>& includes) {
         auto& ftracker = ShaderFileTracker::GetFileTracker();
+
+        if (ftracker.BodyPaths.count(stage) == 0) {
+            ftracker.BodyPaths.emplace(stage, body_path_str);
+        }
 
         for (const auto& inc : includes) {
             generator->includes.emplace_back(inc);

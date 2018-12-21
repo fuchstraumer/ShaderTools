@@ -19,6 +19,7 @@ namespace st {
         ShaderStageProcessor(ShaderStage stage, ResourceFile* rfile);
         ~ShaderStageProcessor();
 
+        void Process(std::string body_path, const std::vector<std::string>& extensions, const std::vector<std::string>& includes);
         const std::string& Generate(const std::string& body_path, const std::vector<std::string>& extensions, const std::vector<std::string>& includes);
         const std::vector<uint32_t>& Compile();
 
@@ -26,6 +27,7 @@ namespace st {
 
         ShaderStage stage{ 0u };
         ResourceFile* rsrcFile{ nullptr };
+        std::string bodyPath;
         std::unique_ptr<ShaderGeneratorImpl> generator{ nullptr };
         std::unique_ptr<ShaderCompilerImpl> compiler{ nullptr };
     };
