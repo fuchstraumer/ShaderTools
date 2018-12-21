@@ -87,7 +87,7 @@ namespace st {
     void ShaderFileTracker::DumpContentsToCacheDir() {
 
         auto write_output = [&](const ShaderStage& handle, const std::string& contents, const std::string& extension) {
-            const std::string output_name = ShaderNames.at(handle) + extension;
+            const std::string output_name = GetShaderName(handle) + extension;
             const fs::path output_path = cacheDir / output_name;
             std::ofstream output_stream(output_path);
             if (output_stream.is_open()) {
@@ -206,12 +206,12 @@ namespace st {
         }
     }
 
-    bool ShaderFileTracker::FindResourceScript(const std::string & fname, const ResourceFile * dest_ptr) {
+    bool ShaderFileTracker::FindResourceScript(const std::string & fname, ResourceFile ** dest_ptr) {
         namespace fs = std::experimental::filesystem;
         if (fs::exists(fs::path(fname))) {
             std::string absolute_file_path = fs::canonical(fs::path(fname)).string();
             if (ResourceScripts.count(absolute_file_path) != 0) {
-                dest_ptr = ResourceScripts.at(absolute_file_path).get();
+                *dest_ptr = ResourceScripts.at(absolute_file_path).get();
                 return true;
             }
             else {
@@ -224,7 +224,7 @@ namespace st {
                 }
 
                 iter.first->second->Execute(absolute_file_path.c_str());
-                dest_ptr = ResourceScripts.at(absolute_file_path).get();
+                *dest_ptr = ResourceScripts.at(absolute_file_path).get();
                 return true;
             }
         }
