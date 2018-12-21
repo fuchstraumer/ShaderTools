@@ -15,10 +15,13 @@ namespace st {
 
     class ResourceFile;
 
+    void ST_API ClearProgramState();
+
     struct ShaderFileTracker {
         ShaderFileTracker(const std::string& initial_directory = std::string{ "" });
         ~ShaderFileTracker();
 
+        void ClearAllContainers();
         void DumpContentsToCacheDir();
 
         bool FindShaderBody(const ShaderStage& handle, std::string& dest_str);

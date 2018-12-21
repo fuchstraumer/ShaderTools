@@ -84,6 +84,22 @@ namespace st {
         DumpContentsToCacheDir();
     }
 
+    void ShaderFileTracker::ClearAllContainers() {
+        StageLastModificationTimes.clear();
+        ShaderBodies.clear();
+        RecompiledSourcesFromBinaries.clear();
+        AssemblyStrings.clear();
+        FullSourceStrings.clear();
+        Binaries.clear();
+        ShaderUsedResourceScript.clear();
+        ShaderUsedResourceBlocks.clear();
+        ResourceGroupSetIndexMaps.clear();
+        ResourceScripts.clear();
+        BodyPaths.clear();
+        BinaryPaths.clear();
+        ShaderPackBinaries.clear();
+    }
+
     void ShaderFileTracker::DumpContentsToCacheDir() {
 
         auto write_output = [&](const ShaderStage& handle, const std::string& contents, const std::string& extension) {
@@ -269,6 +285,11 @@ namespace st {
     ShaderFileTracker & ShaderFileTracker::GetFileTracker() {
         static ShaderFileTracker fileTracker;
         return fileTracker;
+    }
+
+    void ST_API ClearProgramState() {
+        auto& ftracker = ShaderFileTracker::GetFileTracker();
+        ftracker.ClearAllContainers();
     }
 
 }
