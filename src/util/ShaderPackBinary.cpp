@@ -105,21 +105,6 @@ namespace st {
 
     }
 
-
-    template<typename S>
-    void serialize(S& s, std::vector<std::string>& strs) {
-        for (auto& str : strs) {
-            s.text1b(str, 512);
-        }
-    }
-
-    template<typename S>
-    void serialize(S& s, std::vector<std::vector<uint32_t>>& binaries) {
-        for (auto& bin : binaries) {
-            s.container4b(bin, 4092);
-        }
-    }
-
     template<typename S>
     void serialize(S& s, ShaderStageBinary& stage) {
         s.value8b(stage.ID);
@@ -203,5 +188,29 @@ namespace st {
 }
 
 void st::detail::LoadPackFromBinary(ShaderPackImpl * pack, ShaderPackBinary * bin) {
+
+    if (bin->ShaderToolsVersion != SHADER_TOOLS_VERSION) {
+        LOG(WARNING) << "ShaderToolsVersion in loaded binary does not match: loading may fault or cause errors!";
+    }
+
+    pack->packScriptPath = bin->PackPath;
+
+    if (!fs::exists(fs::path(pack->packScriptPath))) {
+        LOG(WARNING) << "Path script path stored in binary doesn't exist!";
+    }
+
+    pack->createPackScript(pack->packScriptPath.c_str());
+    fs::path working_dir{ pack->packScriptPath };
+    pack->workingDir = fs::canonical(working_dir.remove_filename());
+
+    pack->resourceScriptPath = bin->ResourceScriptPath;
+
+    auto& ftracker = ShaderFileTracker::GetFileTracker();
+    for (auto&& stage : bin->Stages) {
+        ftracker.BodyPaths.emplace(stage.ID, std::move(stage.BodyPath));
+        ftracker.StageLastModificationTimes.emplace(stage.ID, fs::file_time_type::clock::duration{ stage.LastWriteTime });
+        ftracker.FullSourceStrings.emplace(stage.ID, std::move(stage.SourceStr));
+        ftracker.Binaries.emplace(stage.ID, std::move(stage.Binary));
+    }
 
 }

@@ -39,13 +39,17 @@ namespace st {
     ShaderPackImpl::ShaderPackImpl(ShaderPackBinary * binary_data) {
         detail::LoadPackFromBinary(this, binary_data);
         executeResourceScript();
-        loadShaderStages(binary_data);
+        processShaderStages();
         createShaders();
         createResourceGroups();
         setDescriptorTypeCounts();
     }
 
     ShaderPackImpl::~ShaderPackImpl() {}
+
+    void ShaderPackImpl::createPackScript(const char* fname) {
+        filePack = std::make_unique<ShaderPackScript>(fname);
+    }
 
     void ShaderPackImpl::executeResourceScript() {
 
@@ -84,12 +88,7 @@ namespace st {
 
     }
 
-    void ShaderPackImpl::loadShaderStages(ShaderPackBinary* bin) {
-
-    }
-
     void ShaderPackImpl::createShaders() {
-
 
         for (const auto& group : filePack->ShaderGroups) {
             std::vector<ShaderStage> stages{};

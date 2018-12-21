@@ -27,7 +27,6 @@ namespace st {
 
         void executeResourceScript();
         void processShaderStages();
-        void loadShaderStages(ShaderPackBinary * bin);
         void createShaders();
         void createResourceGroups();
         void createSingleGroup(const std::string& name, const std::vector<ShaderStage> shaders);
@@ -44,6 +43,7 @@ namespace st {
         std::unordered_map<std::string, std::unique_ptr<ResourceGroup>> resourceGroups;
         mutable descriptor_type_counts_t typeCounts;
     private:
+        friend void detail::LoadPackFromBinary(ShaderPackImpl* pack, ShaderPackBinary* bin);
         friend struct ShaderPackBinary;
         ResourceFile* rsrcFile;
     };
