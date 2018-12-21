@@ -22,7 +22,7 @@ namespace st {
         std::unordered_map<std::string, ShaderStage> Stages;
         std::unordered_map<std::string, std::set<ShaderStage>> ShaderGroups;
         std::unordered_map<std::string, std::vector<std::string>> GroupTags;
-        std::unordered_map<std::string, std::vector<std::string>> GroupExtensions;
+        std::unordered_map<ShaderStage, std::vector<std::string>> StageExtensions;
         std::unique_ptr<LuaEnvironment> environment;
 
         void parseScript();

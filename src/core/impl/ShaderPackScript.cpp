@@ -35,7 +35,17 @@ namespace st {
 
             for (const auto& group : shader_groups) {
                 auto group_table = environment->GetTableMap(group.second);
+
                 size_t idx = static_cast<size_t>(group_table.at("Idx").cast<int>());
+
+                std::vector<std::string> group_exts{};
+                if (group_table.count("Extensions") != 0) {
+                    auto extensions_table = environment->GetLinearTable(group_table.at("Extensions"));
+                    std::vector<std::string> extension_strings;
+                    for (auto& ref : extensions_table) {
+                        group_exts.emplace_back(ref.cast<std::string>());
+                    }
+                }
 
                 GroupIndices.emplace(group.first, std::move(idx));
                 auto group_entries = environment->GetTableMap(group_table.at("Shaders"));
@@ -75,6 +85,11 @@ namespace st {
                     else {
                         ShaderGroups[group.first].emplace(Stages.at(shader_name));
                     }
+
+                    if (!group_exts.empty()) {
+                        std::unique_copy(group_exts.cbegin(), group_exts.cend(), std::back_inserter(StageExtensions[Stages.at(shader_name)]));
+                    }
+
                 }
 
                 if (group_table.count("Tags") != 0) {
@@ -84,15 +99,6 @@ namespace st {
                         tag_strings.emplace_back(ref.cast<std::string>());
                     }
                     GroupTags.emplace(group.first, tag_strings);
-                }
-
-                if (group_table.count("Extensions") != 0) {
-                    auto extensions_table = environment->GetLinearTable(group_table.at("Extensions"));
-                    std::vector<std::string> extension_strings;
-                    for (auto& ref : extensions_table) {
-                        extension_strings.emplace_back(ref.cast<std::string>());
-                    }
-                    GroupExtensions.emplace(group.first, extension_strings);
                 }
 
             }
