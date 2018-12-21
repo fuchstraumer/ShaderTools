@@ -34,7 +34,7 @@ namespace st {
         return ID == other.ID;
     }
 
-    bool ShaderStage::operator<=(const ShaderStage & other) const noexcept {
+    bool ShaderStage::operator<(const ShaderStage & other) const noexcept {
         return GetStage() <= other.GetStage();
     }
 

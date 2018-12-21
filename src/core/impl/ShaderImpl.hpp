@@ -20,24 +20,17 @@ namespace st {
         ShaderGroupImpl& operator=(const ShaderGroupImpl& other) = delete;
     public:
 
-        ShaderGroupImpl(const std::string& group_name, size_t num_extensions, const char* const* extensions, size_t num_includes, const char* const* include_paths);
+        ShaderGroupImpl(const std::string& group_name);
         ~ShaderGroupImpl();
         ShaderGroupImpl(ShaderGroupImpl&& other) noexcept;
         ShaderGroupImpl& operator=(ShaderGroupImpl&& other) noexcept;
 
-        void addShaderStage(const ShaderStage& handle, std::string src_str_path);
-
-        void generateFullShaderSource(const ShaderStage& handle, const std::string& src_path, size_t& dest_src_sz, std::string& src_str);
+        void addShaderStage(const ShaderStage& handle);
 
         std::string groupName;
         size_t idx;
-        std::vector<const char*> includePaths;
-        std::vector<std::string> extensionStrCopies;
-        std::vector<const char*> extensionStrPtrs;
         std::unordered_set<st::ShaderStage> stHandles{};
         std::unordered_map<st::ShaderStage, bool> optimizationEnabled;
-        std::unique_ptr<ShaderGenerator> generator{ nullptr };
-        std::unique_ptr<ShaderCompiler> compiler{ nullptr };
         std::unique_ptr<ShaderReflector> reflector{ nullptr };
         ResourceFile* rsrcFile{ nullptr };
         std::vector<std::string> tags;
