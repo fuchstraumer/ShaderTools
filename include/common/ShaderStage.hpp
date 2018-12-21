@@ -15,7 +15,7 @@ namespace st {
         uint64_t ID;
         VkShaderStageFlagBits GetStage() const noexcept;
         bool operator==(const ShaderStage& other) const noexcept;
-        bool operator<=(const ShaderStage& other) const noexcept;
+        bool operator<(const ShaderStage& other) const noexcept;
     };
 
 }
