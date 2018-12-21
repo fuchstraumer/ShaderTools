@@ -57,6 +57,9 @@ namespace st {
                 // Get rid of current shader body and generated source to force re-load when we call generate()
                 ftracker.ShaderBodies.erase(stage);
                 ftracker.FullSourceStrings.erase(stage);
+                if (ftracker.Binaries.count(stage) != 0) {
+                    ftracker.Binaries.erase(stage);
+                }
             }
             else {
                 // write time hasn't changed, we already have the full source string we need, just return it
@@ -83,6 +86,11 @@ namespace st {
                 }
             }
         }
+        
+        if (ftracker.Binaries.count(stage) != 0) {
+            return ftracker.Binaries.at(stage);
+        }
+
         compiler->prepareToCompile(stage, ftracker.GetShaderName(stage), ftracker.FullSourceStrings.at(stage));
         return ftracker.Binaries.at(stage);
     }
