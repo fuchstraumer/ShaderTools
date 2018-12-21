@@ -25,6 +25,8 @@ namespace st {
         ShaderPackImpl(ShaderPackBinary* binary_data);
         ~ShaderPackImpl();
 
+        void createPackScript(const char * fname);
+
         void executeResourceScript();
         void processShaderStages();
         void createShaders();
