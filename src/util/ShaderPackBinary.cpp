@@ -92,7 +92,7 @@ namespace st {
         PackPath = src->packScriptPath;
         ResourceScriptPath = src->resourceScriptPath;
 
-        NumStages = src->filePack->Stages.size();
+        NumStages = static_cast<uint32_t>(src->filePack->Stages.size());
         for (const auto& stage : src->filePack->Stages) {
             Stages.emplace_back(stage.second);
         }

@@ -135,7 +135,7 @@ namespace st {
             throw std::runtime_error("Passed invalid resource type.");
         };
 
-        const std::string& shader_name = f_tracker.ShaderNames.at(shader_handle);
+        const std::string shader_name = f_tracker.GetShaderName(shader_handle);
 
         for (const auto& rsrc : resources) {
             const std::string rsrc_name = get_actual_name(recompiler->get_name(rsrc.id));
