@@ -171,7 +171,11 @@ namespace st {
                 }
             }
             const uint32_t set_idx = recompiler->get_decoration(rsrc.id, spv::DecorationDescriptorSet);
-            f_tracker.ResourceGroupSetIndexMaps[parent_resource->ParentGroupName()].emplace(shader_handle, set_idx);
+            
+            if (resourceGroupSetIndices.count(parent_resource->ParentGroupName()) == 0) {
+                resourceGroupSetIndices.emplace(parent_resource->ParentGroupName(), set_idx);
+            }
+
             auto iter = tempResources.emplace(set_idx, 
                 ResourceUsage(shader_handle, parent_resource, modifier, parent_resource->DescriptorType()));
             iter->second.bindingIdx = binding_idx;
