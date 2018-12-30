@@ -31,11 +31,11 @@ namespace st {
         }
     }
 
-    ShaderReflectorImpl* Shader::GetBindingGeneratorImpl() {
+    ShaderReflectorImpl* Shader::GetShaderReflectorImpl() {
         return impl->reflector->GetImpl();
     }
 
-    const ShaderReflectorImpl* Shader::GetBindingGeneratorImpl() const {
+    const ShaderReflectorImpl* Shader::GetShaderReflectorImpl() const {
         return impl->reflector->GetImpl();
     }
 
@@ -125,7 +125,7 @@ namespace st {
     }
 
     void Shader::GetSetLayoutBindings(const size_t & set_idx, size_t * num_bindings, VkDescriptorSetLayoutBinding * bindings) const {
-        const auto& b_impl = GetBindingGeneratorImpl();
+        const auto* b_impl = GetShaderReflectorImpl();
         
         auto iter = b_impl->sortedSets.find(static_cast<uint32_t>(set_idx));
         if (iter != b_impl->sortedSets.cend()) {
@@ -144,7 +144,7 @@ namespace st {
     }
 
     void Shader::GetSpecializationConstants(size_t * num_constants, SpecializationConstant * constants) const {
-        const ShaderReflectorImpl* b_impl = GetBindingGeneratorImpl();
+        const ShaderReflectorImpl* b_impl = GetShaderReflectorImpl();
         if (!b_impl->specializationConstants.empty()) {
             *num_constants = b_impl->specializationConstants.size();
             if (constants != nullptr) {
@@ -161,7 +161,7 @@ namespace st {
     }
 
     void Shader::GetResourceUsages(const size_t & _set_idx, size_t * num_resources, ResourceUsage * resources) const {
-        const ShaderReflectorImpl* b_impl = GetBindingGeneratorImpl();
+        const ShaderReflectorImpl* b_impl = GetShaderReflectorImpl();
         const uint32_t set_idx = static_cast<uint32_t>(_set_idx);
         if (b_impl->sortedSets.count(set_idx) != 0) {
             if (b_impl->sortedSets.at(set_idx).Members.empty()) {
@@ -220,7 +220,7 @@ namespace st {
     }
 
     dll_retrieved_strings_t Shader::GetSetResourceNames(const uint32_t set_idx) const {
-        const auto& b_impl = GetBindingGeneratorImpl();
+        const auto& b_impl = GetShaderReflectorImpl();
         auto iter = b_impl->sortedSets.find(set_idx);
         
         if (iter != b_impl->sortedSets.cend()) {

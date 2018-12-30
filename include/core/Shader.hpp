@@ -51,8 +51,8 @@ namespace st {
 
     protected:
         friend class ShaderPackImpl;
-        ShaderReflectorImpl* GetBindingGeneratorImpl();
-        const ShaderReflectorImpl* GetBindingGeneratorImpl() const;
+        ShaderReflectorImpl* GetShaderReflectorImpl();
+        const ShaderReflectorImpl* GetShaderReflectorImpl() const;
         Shader(const char * group_name, const size_t num_extensions, const char * const * extensions, const size_t num_includes, const char * const * paths);
     private:
         std::unique_ptr<ShaderGroupImpl> impl;
