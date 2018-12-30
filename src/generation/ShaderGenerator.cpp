@@ -8,7 +8,7 @@ namespace fs = std::experimental::filesystem;
 
 namespace st {
 
-    ShaderGenerator::ShaderGenerator(const VkShaderStageFlagBits& stage) : impl(std::make_unique<ShaderGeneratorImpl>(stage)) {}
+    ShaderGenerator::ShaderGenerator(ShaderStage stage) : impl(std::make_unique<ShaderGeneratorImpl>(std::move(stage))) {}
 
     ShaderGenerator::~ShaderGenerator() {}
 

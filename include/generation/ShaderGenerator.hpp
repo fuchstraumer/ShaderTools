@@ -1,8 +1,9 @@
 #pragma once
-#ifndef SG_SHADER_HPP
-#define SG_SHADER_HPP
+#ifndef SHADERTOOLS_SHADER_GENERATOR_HPP
+#define SHADERTOOLS_SHADER_GENERATOR_HPP
 #include "common/CommonInclude.hpp"
 #include "common/ShaderStage.hpp"
+
 namespace st {
 
     class ShaderGeneratorImpl;
@@ -13,7 +14,7 @@ namespace st {
         ShaderGenerator& operator=(const ShaderGenerator&) = delete;
     public:
 
-        ShaderGenerator(const VkShaderStageFlagBits& stage = VK_SHADER_STAGE_VERTEX_BIT);
+        ShaderGenerator(ShaderStage stage);
         ~ShaderGenerator();
         ShaderGenerator(ShaderGenerator&& other) noexcept;
         ShaderGenerator& operator=(ShaderGenerator&& other) noexcept;
@@ -35,4 +36,4 @@ namespace st {
 
 }
 
-#endif //!SG_SHADER_HPP
+#endif //!SHADERTOOLS_SHADER_GENERATOR_HPP
