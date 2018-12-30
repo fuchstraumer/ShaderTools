@@ -196,18 +196,15 @@ namespace st {
         }
     }
 
-    size_t Shader::ResourceGroupSetIdx(const char * name) const {
-        auto iter = impl->resourceGroupBindingIndices.find(name);
-        if (iter != std::cend(impl->resourceGroupBindingIndices)) {
-            return iter->second;
+    uint32_t Shader::ResourceGroupSetIdx(const char * name) const {
+        const auto* refl_impl = GetShaderReflectorImpl();
+        auto iter = refl_impl->resourceGroupSetIndices.find(name);
+        if (iter == std::end(refl_impl->resourceGroupSetIndices)) {
+            return std::numeric_limits<uint32_t>::max();
         }
         else {
-            return std::numeric_limits<size_t>::max();
+            return iter->second;
         }
-    }
-
-    void Shader::SetResourceGroupIdx(const char * name, size_t idx) {
-        impl->resourceGroupBindingIndices[name] = std::move(idx);
     }
 
     dll_retrieved_strings_t Shader::GetTags() const {

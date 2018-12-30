@@ -37,8 +37,7 @@ namespace st {
         void GetResourceUsages(const size_t& set_idx, size_t* num_resources, ResourceUsage* resources) const;
         VkShaderStageFlags Stages() const noexcept;
         bool OptimizationEnabled(const ShaderStage& handle) const noexcept;
-        size_t ResourceGroupSetIdx(const char* name) const;
-        void SetResourceGroupIdx(const char* name, size_t idx);
+        uint32_t ResourceGroupSetIdx(const char* name) const;
 
         dll_retrieved_strings_t GetTags() const;
         dll_retrieved_strings_t GetSetResourceNames(const uint32_t set_idx) const;
