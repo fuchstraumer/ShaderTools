@@ -28,6 +28,7 @@ namespace st {
 
     void ShaderGroupImpl::addShaderStage(const ShaderStage& handle) {
         auto& FileTracker = ShaderFileTracker::GetFileTracker();
+        stHandles.emplace(handle);
         reflector->ParseBinary(handle);
     }
 
