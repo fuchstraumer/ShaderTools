@@ -140,6 +140,12 @@ namespace st {
         for (const auto& rsrc : resources) {
             const std::string rsrc_name = get_actual_name(recompiler->get_name(rsrc.id));
             const ShaderResource* parent_resource = rsrc_script->FindResource(rsrc_name);
+            const std::string parent_group_name = parent_resource->ParentGroupName();
+
+            if (usedResourceGroupNames.count(parent_group_name) == 0) {
+                usedResourceGroupNames.emplace(parent_group_name);
+            }
+
             glsl_qualifier curr_qualifier = parent_resource->GetReadWriteQualifierForShader(shader_name.c_str());
             if (parent_resource == nullptr) {
                 LOG(ERROR) << "Couldn't find parent resource of resource usage object!";
@@ -172,8 +178,8 @@ namespace st {
             }
             const uint32_t set_idx = recompiler->get_decoration(rsrc.id, spv::DecorationDescriptorSet);
             
-            if (resourceGroupSetIndices.count(parent_resource->ParentGroupName()) == 0) {
-                resourceGroupSetIndices.emplace(parent_resource->ParentGroupName(), set_idx);
+            if (resourceGroupSetIndices.count(parent_group_name) == 0) {
+                resourceGroupSetIndices.emplace(parent_group_name, set_idx);
             }
 
             auto iter = tempResources.emplace(set_idx, 

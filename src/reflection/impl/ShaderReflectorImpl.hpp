@@ -9,6 +9,7 @@
 #include <fstream>
 #include <filesystem>
 #include <unordered_map>
+#include <unordered_set>
 #include <map>
 #include <set>
 #include "../../util/ShaderFileTracker.hpp"
@@ -46,6 +47,7 @@ namespace st {
         std::unordered_map<VkShaderStageFlags, std::vector<VertexAttributeInfo>> inputAttributes;
         std::unordered_map<VkShaderStageFlags, std::vector<VertexAttributeInfo>> outputAttributes;
         std::unordered_map<std::string, uint32_t> resourceGroupSetIndices;
+        std::unordered_set<std::string> usedResourceGroupNames;
         std::unique_ptr<spirv_cross::CompilerGLSL> recompiler{ nullptr };
         size_t getNumSets() const noexcept;
 
