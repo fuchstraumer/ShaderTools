@@ -237,21 +237,15 @@ namespace st {
     }
 
     dll_retrieved_strings_t Shader::GetUsedResourceBlocks() const {
-        auto& ftracker = ShaderFileTracker::GetFileTracker();
-        size_t num_strings = 0;
-        for (auto& handle : impl->stHandles) {
-            num_strings += ftracker.ShaderUsedResourceBlocks.count(handle);
-        }
-        dll_retrieved_strings_t results;
-        results.SetNumStrings(num_strings);
 
-        size_t curr_idx = 0;
-        for (auto& handle : impl->stHandles) {
-            auto iter_pair = ftracker.ShaderUsedResourceBlocks.equal_range(handle);
-            for (auto iter = iter_pair.first; iter != iter_pair.second; ++iter) {
-                results.Strings[curr_idx] = strdup(iter->second.c_str());
-                ++curr_idx;
-            }
+        const auto* refl_impl = GetShaderReflectorImpl();
+        dll_retrieved_strings_t results;
+        results.SetNumStrings(refl_impl->usedResourceGroupNames.size());
+
+        size_t idx = 0;
+        for (const auto& str : refl_impl->usedResourceGroupNames) {
+            results.Strings[idx] = strdup(str.c_str());
+            ++idx;
         }
 
         return results;
