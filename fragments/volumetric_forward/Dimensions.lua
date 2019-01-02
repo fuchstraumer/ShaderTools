@@ -4,8 +4,8 @@ local dimensions = {
     AverageLightsPerTile = 100;
     SortNumThreadsPerThreadGroup = 256;
     SortElementsPerThread = 8;
-    MaxSpotLights = 4096;
-    MaxPointLights = 4096;
+    MaxSpotLights = 8192;
+    MaxPointLights = 8192;
     NearK = 0.0;
 };
 
@@ -65,15 +65,15 @@ function dimensions.LightGridSize()
 end
 
 function dimensions.NumPointLights()
-    return 8192;
+    return 2048;
 end
 
 function dimensions.NumSpotLights()
-    return 8192;
+    return 1024;
 end
 
 function dimensions.NumDirectionalLights()
-    return 1024;
+    return 64;
 end
 
 function dimensions.NumLightAABBs()

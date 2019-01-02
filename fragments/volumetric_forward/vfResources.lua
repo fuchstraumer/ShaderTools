@@ -75,9 +75,7 @@ Resources = {
         },
         LinearRepeatSampler = {
             Type = "Sampler",
-            SamplerInfo = {
-    
-            }
+            SamplerInfo = {}
         },
         LinearClampSampler = {
             Type = "Sampler",
