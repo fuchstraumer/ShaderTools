@@ -13,12 +13,6 @@
 [submodule "third_party/spirv-headers"]
 	path = third_party/spirv-headers
 	url = https://github.com/KhronosGroup/SPIRV-Headers
-[submodule "third_party/luajit"]
-	path = third_party/luajit
-	url = https://github.com/LuaDist/luajit
-[submodule "third_party/luabridge"]
-	path = third_party/luabridge
-	url = https://github.com/vinniefalco/LuaBridge
 [submodule "third_party/easyloggingpp"]
 	path = third_party/easyloggingpp
 	url = https://github.com/muflihun/easyloggingpp
