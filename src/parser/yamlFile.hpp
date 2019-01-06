@@ -18,12 +18,15 @@ namespace st {
         ~yamlFile();
 
         std::unordered_map<std::string, ShaderStage> stages;
-        std::unordered_map<std::string, std::set<ShaderStage>> groups;
+        std::unordered_map<std::string, std::set<ShaderStage>> shaderGroups;
         std::unordered_map<std::string, std::vector<std::string>> groupTags;
-        std::unordered_map<ShaderStage, std::vector<std::string>> stageExtensions;
+        std::unordered_map<std::string, std::vector<std::string>> groupExtensions;
         std::unordered_map<std::string, std::vector<ShaderResource>> resourceGroups;
+        std::string packName;
 
     private:
+        void parseResources();
+        void parseGroups();
         std::unique_ptr<yamlFileImpl> impl;
     };
 
