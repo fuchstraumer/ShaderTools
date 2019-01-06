@@ -48,8 +48,6 @@ SET(ST_CORE_SRCS
     "${CMAKE_CURRENT_SOURCE_DIR}/src/core/impl/ShaderPackImpl.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/core/impl/ShaderImpl.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/core/impl/ShaderImpl.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/core/impl/ShaderPackScript.hpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/core/impl/ShaderPackScript.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/core/impl/ShaderStageProcessor.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/core/impl/ShaderStageProcessor.cpp"
 )
@@ -64,13 +62,6 @@ SET(ST_GENERATION_SRCS
     "${CMAKE_CURRENT_SOURCE_DIR}/src/generation/impl/CompilerImpl.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/generation/impl/ShaderGeneratorImpl.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/generation/impl/ShaderGeneratorImpl.cpp"
-)
-
-SET(ST_LUA_SRCS
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/lua/LuaEnvironment.hpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/lua/LuaEnvironment.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/lua/ResourceFile.hpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/lua/ResourceFile.cpp"
 )
 
 SET(ST_REFLECTION_SRCS
@@ -103,7 +94,6 @@ SOURCE_GROUP("util" FILES ${ST_UTIL_SRCS})
 SOURCE_GROUP("generation" FILES ${ST_GENERATION_SRCS})
 SOURCE_GROUP("reflection" FILES ${ST_REFLECTION_SRCS})
 SOURCE_GROUP("core" FILES ${ST_CORE_SRCS})
-SOURCE_GROUP("lua" FILES ${ST_LUA_SRCS})
 SOURCE_GROUP("parser" FILES ${ST_PARSER_SRCS})
 
 FIND_PACKAGE(Vulkan REQUIRED)
@@ -112,14 +102,14 @@ OPTION(BUILD_STATIC "Build as a static library instead of a DLL. Not recommended
 
 IF(BUILD_STATIC) 
     ADD_LIBRARY(ShaderTools STATIC ${ST_COMMON_SRCS} ${ST_UTIL_SRCS} ${ST_GENERATION_SRCS} 
-        ${ST_REFLECTION_SRCS} ${ST_LUA_SRCS} ${ST_CORE_SRCS} ${ST_PARSER_SRCS}
+        ${ST_REFLECTION_SRCS} ${ST_CORE_SRCS} ${ST_PARSER_SRCS}
         "${CMAKE_CURRENT_SOURCE_DIR}/third_party/easyloggingpp/src/easylogging++.cc")
     # Used to avoid initializing easyloggingpp when built as static library. Causes 
     # duplicate symbol errors otherwise
     TARGET_COMPILE_DEFINITIONS(ShaderTools PRIVATE "ST_BUILDING_STATIC")
 ELSE()
     ADD_LIBRARY(ShaderTools SHARED ${ST_COMMON_SRCS} ${ST_UTIL_SRCS} ${ST_GENERATION_SRCS} 
-        ${ST_REFLECTION_SRCS} ${ST_LUA_SRCS} ${ST_CORE_SRCS} ${ST_PARSER_SRCS}
+        ${ST_REFLECTION_SRCS} ${ST_CORE_SRCS} ${ST_PARSER_SRCS}
         "${CMAKE_CURRENT_SOURCE_DIR}/third_party/easyloggingpp/src/easylogging++.cc")
     TARGET_COMPILE_DEFINITIONS(ShaderTools PUBLIC "$<BUILD_INTERFACE:SHADERTOOLS_BUILD_DLL>" "$<INSTALL_INTERFACE:SHADERTOOLS_DLL>")
 ENDIF()
@@ -138,9 +128,7 @@ TARGET_LINK_LIBRARIES(ShaderTools PRIVATE shaderc spirv-cross-core spirv-cross-g
 TARGET_INCLUDE_DIRECTORIES(ShaderTools PUBLIC  "${CMAKE_CURRENT_SOURCE_DIR}/include" "${Vulkan_INCLUDE_DIRS}")
 TARGET_INCLUDE_DIRECTORIES(ShaderTools PRIVATE 
     "${CMAKE_CURRENT_SOURCE_DIR}/third_party/" 
-    "${CMAKE_CURRENT_SOURCE_DIR}/ext/include" 
-    "${CMAKE_CURRENT_SOURCE_DIR}/third_party/luajit/src" 
-    "${CMAKE_CURRENT_SOURCE_DIR}/third_party/luabridge/Source"
+    "${CMAKE_CURRENT_SOURCE_DIR}/ext/include"
     "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bitsery/include/"
     "${CMAKE_CURRENT_SOURCE_DIR}/third_party/yaml-cpp/include"
 )
