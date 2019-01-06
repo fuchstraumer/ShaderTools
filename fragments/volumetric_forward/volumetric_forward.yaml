@@ -1,0 +1,526 @@
+---
+
+resource_groups : {
+    GlobalResources : {
+        matrices : {
+            Type : "UniformBuffer",
+            Members : {
+                model : { "mat4", 0 },
+                view : { "mat4", 1 },
+                inverseView : { "mat4", 2 },
+                projection : { "mat4", 3 },
+                modelView : { "mat4", 4 },
+                modelViewProjection : { "mat4", 5 },
+                inverseTransposeModel : { "mat4", 6 },
+                inverseTransposeModelView : { "mat4", 7 }
+            }
+        },
+        globals : {
+            Type : "UniformBuffer",
+            Members : {
+                viewPosition : { "vec4", 0 },
+                mousePosition : { "vec2", 1 },
+                windowSize : { "vec2", 2 },
+                depthRange : { "vec2", 3 },
+                frame : { "uint", 4 },
+                exposure : { "float", 5 },
+                gamma : { "float", 6 },
+                brightness : { "float", 7 }
+            }
+        }
+    },
+    Material : {
+        Tags : {
+            "MaterialGroup"
+        },
+        MaterialParameters : {
+            Type : "UniformBuffer",
+            Members : {
+                Data : { "Material", 0 }
+            }
+        },
+        AlbedoMap : {
+            Type : "SampledImage"
+        },
+        NormalMap : {
+            Type : "SampledImage"
+        },        
+        AmbientOcclusionMap : {
+            Type : "SampledImage",
+            FromFile : true
+        },
+        MetallicRoughnessMap : {
+            Type : "SampledImage"
+        },
+        EmissiveMap : {
+            Type : "SampledImage"
+        },
+        LinearRepeatSampler : {
+            Type : "Sampler",
+            SamplerInfo : {}
+        },
+        LinearClampSampler : {
+            Type : "Sampler",
+            SamplerInfo : {
+                AddressModeU : "ClampToEdge",
+                AddressModeV : "ClampToEdge",
+                AddressModeW : "ClampToEdge"
+            }
+        },
+        AnisotropicSampler : {
+            Type : "Sampler",
+            AnisotropicSampler : {
+                EnableAnisotropy : true,
+                MaxAnisotropy : 8.0
+            }
+        }
+    },
+    VolumetricForward : {
+        ClusterData : {
+            Type : "UniformBuffer",
+            Members : {
+                GridDim : { "uvec3", 0 },
+                ViewNear : { "float", 1 },
+                ScreenSize : { "uvec2", 2 },
+                NearK : { "float", 3 },
+                LogGridDimY : { "float", 4 }
+            },
+            Qualifiers : "restrict readonly"
+        },
+        ClusterAABBs : {
+            Type : "StorageBuffer",
+            Members : {
+                Data : { {
+                    Type : "Array",
+                    ElementType : "AABB"
+                }, 0 }
+            },
+            Qualifiers : "restrict",
+            PerUsageQualifiers : {
+                AssignLightsToClustersBVH : "readonly"
+            }
+        },
+        ClusterFlags : {
+            Type : "StorageTexelBuffer",
+            Format : "r8ui",
+            Qualifiers : "restrict",
+            PerUsageQualifiers : {
+                FindUniqueClusters : "readonly",
+                ClusterSamples : "writeonly"
+            }
+        },
+        PointLightIndexList : {
+            Type : "StorageTexelBuffer",
+            Format : "r32ui",
+            Qualifiers : "restrict",
+            PerUsageQualifiers : {
+                AssignLightsToClustersBVH : "writeonly",
+                Clustered : "readonly"
+            }
+        },
+        SpotLightIndexList : {
+            Type : "StorageTexelBuffer",
+            Format : "r32ui",
+            Qualifiers : "restrict",
+            PerUsageQualifiers : {
+                AssignLightsToClustersBVH : "writeonly",
+                Clustered : "readonly"
+            }
+        },
+        PointLightGrid : {
+            Type : "StorageTexelBuffer",
+            Format : "rg32ui",
+            Qualifiers : "restrict",
+            PerUsageQualifiers : {
+                AssignLightsToClustersBVH : "writeonly",
+                Clustered : "readonly"
+            }
+        },
+        SpotLightGrid : {
+            Type : "StorageTexelBuffer",
+            Format : "rg32ui",
+            Qualifiers : "restrict",
+            PerUsageQualifiers : {
+                AssignLightsToClustersBVH : "writeonly",
+                Clustered : "readonly"
+            }
+        },
+        PointLightIndexCounter : {
+            Type : "StorageTexelBuffer",
+            Format : "r32ui",
+            Qualifiers : "restrict"
+        },
+        SpotLightIndexCounter : {
+            Type : "StorageTexelBuffer",
+            Format : "r32ui",
+            Qualifiers : "restrict"
+        },
+        UniqueClustersCounter : {
+            Type : "StorageTexelBuffer",
+            Format : "r32ui",
+            Qualifiers : "restrict",
+            PerUsageQualifiers : {
+                UpdateClusterIndirectArgs : "readonly"
+            }
+        },
+        UniqueClusters : {
+            Type : "StorageTexelBuffer",
+            Format : "r32ui",
+            Qualifiers : "restrict",
+            PerUsageQualifiers : {
+                AssignLightsToClustersBVH : "readonly",
+                FindUniqueClusters : "writeonly"
+            }
+        }
+    },
+    VolumetricForwardLights : {
+        LightCounts : {
+            Type : "UniformBuffer",
+            Members : {
+                NumPointLights : { "uint", 0 },
+                NumSpotLights : { "uint", 1 },
+                NumDirectionalLights : { "uint", 2 }
+            }
+        },
+        PointLights : {
+            Type : "StorageBuffer",
+            Members : {
+                Data : { {
+                    Type : "Array",
+                    ElementType : "PointLight"
+                }, 0 }
+            },
+            -- PerUsageQualifiers: qualifiers to apply only to single shaders in the pack
+            -- Other qualifiers are applied pack-wide
+            Qualifiers : "restrict",
+            PerUsageQualifiers : {
+                Clustered : "readonly",
+                ReduceLightsAABB : "readonly",
+                ComputeMortonCodes : "readonly",
+                AssignLightsToClustersBVH : "readonly"
+            }
+        },
+        SpotLights : {
+            Type : "StorageBuffer",
+            Members : {
+                Data : { {
+                    Type : "Array",
+                    ElementType : "SpotLight"
+                }, 0 }
+            },
+            Qualifiers : "restrict",
+            PerUsageQualifiers : {
+                Clustered : "readonly",
+                ReduceLightsAABB : "readonly",
+                ComputeMortonCodes : "readonly",
+                AssignLightsToClustersBVH : "readonly"
+            }
+        },
+        DirectionalLights : {
+            Type : "StorageBuffer",
+            Members : {
+                Data : { {
+                    Type : "Array",
+                    ElementType : "DirectionalLight"
+                }, 0 }
+            },
+            Qualifiers : "restrict",
+            PerUsageQualifiers : {
+                Clustered : "readonly",
+                ReduceLightsAABB : "readonly",
+                ComputeMortonCodes : "readonly"
+            }
+        }
+    },
+    IndirectArgsSet : {
+        IndirectArgs : {
+            Type : "StorageBuffer",
+            Members : {
+                NumThreadGroupsX : { "uint", 0 },
+                NumThreadGroupsY : { "uint", 1 },
+                NumThreadGroupsZ : { "uint", 2 }
+            },
+            Qualifiers : "restrict"
+        }       
+    },
+    SortResources : {
+        DispatchParams : {
+            Type : "UniformBuffer",
+            Members : {
+                NumThreadGroups : { "uvec3", 0 },
+                Padding0 : { "uint", 1 },
+                NumThreads : { "uvec3", 2 },
+                Padding1 : { "uint", 3 }
+            }
+        },
+        ReductionParams : {
+            Type : "UniformBuffer",
+            Members : {
+                NumElements : { "uint", 0 }
+            }
+        },
+        SortParams : {
+            Type : "UniformBuffer",
+            Members : {
+                NumElements : { "uint", 0 },
+                ChunkSize : { "uint", 1 }
+            }
+        },
+        LightAABBs : {
+            Type : "StorageBuffer",
+            Members : {
+                Data : { {
+                    Type : "Array",
+                    ElementType : "AABB"
+                }, 0 }
+            },
+            Qualifiers : "restrict",
+            PerUsageQualifiers : {
+                ComputeMortonCodes : "readonly"
+            }
+        },
+        PointLightMortonCodes : {
+            Type : "StorageTexelBuffer",
+            Format : "r32ui",
+            Qualifiers : "restrict"
+        },
+        SpotLightMortonCodes : {
+            Type : "StorageTexelBuffer",
+            Format : "r32ui",
+            Qualifiers : "restrict"
+        },
+        PointLightIndices : {
+            Type : "StorageTexelBuffer",
+            Format : "r32ui",
+            Qualifiers : "restrict"
+        },
+        SpotLightIndices : {
+            Type : "StorageTexelBuffer",
+            Format : "r32ui",
+            Qualifiers : "restrict"
+        }
+    },
+    MergeSortResources : {
+        InputKeys : {
+            Type : "StorageTexelBuffer",
+            Format : "r32ui",
+            Qualifiers : "restrict readonly",
+            Tags : { "DoNotCreate" }
+        },
+        InputValues : {
+            Type : "StorageTexelBuffer",
+            Format : "r32ui",
+            Qualifiers : "restrict readonly",
+            Tags : { "DoNotCreate" }
+        },
+        OutputKeys : {
+            Type : "StorageTexelBuffer",
+            Format : "r32ui",
+            Qualifiers : "restrict writeonly",
+            Tags : { "DoNotCreate" }
+        },
+        OutputValues : {
+            Type : "StorageTexelBuffer",
+            Format : "r32ui",
+            Qualifiers : "restrict writeonly",
+            Tags : { "DoNotCreate" }
+        }, 
+        MergePathPartitions : {
+            Type : "StorageTexelBuffer",
+            Format : "r32i",
+            Qualifiers : "restrict"
+        }
+    },
+    BVHResources : {
+        BVHParams : {
+            Type : "UniformBuffer",
+            Members : {
+                PointLightLevels : { "uint", 0 },
+                SpotLightLevels : { "uint", 1 },
+                ChildLevel : { "uint", 2 }
+            }
+        },
+        PointLightBVH : {
+            Type : "StorageBuffer",
+            Members : {
+                Data : { {
+                    Type : "Array",
+                    ElementType : "AABB",
+                    NumElements : dimensions.NumPointLights()
+                }, 0 }
+            },
+            Qualifiers : "restrict",
+            PerUsageQualifiers : {
+                AssignLightsToClustersBVH : "readonly"
+            }
+        },
+        SpotLightBVH : {
+            Type : "StorageBuffer",
+            Members : {
+                Data : { {
+                    Type : "Array",
+                    ElementType : "AABB",
+                    NumElements : dimensions.NumSpotLights()
+                }, 0 }
+            },
+            Qualifiers : "restrict",
+            PerUsageQualifiers : {
+                AssignLightsToClustersBVH : "readonly"
+            }
+        }
+    },
+    Debug : {
+        ClusterColors : {
+            Type : "StorageTexelBuffer",
+            Format : "rgba8",
+            Qualifiers : "restrict readonly"
+        }
+    }
+}
+
+shader_groups : {
+    UpdateLights : {
+        Idx : 0,
+        Shaders : {
+            Compute : "compute/UpdateLights.comp"
+        },
+        Extensions : {
+            "GL_ARB_separate_shader_objects",
+            "GL_ARB_shading_language_420pack"
+        }
+    },
+    ReduceLights : {
+        Idx : 1,
+        Shaders : {
+            Compute : "compute/ReduceLightsAABB.comp"
+        },
+        Extensions : {
+            "GL_ARB_separate_shader_objects",
+            "GL_ARB_shading_language_420pack"
+        }
+    },
+    ComputeMortonCodes : {
+        Idx : 2,
+        Shaders : {
+            Compute : "compute/ComputeMortonCodes.comp"
+        },
+        Extensions : {
+            "GL_ARB_separate_shader_objects",
+            "GL_ARB_shading_language_420pack"
+        }
+    },
+    RadixSort : {
+        Idx : 3,
+        Shaders : {
+            Compute : "compute/RadixSort.comp"
+        }
+    },
+    MergeSort : {
+        Idx : 4,
+        Shaders : {
+            Compute : "compute/MergeSort.comp"
+        }
+    },
+    BuildBVH : {
+        Idx : 5,
+        Shaders : {
+            Compute : "compute/BuildBVH.comp"
+        },
+        Extensions : {
+            "GL_ARB_separate_shader_objects",
+            "GL_ARB_shading_language_420pack"
+        }
+    },
+    DepthPrePass : {
+        Idx : 6,
+        Shaders : {
+            Vertex : "Default.vert",
+            Fragment : "PrePass.frag"
+        },
+        Extensions : {
+            "GL_ARB_separate_shader_objects",
+            "GL_ARB_shading_language_420pack"
+        }, 
+        -- Use DepthOnly tag to force front-end to attach a depth stencil output
+        -- These shaders probably don't write to the backbuffer for color, but
+        -- we want to keep depth info.
+        Tags : { "DepthOnly" }
+    },
+    ClusterSamples : {
+        Idx : 7,
+        Shaders : {
+            Vertex : "Default.vert",
+            Fragment : "ClusterSamples.frag"
+        },
+        Extensions : {
+            "GL_ARB_separate_shader_objects",
+            "GL_ARB_shading_language_420pack"
+        }, 
+        Tags : { "DepthOnlyAsInput" }
+    },
+    FindUniqueClusters : {
+        Idx : 8,
+        Shaders : {
+            Compute : "compute/FindUniqueClusters.comp"
+        },
+        Extensions : {
+            "GL_ARB_separate_shader_objects",
+            "GL_ARB_shading_language_420pack"
+        }
+    },
+    UpdateClusterIndirectArgs : {
+        Idx : 9,
+        Shaders : {
+            Compute : "compute/UpdateClusterIndirectArgs.comp"
+        },
+        Extensions : {
+            "GL_ARB_separate_shader_objects",
+            "GL_ARB_shading_language_420pack"
+        }
+    },
+    AssignLightsToClusters : {
+        Idx : 10,
+        Shaders : {
+            Compute : "compute/AssignLightsToClustersBVH.comp"
+        },
+        Extensions : {
+            "GL_ARB_separate_shader_objects",
+            "GL_ARB_shading_language_420pack",
+            "GL_EXT_control_flow_attributes"
+        }
+    },
+    DrawPass : {
+        Idx : 11,
+        Shaders : {
+            Vertex : "Default.vert",
+            Fragment : "Clustered.frag"
+        },
+        Extensions : {
+            "GL_ARB_separate_shader_objects",
+            "GL_ARB_shading_language_420pack"
+        }, 
+        -- Draw pass reads depth but has no ability to write to it
+        Tags : { "DepthOnlyAsInput" }
+    },
+    -- Run before everything else, but only once per window resizing
+    -- So I'm putting it down here
+    ComputeClusterAABBs : {
+        Idx : 12,
+        Shaders : {
+            Compute : "compute/ComputeClusterAABBs.comp"
+        }
+    },
+    DebugClusters : {
+        Idx : 13,
+        Shaders : {
+            Vertex : "debug/DebugClusters.vert",
+            Geometry : "debug/DebugClusters.geom",
+            Fragment : "debug/DebugClusters.frag"
+        },
+        Extensions : {
+            "GL_ARB_separate_shader_objects",
+            "GL_ARB_shading_language_420pack",
+            "GL_EXT_control_flow_attributes"
+        }
+    }
+}
