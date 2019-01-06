@@ -131,13 +131,10 @@ namespace st {
 
         size_t bindingIdx{ std::numeric_limits<size_t>::max() };
         std::string name{ "" };
-        size_t memoryRequired{ std::numeric_limits<size_t>::max() };
         VkFormat format{ VK_FORMAT_UNDEFINED };
-        bool fromFile{ false };
         VkDescriptorType type{ VK_DESCRIPTOR_TYPE_MAX_ENUM };
         size_t inputAttachmentIdx{ std::numeric_limits<size_t>::max() };
         std::string parentSetName{ "" };
-        size_class sizeClass{ size_class::Absolute };
         VkShaderStageFlags stages{ VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM };
         std::vector<ShaderResourceSubObject> members;
         std::vector<std::string> tags;
@@ -181,16 +178,8 @@ namespace st {
         return impl->inputAttachmentIdx;
     }
 
-    const size_t& ShaderResource::MemoryRequired() const noexcept {
-        return impl->memoryRequired;
-    }
-
     const VkFormat& ShaderResource::Format() const noexcept {
         return impl->format;
-    }
-
-    const bool& ShaderResource::FromFile() const noexcept {
-        return impl->fromFile;
     }
 
     const char* ShaderResource::Name() const {

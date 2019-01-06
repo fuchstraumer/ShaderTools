@@ -8,20 +8,13 @@ namespace st {
     class ShaderResourceImpl;
     struct ShaderResourceSubObject;
 
-    enum class size_class : uint32_t {
-        Absolute = 0,
-        SwapchainRelative,
-        ViewportRelative,
-        Invalid = std::numeric_limits<uint32_t>::max()
-    };
-
-    enum class glsl_qualifier : uint32_t {
+    enum class glsl_qualifier : uint16_t {
         Coherent = 0,
         ReadOnly,
         WriteOnly,
         Volatile,
         Restrict,
-        InvalidQualifier = std::numeric_limits<uint32_t>::max()
+        InvalidQualifier = std::numeric_limits<uint16_t>::max()
     };
 
     class ST_API ShaderResource {
@@ -36,11 +29,8 @@ namespace st {
         
         const size_t& BindingIndex() const noexcept;
         const size_t& InputAttachmentIndex() const noexcept;
-        const size_t& MemoryRequired() const noexcept;
         const VkFormat& Format() const noexcept;
-        // Used to indicate a binding for a texture, where the texture data is
-        // loaded from a file
-        const bool& FromFile() const noexcept;
+
         const char* Name() const;
         const char* ParentGroupName() const;
         const VkShaderStageFlags& ShaderStages() const noexcept;
@@ -60,10 +50,8 @@ namespace st {
         void SetBindingIndex(size_t idx);
         void SetDataFromFile(bool from_file);
         void SetInputAttachmentIndex(size_t idx);
-        void SetMemoryRequired(size_t amt);
         void SetStages(VkShaderStageFlags stages);
         void SetType(VkDescriptorType _type);
-        void SetSizeClass(size_class _size_class);
         void SetName(const char* name);
         void SetParentGroupName(const char* parent_group_name);
         void SetQualifiers(const size_t num_qualifiers, glsl_qualifier* qualifiers);
