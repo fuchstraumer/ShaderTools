@@ -1,6 +1,8 @@
 #include "yamlFile.hpp"
 #include "yaml-cpp/yaml.h"
+#include "../util/ResourceFormats.hpp"
 #include <experimental/filesystem>
+#include <cassert>
 
 namespace st {
 
@@ -27,11 +29,6 @@ namespace st {
         { "volatile", glsl_qualifier::Volatile },
         { "restrict", glsl_qualifier::Restrict }
     };
-
-    std::string extractNameCheckPathValid(const YAML::Node& node) {
-        fs::path file_path(node.as<std::string>());
-        return file_path.filename().string();
-    }
     
     glsl_qualifier singleQualifierFromString(const std::string& single_qualifier) {
         auto iter = qualifier_from_str_map.find(single_qualifier);
@@ -136,19 +133,19 @@ namespace st {
 
                 auto shaders = iter->second["Shaders"];
                 if (shaders["Vertex"]) {
-                    stages_added.emplace_back(add_stage(extractNameCheckPathValid(shaders["Vertex"]), VK_SHADER_STAGE_VERTEX_BIT));
+                    stages_added.emplace_back(add_stage(shaders["Vertex"].as<std::string>(), VK_SHADER_STAGE_VERTEX_BIT));
                 }
 
                 if (shaders["Geometry"]) {
-                    stages_added.emplace_back(add_stage(extractNameCheckPathValid(shaders["Geometry"]), VK_SHADER_STAGE_GEOMETRY_BIT));
+                    stages_added.emplace_back(add_stage(shaders["Geometry"].as<std::string>(), VK_SHADER_STAGE_GEOMETRY_BIT));
                 }
 
                 if (shaders["Fragment"]) {
-                    stages_added.emplace_back(add_stage(extractNameCheckPathValid(shaders["Fragment"]), VK_SHADER_STAGE_FRAGMENT_BIT));
+                    stages_added.emplace_back(add_stage(shaders["Fragment"].as<std::string>(), VK_SHADER_STAGE_FRAGMENT_BIT));
                 }
 
                 if (shaders["Compute"]) {
-                    stages_added.emplace_back(add_stage(extractNameCheckPathValid(shaders["Compute"]), VK_SHADER_STAGE_COMPUTE_BIT));
+                    stages_added.emplace_back(add_stage(shaders["Compute"].as<std::string>(), VK_SHADER_STAGE_COMPUTE_BIT));
                 }
 
                 if (iter->second["Extensions"]) {
@@ -164,6 +161,7 @@ namespace st {
             }
 
             if (iter->second["Tags"]) {
+                assert(iter->second["Tags"].IsSequence());
                 for (const auto& tag : iter->second["Tags"]) {
                     groupTags[group_name].emplace_back(tag.as<std::string>());
                 }
@@ -189,6 +187,7 @@ namespace st {
             auto& group_resources = resourceGroups[group_name];
 
             for (auto member_iter = curr_node.begin(); member_iter != curr_node.end(); ++member_iter) {
+
                 std::string rsrc_name = member_iter->first.as<std::string>();
                 auto& rsrc_node = member_iter->second;
 
@@ -212,6 +211,14 @@ namespace st {
                 else if (rsrc_node["SamplerSubtype"]) {
                     auto subtype_str = rsrc_node["SamplerSubtype"].as<std::string>();
                     rsrc.SetImageSamplerSubtype(subtype_str.c_str());
+                }
+
+                if (rsrc_node["Format"]) {
+                    rsrc.SetFormat(VkFormatFromString(rsrc_node["Format"].as<std::string>()));
+                }
+
+                if (rsrc_node["Members"]) {
+                    rsrc.SetMembersStr(rsrc_node["Members"].as<std::string>().c_str());
                 }
 
                 if (rsrc_node["Tags"]) {
