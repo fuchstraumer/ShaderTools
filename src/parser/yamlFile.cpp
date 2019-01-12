@@ -98,41 +98,48 @@ namespace st {
         for (auto iter = groups.begin(); iter != groups.end(); ++iter) {
             std::string group_name = iter->first.as<std::string>();
 
-            auto add_stage = [this, &group_name](std::string shader_name, VkShaderStageFlagBits stage) {
+            auto add_stage = [this, &group_name](std::string shader_name, VkShaderStageFlagBits stage)->ShaderStage {
                 if (stages.count(shader_name) == 0) {
                     auto iter = stages.emplace(shader_name, ShaderStage{ shader_name.c_str(), stage });
                     shaderGroups[group_name].emplace(iter.first->second);
+                    return iter.first->second;
                 }
                 else {
                     shaderGroups[group_name].emplace(stages.at(shader_name));
+                    return stages.at(shader_name);
                 }
             };
 
             {
+                std::vector<ShaderStage> stages_added;
+
                 auto shaders = iter->second["Shaders"];
                 if (shaders["Vertex"]) {
-                    add_stage(extractNameCheckPathValid(shaders["Vertex"]), VK_SHADER_STAGE_VERTEX_BIT);
+                    stages_added.emplace_back(add_stage(extractNameCheckPathValid(shaders["Vertex"]), VK_SHADER_STAGE_VERTEX_BIT));
                 }
 
                 if (shaders["Geometry"]) {
-                    add_stage(extractNameCheckPathValid(shaders["Geometry"]), VK_SHADER_STAGE_GEOMETRY_BIT);
+                    stages_added.emplace_back(add_stage(extractNameCheckPathValid(shaders["Geometry"]), VK_SHADER_STAGE_GEOMETRY_BIT));
                 }
 
                 if (shaders["Fragment"]) {
-                    add_stage(extractNameCheckPathValid(shaders["Fragment"]), VK_SHADER_STAGE_FRAGMENT_BIT);
+                    stages_added.emplace_back(add_stage(extractNameCheckPathValid(shaders["Fragment"]), VK_SHADER_STAGE_FRAGMENT_BIT));
                 }
 
                 if (shaders["Compute"]) {
-                    add_stage(extractNameCheckPathValid(shaders["Compute"]), VK_SHADER_STAGE_COMPUTE_BIT);
+                    stages_added.emplace_back(add_stage(extractNameCheckPathValid(shaders["Compute"]), VK_SHADER_STAGE_COMPUTE_BIT));
                 }
-            }
 
-            if (iter->second["Extensions"]) {
-                std::vector<std::string> extension_strs;
-                for (const auto& ext : iter->second["Extensions"]) {
-                    extension_strs.emplace_back(ext.as<std::string>());
+                if (iter->second["Extensions"]) {
+                    std::vector<std::string> extension_strs;
+                    for (const auto& ext : iter->second["Extensions"]) {
+                        extension_strs.emplace_back(ext.as<std::string>());
+                    }
+
+                    for (auto& stage : stages_added) {
+                        std::unique_copy(std::begin(extension_strs), std::end(extension_strs), std::back_inserter(stageExtensions[stage]));
+                    }
                 }
-                std::unique_copy(std::begin(extension_strs), std::end(extension_strs), std::back_inserter(groupExtensions[group_name]));
             }
 
             if (iter->second["Tags"]) {
@@ -177,7 +184,14 @@ namespace st {
                 rsrc.SetParentGroupName(group_name.c_str());
                 rsrc.SetName(rsrc_name.c_str());
                 rsrc.SetType(type_iter->second);
-
+                if (rsrc_node["ImageSubtype"]) {
+                    auto subtype_str = rsrc_node["ImageSubtype"].as<std::string>();
+                    rsrc.SetImageSamplerSubtype(subtype_str.c_str());
+                }
+                else if (rsrc_node["SamplerSubtype"]) {
+                    auto subtype_str = rsrc_node["SamplerSubtype"].as<std::string>();
+                    rsrc.SetImageSamplerSubtype(subtype_str.c_str());
+                }
 
                 if (rsrc_node["Tags"]) {
                     std::vector<std::string> tag_strs;
