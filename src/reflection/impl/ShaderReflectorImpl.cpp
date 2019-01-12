@@ -7,7 +7,6 @@
 #ifdef FindResource
 #undef FindResource
 #endif // FindResource
-#include "../../lua/ResourceFile.hpp"
 
 namespace st {
 
@@ -67,8 +66,6 @@ namespace st {
     void ShaderReflectorImpl::parseResourceType(const ShaderStage& shader_handle, const VkDescriptorType& type_being_parsed) {
         
         auto& f_tracker = ShaderFileTracker::GetFileTracker();
-        const auto& rsrc_path = f_tracker.ShaderUsedResourceScript.at(shader_handle);
-        const auto* rsrc_script = f_tracker.ResourceScripts.at(rsrc_path).get();
 
         auto get_actual_name = [](const std::string& rsrc_name)->std::string {
             size_t first_idx = rsrc_name.find_first_of('_');
