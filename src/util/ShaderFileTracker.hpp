@@ -13,8 +13,6 @@
 
 namespace st {
 
-    class ResourceFile;
-
     void ST_API ClearProgramState();
 
     struct ShaderFileTracker {
@@ -27,7 +25,6 @@ namespace st {
         bool FindShaderBody(const ShaderStage& handle, std::string& dest_str);
         bool AddShaderBodyPath(const ShaderStage& handle, const std::string& shader_body_path);
         bool FindShaderBinary(const ShaderStage& handle, std::vector<uint32_t>& dest_binary_vector);
-        bool FindResourceScript(const std::string& fname, ResourceFile ** dest_ptr);
         bool FindRecompiledShaderSource(const ShaderStage& handle, std::string& destination_str);
         bool FindAssemblyString(const ShaderStage& handle, std::string& destination_str);
         std::string GetShaderName(const ShaderStage& handle);
@@ -41,14 +38,11 @@ namespace st {
         std::unordered_map<ShaderStage, std::string> AssemblyStrings;
         std::unordered_map<ShaderStage, std::string> FullSourceStrings;
         std::unordered_map<ShaderStage, std::vector<uint32_t>> Binaries;
-        std::unordered_map<ShaderStage, std::string> ShaderUsedResourceScript;
         std::unordered_multimap<ShaderStage, std::string> ShaderUsedResourceBlocks;
         // first key is resource group, second map is stage and index of group in that stage
         std::unordered_map<std::string, std::unordered_map<ShaderStage, uint32_t>> ResourceGroupSetIndexMaps;
-        std::unordered_map<std::string, std::unique_ptr<ResourceFile>> ResourceScripts;
         std::unordered_map<ShaderStage, std::experimental::filesystem::path> BodyPaths;
         std::unordered_map<ShaderStage, std::experimental::filesystem::path> BinaryPaths;
-        std::unordered_map<std::string, size_t> ObjectSizes;
         std::unordered_map<std::string, std::unique_ptr<ShaderPackBinary, decltype(&DestroyShaderPackBinary)>> ShaderPackBinaries;
     };
 
