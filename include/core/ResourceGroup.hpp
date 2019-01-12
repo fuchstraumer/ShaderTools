@@ -7,7 +7,7 @@ namespace st {
 
     class ShaderResource;
     class ResourceGroupImpl;
-    class ResourceFile;
+    struct yamlFile;
     struct ShaderStage;
 
     class ST_API ResourceGroup {
@@ -16,7 +16,7 @@ namespace st {
         friend class ResourceFile;
     public:
 
-        ResourceGroup(ResourceFile* resource_file, const char* group_name);
+        ResourceGroup(yamlFile* resource_file, const char* group_name);
         ~ResourceGroup();
 
         dll_retrieved_strings_t ResourceNames() const noexcept;

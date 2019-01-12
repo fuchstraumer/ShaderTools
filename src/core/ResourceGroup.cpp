@@ -1,5 +1,5 @@
 #include "core/ResourceGroup.hpp"
-#include "../lua/ResourceFile.hpp"
+#include "../parser/yamlFile.hpp"
 #include "../util/ShaderFileTracker.hpp"
 #include "common/ShaderStage.hpp"
 #include <unordered_map>
@@ -11,7 +11,7 @@ namespace st {
 
     class ResourceGroupImpl {
     public:
-        ResourceGroupImpl(ResourceFile* resource_file, const char* group_name);
+        ResourceGroupImpl(yamlFile* resource_file, const char* group_name);
         ~ResourceGroupImpl() = default;
 
         bool hasResource(const char* str) const;
@@ -23,10 +23,10 @@ namespace st {
         std::set<std::string> usedByShaders;
     };
 
-    ResourceGroupImpl::ResourceGroupImpl(ResourceFile* resource_file, const char* group_name) : name(group_name),
-        resources(resource_file->setResources.at(group_name)) {
-        if (resource_file->resourceGroupTags.count(name) != 0) {
-            tags = resource_file->resourceGroupTags.at(name);
+    ResourceGroupImpl::ResourceGroupImpl(yamlFile* resource_file, const char* group_name) : name(group_name),
+        resources(resource_file->resourceGroups.at(group_name)) {
+        if (resource_file->groupTags.count(name) != 0) {
+            tags = resource_file->groupTags.at(name);
         }
     }
 
@@ -39,7 +39,7 @@ namespace st {
         return false;
     }
 
-    ResourceGroup::ResourceGroup(ResourceFile* resource_file, const char* group_name) : 
+    ResourceGroup::ResourceGroup(yamlFile* resource_file, const char* group_name) : 
         impl(std::make_unique<ResourceGroupImpl>(resource_file, group_name)) {}
     
     ResourceGroup::~ResourceGroup() {
