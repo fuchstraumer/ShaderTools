@@ -11,7 +11,7 @@ namespace st {
 
     namespace fs = std::experimental::filesystem;
 
-    ShaderGroupImpl::ShaderGroupImpl(const std::string& group_name) : groupName(group_name), reflector(std::make_unique<ShaderReflector>()) {}
+    ShaderGroupImpl::ShaderGroupImpl(const std::string& group_name, yamlFile* yaml_file) : groupName(group_name), reflector(std::make_unique<ShaderReflector>(yaml_file)), rsrcFile(yaml_file) {}
 
     ShaderGroupImpl::~ShaderGroupImpl() { }
 

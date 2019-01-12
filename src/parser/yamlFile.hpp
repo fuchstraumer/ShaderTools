@@ -7,6 +7,9 @@
 #include <unordered_map>
 #include <set>
 #include <vector>
+#ifdef FindResource
+#undef FindResource
+#endif
 
 namespace st {
 
@@ -17,6 +20,7 @@ namespace st {
         yamlFile(const char* fname);
         ~yamlFile();
 
+        ShaderResource* FindResource(const std::string& name);
         std::unordered_map<std::string, ShaderStage> stages;
         std::unordered_map<std::string, std::set<ShaderStage>> shaderGroups;
         std::unordered_map<std::string, std::vector<std::string>> groupTags;

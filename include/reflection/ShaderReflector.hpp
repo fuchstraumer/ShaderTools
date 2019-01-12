@@ -12,13 +12,14 @@ namespace st {
     class ResourceUsage;
     struct VertexAttributeInfo;
     struct PushConstantInfo;
+    struct yamlFile;
 
     class ShaderReflector {
         ShaderReflector(const ShaderReflector&) = delete;
         ShaderReflector& operator=(const ShaderReflector&) = delete;
     public:
 
-        ShaderReflector();
+        ShaderReflector(yamlFile* yaml_file);
         ~ShaderReflector();
         ShaderReflector(ShaderReflector&& other) noexcept;
         ShaderReflector& operator=(ShaderReflector&& other) noexcept;

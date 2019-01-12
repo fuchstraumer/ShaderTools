@@ -85,6 +85,27 @@ namespace st {
 
     yamlFile::~yamlFile() {}
 
+    ShaderResource * yamlFile::FindResource(const std::string& name) {
+
+        auto find_single_resource = [&name](std::vector<st::ShaderResource>& resources)->ShaderResource* {
+            for (auto iter = resources.begin(); iter != resources.end(); ++iter) {
+                if (strcmp(iter->Name(), name.c_str()) == 0) {
+                    return &(*iter);
+                }
+            }
+            return nullptr;
+        };
+
+        for (auto& group : resourceGroups) {
+            ShaderResource* result = find_single_resource(group.second);
+            if (result != nullptr) {
+                return result;
+            }
+        }
+
+        return nullptr;
+    }
+
     void yamlFile::parseGroups() {
         using namespace YAML;
         

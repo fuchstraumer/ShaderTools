@@ -19,7 +19,7 @@ namespace st {
         std::vector<ShaderResource> resources;
         // what index this group is bound at in the given shader
         std::unordered_map<ShaderStage, uint32_t> stageSetIndices;
-        std::set<std::string> tags;
+        std::vector<std::string> tags;
         std::set<std::string> usedByShaders;
     };
 
@@ -150,7 +150,7 @@ namespace st {
     void ResourceGroup::SetTags(const size_t num_tags, const char** tags) {
         std::vector<const char*> tags_buffer{ tags, tags + num_tags };
         for (auto& str : tags_buffer) {
-            impl->tags.emplace(str);
+            impl->tags.emplace_back(str);
         }
     }
 

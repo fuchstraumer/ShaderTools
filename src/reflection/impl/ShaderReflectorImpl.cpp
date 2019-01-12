@@ -1,6 +1,7 @@
 #include "ShaderReflectorImpl.hpp"
 #include "easyloggingpp/src/easylogging++.h"
 #include "../../util/ShaderFileTracker.hpp"
+#include "../../parser/yamlFile.hpp"
 #include "core/ShaderResource.hpp"
 #include "core/ResourceUsage.hpp"
 #include <array>
@@ -10,6 +11,8 @@
 
 namespace st {
 
+    ShaderReflectorImpl::ShaderReflectorImpl(yamlFile * yaml_file) : rsrcFile(yaml_file) {}
+
     ShaderReflectorImpl::ShaderReflectorImpl(ShaderReflectorImpl&& other) noexcept : descriptorSets(std::move(other.descriptorSets)),
         sortedSets(std::move(other.sortedSets)), pushConstants(std::move(other.pushConstants)) {}
 
@@ -18,10 +21,6 @@ namespace st {
         sortedSets = std::move(other.sortedSets);
         pushConstants = std::move(other.pushConstants);
         return *this;
-    }
-
-    size_t ShaderReflectorImpl::getNumSets() const noexcept {
-        return sortedSets.size();
     }
 
     constexpr static std::array<VkShaderStageFlags, 6> possible_stages{
@@ -136,7 +135,7 @@ namespace st {
 
         for (const auto& rsrc : resources) {
             const std::string rsrc_name = get_actual_name(recompiler->get_name(rsrc.id));
-            const ShaderResource* parent_resource = rsrc_script->FindResource(rsrc_name);
+            const ShaderResource* parent_resource = rsrcFile->FindResource(rsrc_name);
             const std::string parent_group_name = parent_resource->ParentGroupName();
 
             if (usedResourceGroupNames.count(parent_group_name) == 0) {
@@ -337,6 +336,10 @@ namespace st {
         inputAttributes.emplace(stage, parseInputAttributes(*recompiler));
         outputAttributes.emplace(stage, parseOutputAttributes(*recompiler));
         recompiler.reset();
+    }
+
+    size_t ShaderReflectorImpl::getNumSets() const noexcept {
+        return sortedSets.size();
     }
     
 }

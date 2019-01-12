@@ -37,7 +37,7 @@ namespace st {
         return impl->reflector->GetImpl();
     }
 
-    Shader::Shader(const char* group_name, const size_t num_stages, const ShaderStage * stages, const char* resource_file_path) : impl(std::make_unique<ShaderGroupImpl>(group_name)) {
+    Shader::Shader(const char* group_name, const size_t num_stages, const ShaderStage * stages, yamlFile* resource_file) : impl(std::make_unique<ShaderGroupImpl>(group_name, resource_file)) {
 
         for (size_t i = 0; i < num_stages; ++i) {
             impl->addShaderStage(stages[i]);

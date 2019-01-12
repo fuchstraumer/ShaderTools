@@ -6,7 +6,7 @@
 
 namespace st {
 
-    ShaderReflector::ShaderReflector() : impl(std::make_unique<ShaderReflectorImpl>()) {}
+    ShaderReflector::ShaderReflector(yamlFile* yaml_file) : impl(std::make_unique<ShaderReflectorImpl>(yaml_file)) {}
 
     ShaderReflector::~ShaderReflector() {}
 
@@ -20,11 +20,6 @@ namespace st {
 
     uint32_t ShaderReflector::GetNumSets() const noexcept {
         return static_cast<uint32_t>(impl->getNumSets());
-    }    
-    
-    void ShaderReflector::Clear() {
-        impl.reset();
-        impl = std::make_unique<ShaderReflectorImpl>();
     }
 
     void ShaderReflector::GetShaderResources(const size_t set_idx, size_t * num_resources, ResourceUsage * resources) {

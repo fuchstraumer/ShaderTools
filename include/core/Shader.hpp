@@ -11,6 +11,7 @@ namespace st {
     class ShaderPackImpl;
     class ShaderReflectorImpl;
     class ResourceUsage;
+    struct yamlFile;
 
     /*  Designed to be used to group shaders into the groups that they are used in
         when bound to a pipeline, to simplify a few key things.
@@ -20,7 +21,7 @@ namespace st {
         Shader& operator=(const Shader&) = delete;
     public:
 
-        Shader(const char* group_name, const size_t num_stages, const ShaderStage* stages, const char* resource_file_path);
+        Shader(const char* group_name, const size_t num_stages, const ShaderStage* stages, yamlFile* resource_file_path);
         ~Shader();
         Shader(Shader&& other) noexcept;
         Shader& operator=(Shader&& other) noexcept;

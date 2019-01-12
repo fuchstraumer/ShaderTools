@@ -20,7 +20,7 @@ namespace st {
         ShaderGroupImpl& operator=(const ShaderGroupImpl& other) = delete;
     public:
 
-        ShaderGroupImpl(const std::string& group_name);
+        ShaderGroupImpl(const std::string& group_name, yamlFile* yaml_file);
         ~ShaderGroupImpl();
         ShaderGroupImpl(ShaderGroupImpl&& other) noexcept;
         ShaderGroupImpl& operator=(ShaderGroupImpl&& other) noexcept;

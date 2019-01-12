@@ -76,7 +76,7 @@ namespace st {
 
     void ShaderPackImpl::createResourceGroups() {
         for (const auto& entry : filePack->resourceGroups) {
-            resourceGroups.emplace(entry.first, std::make_unique<ResourceGroup>(filePack, entry.first.c_str()));
+            resourceGroups.emplace(entry.first, std::make_unique<ResourceGroup>(filePack.get(), entry.first.c_str()));
         }
     }
 
@@ -90,7 +90,7 @@ namespace st {
             }
         }
 
-        groups.emplace(name, std::make_unique<Shader>(name.c_str(), shaders.size(), shaders.data(), resourceScriptPath.c_str()));
+        groups.emplace(name, std::make_unique<Shader>(name.c_str(), shaders.size(), shaders.data(), filePack.get()));
     }
 
     void ShaderPackImpl::setDescriptorTypeCounts() const {
