@@ -298,21 +298,7 @@ namespace st {
     }
 
     std::string ShaderGeneratorImpl::getBufferMembersString(const ShaderResource& resource) const {
-        std::string result;
-
-        size_t num_members = 0;
-        resource.GetMembers(&num_members, nullptr);
-        std::vector<ShaderResourceSubObject> subobjects(num_members);
-        resource.GetMembers(&num_members, subobjects.data());
-
-        for (const auto& member : subobjects) {
-            result += std::string{ "    " };
-            result += member.Type;
-            result += std::string(" ") + member.Name;
-            result += std::string{ ";\n" };
-        }
-
-        return result;
+        return resource.GetMembersStr();
     }
 
     std::string ShaderGeneratorImpl::getUniformBufferString(const size_t& active_set, const ShaderResource& buffer, const std::string& name) const {

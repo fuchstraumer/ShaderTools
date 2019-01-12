@@ -47,7 +47,7 @@ int main(int argc, char* argv[]) {
 
         std::chrono::high_resolution_clock::time_point beforeExec;
         beforeExec = std::chrono::high_resolution_clock::now();
-        ShaderPack pack("../fragments/volumetric_forward/ShaderPack.lua");
+        ShaderPack pack("../fragments/volumetric_forward/volumetric_forward.yaml");
         std::chrono::duration<double, std::milli> work_time = std::chrono::high_resolution_clock::now() - beforeExec;
         LOG(INFO) << "Conventional creation of ShaderPack took: " << work_time.count() << "ms";
         ShaderPackBinary* binarization_of_pack = CreateShaderPackBinary(&pack);
