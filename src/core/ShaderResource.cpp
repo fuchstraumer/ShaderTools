@@ -23,6 +23,7 @@ namespace st {
         size_t inputAttachmentIdx{ std::numeric_limits<size_t>::max() };
         std::string parentSetName{ "" };
         VkShaderStageFlags stages{ VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM };
+        std::string imageSamplerSubtype{ "2D" };
         std::vector<ShaderResourceSubObject> members;
         std::vector<std::string> tags;
         std::set<glsl_qualifier> qualifiers;
@@ -73,12 +74,16 @@ namespace st {
         return impl->parentSetName.c_str();
     }
 
-    const VkShaderStageFlags& ShaderResource::ShaderStages() const noexcept {
+    VkShaderStageFlags ShaderResource::ShaderStages() const noexcept {
         return impl->stages;
     }
 
-    const VkDescriptorType& ShaderResource::DescriptorType() const noexcept {
+    VkDescriptorType ShaderResource::DescriptorType() const noexcept {
         return impl->type;
+    }
+
+    const char * ShaderResource::ImageSamplerSubtype() const {
+        return impl->imageSamplerSubtype.c_str();
     }
 
     bool ShaderResource::HasQualifiers() const noexcept {
@@ -147,16 +152,8 @@ namespace st {
         impl->bindingIdx = std::move(idx);
     }
 
-    void ShaderResource::SetDataFromFile(bool from_file) {
-        impl->fromFile = std::move(from_file);
-    }
-
     void ShaderResource::SetInputAttachmentIndex(size_t idx) {
         impl->inputAttachmentIdx = idx;
-    }
-
-    void ShaderResource::SetMemoryRequired(size_t amt) {
-        impl->memoryRequired = std::move(amt);
     }
 
     void ShaderResource::SetStages(VkShaderStageFlags stages) {
@@ -166,11 +163,6 @@ namespace st {
     void ShaderResource::SetType(VkDescriptorType _type) {
         impl->type = std::move(_type);
     }
-
-    void ShaderResource::SetSizeClass(size_class _size_class) {
-        impl->sizeClass = std::move(_size_class);
-    }
-
     void ShaderResource::SetName(const char* name) {
         impl->name = std::string{ name };
     }
@@ -209,6 +201,10 @@ namespace st {
         for (size_t i = 0; i < num_tags; ++i) {
             impl->tags.emplace_back(tags[i]);
         }
+    }
+
+    void ShaderResource::SetImageSamplerSubtype(const char * subtype) {
+        impl->imageSamplerSubtype = std::string(subtype);
     }
 
 }

@@ -29,12 +29,13 @@ namespace st {
         
         size_t BindingIndex() const noexcept;
         size_t InputAttachmentIndex() const noexcept;
-        kFormat Format() const noexcept;
+        VkFormat Format() const noexcept;
 
         const char* Name() const;
         const char* ParentGroupName() const;
-        const VkShaderStageFlags& ShaderStages() const noexcept;
-        const VkDescriptorType& DescriptorType() const noexcept;
+        VkShaderStageFlags ShaderStages() const noexcept;
+        VkDescriptorType DescriptorType() const noexcept;
+        const char* ImageSamplerSubtype() const;
         bool HasQualifiers() const noexcept;
         void GetQualifiers(size_t* num_qualifiers, glsl_qualifier* qualifiers) const noexcept;
         void GetPerUsageQualifiers(const char* shader_name, size_t* num_qualifiers, glsl_qualifier* qualifiers) const noexcept;
@@ -44,7 +45,6 @@ namespace st {
         dll_retrieved_strings_t GetTags() const noexcept;
 
         void SetBindingIndex(size_t idx);
-        void SetDataFromFile(bool from_file);
         void SetInputAttachmentIndex(size_t idx);
         void SetStages(VkShaderStageFlags stages);
         void SetType(VkDescriptorType _type);
@@ -56,6 +56,7 @@ namespace st {
         void SetMembers(const size_t num_members, ShaderResourceSubObject* src_objects);
         void SetFormat(VkFormat fmt);
         void SetTags(const size_t num_tags, const char** tags);
+        void SetImageSamplerSubtype(const char* subtype);
 
     private:
         std::unique_ptr<ShaderResourceImpl> impl;
