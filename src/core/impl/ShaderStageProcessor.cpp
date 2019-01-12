@@ -8,9 +8,9 @@
 namespace st {
     namespace fs = std::experimental::filesystem;
 
-    ShaderStageProcessor::ShaderStageProcessor(ShaderStage _stage, ResourceFile* rfile) : stage(std::move(_stage)), rsrcFile(rfile),
+    ShaderStageProcessor::ShaderStageProcessor(ShaderStage _stage, yamlFile* rfile) : stage(std::move(_stage)), rsrcFile(rfile),
         generator(std::make_unique<ShaderGeneratorImpl>(_stage)), compiler(std::make_unique<ShaderCompilerImpl>()) {
-        generator->luaResources = rsrcFile;
+        generator->resourceFile = rsrcFile;
     }
 
     ShaderStageProcessor::~ShaderStageProcessor() {}

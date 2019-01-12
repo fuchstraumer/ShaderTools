@@ -16,7 +16,7 @@ namespace st {
 
     namespace fs = std::experimental::filesystem;
 
-    class ResourceFile;
+    struct yamlFile;
 
     enum class fragment_type : uint8_t {
         Preamble = 0,
@@ -105,12 +105,12 @@ namespace st {
         static std::map<fs::path, std::string> fileContents;
         std::map<std::string, std::string> resourceBlocks;
         mutable shader_resources_t ShaderResources;
-        ResourceFile* luaResources;
+        yamlFile* resourceFile;
         std::vector<fs::path> includes;
         
 
-        inline static std::string BasePath = "../fragments/";
-        inline static std::string LibPath = "../fragments/include";
+        inline static std::string BasePath{ "../fragments/" };
+        inline static std::string LibPath{ "../fragments/include" };
 
     };
 

@@ -2,8 +2,6 @@
 #include "impl/ShaderImpl.hpp"
 #include "core/ShaderResource.hpp"
 #include "core/ResourceUsage.hpp"
-#include "../lua/LuaEnvironment.hpp"
-#include "../lua/ResourceFile.hpp"
 #include "../util/ShaderFileTracker.hpp"
 #include "reflection/ShaderReflector.hpp"
 #include "../reflection/impl/ShaderReflectorImpl.hpp"
@@ -41,20 +39,7 @@ namespace st {
 
     Shader::Shader(const char* group_name, const size_t num_stages, const ShaderStage * stages, const char* resource_file_path) : impl(std::make_unique<ShaderGroupImpl>(group_name)) {
 
-        auto& FileTracker = ShaderFileTracker::GetFileTracker();
-        const std::string file_path{ resource_file_path };
-        if (!FileTracker.FindResourceScript(file_path, &impl->rsrcFile)) {
-            LOG(ERROR) << "Failed to execute or find resource script.";
-            throw std::runtime_error("Failed to execute resource script: check error log.");
-        }
-        else {
-            namespace fs = std::experimental::filesystem;
-            impl->rsrcFile = FileTracker.ResourceScripts.at(fs::path(fs::canonical(fs::path(file_path))).string()).get();
-            impl->resourceScriptPath = fs::canonical(fs::path(file_path));
-        }
-
         for (size_t i = 0; i < num_stages; ++i) {
-            FileTracker.ShaderUsedResourceScript.emplace(stages[i], impl->resourceScriptPath.string());
             impl->addShaderStage(stages[i]);
         }
 
@@ -71,8 +56,6 @@ namespace st {
 
     ShaderStage Shader::AddShaderStage(const char * shader_name, const VkShaderStageFlagBits & flags) {
         ShaderStage handle(shader_name, flags);
-        auto& FileTracker = ShaderFileTracker::GetFileTracker();
-        FileTracker.ShaderUsedResourceScript.emplace(handle, impl->resourceScriptPath.string());
         auto iter = impl->stHandles.emplace(handle);
         if (!iter.second) {
             LOG(ERROR) << "Could not add/emplace Shader to Shader - handle or shader may already exist!";

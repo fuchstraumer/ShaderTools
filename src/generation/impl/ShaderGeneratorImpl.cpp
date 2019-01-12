@@ -1,5 +1,5 @@
 #include "ShaderGeneratorImpl.hpp"
-#include "../../lua/ResourceFile.hpp"
+#include "../../parser/yamlFile.hpp"
 #include "../../util/FilesystemUtils.hpp"
 #include "../../util/ResourceFormats.hpp"
 #include "../../util/ShaderFileTracker.hpp"
@@ -435,7 +435,7 @@ namespace st {
         const VkFormat fmt = storage_image.Format();
         const std::string fmt_string = VkFormatEnumToString(fmt);
         const std::string prefix = getResourcePrefix(active_set, fmt_string, storage_image);
-        const std::string resource_type = get_image_subtype(fmt_string) + getImageTypeSuffix(storage_image.ImageInfo());
+        const std::string resource_type = get_image_subtype(fmt_string) + storage_image.ImageSamplerSubtype();
         return prefix + std::string("uniform ") + resource_type + std::string(" ") + name + std::string(";\n");
     }
 
@@ -447,24 +447,14 @@ namespace st {
     std::string ShaderGeneratorImpl::getSampledImageString(const size_t& active_set, const ShaderResource& sampled_image, const std::string& name) const {
         const std::string prefix = getResourcePrefix(active_set, "", sampled_image);
         std::string resource_type = std::string("texture");
-        if (!sampled_image.FromFile()) {
-            resource_type += getImageTypeSuffix(sampled_image.ImageInfo());
-        }
-        else {
-            resource_type += "2D";
-        }
+        resource_type += sampled_image.ImageSamplerSubtype();
         return prefix + std::string("uniform ") + resource_type + std::string(" ") + name + std::string(";\n");
     }
 
     std::string ShaderGeneratorImpl::getCombinedImageSamplerString(const size_t& active_set, const ShaderResource& combined_image_sampler, const std::string& name) const {
         const std::string prefix = getResourcePrefix(active_set, "", combined_image_sampler);
         std::string resource_type = std::string("sampler");
-        if (!combined_image_sampler.FromFile()) {
-            resource_type += getImageTypeSuffix(combined_image_sampler.ImageInfo());
-        }
-        else {
-            resource_type += "2D";
-        }
+        resource_type += combined_image_sampler.ImageSamplerSubtype();
         return prefix + std::string("uniform ") + resource_type + std::string(" ") + name + std::string(";\n");
     }
 
@@ -492,11 +482,6 @@ namespace st {
                 }
             }
 
-            const VkImageCreateInfo info = input_attachment.ImageInfo();
-            if (info.samples != VK_SAMPLE_COUNT_1_BIT) {
-                result += std::string("MS"); // add multisampled flag.
-            }
-
             return result;
         };
 
@@ -519,7 +504,7 @@ namespace st {
 
         fragments.emplace(shaderFragment{ fragment_type::ResourceBlock, std::string("// Resource block: ") + block_name + std::string("\n") });
 
-        auto& resource_block = luaResources->GetResources(block_name);
+        auto& resource_block = resourceFile->resourceGroups.at(block_name);
         std::string resource_block_string{ "" };
 
         for (auto& resource : resource_block) {

@@ -11,12 +11,12 @@ namespace st {
 
     class ShaderGeneratorImpl;
     class ShaderCompilerImpl;
-    class ResourceFile;
+    struct yamlFile;
 
     class ShaderStageProcessor {
     public:
 
-        ShaderStageProcessor(ShaderStage stage, ResourceFile* rfile);
+        ShaderStageProcessor(ShaderStage stage, yamlFile* yfile);
         ~ShaderStageProcessor();
 
         void Process(std::string body_path, const std::vector<std::string>& extensions, const std::vector<std::string>& includes);
@@ -26,7 +26,7 @@ namespace st {
     private:
 
         ShaderStage stage{ 0u };
-        ResourceFile* rsrcFile{ nullptr };
+        yamlFile* rsrcFile{ nullptr };
         std::string bodyPath;
         std::unique_ptr<ShaderGeneratorImpl> generator{ nullptr };
         std::unique_ptr<ShaderCompilerImpl> compiler{ nullptr };

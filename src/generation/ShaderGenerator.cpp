@@ -19,8 +19,8 @@ namespace st {
         return *this;
     }
 
-    void ShaderGenerator::SetResourceFile(ResourceFile * rsrc_file) {
-        impl->luaResources = rsrc_file;
+    void ShaderGenerator::SetResourceFile(yamlFile* rsrc_file) {
+        impl->resourceFile = rsrc_file;
     }
 
     void ShaderGenerator::Generate(const ShaderStage& handle, const char* path, const size_t num_extensions, const char* const* extensions, const size_t num_includes, const char* const* paths) {
