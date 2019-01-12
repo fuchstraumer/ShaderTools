@@ -41,24 +41,25 @@ namespace st {
         void GetPerUsageQualifiers(const char* shader_name, size_t* num_qualifiers, glsl_qualifier* qualifiers) const noexcept;
         // Returns readonly/writeonly, if available. If not available or not applied to resource, returns glsl_qualifier::Invalid
         glsl_qualifier GetReadWriteQualifierForShader(const char* shader_name) const noexcept;
-        void GetMembers(size_t* num_members, ShaderResourceSubObject* dest_objects) const noexcept;
         dll_retrieved_strings_t GetTags() const noexcept;
+        const char* GetMembersStr() const noexcept;
 
         void SetBindingIndex(size_t idx);
         void SetInputAttachmentIndex(size_t idx);
         void SetStages(VkShaderStageFlags stages);
         void SetType(VkDescriptorType _type);
         void SetName(const char* name);
+        void SetMembersStr(const char* members_str);
         void SetParentGroupName(const char* parent_group_name);
         void SetQualifiers(const size_t num_qualifiers, glsl_qualifier* qualifiers);
         void AddPerUsageQualifier(const char* shader_name, glsl_qualifier qualifier);
         void AddPerUsageQualifiers(const char* shader_name, const size_t num_qualifiers, const glsl_qualifier* qualifiers);
-        void SetMembers(const size_t num_members, ShaderResourceSubObject* src_objects);
         void SetFormat(VkFormat fmt);
         void SetTags(const size_t num_tags, const char** tags);
         void SetImageSamplerSubtype(const char* subtype);
 
     private:
+        friend struct yamlFile;
         std::unique_ptr<ShaderResourceImpl> impl;
     };
 

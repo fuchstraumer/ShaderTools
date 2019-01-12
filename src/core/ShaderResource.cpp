@@ -24,6 +24,7 @@ namespace st {
         std::string parentSetName{ "" };
         VkShaderStageFlags stages{ VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM };
         std::string imageSamplerSubtype{ "2D" };
+        std::string membersStr;
         std::vector<ShaderResourceSubObject> members;
         std::vector<std::string> tags;
         std::set<glsl_qualifier> qualifiers;
@@ -132,13 +133,6 @@ namespace st {
         return glsl_qualifier::InvalidQualifier;
     }
 
-    void ShaderResource::GetMembers(size_t* num_members, ShaderResourceSubObject* objects) const noexcept {
-        *num_members = impl->members.size();
-        if (objects != nullptr) {
-            std::copy(impl->members.cbegin(), impl->members.cend(), objects);
-        }
-    }
-
     dll_retrieved_strings_t ShaderResource::GetTags() const noexcept {
         dll_retrieved_strings_t result;
         result.SetNumStrings(impl->tags.size());
@@ -146,6 +140,10 @@ namespace st {
             result.Strings[i] = strdup(impl->tags[i].c_str());
         }
         return result;
+    }
+
+    const char* ShaderResource::GetMembersStr() const noexcept {
+        return impl->membersStr.c_str();
     }
 
     void ShaderResource::SetBindingIndex(size_t idx) {
@@ -167,6 +165,10 @@ namespace st {
         impl->name = std::string{ name };
     }
 
+    void ShaderResource::SetMembersStr(const char * members_str) {
+        impl->membersStr = members_str;
+    }
+
     void ShaderResource::SetParentGroupName(const char * parent_group_name) {
         impl->parentSetName = parent_group_name;
     }
@@ -186,10 +188,6 @@ namespace st {
         for (size_t i = 0; i < num_qualifiers; ++i) {
             qualifier_set.emplace(qualifiers[i]);
         }
-    }
-
-    void ShaderResource::SetMembers(const size_t num_members, ShaderResourceSubObject* src_objects) {
-        impl->members = std::move(std::vector<ShaderResourceSubObject>{ src_objects, src_objects + num_members });
     }
 
     void ShaderResource::SetFormat(VkFormat fmt) {
