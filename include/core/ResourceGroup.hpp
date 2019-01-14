@@ -3,6 +3,7 @@
 #define SHADERTOOLS_RESOURCE_GROUP_HPP
 #include "common/CommonInclude.hpp"
 #include "common/UtilityStructs.hpp"
+
 namespace st {
 
     class ShaderResource;
@@ -22,6 +23,7 @@ namespace st {
         dll_retrieved_strings_t ResourceNames() const noexcept;
         dll_retrieved_strings_t UsedByGroups() const noexcept;
         dll_retrieved_strings_t GetTags() const noexcept;
+        const descriptor_type_counts_t& DescriptorCounts() const noexcept;
         const char* Name() const noexcept;
         uint32_t DescriptorSetIdxInStage(const ShaderStage& handle) const;
         ShaderResource* operator[](const char* name) noexcept;
