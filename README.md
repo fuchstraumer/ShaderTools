@@ -1,8 +1,255 @@
-# ShaderTools - Tools for working with shaders and Vulkan
+# ShaderTools - A Vulkan Shader Toolchain
 
-ShaderTools is a library that supports a number of uses: the most primitive being runtime shader compiliation from GLSL source code and aiding in generating
-Vulkan binding/descriptor objects at runtime. Most of the expensive generated data can be saved to a binary file on program exit, and then reloaded later - 
-timestamps of the saved data are then evaluated, and if the source code of the generated/compiled shaders in this file has been updated (resulting in a newer write time) 
-things will then be re-generated. This can cut load time by as much as 10x! (23ms for binary re-load vs 250ms for conventional load and generation)
+ShaderTools is a Vulkan-oriented shader toolchain, designed to make shader editing and creation easier while also greatly simplifying rendering code that uses Vulkan - this latter point being acheived through a sophisticated reflection system. 
 
-### Recently refactored! I'm going to have to work on docs and an article documenting the changes
+ShaderTools works in three "steps":
+- **Generation**: Shaders are generated from source code snippets, which are only required to feature the `void main()` entry point. Resources can be easily imported, and `#include` support exists as well.
+- **Compiliation**: The shaders generated from the initial source code snippets and preprocessor directives are fed to the `shaderc` optimizing SPIR-V compiler, and compiled into their final binary form
+- **Reflection**: The compiled shaders from the previous step are re-parsed, allowing us to extract vertex layouts, used resources, specialization constants, and push constants. All of this metadata allows us to automate a significant chunk of Vulkan code.
+
+The last point is particularly significant: normally, the Vulkan code tied to a shader involves a significant quantity of setup in creating our descriptor sets, pipeline layouts, and the like. All of this code has to be hand-written to reflect what our shaders currently look like and what resources they use, but with `ShaderTools` this goes away. Instead of a difficult dependency problem between compiled C++ code and GLSL shaders (meaning shader editing requires a recompile), our C++ code can adapt to whatever our shaders currently look like. We can quite literally create the exact `VkDescriptorPool`s, `VkDescriptorSetLayout`s, `VkDescriptorSet`s, and `VkPipelineLayout`s we need for executing some rendering work by just reading what our shaders desire.
+
+## Shader Generation and Preprocessing
+
+One of the best features of ShaderTools is how much easier it can make writing shaders themselves - Vulkan conventionally requires a user to write cumbersome and verbose resource definitions, such as the following:
+
+```glsl
+// Resource block: Lights
+layout (set = 1, binding = 0, rgba8) readonly restrict uniform imageBuffer lightColors;
+layout (set = 1, binding = 1, rgba32f) restrict uniform imageBuffer positionRanges;
+// End resource block
+
+// Resource block: ClusteredForward
+layout (set = 2, binding = 0, r32ui) restrict uniform uimageBuffer lightCountTotal;
+layout (set = 2, binding = 1, r32ui) restrict uniform uimageBuffer lightBounds;
+layout (set = 2, binding = 2, r8ui) restrict uniform uimageBuffer Flags;
+layout (set = 2, binding = 3, r32ui) restrict uniform uimageBuffer lightList;
+layout (set = 2, binding = 4, r32ui) restrict uniform uimageBuffer lightCounts;
+layout (set = 2, binding = 5, r32ui) restrict uniform uimageBuffer lightCountOffsets;
+layout (set = 2, binding = 6, r32ui) restrict uniform uimageBuffer lightCountCompare;
+// End resource block
+
+// Resource block: ObjMaterials
+layout (set = 3, binding = 0) uniform _Material_ {
+    // whole bunch of members
+} Material;
+layout (set = 3, binding = 1) uniform sampler2D normalMap;
+layout (set = 3, binding = 2) uniform sampler2D metallicMap;
+layout (set = 3, binding = 3) uniform sampler2D roughnessMap;
+layout (set = 3, binding = 4) uniform sampler2D diffuseMap;
+// End resource block
+```
+
+This is difficult to type, and becomes a maintenance nightmare. The sets that each resource are bound to must be specified, along with it's relative binding in that set. Additionally, we need to know all sorts of other metadata about the resources - type, subtype, formats, qualifiers, etc. To make it worse, all of these complicated resources and their bindings must be kept the same across *multiple* shader source files. With ShaderTools, resources are "used" by just specifying the following in the first few lines of your shader:
+
+```glsl
+#pragma USE_RESOURCES Lights
+#pragma USE_RESOURCES ClusteredForward
+// ... and so on
+```
+
+Now, the previously posted verbose code blocks will be automatically generated and inserted into the shader's source string shortly before it is compiled - massively reducing the quantity of work we have to do! Additionally, Vulkan-specific items like "specialization constants" can also be handled in an easier manner - users are no longer requried to track the `constant_id` index value, and can instead just prefix what they want to become a spec. constant with `#SPC`.
+
+Lastly, this generation/preprocessing toolchain also includes support for `#include`s, making GLSL source code writing behave more like the C/C++ style of code that many are used to.
+
+## Shader Compiliation
+
+Once a shader's source code string has been generated by the previous step, it is simply fed through a compiler to be turned into SPIR-V bytecode. This is the simplest stage in the process, and has the least configuration/setup to it.
+
+## Shader Reflection
+
+In the reflection stage, we feed the generated `SPIR-V` binary blob into `spirv-cross`. This allows us to retrieve the metadata that tells us *exactly* what resources a shader actually uses, where things have end up bound, and more. The end result is that instead of specifying descriptor data for a shader stage like this:
+
+```cpp
+// texelBuffersLayout is a vpr::DescriptorSetLayout, used to describe the layout of a single
+// descriptor set's resources. This layout is for the "ClusteredForward" resource block.
+constexpr static VkShaderStageFlags fc_flags = VK_SHADER_STAGE_FRAGMENT_BIT | VK_SHADER_STAGE_COMPUTE_BIT;
+texelBuffersLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, fc_flags, 0);
+texelBuffersLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, fc_flags, 1);
+texelBuffersLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, fc_flags, 2);
+texelBuffersLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, fc_flags, 3);
+texelBuffersLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, fc_flags, 4);
+texelBuffersLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, fc_flags, 5);
+texelBuffersLayout->AddDescriptorBinding(VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, fc_flags, 6);
+texelBuffersLayout->Create();
+```
+
+We can do it as simply as this:
+
+```cpp
+const size_t num_descriptor_sets = reflectionSystem->GetNumDescriptorSets();
+std::vector<std::vector<VkDescriptorSetLayoutBinding>> setBindings(num_descriptor_sets);
+for (size_t i = 0; i < num_descriptor_sets; ++i) {
+    size_t num_bindings = 0;
+    reflectionSystem->GetLayoutBindings(i, &num_bindings, nullptr);
+    setBindings[i].resize(num_bindings);
+    reflectionSystem->GetLayoutBindings(i, &num_bindings, setBindings[i].data());
+}
+// assuming we have some VkDescriptorSetLayout wrapper class, we then just add the bindings:
+for (size_t i = 0; i < num_descriptor_sets; ++i) {
+  descriptorSetLayouts[i].AddSetLayoutBindings(setBindings[i]);
+}
+// (repeat the above for each descriptor set and set layout we retrieved data for)
+```
+
+Another difficulty is the creation of a `VkDescriptorPool`: to construct these, we need to know the max quantity of `VkDescriptorSet`s we'll need, along with precisely how many of each resource type we'll be using across all the `VkDescriptorSet`s created from the pool. Without `ShaderTools`, one would have to do this by manually counting things up across all of the shaders they're using in a chunk of rendering work: with `ShaderTools` though, we can retrieve the *exact* quantity of sets needed *and* the exact quantity of each resource required. Another compile-time dependency on shader code is removed, and our code becomes simpler and more robust for it.
+
+## The Fourth "Step"
+
+The final step in `ShaderTools` isn't exactly a shader processing step, but is still significant enough to mention: shader compiliation takes a significant quantity of time, and repeating this process on shaders that haven't changed makes no sense. Most of the expensive generated data can be saved to a binary file on program exit, and then reloaded later - timestamps of the saved data are then evaluated, and if the source code of the generated/compiled shaders in this file has been updated (resulting in a newer write time) things will then be re-generated. This can cut load time of an entire `ShaderPack` (more on that shortly) by as much as 10x! (23ms for binary re-load vs 250ms for conventional load and generation)
+
+## In-Use
+
+While this is all well and great, it hasn't exactly gone far to describe how a user can make use of all of this functionality. Let's take a quick trip to do just that! ShaderPacks and ResourceGroups are both specified in a single `.yaml` file together, so we'll get into those first.
+
+### Specifying Resources and ResourceGroups
+
+Resource definitions are the backbone of `ShaderTools` functionality. These `.yaml` entries contain everything we need to generate the bindings for the shaders, and include some of the metadata that we'll use later.
+
+Begin the resource definition in your pack's `resource_groups` section like so:
+```yaml
+resource_groups :
+  // start writing out resources
+```
+
+Resources are only *required* to have a `Type` subfield. This can be: `UniformBuffer`, `UniformBufferDynamic`, `StorageBuffer`, `StorageBufferDynamic`, `UniformTexelBuffer`, `StorageTexelBuffer`, `SampledImage`, `Sampler`, `CombinedImageSampler`, or `InputAttachment`.
+
+For the `UniformBuffer` and `StorageBuffer` types, a `Members` field is expected as well - this is used during shader generation to generate the correct declaration of the resource and it's members that GLSL expects. The following formatting is used to specify those:
+
+```yaml
+# the |+1 specifies that the following string is to be taken literally, with newlines, and one tab spacing  
+Members: |+1 
+  uint FrameNumber;
+  vec3 CameraPos;
+  mat4 ViewMatrix;
+  # and so on. members are written as if
+  # we were just writing them in GLSL itself
+```
+
+If one is creating a storage buffer with array resources, specification of that also looks how it would in GLSL:
+
+```yaml
+LightAABBs : 
+    Type : "StorageBuffer"
+    Members : |+1
+        AABB Data[];
+```
+
+For our image types, in order to best assist metadata usage a `Format` field should be included. The full list of formats supported can be found in `/src/util/ResourceFormats.cpp`, in an `unordered_map` that's part of the `VkFormatFromString` method. This format is specified as a string member, like so:
+
+```yaml
+PointLightIndexCounter : 
+    Type : "StorageTexelBuffer"
+    Format : "r32ui"
+```
+
+#### Further Resource Qualifiers
+
+One can also further adjust resources by adding qualifiers to them - either globally (so for every time it is used in a shader), or per-usage. Available qualifiers are just the GLSL storage qualifiers, so: `coherent`, `volatile`, `readonly`, `writeonly`, or `restrict`. A "usage" is just a `Shader` from the `ShaderPack` we're defining in the same file. Example: (from `volumetric_forward.yaml`)
+
+```yaml
+UniqueClustersCounter : 
+    Type : "StorageTexelBuffer"
+    Format : "r32ui"
+    Qualifiers : "restrict"
+    PerUsageQualifiers : 
+        UpdateClusterIndirectArgs : "readonly"
+```
+
+#### What Happened To The Lua Scripts?
+
+The Lua scripting interface for writing resource files was an initially good idea: it allowed one to much more deeply define the resources used by the shaders, and it gave support for functions to be used to set some of the metadata about resources (e.g, if a resource's memory footprint or size depended on screen size or similar variables, we were able to calculate it). This was all part of an earlier drive in the development of this library to not just automate descriptor-related Vulkan work - I intended to fully automate (where possible) resource construction as well. 
+
+This worked, to a point - and it was great! I didn't have to type our `VkBufferCreateInfo` / `VkImageCreateInfo` structures, and many of the resources I expected to use could be just pulled out of my resource pooling system. However, it fell apart for a couple of reasons: not compatible with frame-buffering of resources, multithreading got a bit weird, resource/memory aliasing based on rendergraph analysis of the resources wasn't possible, and so on. For this reason, I pulled all of the Lua functionality out and greatly simplified the scope of the `ShaderResource` class to be what it is now.
+
+This approach is less cool and less fun to talk about, but it has ended up being far more practical. I'm still looking for a way to make Vulkan resource creation significantly more robust and data-driven (instead of so dependent on compiled-in behavior and the like).
+
+### Writing "ShaderPacks"
+
+The second part of the `.yaml` files used to drive behavior in `ShaderTools` is the specification of `ShaderPack`s themselves. A `ShaderPack` is effectively a group of shaders that we all expect to be sharing the resources used earlier - in the case of the example `volumetric_forward` yaml file, this represents all the resources and shaders that will be used as part of a lighting model.
+
+Packs are easy to write, and are opened with a `shader_groups` entry in the yaml file:
+
+```yaml
+shader_groups : 
+    UpdateLights : 
+        Shaders : 
+        # the actual stages used are specified as (Stage) : (Local_Path_To_File)
+            Compute : "compute/UpdateLights.comp"
+```
+
+Each entry becomes a `Shader`. These can have two optional fields added - `Tags` and `Extensions`. `Tags` is just an array of string tags, which can be used by frontends to further customize their behavior when they encounter a tag. As an example, consider using a `DepthOnly` tag to let a frontend know this particular group is for a depth-only renderpass, meaning we need to change how we treat it a little bit:
+
+```yaml
+    DepthPrePass : 
+        Shaders : 
+            Vertex : "Default.vert"
+            Fragment : "PrePass.frag"
+        # Use DepthOnly tag to force front-end to attach a depth stencil output
+        # These shaders probably don't write to the backbuffer for color but
+        # we want to keep depth info.
+        Tags : [ "DepthOnly" ]
+```
+
+`Extensions` is used to add the requisite string at the top of a GLSL file, enabling that particular extension for all shaders in that group. The following example will enable the `GL_EXT_control_flow_attributes` extension, so that users can use things like `[[unroll]]` and the like to optimize their shaders by hand:
+
+```yaml
+DebugClusters : 
+    Shaders : 
+        Vertex : "debug/DebugClusters.vert"
+        Geometry : "debug/DebugClusters.geom"
+        Fragment : "debug/DebugClusters.frag"
+    Extensions : [
+        "GL_EXT_control_flow_attributes"
+    ]
+```
+
+### Using The Reflection Facilities
+
+The scope of these falls outside of my current ability to write documentation for, and they are the ones that are the most subject to evolve. For now, the `DescriptorPack` and `Descriptor` structures found in my `DiamondDogs` repository are the most likely to provide aid and understanding for how to utilize the reflection systems. The `DescriptorPack` source can be found [here](https://github.com/fuchstraumer/DiamondDogs/blob/060cb39bda5124af843991c89d0fa6c858d1d9ab/modules/rendergraph_module/src/DescriptorPack.cpp) and `Descriptor` over [here](https://github.com/fuchstraumer/DiamondDogs/blob/b41f8b162d4fd54866d6bc1f41f98e4a92d5c8cf/modules/rendergraph_module/src/Descriptor.cpp). 
+
+Apologies, but hopefully I'll finish this project up "fully" soon, and then I can get down to some proper documentation for it!
+
+## Important Library Classes/Structures
+
+- `ShaderStage`: a single stage in the programmable shading pipeline, represented as a struct wrapping a hashed integer identifying the particular file used to create/define this stage
+- `Shader`: effectively a group of `ShaderStage`s, representing the cumulative group of shaders required to perform a small chunk of rendering work
+- `ShaderPack`: a group of `Shader`s, representing the larger volume of work required to perform a significant amount of rendering, along with the resources that will be used these shaders
+- `ShaderResource`: a single resource, belonging to a `ResourceGroup` and storing a significant amount of parsed metadata that has been extracted during the reflection process
+- `ResourceGroup`: a group of `ShaderResource` objects - effectively, this is logically equivalent to everything we'll need to create and use a `VkDescriptorSet`
+
+## Saving ShaderPacks To Files
+
+This functionality is still somewhat WIP, so it has been left out of the public-facing API headers. It can still be used, however, by clients. It will have to be included from the `src/util` subfolder, is all. Working with these binaries and using them to construct a `ShaderPack` however is extremely simple:
+
+```cpp
+ShaderPack my_loaded_pack; // assume we've already loaded this, compiled the shaders, etc
+
+// create binary - pass pointer to the pack we want to binarize
+ShaderPackBinary* my_pack_binary = CreateShaderPackBinary(&my_loaded_pack);
+
+// now save it to file, if we like
+SaveBinaryToFile(my_pack_binary, "output_file.bin");
+
+// Load pack binary from file
+ShaderPackBinary* reloaded_bin = LoadShaderPackBinary("output_file.bin");
+// if unable to load, returns a nullptr
+
+// Create new shader pack from a loaded binary
+ShaderPack pack_from_binary(reloaded_bin);
+
+// As binaries are pointer resources created across a DLL boundary, don't forget to clean them up!
+DestroyShaderPackBinary(my_pack_binary);
+DestroyShaderPackBinary(reloaded_bin);
+
+```
+
+## Building ShaderTools
+
+ShaderTools should build just using CMake, as long as the submodules have all been checked out - the first attempt to `configure` will fail however, as `spirv-tools` won't be detected. This is a false positive: just try to configure and run the `CMakeLists.txt` one more time and everything should work!
+
+The library also builds into a shared library or `.dll` by default: this is because ShaderTools has to link into a fairly massive pile of dependencies for the SPIR-V ecosystem. Linking to ShaderTools as a static library will pull all of these dependencies in, and might cause costly recompiles to happen more frequently. For these reasons, it's *strongly recommended* that users do not build it as a static library and keep it a shared library (additionally, all the work already went into giving it a C ABI: might as well just make use of that!).
+
+## Tests?
+
+If the testing variable is enabled in CMake, a small test will be added as a target - this serves to test the included `fragments` by compiling the complex `VolumetricTiledForward` `ShaderPack`. This pack features over a dozen separate shader files, and just as many unique `Shader` structures. It's a good way to make sure everything compiled correctly, although I mostly use it to test functionality without having to use another project or drag in source code from elsewhere. Feel free to try it though!
