@@ -1,24 +1,25 @@
 #pragma once
-#ifndef SG_SHADER_HPP
-#define SG_SHADER_HPP
+#ifndef SHADERTOOLS_SHADER_GENERATOR_HPP
+#define SHADERTOOLS_SHADER_GENERATOR_HPP
 #include "common/CommonInclude.hpp"
 #include "common/ShaderStage.hpp"
+
 namespace st {
 
     class ShaderGeneratorImpl;
-    class ResourceFile;
+    struct yamlFile;
 
     class ST_API ShaderGenerator { 
         ShaderGenerator(const ShaderGenerator&) = delete;
         ShaderGenerator& operator=(const ShaderGenerator&) = delete;
     public:
 
-        ShaderGenerator(const VkShaderStageFlagBits& stage = VK_SHADER_STAGE_VERTEX_BIT);
+        ShaderGenerator(ShaderStage stage);
         ~ShaderGenerator();
         ShaderGenerator(ShaderGenerator&& other) noexcept;
         ShaderGenerator& operator=(ShaderGenerator&& other) noexcept;
 
-        void SetResourceFile(ResourceFile* rsrc_file);
+        void SetResourceFile(yamlFile* rsrc_file);
         void Generate(const ShaderStage& handle, const char* path_to_src, const size_t num_extensions, const char* const* extensions, 
             const size_t num_includes, const char* const* paths);
         void AddIncludePath(const char* path_to_include);
@@ -35,4 +36,4 @@ namespace st {
 
 }
 
-#endif //!SG_SHADER_HPP
+#endif //!SHADERTOOLS_SHADER_GENERATOR_HPP

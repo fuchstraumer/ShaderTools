@@ -2,8 +2,6 @@
 #include "impl/ShaderImpl.hpp"
 #include "core/ShaderResource.hpp"
 #include "core/ResourceUsage.hpp"
-#include "../lua/LuaEnvironment.hpp"
-#include "../lua/ResourceFile.hpp"
 #include "../util/ShaderFileTracker.hpp"
 #include "reflection/ShaderReflector.hpp"
 #include "../reflection/impl/ShaderReflectorImpl.hpp"
@@ -31,30 +29,17 @@ namespace st {
         }
     }
 
-    ShaderReflectorImpl* Shader::GetBindingGeneratorImpl() {
+    ShaderReflectorImpl* Shader::GetShaderReflectorImpl() {
         return impl->reflector->GetImpl();
     }
 
-    const ShaderReflectorImpl* Shader::GetBindingGeneratorImpl() const {
+    const ShaderReflectorImpl* Shader::GetShaderReflectorImpl() const {
         return impl->reflector->GetImpl();
     }
 
-    Shader::Shader(const char* group_name, const size_t num_stages, const ShaderStage * stages, const char* resource_file_path) : impl(std::make_unique<ShaderGroupImpl>(group_name)) {
-
-        auto& FileTracker = ShaderFileTracker::GetFileTracker();
-        const std::string file_path{ resource_file_path };
-        if (!FileTracker.FindResourceScript(file_path, &impl->rsrcFile)) {
-            LOG(ERROR) << "Failed to execute or find resource script.";
-            throw std::runtime_error("Failed to execute resource script: check error log.");
-        }
-        else {
-            namespace fs = std::experimental::filesystem;
-            impl->rsrcFile = FileTracker.ResourceScripts.at(fs::path(fs::canonical(fs::path(file_path))).string()).get();
-            impl->resourceScriptPath = fs::canonical(fs::path(file_path));
-        }
+    Shader::Shader(const char* group_name, const size_t num_stages, const ShaderStage * stages, yamlFile* resource_file) : impl(std::make_unique<ShaderGroupImpl>(group_name, resource_file)) {
 
         for (size_t i = 0; i < num_stages; ++i) {
-            FileTracker.ShaderUsedResourceScript.emplace(stages[i], impl->resourceScriptPath.string());
             impl->addShaderStage(stages[i]);
         }
 
@@ -71,8 +56,6 @@ namespace st {
 
     ShaderStage Shader::AddShaderStage(const char * shader_name, const VkShaderStageFlagBits & flags) {
         ShaderStage handle(shader_name, flags);
-        auto& FileTracker = ShaderFileTracker::GetFileTracker();
-        FileTracker.ShaderUsedResourceScript.emplace(handle, impl->resourceScriptPath.string());
         auto iter = impl->stHandles.emplace(handle);
         if (!iter.second) {
             LOG(ERROR) << "Could not add/emplace Shader to Shader - handle or shader may already exist!";
@@ -125,7 +108,7 @@ namespace st {
     }
 
     void Shader::GetSetLayoutBindings(const size_t & set_idx, size_t * num_bindings, VkDescriptorSetLayoutBinding * bindings) const {
-        const auto& b_impl = GetBindingGeneratorImpl();
+        const auto* b_impl = GetShaderReflectorImpl();
         
         auto iter = b_impl->sortedSets.find(static_cast<uint32_t>(set_idx));
         if (iter != b_impl->sortedSets.cend()) {
@@ -144,7 +127,7 @@ namespace st {
     }
 
     void Shader::GetSpecializationConstants(size_t * num_constants, SpecializationConstant * constants) const {
-        const ShaderReflectorImpl* b_impl = GetBindingGeneratorImpl();
+        const ShaderReflectorImpl* b_impl = GetShaderReflectorImpl();
         if (!b_impl->specializationConstants.empty()) {
             *num_constants = b_impl->specializationConstants.size();
             if (constants != nullptr) {
@@ -161,7 +144,7 @@ namespace st {
     }
 
     void Shader::GetResourceUsages(const size_t & _set_idx, size_t * num_resources, ResourceUsage * resources) const {
-        const ShaderReflectorImpl* b_impl = GetBindingGeneratorImpl();
+        const ShaderReflectorImpl* b_impl = GetShaderReflectorImpl();
         const uint32_t set_idx = static_cast<uint32_t>(_set_idx);
         if (b_impl->sortedSets.count(set_idx) != 0) {
             if (b_impl->sortedSets.at(set_idx).Members.empty()) {
@@ -196,18 +179,15 @@ namespace st {
         }
     }
 
-    size_t Shader::ResourceGroupSetIdx(const char * name) const {
-        auto iter = impl->resourceGroupBindingIndices.find(name);
-        if (iter != std::cend(impl->resourceGroupBindingIndices)) {
-            return iter->second;
+    uint32_t Shader::ResourceGroupSetIdx(const char * name) const {
+        const auto* refl_impl = GetShaderReflectorImpl();
+        auto iter = refl_impl->resourceGroupSetIndices.find(name);
+        if (iter == std::end(refl_impl->resourceGroupSetIndices)) {
+            return std::numeric_limits<uint32_t>::max();
         }
         else {
-            return std::numeric_limits<size_t>::max();
+            return iter->second;
         }
-    }
-
-    void Shader::SetResourceGroupIdx(const char * name, size_t idx) {
-        impl->resourceGroupBindingIndices[name] = std::move(idx);
     }
 
     dll_retrieved_strings_t Shader::GetTags() const {
@@ -220,7 +200,7 @@ namespace st {
     }
 
     dll_retrieved_strings_t Shader::GetSetResourceNames(const uint32_t set_idx) const {
-        const auto& b_impl = GetBindingGeneratorImpl();
+        const auto& b_impl = GetShaderReflectorImpl();
         auto iter = b_impl->sortedSets.find(set_idx);
         
         if (iter != b_impl->sortedSets.cend()) {
@@ -240,21 +220,15 @@ namespace st {
     }
 
     dll_retrieved_strings_t Shader::GetUsedResourceBlocks() const {
-        auto& ftracker = ShaderFileTracker::GetFileTracker();
-        size_t num_strings = 0;
-        for (auto& handle : impl->stHandles) {
-            num_strings += ftracker.ShaderUsedResourceBlocks.count(handle);
-        }
-        dll_retrieved_strings_t results;
-        results.SetNumStrings(num_strings);
 
-        size_t curr_idx = 0;
-        for (auto& handle : impl->stHandles) {
-            auto iter_pair = ftracker.ShaderUsedResourceBlocks.equal_range(handle);
-            for (auto iter = iter_pair.first; iter != iter_pair.second; ++iter) {
-                results.Strings[curr_idx] = strdup(iter->second.c_str());
-                ++curr_idx;
-            }
+        const auto* refl_impl = GetShaderReflectorImpl();
+        dll_retrieved_strings_t results;
+        results.SetNumStrings(refl_impl->usedResourceGroupNames.size());
+
+        size_t idx = 0;
+        for (const auto& str : refl_impl->usedResourceGroupNames) {
+            results.Strings[idx] = strdup(str.c_str());
+            ++idx;
         }
 
         return results;

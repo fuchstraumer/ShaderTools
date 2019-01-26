@@ -80,20 +80,19 @@ namespace st {
         uint32_t MagicBits{ SHADER_PACK_BINARY_MAGIC_VALUE };
         uint32_t ShaderToolsVersion{ 0 };
         std::string PackPath{};
-        std::string ResourceScriptPath{};
         uint32_t NumStages{ 0u };
         std::vector<ShaderStageBinary> Stages{};
         uint32_t NumShaders{ 0u };
         std::vector<ShaderBinary> Shaders{};
+        uint32_t NumResourceGroups{ 0u };
     };
 
     ShaderPackBinary::ShaderPackBinary(const ShaderPack * initial_pack) : ShaderToolsVersion{ SHADER_TOOLS_VERSION } {
         const ShaderPackImpl* src = initial_pack->impl.get();
-        PackPath = src->packScriptPath;
-        ResourceScriptPath = src->resourceScriptPath;
+        PackPath = src->packPath;
 
-        NumStages = static_cast<uint32_t>(src->filePack->Stages.size());
-        for (const auto& stage : src->filePack->Stages) {
+        NumStages = static_cast<uint32_t>(src->filePack->stages.size());
+        for (const auto& stage : src->filePack->stages) {
             Stages.emplace_back(stage.second);
         }
 
@@ -127,7 +126,6 @@ namespace st {
         s.value4b(pack.MagicBits);
         s.value4b(pack.ShaderToolsVersion);
         s.text1b(pack.PackPath, 512);
-        s.text1b(pack.ResourceScriptPath, 512);
         s.value4b(pack.NumStages);
         s.container(pack.Stages, 64, [&s](ShaderStageBinary& stg) { serialize<S>(s, stg); });
         s.value4b(pack.NumShaders);
@@ -193,17 +191,15 @@ void st::detail::LoadPackFromBinary(ShaderPackImpl * pack, ShaderPackBinary * bi
         LOG(WARNING) << "ShaderToolsVersion in loaded binary does not match: loading may fault or cause errors!";
     }
 
-    pack->packScriptPath = bin->PackPath;
+    pack->packPath = bin->PackPath;
 
-    if (!fs::exists(fs::path(pack->packScriptPath))) {
+    if (!fs::exists(fs::path(pack->packPath))) {
         LOG(WARNING) << "Path script path stored in binary doesn't exist!";
     }
 
-    pack->createPackScript(pack->packScriptPath.c_str());
-    fs::path working_dir{ pack->packScriptPath };
+    pack->createPackScript(pack->packPath.c_str());
+    fs::path working_dir{ pack->packPath };
     pack->workingDir = fs::canonical(working_dir.remove_filename());
-
-    pack->resourceScriptPath = bin->ResourceScriptPath;
 
     auto& ftracker = ShaderFileTracker::GetFileTracker();
     for (auto&& stage : bin->Stages) {

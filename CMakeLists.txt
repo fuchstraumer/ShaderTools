@@ -16,8 +16,12 @@ SET(ENABLE_GLSLANG_BINARIES OFF CACHE BOOL "Builds glslangValidator and spirv-re
 SET(SKIP_GLSLANG_INSTALL ON CACHE BOOL "Skip installation")
 ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/shaderc" EXCLUDE_FROM_ALL)
 ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/spirv-cross" EXCLUDE_FROM_ALL)
-SET(SKIP_LUA_WRAPPER ON CACHE BOOL "Do not build and install Lua executable wrappers.")
-ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/luajit" EXCLUDE_FROM_ALL)
+
+SET(YAML_CPP_BUILD_CONTRIB OFF CACHE BOOL "Enable contrib stuff in library")
+SET(YAML_CPP_BUILD_TESTS OFF CACHE BOOL "Enable testing")
+SET(YAML_CPP_BUILD_TOOLS OFF CACHE BOOL "Enable parse tools")
+SET(YAML_CPP_INSTALL OFF CACHE BOOL "Enable generation of install target")
+ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/yaml-cpp")
 
 OPTION(SHADERTOOLS_PROFILING "Profile key steps in the execution of ShaderTools, and log timing info to the console" OFF)
 
@@ -44,8 +48,6 @@ SET(ST_CORE_SRCS
     "${CMAKE_CURRENT_SOURCE_DIR}/src/core/impl/ShaderPackImpl.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/core/impl/ShaderImpl.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/core/impl/ShaderImpl.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/core/impl/ShaderPackScript.hpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/core/impl/ShaderPackScript.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/core/impl/ShaderStageProcessor.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/core/impl/ShaderStageProcessor.cpp"
 )
@@ -62,13 +64,6 @@ SET(ST_GENERATION_SRCS
     "${CMAKE_CURRENT_SOURCE_DIR}/src/generation/impl/ShaderGeneratorImpl.cpp"
 )
 
-SET(ST_LUA_SRCS
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/lua/LuaEnvironment.hpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/lua/LuaEnvironment.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/lua/ResourceFile.hpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/lua/ResourceFile.cpp"
-)
-
 SET(ST_REFLECTION_SRCS
     "${CMAKE_CURRENT_SOURCE_DIR}/include/reflection/ReflectionStructs.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/include/reflection/ShaderReflector.hpp"
@@ -76,6 +71,11 @@ SET(ST_REFLECTION_SRCS
     "${CMAKE_CURRENT_SOURCE_DIR}/src/reflection/ShaderReflector.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/reflection/impl/ShaderReflectorImpl.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/reflection/impl/ShaderReflectorImpl.cpp"
+)
+
+SET(ST_PARSER_SRCS
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/parser/yamlFile.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/parser/yamlFile.cpp"
 )
 
 SET(ST_UTIL_SRCS
@@ -94,7 +94,7 @@ SOURCE_GROUP("util" FILES ${ST_UTIL_SRCS})
 SOURCE_GROUP("generation" FILES ${ST_GENERATION_SRCS})
 SOURCE_GROUP("reflection" FILES ${ST_REFLECTION_SRCS})
 SOURCE_GROUP("core" FILES ${ST_CORE_SRCS})
-SOURCE_GROUP("lua" FILES ${ST_LUA_SRCS})
+SOURCE_GROUP("parser" FILES ${ST_PARSER_SRCS})
 
 FIND_PACKAGE(Vulkan REQUIRED)
 
@@ -102,14 +102,14 @@ OPTION(BUILD_STATIC "Build as a static library instead of a DLL. Not recommended
 
 IF(BUILD_STATIC) 
     ADD_LIBRARY(ShaderTools STATIC ${ST_COMMON_SRCS} ${ST_UTIL_SRCS} ${ST_GENERATION_SRCS} 
-        ${ST_REFLECTION_SRCS} ${ST_LUA_SRCS} ${ST_CORE_SRCS}  
+        ${ST_REFLECTION_SRCS} ${ST_CORE_SRCS} ${ST_PARSER_SRCS}
         "${CMAKE_CURRENT_SOURCE_DIR}/third_party/easyloggingpp/src/easylogging++.cc")
     # Used to avoid initializing easyloggingpp when built as static library. Causes 
     # duplicate symbol errors otherwise
     TARGET_COMPILE_DEFINITIONS(ShaderTools PRIVATE "ST_BUILDING_STATIC")
 ELSE()
     ADD_LIBRARY(ShaderTools SHARED ${ST_COMMON_SRCS} ${ST_UTIL_SRCS} ${ST_GENERATION_SRCS} 
-        ${ST_REFLECTION_SRCS} ${ST_LUA_SRCS} ${ST_CORE_SRCS} 
+        ${ST_REFLECTION_SRCS} ${ST_CORE_SRCS} ${ST_PARSER_SRCS}
         "${CMAKE_CURRENT_SOURCE_DIR}/third_party/easyloggingpp/src/easylogging++.cc")
     TARGET_COMPILE_DEFINITIONS(ShaderTools PUBLIC "$<BUILD_INTERFACE:SHADERTOOLS_BUILD_DLL>" "$<INSTALL_INTERFACE:SHADERTOOLS_DLL>")
 ENDIF()
@@ -117,29 +117,23 @@ ENDIF()
 # Require CXX17 for all compilers
 SET_PROPERTY(TARGET ShaderTools PROPERTY CXX_STANDARD 17)
 
-IF(MSVC)
-    # Set some MSVC-specific compiler options that we need
-    TARGET_COMPILE_OPTIONS(ShaderTools PRIVATE "/bigobj" "/MP")
-ENDIF()
-
 IF(SHADERTOOLS_PROFILING)
     TARGET_COMPILE_DEFINITIONS(ShaderTools PRIVATE "SHADERTOOLS_PROFILING_ENABLED")
 ENDIF()
 
 TARGET_COMPILE_DEFINITIONS(ShaderTools PRIVATE -DSHADERTOOLS_BUILD_DLL)
 
-TARGET_LINK_LIBRARIES(ShaderTools PRIVATE shaderc spirv-cross-core spirv-cross-glsl spirv-cross-cpp)
-TARGET_LINK_LIBRARIES(ShaderTools PRIVATE liblua)
+TARGET_LINK_LIBRARIES(ShaderTools PRIVATE shaderc spirv-cross-core spirv-cross-glsl spirv-cross-cpp yaml-cpp)
 
 TARGET_INCLUDE_DIRECTORIES(ShaderTools PUBLIC  "${CMAKE_CURRENT_SOURCE_DIR}/include" "${Vulkan_INCLUDE_DIRS}")
 TARGET_INCLUDE_DIRECTORIES(ShaderTools PRIVATE 
     "${CMAKE_CURRENT_SOURCE_DIR}/third_party/" 
-    "${CMAKE_CURRENT_SOURCE_DIR}/ext/include" 
-    "${CMAKE_CURRENT_SOURCE_DIR}/third_party/luajit/src" 
-    "${CMAKE_CURRENT_SOURCE_DIR}/third_party/luabridge/Source"
+    "${CMAKE_CURRENT_SOURCE_DIR}/ext/include"
     "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bitsery/include/"
+    "${CMAKE_CURRENT_SOURCE_DIR}/third_party/yaml-cpp/include"
 )
-    
+
+IF(MSVC)
 TARGET_COMPILE_DEFINITIONS(ShaderTools PRIVATE 
     "_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS"
     "_SCL_SECURE_NO_WARNINGS"
@@ -150,14 +144,16 @@ TARGET_COMPILE_DEFINITIONS(ShaderTools PRIVATE
     "_CRT_NONSTDC_NO_DEPRECATE"
     "NOMINMAX"
 )
+ENDIF()
 
 # Group all our dependencies together so they don't clutter up the IDE, or the IDE of users
 SET_TARGET_PROPERTIES(
-    liblua shaderc spirv-cross-core spirv-cross-glsl spirv-cross-cpp glslang
-    HLSL buildvm minilua shaderc_util OGLCompiler OSDependent SPIRV SPIRV-Tools SPIRV-Tools-opt
+    shaderc spirv-cross-core spirv-cross-glsl spirv-cross-cpp glslang format yaml-cpp
+    HLSL shaderc_util OGLCompiler OSDependent SPIRV SPIRV-Tools SPIRV-Tools-opt
     PROPERTIES FOLDER "ShaderTools Dependencies")
 
 ## 
+
 INSTALL(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include/" DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/ShaderTools/")
 INSTALL(TARGETS ShaderTools RUNTIME DESTINATION "bin" LIBRARY DESTINATION "lib" ARCHIVE DESTINATION "lib")
 INSTALL(TARGETS ShaderTools RUNTIME DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/")

@@ -3,11 +3,12 @@
 #define SHADERTOOLS_RESOURCE_GROUP_HPP
 #include "common/CommonInclude.hpp"
 #include "common/UtilityStructs.hpp"
+
 namespace st {
 
     class ShaderResource;
     class ResourceGroupImpl;
-    class ResourceFile;
+    struct yamlFile;
     struct ShaderStage;
 
     class ST_API ResourceGroup {
@@ -16,12 +17,13 @@ namespace st {
         friend class ResourceFile;
     public:
 
-        ResourceGroup(ResourceFile* resource_file, const char* group_name);
+        ResourceGroup(yamlFile* resource_file, const char* group_name);
         ~ResourceGroup();
 
         dll_retrieved_strings_t ResourceNames() const noexcept;
         dll_retrieved_strings_t UsedByGroups() const noexcept;
         dll_retrieved_strings_t GetTags() const noexcept;
+        const descriptor_type_counts_t& DescriptorCounts() const noexcept;
         const char* Name() const noexcept;
         uint32_t DescriptorSetIdxInStage(const ShaderStage& handle) const;
         ShaderResource* operator[](const char* name) noexcept;

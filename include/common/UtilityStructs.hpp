@@ -22,16 +22,19 @@ namespace st {
     };
 
     struct ST_API descriptor_type_counts_t {
-        uint32_t UniformBuffers{ 0 };
-        uint32_t UniformBuffersDynamic{ 0 };
-        uint32_t StorageBuffers{ 0 };
-        uint32_t StorageBuffersDynamic{ 0 };
-        uint32_t StorageTexelBuffers{ 0 };
-        uint32_t UniformTexelBuffers{ 0 };
-        uint32_t StorageImages{ 0 };
-        uint32_t Samplers{ 0 };
-        uint32_t SampledImages{ 0 };
-        uint32_t CombinedImageSamplers{ 0 };
+        uint32_t Samplers{ 0u };
+        uint32_t CombinedImageSamplers{ 0u };
+        uint32_t SampledImages{ 0u };
+        uint32_t StorageImages{ 0u };
+        uint32_t UniformTexelBuffers{ 0u };
+        uint32_t StorageTexelBuffers{ 0u };
+        uint32_t UniformBuffers{ 0u };
+        uint32_t StorageBuffers{ 0u };
+        uint32_t UniformBuffersDynamic{ 0u };
+        uint32_t StorageBuffersDynamic{ 0u };
+        uint32_t InputAttachments{ 0u };
+        uint32_t InlineUniformBlockEXT{ 0u };
+        uint32_t AccelerationStructureNVX{ 0u };
     };
 
     struct ST_API engine_environment_callbacks_t {

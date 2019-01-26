@@ -9,6 +9,7 @@
 #include <fstream>
 #include <filesystem>
 #include <unordered_map>
+#include <unordered_set>
 #include <map>
 #include <set>
 #include "../../util/ShaderFileTracker.hpp"
@@ -16,6 +17,7 @@
 namespace st {
 
     class ResourceUsage;
+    struct yamlFile;
 
     struct DescriptorSetInfo {
         uint32_t Binding;
@@ -27,7 +29,7 @@ namespace st {
         ShaderReflectorImpl& operator=(const ShaderReflectorImpl&) = delete;
     public:
 
-        ShaderReflectorImpl() = default;
+        ShaderReflectorImpl(yamlFile* yaml_file);
         ~ShaderReflectorImpl() = default;
         ShaderReflectorImpl(ShaderReflectorImpl&& other) noexcept;
         ShaderReflectorImpl& operator=(ShaderReflectorImpl&& other) noexcept;
@@ -45,7 +47,10 @@ namespace st {
         std::unordered_map<VkShaderStageFlags, PushConstantInfo> pushConstants;
         std::unordered_map<VkShaderStageFlags, std::vector<VertexAttributeInfo>> inputAttributes;
         std::unordered_map<VkShaderStageFlags, std::vector<VertexAttributeInfo>> outputAttributes;
+        std::unordered_map<std::string, uint32_t> resourceGroupSetIndices;
+        std::unordered_set<std::string> usedResourceGroupNames;
         std::unique_ptr<spirv_cross::CompilerGLSL> recompiler{ nullptr };
+        yamlFile* rsrcFile;
         size_t getNumSets() const noexcept;
 
         decltype(sortedSets)::iterator findSetWithIdx(const uint32_t idx);

@@ -13,14 +13,14 @@ namespace st {
     class ShaderGenerator;
     class ShaderCompiler;
     class ShaderReflector;
-    class ResourceFile;
+    struct yamlFile;
 
     class ShaderGroupImpl {
         ShaderGroupImpl(const ShaderGroupImpl& other) = delete;
         ShaderGroupImpl& operator=(const ShaderGroupImpl& other) = delete;
     public:
 
-        ShaderGroupImpl(const std::string& group_name);
+        ShaderGroupImpl(const std::string& group_name, yamlFile* yaml_file);
         ~ShaderGroupImpl();
         ShaderGroupImpl(ShaderGroupImpl&& other) noexcept;
         ShaderGroupImpl& operator=(ShaderGroupImpl&& other) noexcept;
@@ -32,7 +32,7 @@ namespace st {
         std::unordered_set<st::ShaderStage> stHandles{};
         std::unordered_map<st::ShaderStage, bool> optimizationEnabled;
         std::unique_ptr<ShaderReflector> reflector{ nullptr };
-        ResourceFile* rsrcFile{ nullptr };
+        yamlFile* rsrcFile{ nullptr };
         std::vector<std::string> tags;
         std::unordered_map<std::string, size_t> resourceGroupBindingIndices;
 

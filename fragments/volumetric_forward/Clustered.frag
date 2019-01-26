@@ -1,11 +1,11 @@
 
 layout(early_fragment_tests) in;
 
-SPC const bool HasDiffuse = false;
-SPC const bool HasNormal = false;
-SPC const bool HasAmbientOcclusion = false;
-SPC const bool HasRoughness = false;
-SPC const bool HasMetallic = false;
+SPC const bool HasDiffuse = true;
+SPC const bool HasNormal = true;
+SPC const bool HasAmbientOcclusion = true;
+SPC const bool HasRoughness = true;
+SPC const bool HasMetallic = true;
 SPC const bool HasEmissive = false;
 
 #include "Structures.glsl"

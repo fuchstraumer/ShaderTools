@@ -1,15 +1,17 @@
 #include "ShaderReflectorImpl.hpp"
 #include "easyloggingpp/src/easylogging++.h"
 #include "../../util/ShaderFileTracker.hpp"
+#include "../../parser/yamlFile.hpp"
 #include "core/ShaderResource.hpp"
 #include "core/ResourceUsage.hpp"
 #include <array>
 #ifdef FindResource
 #undef FindResource
 #endif // FindResource
-#include "../../lua/ResourceFile.hpp"
 
 namespace st {
+
+    ShaderReflectorImpl::ShaderReflectorImpl(yamlFile * yaml_file) : rsrcFile(yaml_file) {}
 
     ShaderReflectorImpl::ShaderReflectorImpl(ShaderReflectorImpl&& other) noexcept : descriptorSets(std::move(other.descriptorSets)),
         sortedSets(std::move(other.sortedSets)), pushConstants(std::move(other.pushConstants)) {}
@@ -19,10 +21,6 @@ namespace st {
         sortedSets = std::move(other.sortedSets);
         pushConstants = std::move(other.pushConstants);
         return *this;
-    }
-
-    size_t ShaderReflectorImpl::getNumSets() const noexcept {
-        return sortedSets.size();
     }
 
     constexpr static std::array<VkShaderStageFlags, 6> possible_stages{
@@ -67,8 +65,6 @@ namespace st {
     void ShaderReflectorImpl::parseResourceType(const ShaderStage& shader_handle, const VkDescriptorType& type_being_parsed) {
         
         auto& f_tracker = ShaderFileTracker::GetFileTracker();
-        const auto& rsrc_path = f_tracker.ShaderUsedResourceScript.at(shader_handle);
-        const auto* rsrc_script = f_tracker.ResourceScripts.at(rsrc_path).get();
 
         auto get_actual_name = [](const std::string& rsrc_name)->std::string {
             size_t first_idx = rsrc_name.find_first_of('_');
@@ -139,7 +135,13 @@ namespace st {
 
         for (const auto& rsrc : resources) {
             const std::string rsrc_name = get_actual_name(recompiler->get_name(rsrc.id));
-            const ShaderResource* parent_resource = rsrc_script->FindResource(rsrc_name);
+            const ShaderResource* parent_resource = rsrcFile->FindResource(rsrc_name);
+            const std::string parent_group_name = parent_resource->ParentGroupName();
+
+            if (usedResourceGroupNames.count(parent_group_name) == 0) {
+                usedResourceGroupNames.emplace(parent_group_name);
+            }
+
             glsl_qualifier curr_qualifier = parent_resource->GetReadWriteQualifierForShader(shader_name.c_str());
             if (parent_resource == nullptr) {
                 LOG(ERROR) << "Couldn't find parent resource of resource usage object!";
@@ -171,7 +173,11 @@ namespace st {
                 }
             }
             const uint32_t set_idx = recompiler->get_decoration(rsrc.id, spv::DecorationDescriptorSet);
-            f_tracker.ResourceGroupSetIndexMaps[parent_resource->ParentGroupName()].emplace(shader_handle, set_idx);
+            
+            if (resourceGroupSetIndices.count(parent_group_name) == 0) {
+                resourceGroupSetIndices.emplace(parent_group_name, set_idx);
+            }
+
             auto iter = tempResources.emplace(set_idx, 
                 ResourceUsage(shader_handle, parent_resource, modifier, parent_resource->DescriptorType()));
             iter->second.bindingIdx = binding_idx;
@@ -330,6 +336,10 @@ namespace st {
         inputAttributes.emplace(stage, parseInputAttributes(*recompiler));
         outputAttributes.emplace(stage, parseOutputAttributes(*recompiler));
         recompiler.reset();
+    }
+
+    size_t ShaderReflectorImpl::getNumSets() const noexcept {
+        return sortedSets.size();
     }
     
 }

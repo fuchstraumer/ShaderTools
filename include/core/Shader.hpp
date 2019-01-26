@@ -11,6 +11,7 @@ namespace st {
     class ShaderPackImpl;
     class ShaderReflectorImpl;
     class ResourceUsage;
+    struct yamlFile;
 
     /*  Designed to be used to group shaders into the groups that they are used in
         when bound to a pipeline, to simplify a few key things.
@@ -20,7 +21,7 @@ namespace st {
         Shader& operator=(const Shader&) = delete;
     public:
 
-        Shader(const char* group_name, const size_t num_stages, const ShaderStage* stages, const char* resource_file_path);
+        Shader(const char* group_name, const size_t num_stages, const ShaderStage* stages, yamlFile* resource_file_path);
         ~Shader();
         Shader(Shader&& other) noexcept;
         Shader& operator=(Shader&& other) noexcept;
@@ -37,8 +38,7 @@ namespace st {
         void GetResourceUsages(const size_t& set_idx, size_t* num_resources, ResourceUsage* resources) const;
         VkShaderStageFlags Stages() const noexcept;
         bool OptimizationEnabled(const ShaderStage& handle) const noexcept;
-        size_t ResourceGroupSetIdx(const char* name) const;
-        void SetResourceGroupIdx(const char* name, size_t idx);
+        uint32_t ResourceGroupSetIdx(const char* name) const;
 
         dll_retrieved_strings_t GetTags() const;
         dll_retrieved_strings_t GetSetResourceNames(const uint32_t set_idx) const;
@@ -51,8 +51,8 @@ namespace st {
 
     protected:
         friend class ShaderPackImpl;
-        ShaderReflectorImpl* GetBindingGeneratorImpl();
-        const ShaderReflectorImpl* GetBindingGeneratorImpl() const;
+        ShaderReflectorImpl* GetShaderReflectorImpl();
+        const ShaderReflectorImpl* GetShaderReflectorImpl() const;
         Shader(const char * group_name, const size_t num_extensions, const char * const * extensions, const size_t num_includes, const char * const * paths);
     private:
         std::unique_ptr<ShaderGroupImpl> impl;

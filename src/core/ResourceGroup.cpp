@@ -1,5 +1,5 @@
 #include "core/ResourceGroup.hpp"
-#include "../lua/ResourceFile.hpp"
+#include "../parser/yamlFile.hpp"
 #include "../util/ShaderFileTracker.hpp"
 #include "common/ShaderStage.hpp"
 #include <unordered_map>
@@ -11,23 +11,71 @@ namespace st {
 
     class ResourceGroupImpl {
     public:
-        ResourceGroupImpl(ResourceFile* resource_file, const char* group_name);
+        ResourceGroupImpl(yamlFile* resource_file, const char* group_name);
         ~ResourceGroupImpl() = default;
 
         bool hasResource(const char* str) const;
         std::string name;
         std::vector<ShaderResource> resources;
+        descriptor_type_counts_t descriptorCounts;
         // what index this group is bound at in the given shader
         std::unordered_map<ShaderStage, uint32_t> stageSetIndices;
-        std::set<std::string> tags;
+        std::vector<std::string> tags;
         std::set<std::string> usedByShaders;
     };
 
-    ResourceGroupImpl::ResourceGroupImpl(ResourceFile* resource_file, const char* group_name) : name(group_name),
-        resources(resource_file->setResources.at(group_name)) {
-        if (resource_file->resourceGroupTags.count(name) != 0) {
-            tags = resource_file->resourceGroupTags.at(name);
+    ResourceGroupImpl::ResourceGroupImpl(yamlFile* resource_file, const char* group_name) : name(group_name),
+        resources(resource_file->resourceGroups.at(group_name)) {
+        if (resource_file->groupTags.count(name) != 0) {
+            tags = resource_file->groupTags.at(name);
         }
+
+        for (const auto& rsrc : resources) {
+            switch (rsrc.DescriptorType()) {
+            case VK_DESCRIPTOR_TYPE_SAMPLER:
+                descriptorCounts.Samplers++;
+                break;
+            case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+                descriptorCounts.CombinedImageSamplers++;
+                break;
+            case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
+                descriptorCounts.SampledImages++;
+                break;
+            case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+                descriptorCounts.StorageImages++;
+                break;
+            case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
+                descriptorCounts.UniformTexelBuffers++;
+                break;
+            case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
+                descriptorCounts.StorageTexelBuffers++;
+                break;
+            case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+                descriptorCounts.UniformBuffers++;
+                break;
+            case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+                descriptorCounts.StorageBuffers++;
+                break;
+            case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
+                descriptorCounts.UniformBuffersDynamic++;
+                break;
+            case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
+                descriptorCounts.StorageBuffersDynamic++;
+                break;
+            case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
+                descriptorCounts.InputAttachments++;
+                break;
+            case VK_DESCRIPTOR_TYPE_INLINE_UNIFORM_BLOCK_EXT:
+                descriptorCounts.InlineUniformBlockEXT++;
+                break;
+            case VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_NVX:
+                descriptorCounts.AccelerationStructureNVX++;
+                break;
+            default:
+                throw std::domain_error("Invalid VK_DESCRIPTOR_TYPE value for a ShaderResource in a ResourceGroup!");
+            }
+        }
+
     }
 
     bool ResourceGroupImpl::hasResource(const char* str) const {
@@ -39,7 +87,7 @@ namespace st {
         return false;
     }
 
-    ResourceGroup::ResourceGroup(ResourceFile* resource_file, const char* group_name) : 
+    ResourceGroup::ResourceGroup(yamlFile* resource_file, const char* group_name) : 
         impl(std::make_unique<ResourceGroupImpl>(resource_file, group_name)) {}
     
     ResourceGroup::~ResourceGroup() {
@@ -75,6 +123,10 @@ namespace st {
             ++i;
         }
         return results;
+    }
+
+    const descriptor_type_counts_t& ResourceGroup::DescriptorCounts() const noexcept {
+        return impl->descriptorCounts;
     }
 
     const char* ResourceGroup::Name() const noexcept {
@@ -150,7 +202,7 @@ namespace st {
     void ResourceGroup::SetTags(const size_t num_tags, const char** tags) {
         std::vector<const char*> tags_buffer{ tags, tags + num_tags };
         for (auto& str : tags_buffer) {
-            impl->tags.emplace(str);
+            impl->tags.emplace_back(str);
         }
     }
 

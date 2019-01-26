@@ -8,7 +8,7 @@ namespace fs = std::experimental::filesystem;
 
 namespace st {
 
-    ShaderGenerator::ShaderGenerator(const VkShaderStageFlagBits& stage) : impl(std::make_unique<ShaderGeneratorImpl>(stage)) {}
+    ShaderGenerator::ShaderGenerator(ShaderStage stage) : impl(std::make_unique<ShaderGeneratorImpl>(std::move(stage))) {}
 
     ShaderGenerator::~ShaderGenerator() {}
 
@@ -19,8 +19,8 @@ namespace st {
         return *this;
     }
 
-    void ShaderGenerator::SetResourceFile(ResourceFile * rsrc_file) {
-        impl->luaResources = rsrc_file;
+    void ShaderGenerator::SetResourceFile(yamlFile* rsrc_file) {
+        impl->resourceFile = rsrc_file;
     }
 
     void ShaderGenerator::Generate(const ShaderStage& handle, const char* path, const size_t num_extensions, const char* const* extensions, const size_t num_includes, const char* const* paths) {

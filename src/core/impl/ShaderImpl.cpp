@@ -3,6 +3,7 @@
 #include "generation/Compiler.hpp"
 #include "generation/ShaderGenerator.hpp"
 #include "reflection/ShaderReflector.hpp"
+#include "../../reflection/impl/ShaderReflectorImpl.hpp"
 #include "easyloggingpp/src/easylogging++.h"
 #include <experimental/filesystem>
 
@@ -10,7 +11,7 @@ namespace st {
 
     namespace fs = std::experimental::filesystem;
 
-    ShaderGroupImpl::ShaderGroupImpl(const std::string& group_name) : groupName(group_name), reflector(std::make_unique<ShaderReflector>()) {}
+    ShaderGroupImpl::ShaderGroupImpl(const std::string& group_name, yamlFile* yaml_file) : groupName(group_name), reflector(std::make_unique<ShaderReflector>(yaml_file)), rsrcFile(yaml_file) {}
 
     ShaderGroupImpl::~ShaderGroupImpl() { }
 
@@ -27,7 +28,7 @@ namespace st {
     }
 
     void ShaderGroupImpl::addShaderStage(const ShaderStage& handle) {
-        auto& FileTracker = ShaderFileTracker::GetFileTracker();
+        stHandles.emplace(handle);
         reflector->ParseBinary(handle);
     }
 
