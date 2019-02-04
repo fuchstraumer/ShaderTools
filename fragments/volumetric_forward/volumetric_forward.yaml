@@ -35,8 +35,10 @@ resource_groups :
             Type : "SampledImage"              
         AmbientOcclusionMap : 
             Type : "SampledImage"      
-        MetallicRoughnessMap : 
+        MetallicMap : 
             Type : "SampledImage" 
+        RoughnessMap :
+            Type : "SampledImage"
         EmissiveMap : 
             Type : "SampledImage"
         LinearRepeatSampler : 
@@ -297,7 +299,7 @@ shader_groups :
         ]
     DrawPass : 
         Shaders : 
-            Vertex : "Default.vert"
+            Vertex : "HeightMap.vert"
             Fragment : "Clustered.frag"
         # Draw pass reads depth but has no ability to write to it
         Tags : [ "DepthOnlyAsInput" ]

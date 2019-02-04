@@ -5,7 +5,7 @@ SPC const bool HasDiffuse = true;
 SPC const bool HasNormal = true;
 SPC const bool HasAmbientOcclusion = true;
 SPC const bool HasRoughness = true;
-SPC const bool HasMetallic = true;
+SPC const bool HasMetallic = false;
 SPC const bool HasEmissive = false;
 
 #include "Structures.glsl"
@@ -128,7 +128,7 @@ void main() {
 
     float metallic = MaterialParameters.Data.metallic;
     if (HasMetallic) {
-        float metallic_sample = texture(sampler2D(MetallicRoughnessMap, LinearRepeatSampler), vUV).r;
+        float metallic_sample = texture(sampler2D(MetallicMap, LinearRepeatSampler), vUV).r;
         if (metallic != 0.0f) {
             metallic *= metallic_sample;
         }
@@ -139,7 +139,7 @@ void main() {
 
     float roughness = MaterialParameters.Data.roughness;
     if (HasRoughness) {
-        float roughness_sample = texture(sampler2D(MetallicRoughnessMap, LinearRepeatSampler), vUV).g;
+        float roughness_sample = texture(sampler2D(RoughnessMap, LinearRepeatSampler), vUV).r;
         if (roughness != 0.0f) {
             roughness *= roughness_sample;
         }
