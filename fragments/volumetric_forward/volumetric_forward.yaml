@@ -32,6 +32,8 @@ resource_groups :
         AlbedoMap : 
             Type : "SampledImage"        
         NormalMap : 
+            Type : "SampledImage"
+        HeightMap :
             Type : "SampledImage"              
         AmbientOcclusionMap : 
             Type : "SampledImage"      

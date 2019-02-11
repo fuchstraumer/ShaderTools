@@ -2,7 +2,9 @@
 #include <fstream>
 #include <experimental/filesystem>
 #include "easyloggingpp/src/easylogging++.h"
+
 namespace fs = std::experimental::filesystem;
+
 namespace st {
 
     ShaderFileTracker::ShaderFileTracker(const std::string & initial_directory) {
@@ -72,6 +74,8 @@ namespace st {
             return true;
         }
         else if (BodyPaths.count(handle) != 0) {
+
+            std::lock_guard map_guard(mapMutex);
             // Load source string into memory
             std::ifstream input_file(BodyPaths.at(handle));
             if (!input_file.is_open()) {
@@ -99,6 +103,8 @@ namespace st {
             return true;
         }
         else {
+
+            std::lock_guard map_guard(mapMutex);
             fs::path source_body_path(shader_body_path);
             if (!fs::exists(source_body_path)) {
                 LOG(ERROR) << "Given path does not exist.";
@@ -130,7 +136,8 @@ namespace st {
             return true;
         }
         else if (BinaryPaths.count(handle) != 0) {
-            
+
+            std::lock_guard map_guard(mapMutex);
             std::ifstream input_file(BinaryPaths.at(handle), std::ios::binary | std::ios::in | std::ios::ate);
             if (!input_file.is_open()) {
                 LOG(ERROR) << "Path to binary of shader existed in programs map, but binary file itself could not be read!\n";

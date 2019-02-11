@@ -10,6 +10,7 @@
 #include <experimental/filesystem>
 #include <unordered_set>
 #include <memory>
+#include <mutex>
 
 namespace st {
 
@@ -31,6 +32,7 @@ namespace st {
 
         static ShaderFileTracker& GetFileTracker();
 
+        std::recursive_mutex mapMutex;
         std::experimental::filesystem::path cacheDir{ std::experimental::filesystem::temp_directory_path() };
         std::unordered_map<ShaderStage, std::experimental::filesystem::file_time_type> StageLastModificationTimes;
         std::unordered_map<ShaderStage, std::string> ShaderBodies;
