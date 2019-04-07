@@ -302,7 +302,10 @@ namespace st {
         spirv_cross::CompilerGLSL::Options options;
         options.vulkan_semantics = true;
         recompiler->set_common_options(options);
-        recompiler->compile();
+        std::string recompiled_source = recompiler->compile();
+
+		auto& sft = ShaderFileTracker::GetFileTracker();
+		auto iter = sft.RecompiledSourcesFromBinaries.emplace(handle, recompiled_source);
 
         const auto stage = handle.GetStage();
         parseResourceType(handle, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER);

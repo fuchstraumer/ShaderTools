@@ -6,7 +6,6 @@ SPC const bool HasNormal = true;
 SPC const bool HasAmbientOcclusion = true;
 SPC const bool HasRoughness = true;
 SPC const bool HasMetallic = false;
-SPC const bool HasEmissive = false;
 
 #include "Structures.glsl"
 #include "Functions.glsl"
@@ -116,15 +115,6 @@ void main() {
     ambient *= globals.brightness;
 
     vec4 emissive = MaterialParameters.Data.emissive;
-    if (HasEmissive) {
-        vec4 emissive_sample = vec4(texture(sampler2D(EmissiveMap, LinearRepeatSampler), vUV).r);
-        if (any(notEqual(emissive.rgb, zero_vec))) {
-            emissive *= emissive_sample;
-        }
-        else {
-            emissive = emissive_sample;
-        }
-    }
 
     float metallic = MaterialParameters.Data.metallic;
     if (HasMetallic) {
