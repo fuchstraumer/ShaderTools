@@ -4,6 +4,7 @@
 #pragma USE_RESOURCES MergeSortResources
 
 const uint NUM_THREADS = 256;
+layout (local_size_x = NUM_THREADS, local_size_y = 1u, local_size_z = 1u) in;
 const uint INT_MAX = 0xffffffff;
 
 shared uint gs_Keys[NUM_THREADS];
@@ -13,30 +14,36 @@ shared uint gs_F[NUM_THREADS];
 shared uint gs_D[NUM_THREADS];
 shared uint gs_TotalFalses;
 
-void main() {
+void main() 
+{
 
-    const uint NumBits = 30;
+    const uint NumBits = 30u;
 
     uint input_key = imageLoad(InputKeys, int(gl_LocalInvocationID.x)).r;
     uint input_value = imageLoad(InputValues, int(gl_LocalInvocationID.x)).r;
     gs_Keys[gl_LocalInvocationIndex] = (gl_LocalInvocationID.x < SortParams.NumElements) ? input_key : INT_MAX;
     gs_Values[gl_LocalInvocationIndex] = (gl_LocalInvocationID.x < SortParams.NumElements) ? input_value : INT_MAX;
 
-    for (uint b = 0; b < NumBits; ++b) {
-        gs_E[gl_LocalInvocationIndex] = ((gs_Keys[gl_LocalInvocationIndex] >> b) & 1) == 0 ? 1 : 0;
+    [[flatten]]
+    for (uint b = 0u; b < NumBits; ++b) 
+    {
+        gs_E[gl_LocalInvocationIndex] = ((gs_Keys[gl_LocalInvocationIndex] >> b) & 1u) == 0u ? 1u : 0u;
         
         groupMemoryBarrier();
 
-        if (gl_LocalInvocationIndex == 0) {
-            gs_F[gl_LocalInvocationIndex] = 0;
+        if (gl_LocalInvocationIndex == 0u) 
+        {
+            gs_F[gl_LocalInvocationIndex] = 0u;
         }
-        else {
+        else 
+        {
             gs_F[gl_LocalInvocationIndex] = gs_E[gl_LocalInvocationIndex - 1];
         }
 
         groupMemoryBarrier();
 
-        for (uint i = 1; i < NUM_THREADS; i <<= 1) {
+        for (uint i = 1; i < NUM_THREADS; i <<= 1) 
+        {
             uint tmp = gs_F[gl_LocalInvocationIndex];
             if (gl_LocalInvocationIndex > i) {
                 tmp += gs_F[gl_LocalInvocationIndex - i];
@@ -49,7 +56,8 @@ void main() {
             groupMemoryBarrier();
         }
 
-        if (gl_LocalInvocationIndex == 0) {
+        if (gl_LocalInvocationIndex == 0) 
+        {
             gs_TotalFalses = gs_E[NUM_THREADS - 1] + gs_F[NUM_THREADS - 1];
         }
 

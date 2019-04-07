@@ -4,6 +4,8 @@
 #pragma USE_RESOURCES GlobalResources
 #pragma USE_RESOURCES VolumetricForward
 
+layout (local_size_x = 1024u, local_size_y = 1u, local_size_z = 1u) in;
+
 uvec3 IdxToCoord(uint idx) {
     uvec3 result;
     result.x = idx % ClusterData.GridDim.x;
