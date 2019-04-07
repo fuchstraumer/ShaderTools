@@ -32,16 +32,12 @@ resource_groups :
         AlbedoMap : 
             Type : "SampledImage"        
         NormalMap : 
-            Type : "SampledImage"
-        HeightMap :
-            Type : "SampledImage"              
+            Type : "SampledImage"         
         AmbientOcclusionMap : 
             Type : "SampledImage"      
         MetallicMap : 
             Type : "SampledImage" 
         RoughnessMap :
-            Type : "SampledImage"
-        EmissiveMap : 
             Type : "SampledImage"
         LinearRepeatSampler : 
             Type : "Sampler"
@@ -178,7 +174,8 @@ resource_groups :
         ReductionParams : 
             Type : "UniformBuffer"
             Members : |+1
-                uint NumElements;  
+                uint NumElements;
+                uvec3 Padding;
         SortParams : 
             Type : "UniformBuffer" 
             Members : |+1
@@ -268,6 +265,9 @@ shader_groups :
     RadixSort : 
         Shaders : 
             Compute : "compute/RadixSort.comp"
+        Extensions : [
+            "GL_EXT_control_flow_attributes"
+        ]
     MergeSort : 
         Shaders : 
             Compute : "compute/MergeSort.comp"
@@ -301,7 +301,7 @@ shader_groups :
         ]
     DrawPass : 
         Shaders : 
-            Vertex : "HeightMap.vert"
+            Vertex : "Default.vert"
             Fragment : "Clustered.frag"
         # Draw pass reads depth but has no ability to write to it
         Tags : [ "DepthOnlyAsInput" ]
