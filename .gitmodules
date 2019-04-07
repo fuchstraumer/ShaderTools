@@ -1,6 +1,3 @@
-[submodule "third_party/glslang"]
-	path = third_party/glslang
-	url = https://github.com/google/glslang
 [submodule "third_party/shaderc"]
 	path = third_party/shaderc
 	url = https://github.com/google/shaderc
