@@ -12,7 +12,7 @@ namespace st {
     shaderc::CompileOptions ShaderCompilerImpl::getCompilerOptions() const {
         shaderc::CompileOptions options;
         options.SetGenerateDebugInfo();
-        options.SetOptimizationLevel(shaderc_optimization_level_zero);
+        options.SetOptimizationLevel(shaderc_optimization_level_performance);
         options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_0);
         options.SetSourceLanguage(shaderc_source_language_glsl);
         return options;
@@ -94,8 +94,13 @@ namespace st {
         auto options = getCompilerOptions();
 
         // Note: optimizer seems to behave weird and generally break for geometry shaders. Currently safest to just disable it.
-        if (kind == shaderc_glsl_geometry_shader) {
+        if (kind == shaderc_glsl_geometry_shader) 
+        {
             options.SetOptimizationLevel(shaderc_optimization_level_zero);
+        }
+        else if (FileTracker.StageOptimizationDisabled.count(handle) != 0u)
+        {
+            options.SetOptimizationLevel(FileTracker.StageOptimizationDisabled.at(handle) ? shaderc_optimization_level_zero : shaderc_optimization_level_performance);
         }
 
         shaderc::AssemblyCompilationResult assembly_result = compiler.CompileGlslToSpvAssembly(src_str, kind, name.c_str(), options);

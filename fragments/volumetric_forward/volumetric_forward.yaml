@@ -162,6 +162,7 @@ resource_groups :
                 uint NumThreadGroupsX;
                 uint NumThreadGroupsY;
                 uint NumThreadGroupsZ;
+                uint Padding;
             Qualifiers : "restrict"
     SortResources : 
         DispatchParams : 
@@ -251,7 +252,19 @@ resource_groups :
             Type : "StorageTexelBuffer"
             Format : "rgba8"
             Qualifiers : "restrict readonly"
-        
+        DebugClustersIndirectArgs :
+            Type : "StorageBuffer"
+            Members : |+1
+                uint vertexCount;
+                uint instanceCount;
+                uint firstVertex;
+                uint firstInstance;
+        DebugClustersMatrices :
+            Type : "UniformBuffer"
+            Members : |+1
+                mat4 dbView;
+                mat4 dbProjection;
+
 shader_groups : 
     UpdateLights : 
         Shaders : 
@@ -259,6 +272,9 @@ shader_groups :
     ReduceLights : 
         Shaders : 
             Compute : "compute/ReduceLightsAABB.comp"
+        Extensions : [
+            "GL_EXT_control_flow_attributes"
+        ]
     ComputeMortonCodes : 
         Shaders : 
             Compute : "compute/ComputeMortonCodes.comp"
@@ -299,6 +315,7 @@ shader_groups :
         Extensions : [
             "GL_EXT_control_flow_attributes"
         ]
+        OptimizationDisabled : true
     DrawPass : 
         Shaders : 
             Vertex : "Default.vert"
@@ -318,3 +335,11 @@ shader_groups :
         Extensions : [
             "GL_EXT_control_flow_attributes"
         ]
+    DebugLights : 
+        Shaders : 
+            Vertex : "debug/DebugLights.vert"
+            Fragment : "debug/DebugLights.frag"
+        Extensions : [
+            "GL_EXT_control_flow_attributes"
+        ]
+

@@ -136,6 +136,7 @@ void MergeSort() {
     }
 
     groupMemoryBarrier();
+    barrier();
 
     int mergePath = MergePath(0, numA, numA, numB, diag, true);
 

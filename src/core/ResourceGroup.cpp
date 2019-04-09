@@ -68,9 +68,9 @@ namespace st {
             case VK_DESCRIPTOR_TYPE_INLINE_UNIFORM_BLOCK_EXT:
                 descriptorCounts.InlineUniformBlockEXT++;
                 break;
-            case VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_NVX:
-                descriptorCounts.AccelerationStructureNVX++;
-                break;
+            //case VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_NVX:
+            //    descriptorCounts.AccelerationStructureNVX++;
+            //    break;
             default:
                 throw std::domain_error("Invalid VK_DESCRIPTOR_TYPE value for a ShaderResource in a ResourceGroup!");
             }

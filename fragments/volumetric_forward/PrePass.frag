@@ -2,6 +2,7 @@
 SPC const bool HasDiffuse = true;
 #include "Structures.glsl"
 #pragma USE_RESOURCES GlobalResources
+#pragma USE_RESOURCES VolumetricForward
 #pragma USE_RESOURCES Material
 
 void main() {

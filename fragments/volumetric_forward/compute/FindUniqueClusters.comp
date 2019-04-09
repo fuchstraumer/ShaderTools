@@ -5,7 +5,7 @@ layout(local_size_x = 1024) in;
 
 void main() {
     int idx = int(gl_GlobalInvocationID.x);
-    if (imageLoad(ClusterFlags, idx).r == 1) {
+    if (imageLoad(ClusterFlags, idx).r != 0) {
         uint unique_idx = imageAtomicAdd(UniqueClustersCounter, int(0), int(1));
         imageStore(UniqueClusters, int(unique_idx), uvec4(idx, 0, 0, 0));
     }

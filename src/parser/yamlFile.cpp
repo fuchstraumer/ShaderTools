@@ -1,8 +1,13 @@
 #include "yamlFile.hpp"
 #include "yaml-cpp/yaml.h"
 #include "../util/ResourceFormats.hpp"
+#include "../util/ShaderFileTracker.hpp"
 #include <experimental/filesystem>
 #include <cassert>
+#include "easyloggingpp/src/easylogging++.h"
+#ifdef FindResource
+#undef FindResource
+#endif
 
 namespace st {
 
@@ -75,7 +80,16 @@ namespace st {
         YAML::Node rootFileNode;
     };
 
-    yamlFile::yamlFile(const char * fname) : impl{ std::make_unique<yamlFileImpl>(fname) } {
+    yamlFile::yamlFile(const char * fname) {
+        try
+        {
+            impl = std::make_unique<yamlFileImpl>(fname);
+        }
+        catch (const std::exception & e)
+        {
+            LOG(ERROR) << "Failed to create/open YAML file: " << e.what();
+            throw e;
+        }
         parseGroups();
         parseResources();
     }
@@ -130,8 +144,8 @@ namespace st {
 
             {
                 std::vector<ShaderStage> stages_added;
-
                 auto shaders = iter->second["Shaders"];
+
                 if (shaders["Vertex"]) {
                     stages_added.emplace_back(add_stage(shaders["Vertex"].as<std::string>(), VK_SHADER_STAGE_VERTEX_BIT));
                 }
@@ -146,6 +160,17 @@ namespace st {
 
                 if (shaders["Compute"]) {
                     stages_added.emplace_back(add_stage(shaders["Compute"].as<std::string>(), VK_SHADER_STAGE_COMPUTE_BIT));
+                }
+
+
+                if (shaders["OptimizationDisabled"])
+                {
+                    auto& sft = ShaderFileTracker::GetFileTracker();
+                    const bool disabled_value = shaders["OptimizationDisabled"].as<bool>();
+                    for (const auto& stage : stages_added)
+                    {
+                        sft.StageOptimizationDisabled.emplace(stage, disabled_value);
+                    }
                 }
 
                 if (iter->second["Extensions"]) {

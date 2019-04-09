@@ -302,7 +302,27 @@ namespace st {
         spirv_cross::CompilerGLSL::Options options;
         options.vulkan_semantics = true;
         recompiler->set_common_options(options);
-        std::string recompiled_source = recompiler->compile();
+        std::string recompiled_source;
+
+        try {
+            recompiled_source = recompiler->compile();
+        }
+        catch (const spirv_cross::CompilerError & e) {
+            LOG(WARNING) << "Failed to fully parse/recompile SPIR-V binary back to GLSL text. Outputting partial source thus far.";
+            LOG(WARNING) << "spirv_cross::CompilerError.what(): " << e.what() << "\n";
+            recompiled_source = recompiler->get_partial_source();
+
+            std::string suffix{ "_failed_compile.glsl" };
+            auto& sft = ShaderFileTracker::GetFileTracker();
+
+            const std::string output_name = sft.GetShaderName(handle) + suffix;
+            std::ofstream output_stream(output_name);
+            output_stream << recompiled_source;
+            output_stream.flush(); output_stream.close();
+            
+            std::cerr << e.what();
+            throw e;
+        }
 
 		auto& sft = ShaderFileTracker::GetFileTracker();
 		auto iter = sft.RecompiledSourcesFromBinaries.emplace(handle, recompiled_source);

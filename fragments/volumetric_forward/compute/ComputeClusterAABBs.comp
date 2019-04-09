@@ -26,7 +26,7 @@ void main() {
     far_plane.N = vec3(0.0f, 0.0f, 1.0f);
     far_plane.d = -ClusterData.ViewNear * pow(abs(ClusterData.NearK), cluster_3d.z + 1);
 
-    vec4 p_min = vec4(vec2(cluster_3d.xy) * ClusterData.ScreenSize.xy, 1.0f, 1.0f);
+    vec4 p_min = vec4(cluster_3d.xy * ClusterData.ScreenSize.xy, 1.0f, 1.0f);
     vec4 p_max = vec4(vec2(cluster_3d.xy + 1) * ClusterData.ScreenSize.xy, 1.0f, 1.0f);
 
     p_min = ScreenToView(p_min, globals.windowSize, matrices.projection);
@@ -44,8 +44,8 @@ void main() {
     vec3 aabb_max = max(near_min, max(near_max, max(far_min, far_max)));
 
     ClusterAABBs.Data[cluster_index_1d].Min.xyz = aabb_min;
-    ClusterAABBs.Data[cluster_index_1d].Min.w = 0.0f;
+    ClusterAABBs.Data[cluster_index_1d].Min.w = 1.0f;
     ClusterAABBs.Data[cluster_index_1d].Max.xyz = aabb_max;
-    ClusterAABBs.Data[cluster_index_1d].Max.w = 0.0f;
+    ClusterAABBs.Data[cluster_index_1d].Max.w = 1.0f;
 
 }

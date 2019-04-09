@@ -2,7 +2,7 @@
 layout(early_fragment_tests) in;
 
 SPC const bool HasDiffuse = true;
-SPC const bool HasNormal = true;
+SPC const bool HasNormal = false;
 SPC const bool HasAmbientOcclusion = true;
 SPC const bool HasRoughness = true;
 SPC const bool HasMetallic = false;
@@ -86,7 +86,7 @@ LightingResult Lighting(in Material mtl, in uint cluster_index, vec4 eye_pos, ve
 void main() {
     vec4 eye_pos = globals.viewPosition;
 
-    vec4 vertexPosViewSpace = matrices.view * vec4(vPosition, 1.0f);
+    vec4 vertexPosViewSpace = matrices.view * vPosition;
 
     const vec3 zero_vec = vec3(0.0f, 0.0f, 0.0f);
 
@@ -112,8 +112,9 @@ void main() {
         }
     }
 
-    ambient *= globals.brightness;
+    //ambient *= globals.brightness;
 
+    /*
     vec4 emissive = MaterialParameters.Data.emissive;
 
     float metallic = MaterialParameters.Data.metallic;
@@ -126,6 +127,7 @@ void main() {
             metallic = metallic_sample;
         }
     }
+    */
 
     float roughness = MaterialParameters.Data.roughness;
     if (HasRoughness) {
@@ -143,11 +145,11 @@ void main() {
         normal = texture(sampler2D(NormalMap, LinearRepeatSampler), vUV);
     }
 
+    
     uvec3 index_3d = cluster_index_fs(gl_FragCoord.xy, vertexPosViewSpace.z);
     uint index_1d = CoordToIdx(index_3d);
-
     LightingResult lighting_result = Lighting(MaterialParameters.Data, index_1d, eye_pos, vertexPosViewSpace, normal);
-    diffuse *= vec4(lighting_result.Diffuse, 1.0f);
-
-    backbuffer = vec4((diffuse + roughness + metallic + ambient + emissive).rgb, MaterialParameters.Data.baseColor.a);
+    diffuse *= vec4(lighting_result.Diffuse * 0.01f, 1.0f);
+    
+    backbuffer = vec4((diffuse + roughness + ambient).rgb, MaterialParameters.Data.baseColor.a);
 }

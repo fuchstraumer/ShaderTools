@@ -3,7 +3,7 @@ in vec3 position;
 in vec3 normal;
 in vec3 tangent;
 in vec2 uv;
-out vec3 vPosition;
+out vec4 vPosition;
 out vec3 vNormal;
 out vec3 vTangent;
 out vec2 vUV;

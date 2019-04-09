@@ -19,14 +19,12 @@ uint CoordToIdx(uvec3 coord) {
 uvec3 ComputeClusterIndex3D(vec2 screen_pos, float view_z) {
     uint i = uint(screen_pos.x / ClusterData.ScreenSize.x);
     uint j = uint(screen_pos.y / ClusterData.ScreenSize.y);
-    uint k = uint(log(-view_z / ClusterData.ViewNear) * ClusterData.LogGridDimY);
+    uint k = uint(log(-view_z / globals.depthRange.x) * ClusterData.LogGridDimY);
     return uvec3(i, j, k);
 }
 
 void main() {
-    vec4 viewSpacePosition = matrices.view * vec4(vPosition, 1.0f);
-    vec4 finalPosition = matrices.projection * viewSpacePosition;
-    uvec3 cluster_index_3d = ComputeClusterIndex3D(finalPosition.xy, viewSpacePosition.z);
+    uvec3 cluster_index_3d = ComputeClusterIndex3D(gl_FragCoord.xy, vPosition.z);
     uint idx = CoordToIdx(cluster_index_3d);
     imageStore(ClusterFlags, int(idx), uvec4(1, 0, 0, 0));
     // cluster color written out is used for debugging.

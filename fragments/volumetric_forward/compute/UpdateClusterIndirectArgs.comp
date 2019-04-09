@@ -3,7 +3,9 @@
 
 #pragma USE_RESOURCES VolumetricForward
 #pragma USE_RESOURCES IndirectArgsSet
+#pragma USE_RESOURCES Debug
 
+SPC const bool UpdateUniqueClusters = true;
 layout(local_size_x = 1, local_size_y = 1, local_size_z  = 1) in;
 
 void main() {
@@ -11,4 +13,12 @@ void main() {
     IndirectArgs.NumThreadGroupsX = count;
     IndirectArgs.NumThreadGroupsY = 1;
     IndirectArgs.NumThreadGroupsZ = 1;
+
+    if (UpdateUniqueClusters)
+    {
+        DebugClustersIndirectArgs.vertexCount = count;
+        DebugClustersIndirectArgs.instanceCount = 1u;
+        DebugClustersIndirectArgs.firstVertex = 0u;
+        DebugClustersIndirectArgs.firstInstance = 0u;
+    }
 }

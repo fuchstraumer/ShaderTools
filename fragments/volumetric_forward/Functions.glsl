@@ -71,13 +71,13 @@ LightingResult CalculateSpotLight(in const SpotLight light, in Material material
 
 vec4 ClipToView(in vec4 clip_pos, in mat4 projection_matrix) {
     vec4 view = inverse(projection_matrix) * clip_pos;
-    view /= view.w;
+    view.xyz /= view.w;
     return view;
 }
 
 vec4 ScreenToView(vec4 screen, in vec2 screen_dim, in mat4 projection_matrix) {
     vec2 tex_coord = screen.xy / screen_dim;
-    vec4 clip = vec4(vec2(tex_coord.x, 1.0f - tex_coord.y) * 2.0f - 1.0f, screen.z, screen.w);
+    vec4 clip = vec4(tex_coord * 2.0f - 1.0f, screen.z, screen.w);
     return ClipToView(clip, projection_matrix);
 }
 
