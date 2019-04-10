@@ -1,7 +1,6 @@
 #include "Structures.glsl"
 SPC const bool DoPointLights = true;
 #pragma USE_RESOURCES GlobalResources
-#pragma USE_RESOURCES Material
 #pragma USE_RESOURCES VolumetricForwardLights
 
 #pragma INTERFACE_OVERRIDE
@@ -14,6 +13,7 @@ layout (location = 2) out flat uint vInstanceID;
 
 void main() 
 {
+    [[flatten]]
     if (DoPointLights)
     {
         vInstanceID = gl_InstanceIndex;
