@@ -149,7 +149,6 @@ void main() {
     uvec3 index_3d = cluster_index_fs(gl_FragCoord.xy, vertexPosViewSpace.z);
     uint index_1d = CoordToIdx(index_3d);
     LightingResult lighting_result = Lighting(MaterialParameters.Data, index_1d, eye_pos, vertexPosViewSpace, normal);
-    diffuse *= vec4(lighting_result.Diffuse * 0.01f, 1.0f);
     
-    backbuffer = vec4((diffuse + roughness + ambient).rgb, MaterialParameters.Data.baseColor.a);
+    backbuffer = vec4(diffuse.rgb, MaterialParameters.Data.baseColor.a);
 }
