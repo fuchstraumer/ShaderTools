@@ -53,40 +53,14 @@ LightingResult Lighting(in Material mtl, in uint cluster_index, vec4 eye_pos, ve
         results.Diffuse += point_result.Diffuse;
         results.Specular += point_result.Specular;
     }
-
-    startOffset = imageLoad(SpotLightGrid, int(cluster_index)).r;
-    lightCount = imageLoad(SpotLightGrid, int(cluster_index)).g;
-
-    for (uint j = 0; j < lightCount; ++j) {
-
-        lightIndex = imageLoad(SpotLightIndexList, int(startOffset + j)).r;
-
-        if (!SpotLights.Data[lightIndex].Enabled) {
-            continue;
-        }
-
-        LightingResult spot_result = CalculateSpotLight(SpotLights.Data[lightIndex], mtl, v, p, n);
-        results.Diffuse += spot_result.Diffuse;
-        results.Specular += spot_result.Specular;
-    }
-
-    for (uint k = 0; k < LightCounts.NumDirectionalLights; ++k) {
-        if (!DirectionalLights.Data[k].Enabled) {
-            continue;
-        }
-
-        LightingResult dir_result = CalculateDirectionalLight(DirectionalLights.Data[k], mtl, v, p, n);
-        results.Diffuse += dir_result.Diffuse;
-        results.Specular += dir_result.Specular;
-    }
-
+    
     return results;
 } 
 
 void main() {
     vec4 eye_pos = globals.viewPosition;
 
-    vec4 vertexPosViewSpace = matrices.view * vPosition;
+    vec4 vertexPosViewSpace = vPosition;
 
     const vec3 zero_vec = vec3(0.0f, 0.0f, 0.0f);
 
@@ -150,5 +124,5 @@ void main() {
     uint index_1d = CoordToIdx(index_3d);
     LightingResult lighting_result = Lighting(MaterialParameters.Data, index_1d, eye_pos, vertexPosViewSpace, normal);
     
-    backbuffer = vec4(diffuse.rgb, MaterialParameters.Data.baseColor.a);
+    backbuffer = vec4(diffuse.rgb * lighting_result.Diffuse.xyz, MaterialParameters.Data.baseColor.a);
 }
