@@ -30,6 +30,10 @@ const uint FirstNodeIndex[7] = {
     34636833
 };
 
+layout(push_constant) uniform PushConsts {
+	uint ChildLevel;
+} levelsPushed;
+
 shared vec4 gs_AABBMin[NUM_THREADS];
 shared vec4 gs_AABBMax[NUM_THREADS];
 
@@ -97,8 +101,8 @@ void BuildBottom() {
 
 void BuildUpper() {
 
-    if (BVHParams.ChildLevel < BVHParams.PointLightLevels && gl_GlobalInvocationID.x < NumLevelNodes[BVHParams.ChildLevel]) {
-        uint childIndex = FirstNodeIndex[BVHParams.ChildLevel] + gl_GlobalInvocationID.x;
+    if (levelsPushed.ChildLevel < BVHParams.PointLightLevels && gl_GlobalInvocationID.x < NumLevelNodes[levelsPushed.ChildLevel]) {
+        uint childIndex = FirstNodeIndex[levelsPushed.ChildLevel] + gl_GlobalInvocationID.x;
         gs_AABBMin[childIndex] = PointLightBVH.Data[childIndex].Min;
         gs_AABBMax[childIndex] = PointLightBVH.Data[childIndex].Max;
     }
@@ -111,15 +115,15 @@ void BuildUpper() {
 
     if (gl_GlobalInvocationID.x % 32 == 0) {
         uint nodeOffset = gl_GlobalInvocationID.x / 32;
-        if (BVHParams.ChildLevel < BVHParams.PointLightLevels && nodeOffset < NumLevelNodes[BVHParams.ChildLevel - 1]) {
-            uint nodeIndex = FirstNodeIndex[BVHParams.ChildLevel - 1] + nodeOffset;
+        if (levelsPushed.ChildLevel < BVHParams.PointLightLevels && nodeOffset < NumLevelNodes[levelsPushed.ChildLevel - 1]) {
+            uint nodeIndex = FirstNodeIndex[levelsPushed.ChildLevel - 1] + nodeOffset;
             PointLightBVH.Data[nodeIndex].Min = gs_AABBMin[gl_LocalInvocationIndex];
             PointLightBVH.Data[nodeIndex].Max = gs_AABBMax[gl_LocalInvocationIndex];
         }
     }
 
-    if (BVHParams.ChildLevel < BVHParams.SpotLightLevels && gl_GlobalInvocationID.x < NumLevelNodes[BVHParams.ChildLevel]) {
-        uint childIndex = FirstNodeIndex[BVHParams.ChildLevel] + gl_GlobalInvocationID.x;
+    if (levelsPushed.ChildLevel < BVHParams.SpotLightLevels && gl_GlobalInvocationID.x < NumLevelNodes[levelsPushed.ChildLevel]) {
+        uint childIndex = FirstNodeIndex[levelsPushed.ChildLevel] + gl_GlobalInvocationID.x;
         gs_AABBMin[childIndex] = SpotLightBVH.Data[childIndex].Min;
         gs_AABBMax[childIndex] = SpotLightBVH.Data[childIndex].Max;
     }
@@ -132,8 +136,8 @@ void BuildUpper() {
 
     if (gl_GlobalInvocationID.x % 32 == 0) {
         uint nodeOffset = gl_GlobalInvocationID.x / 32;
-        if (BVHParams.ChildLevel < BVHParams.SpotLightLevels && nodeOffset < NumLevelNodes[BVHParams.ChildLevel - 1]) {
-            uint nodeIndex = FirstNodeIndex[BVHParams.ChildLevel - 1] + nodeOffset;
+        if (levelsPushed.ChildLevel < BVHParams.SpotLightLevels && nodeOffset < NumLevelNodes[levelsPushed.ChildLevel - 1]) {
+            uint nodeIndex = FirstNodeIndex[levelsPushed.ChildLevel - 1] + nodeOffset;
             SpotLightBVH.Data[nodeIndex].Min = gs_AABBMin[gl_LocalInvocationIndex];
             SpotLightBVH.Data[nodeIndex].Max = gs_AABBMax[gl_LocalInvocationIndex];
         }
