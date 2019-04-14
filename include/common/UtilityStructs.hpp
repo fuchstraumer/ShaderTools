@@ -79,7 +79,7 @@ namespace st {
         char* Name{ nullptr };
         char* Type{ nullptr };
         union {
-            uint32_t Size;
+            uint32_t Size{ 0u };
             uint32_t NumElements;
         };
         uint32_t Offset{ 0 };

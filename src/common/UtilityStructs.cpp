@@ -36,10 +36,10 @@ namespace st {
     }
 
     ShaderResourceSubObject::ShaderResourceSubObject(const ShaderResourceSubObject & other) noexcept : Type(strdup(other.Type)), Name(strdup(other.Name)), NumElements(other.NumElements),
-        isComplex(other.isComplex) {}
+        isComplex(other.isComplex), Offset(other.Offset), Size(other.Size) {}
 
     ShaderResourceSubObject::ShaderResourceSubObject(ShaderResourceSubObject && other) noexcept : Type(std::move(other.Type)), Name(std::move(other.Name)), NumElements(std::move(other.NumElements)),
-        isComplex(std::move(other.isComplex)) {
+        isComplex(std::move(other.isComplex)), Offset(std::move(other.Offset)), Size(std::move(other.Size)) {
         other.Type = nullptr;
         other.Name = nullptr;
     }
@@ -47,6 +47,8 @@ namespace st {
     ShaderResourceSubObject & ShaderResourceSubObject::operator=(const ShaderResourceSubObject & other) noexcept {
         Type = strdup(other.Type);
         Name = strdup(other.Name);
+        Offset = other.Offset;
+        Size = other.Size;
         NumElements = other.NumElements;
         isComplex = other.isComplex;
         return *this;
@@ -57,6 +59,8 @@ namespace st {
         Name = std::move(other.Name);
         NumElements = std::move(other.NumElements);
         isComplex = std::move(other.isComplex);
+        Size = std::move(other.Size);
+        Offset = std::move(other.Offset);
         other.Type = nullptr;
         other.Name = nullptr;
         return *this;
