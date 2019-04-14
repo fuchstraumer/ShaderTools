@@ -8,7 +8,7 @@ namespace st {
         VkShaderStageFlags stages{ VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM };
         std::string name{};
         std::vector<ShaderResourceSubObject> members{};
-        uint32_t offset{ std::numeric_limits<uint32_t>::max() };
+        uint32_t offset{ 0u };
     };
 
     PushConstantInfo::PushConstantInfo() noexcept : impl(std::make_unique<PushConstantInfoImpl>()) {}

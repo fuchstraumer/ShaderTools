@@ -20,15 +20,15 @@ namespace st {
 
     enum class fragment_type : uint8_t {
         Preamble = 0,
-        Extension,
-        InterfaceBlock,
+        Extension = 1,
+        glPerVertex = 2,
+        InterfaceBlock = 3,
         InputAttribute,
         OutputAttribute,
-        glPerVertex,
         SpecConstant,
+        PushConstantItem,
         IncludedFragment,
         ResourceBlock,
-        PushConstantItem,
         Main,
         Invalid
     };
