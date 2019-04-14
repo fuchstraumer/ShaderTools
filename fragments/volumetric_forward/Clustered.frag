@@ -27,10 +27,10 @@ uint CoordToIdx(uvec3 coord) {
     return coord.x + (ClusterData.GridDim.x * (coord.y + ClusterData.GridDim.y * coord.z));
 }
 
-uvec3 cluster_index_fs(in vec2 screen_pos, in float view_z) {
-    uint i = uint(screen_pos.x / globals.windowSize.x);
-    uint j = uint(screen_pos.y / globals.windowSize.y);
-    uint k = uint(log(-view_z / globals.depthRange.x) * ClusterData.LogGridDimY);
+uvec3 ComputeClusterIndex3D(vec2 screen_pos, float view_z) {
+    uint i = uint(screen_pos.x / ClusterData.ScreenSize.x);
+    uint j = uint(screen_pos.y / ClusterData.ScreenSize.y);
+    uint k = uint(log(-view_z / ClusterData.ViewNear) * ClusterData.LogGridDimY);
     return uvec3(i, j, k);
 }
 
@@ -120,9 +120,9 @@ void main() {
     }
 
     
-    uvec3 index_3d = cluster_index_fs(gl_FragCoord.xy, vertexPosViewSpace.z);
+    uvec3 index_3d = ComputeClusterIndex3D(gl_FragCoord.xy, vPosition.z);
     uint index_1d = CoordToIdx(index_3d);
     LightingResult lighting_result = Lighting(MaterialParameters.Data, index_1d, eye_pos, vertexPosViewSpace, normal);
-    
-    backbuffer = vec4(diffuse.rgb * lighting_result.Diffuse.xyz, MaterialParameters.Data.baseColor.a);
+    vec3 lighting_result_scaled = lighting_result.Diffuse.xyz * 0.1f;
+    backbuffer = vec4(diffuse.rgb * lighting_result_scaled, MaterialParameters.Data.baseColor.a);
 }

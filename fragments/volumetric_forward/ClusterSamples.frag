@@ -17,9 +17,9 @@ uint CoordToIdx(uvec3 coord) {
 }
 
 uvec3 ComputeClusterIndex3D(vec2 screen_pos, float view_z) {
-    uint i = uint(screen_pos.x / globals.windowSize.x);
-    uint j = uint(screen_pos.y /  globals.windowSize.y);
-    uint k = uint(log(-view_z / globals.depthRange.x) * ClusterData.LogGridDimY);
+    uint i = uint(screen_pos.x / ClusterData.ScreenSize.x);
+    uint j = uint(screen_pos.y / ClusterData.ScreenSize.y);
+    uint k = uint(log(-view_z / ClusterData.ViewNear) * ClusterData.LogGridDimY);
     return uvec3(i, j, k);
 }
 
