@@ -34,6 +34,7 @@ void main()
     groupMemoryBarrier();
     barrier();
 
+    [[unroll]]
     for (b = 0u; b < NumBits; ++b) 
     {
         gs_E[gl_LocalInvocationIndex] = ((gs_Keys[gl_LocalInvocationIndex] >> b) & 1u) == 0u ? 1u : 0u;
@@ -53,6 +54,7 @@ void main()
         groupMemoryBarrier();
         barrier();
 
+        [[unroll]]
         for (i = 1; i < NUM_THREADS; i <<= 1) 
         {
             uint tmp = gs_F[gl_LocalInvocationIndex];
@@ -79,7 +81,7 @@ void main()
 
         gs_D[gl_LocalInvocationIndex] = (gs_E[gl_LocalInvocationIndex] == 1) ? gs_F[gl_LocalInvocationIndex] : (gl_LocalInvocationIndex - gs_F[gl_LocalInvocationIndex] + gs_TotalFalses);
         uint key = gs_Keys[gl_LocalInvocationIndex];
-        uint value = gs_Keys[gl_LocalInvocationIndex];
+        uint value = gs_Values[gl_LocalInvocationIndex];
 
         groupMemoryBarrier();
         barrier();
