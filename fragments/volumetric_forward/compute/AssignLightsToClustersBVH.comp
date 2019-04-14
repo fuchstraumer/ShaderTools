@@ -101,7 +101,7 @@ void main() {
                 sphere.r = PointLights.Data[light_index].Range;
 
                 [[flatten]]
-                if (SphereInsideAABB_Fast(sphere, gs_ClusterAABB))
+                if (SphereInsideAABB(sphere, gs_ClusterAABB))
                 {
                     uint idx = atomicAdd(gs_PointLightCount, 1u);
                     gs_PointLightList[idx] = light_index;
@@ -163,7 +163,7 @@ void main() {
                 sphere.c = SpotLights.Data[light_index].PositionViewSpace.xyz;
                 sphere.r = SpotLights.Data[light_index].Range;
 
-                if (SphereInsideAABB_Fast(sphere, gs_ClusterAABB))
+                if (SphereInsideAABB(sphere, gs_ClusterAABB))
                 {
                     uint idx = atomicAdd(gs_SpotLightCount, 1u);
                     gs_SpotLightList[idx] = light_index;
