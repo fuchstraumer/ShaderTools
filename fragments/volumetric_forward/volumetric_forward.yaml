@@ -273,6 +273,7 @@ shader_groups :
         Extensions : [
             "GL_EXT_control_flow_attributes"
         ]
+        OptimizationDisabled : true
     BuildBVH : 
         Shaders : 
             Compute : "compute/BuildBVH.comp"
