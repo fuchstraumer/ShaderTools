@@ -5,8 +5,11 @@
 #pragma USE_RESOURCES IndirectArgsSet
 #pragma USE_RESOURCES Debug
 
-SPC const bool UpdateUniqueClusters = true;
 layout(local_size_x = 1, local_size_y = 1, local_size_z  = 1) in;
+
+layout(push_constant) uniform _push_constants {
+    layout(offset = 0) bool UpdateUniqueClusters;
+};
 
 void main() {
     uint count = imageLoad(UniqueClustersCounter, 0).r;
