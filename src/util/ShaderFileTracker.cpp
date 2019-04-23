@@ -2,6 +2,7 @@
 #include <fstream>
 #include <experimental/filesystem>
 #include "easyloggingpp/src/easylogging++.h"
+#include "ResourceFormats.hpp"
 
 namespace fs = std::experimental::filesystem;
 
@@ -43,7 +44,7 @@ namespace st {
     void ShaderFileTracker::DumpContentsToCacheDir() {
 
         auto write_output = [&](const ShaderStage& handle, const std::string& contents, const std::string& extension) {
-            const std::string output_name = GetShaderName(handle) + extension;
+            const std::string output_name = GetShaderName(handle) + GetShaderStageString(handle.GetStage()) + extension;
             const fs::path output_path = cacheDir / output_name;
             std::ofstream output_stream(output_path);
             if (output_stream.is_open()) {
