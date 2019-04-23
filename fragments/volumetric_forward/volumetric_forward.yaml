@@ -273,7 +273,6 @@ shader_groups :
         Extensions : [
             "GL_EXT_control_flow_attributes"
         ]
-        OptimizationDisabled : true
     BuildBVH : 
         Shaders : 
             Compute : "compute/BuildBVH.comp"
@@ -295,13 +294,18 @@ shader_groups :
     UpdateClusterIndirectArgs : 
         Shaders : 
             Compute : "compute/UpdateClusterIndirectArgs.comp"
-    AssignLightsToClusters : 
+    AssignLightsToClustersBVH : 
         Shaders : 
-            Compute : "compute/AssignLightsToClustersBVH.comp"
+            Compute : "compute/AssignLightsToClustersBVH.glsl"
         Extensions : [
             "GL_EXT_control_flow_attributes"
         ]
-        OptimizationDisabled : true
+    AssignLightsToClusters :
+        Shaders :
+            Compute : "compute/AssignLightsToClusters.comp"
+        Extensions : [
+                "GL_EXT_control_flow_attributes"
+            ]
     DrawPass : 
         Shaders : 
             Vertex : "Default.vert"
