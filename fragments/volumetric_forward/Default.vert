@@ -6,7 +6,7 @@
 void main() {
     gl_Position = matrices.modelViewProjection * vec4(position, 1.0f);
     vPosition = matrices.modelView * vec4(position, 1.0f);
-    vNormal = mat3(matrices.inverseTransposeModelView) * normal;
-    vTangent = mat3(matrices.inverseTransposeModelView) * tangent;
+    vNormal = mat3(inverse(transpose(matrices.model))) * normal;
+    vTangent = mat3(inverse(transpose(matrices.model))) * tangent;
     vUV = uv;
 }
