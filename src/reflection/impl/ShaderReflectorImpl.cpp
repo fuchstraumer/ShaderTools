@@ -5,6 +5,7 @@
 #include "core/ShaderResource.hpp"
 #include "core/ResourceUsage.hpp"
 #include <array>
+#include "spirv_cross_containers.hpp"
 #ifdef FindResource
 #undef FindResource
 #endif // FindResource
@@ -32,7 +33,7 @@ namespace st {
         VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT
     };
 
-    std::vector<VertexAttributeInfo> parseVertAttrs(const spirv_cross::Compiler& cmplr, const std::vector<spirv_cross::Resource>& rsrcs) {
+    std::vector<VertexAttributeInfo> parseVertAttrs(const spirv_cross::Compiler& cmplr, const spirv_cross::SmallVector<spirv_cross::Resource>& rsrcs) {
         std::vector<VertexAttributeInfo> attributes;
         uint32_t idx = 0;
         uint32_t running_offset = 0;
@@ -103,7 +104,7 @@ namespace st {
         };
         
         const auto resources_all = recompiler->get_shader_resources();
-        std::vector<spirv_cross::Resource> resources;
+        spirv_cross::SmallVector<spirv_cross::Resource> resources;
         switch (type_being_parsed) {
         case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
             resources = resources_all.uniform_buffers;
@@ -312,7 +313,7 @@ namespace st {
             LOG(WARNING) << "spirv_cross::CompilerError.what(): " << e.what() << "\n";
             recompiled_source = recompiler->get_partial_source();
 
-            std::string suffix{ "_failed_compile.glsl" };
+            std::string suffix{ "_failed_recompile.glsl" };
             auto& sft = ShaderFileTracker::GetFileTracker();
 
             const std::string output_name = sft.GetShaderName(handle) + suffix;
@@ -320,8 +321,8 @@ namespace st {
             output_stream << recompiled_source;
             output_stream.flush(); output_stream.close();
             
+            // This exception doesn't stop what we need to do, so we can continue (afaik)
             std::cerr << e.what();
-            throw e;
         }
 
 		auto& sft = ShaderFileTracker::GetFileTracker();
