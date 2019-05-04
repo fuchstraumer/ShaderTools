@@ -9,64 +9,55 @@ vec4 NormalMapping(mat3 tbn, vec3 _sample) {
     return normalize(vec4(normal, 0.0f));
 }
 
-float GetDiffuse(vec4 n, vec4 l) {
-    float NdotL = max(dot(n,l), 0.0f);
-    return NdotL;
-}
-
-float GetSpecular(in Material material, vec4 V, vec4 L, vec4 N) {
-    vec4 r = normalize(reflect(-L,N));
-    float RdotV = max(dot(r,V),0.0f);
-    return pow(RdotV, material.reflectance);
-}
-
 float Attenuation(float range, float d) {
     return 1.0f - smoothstep(range * 0.75f, range, d);
 }
 
-float GetSpotLightCone(in SpotLight light, vec4 L) {
+float GetSpotLightCone(in const SpotLight light, in const vec3 L) {
     float minCos = cos(radians(light.SpotLightAngle));
     float maxCos = mix(minCos, 1.0f, 0.0f);
-    float cosAngle = dot(light.Direction, -L);
+    float cosAngle = dot(light.Direction.xyz, -L);
     return smoothstep(minCos, maxCos, cosAngle);
 }
 
-LightingResult CalculatePointLight(in const PointLight light, in Material material, vec4 V, vec4 P, vec4 N) {
-    LightingResult result;
-    vec4 L = light.PositionViewSpace - P;
-    float dist = length(L);
-    L = L / dist;
+float DistributionGGX(in const vec3 N, in const vec3 H, in const float roughness)
+{
+    float a = roughness * roughness;
+    float a2 = a * a;
+    float NdotH = max(dot(N, H), 0.0f);
+    float NdotH2 = NdotH * NdotH;
 
-    float atten = Attenuation(light.Range, dist);
+    float numerator = a2;
+    float denominator = (NdotH2 * (a2 - 1.0f) + 1.0f);
+    denominator = 3.14159f * denominator * denominator;
 
-    result.Diffuse = light.Color * GetDiffuse(N,L) * atten * light.Intensity;
-    result.Specular = light.Color * GetSpecular(material, V, L, N) * atten * light.Intensity;
-
-    return result;
+    return numerator / denominator;
 }
 
-LightingResult CalculateDirectionalLight(in const DirectionalLight light, in Material material, vec4 V, vec4 P, vec4 N) {
-    LightingResult result;
-    vec4 L = normalize(-light.DirectionViewSpace);
-    result.Diffuse = light.Color * GetDiffuse(N, L) * light.Intensity;
-    result.Specular = light.Color * GetSpecular(material, V, L, N) * light.Intensity;
-    return result;
+float GeometrySchlickGGX(in const float NdotV, in const float roughness)
+{
+    float r = roughness + 1.0f;
+    float k = (r * r) / 8.0f;
+
+    float denominator = NdotV * (1.0f - k) + k;
+
+    return NdotV / denominator;
 }
 
-LightingResult CalculateSpotLight(in const SpotLight light, in Material material, vec4 V, vec4 P, vec4 N) {
-    LightingResult result;
+float GeometrySmith(in vec3 N, in vec3 V, in vec3 L, in float roughness)
+{
+    float NdotV = max(dot(N, V), 0.0f);
+    float NdotL = max(dot(N, L), 0.0f);
 
-    vec4 L = light.PositionViewSpace - P;
-    float dist = length(L);
-    L /= dist;
+    float ggx2 = GeometrySchlickGGX(NdotV, roughness);
+    float ggx1 = GeometrySchlickGGX(NdotL, roughness);
 
-    float atten = Attenuation(light.Range, dist);
-    float spot_intensity = GetSpotLightCone(light, L);
+    return ggx1 * ggx2;
+}
 
-    result.Diffuse = light.Color * GetDiffuse(N, L) * atten * spot_intensity * light.Intensity;
-    result.Specular = light.Color * GetSpecular(material, V, L, N) * atten * spot_intensity * light.Intensity;
-
-    return result;
+vec3 fresnelSchlick(const in float cosTheta, const in vec3 F0)
+{
+    return F0 + (1.0f - F0) * pow(1.0f - cosTheta, 5.0f);
 }
 
 vec4 ClipToView(in vec4 clip_pos, in mat4 projection_matrix) {
@@ -80,7 +71,6 @@ vec4 ScreenToView(vec4 screen, in vec2 screen_dim, in mat4 projection_matrix) {
     vec4 clip = vec4(tex_coord * 2.0f - 1.0f, screen.z, screen.w);
     return ClipToView(clip, projection_matrix);
 }
-
 
 Plane ComputePlane(in vec3 p0, in vec3 p1, in vec3 p2) {
     Plane result;
@@ -119,19 +109,19 @@ bool SphereInsideFrustum(in Sphere sphere, in Frustum frustum, in vec2 depth_ran
     return any(sphere_inside_planes) ? false : true;
 }
 
-vec3 when_lt(in vec3 x, in vec3 y) {
+vec3 when_lt(in const vec3 x, in const vec3 y) {
     return max(sign(y - x), vec3(0.0f));
 }
 
-vec3 when_gt(in vec3 x, in vec3 y) {
+vec3 when_gt(in const vec3 x, in const vec3 y) {
     return max(sign(x - y), vec3(0.0f));
 }
 
-vec3 when_ge(in vec3 x, in vec3 y) {
+vec3 when_ge(in const vec3 x, in const vec3 y) {
     return 1.0f - when_lt(x, y);
 }
 
-vec3 when_le(in vec3 x, in vec3 y) {
+vec3 when_le(in const vec3 x, in const vec3 y) {
     return 1.0f - when_gt(x, y);
 }
 
@@ -142,7 +132,7 @@ bool SphereInsideAABB_Fast(in Sphere sphere, in AABB b) {
     return (result.x + result.y + result.z) <= (sphere.r * sphere.r);
 }
 
-bool SphereInsideAABB(in Sphere sphere, in AABB b) {
+bool SphereInsideAABB(in Sphere sphere, in const AABB b) {
     float result = 0.0f;
     for (uint i = 0; i < 3; ++i) {
         if (sphere.c[i] < b.Min[i]) {
@@ -155,7 +145,7 @@ bool SphereInsideAABB(in Sphere sphere, in AABB b) {
     return (result <= sphere.r * sphere.r);
 }
 
-bool AABBIntersectAABB(in AABB a, in AABB b) {
+bool AABBIntersectAABB(in const AABB a, in const AABB b) {
     return all(greaterThanEqual(a.Max,b.Min)) && all(lessThanEqual(a.Min,b.Max));
 }
 

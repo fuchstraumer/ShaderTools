@@ -28,7 +28,22 @@ resource_groups :
         MaterialParameters : 
             Type : "UniformBuffer"   
             Members : |+1
-                Material Data;   
+                vec3 ambient;
+                vec3 diffuse;
+                vec3 specular;
+                vec3 transmittance;
+                vec3 emissive;
+                float shininess;
+                float ior;
+                float dissolve;
+                int illum;
+                float roughness;
+                float metallic;
+                float sheen;
+                float clearcoat_thickness;
+                float clearcoat_roughness;
+                float anisotropy;
+                float anisotropy_rotation;
         AlbedoMap : 
             Type : "SampledImage"        
         NormalMap : 
@@ -38,6 +53,8 @@ resource_groups :
         MetallicMap : 
             Type : "SampledImage" 
         RoughnessMap :
+            Type : "SampledImage"
+        EmissiveMap :
             Type : "SampledImage"
         LinearRepeatSampler : 
             Type : "Sampler"
@@ -276,6 +293,9 @@ shader_groups :
     BuildBVH : 
         Shaders : 
             Compute : "compute/BuildBVH.comp"
+        Extensions : [
+            "GL_EXT_control_flow_attributes"
+        ]
     DepthPrePass : 
         Shaders : 
             Vertex : "Default.vert"
