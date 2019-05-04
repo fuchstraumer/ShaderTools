@@ -1,22 +1,4 @@
 
-struct Material {
-    vec4 baseColor;
-    vec4 emissive;
-    float roughness;
-    float metallic;
-    float reflectance;
-    float ambientOcclusion;
-    float clearCoat;
-    float clearCoatRoughness;
-    float anisotropy;
-    vec3 anisotropyDirection;
-    float thickness;
-    float subsurfacePower;
-    vec4 subsurfaceColor;
-    vec4 sheenColor;
-    vec4 normal;
-};
-
 struct PointLight {
     vec4 Position;
     vec4 PositionViewSpace;

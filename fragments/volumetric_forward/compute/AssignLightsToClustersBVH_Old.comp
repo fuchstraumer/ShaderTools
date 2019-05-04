@@ -8,7 +8,7 @@
 #pragma USE_RESOURCES VolumetricForwardLights
 
 layout (local_size_x = 32u, local_size_y = 1u, local_size_z = 1u) in;
-SPC const uint MaxLights = 1024u;
+SPC const uint MaxLights = 4096u;
 
 const uint NumChildNodes[6] = {
     1u,
@@ -35,17 +35,21 @@ shared uint gs_SpotLightStartOffset;
 shared uint gs_PointLightList[MaxLights];
 shared uint gs_SpotLightList[MaxLights];
 
-void PushNode(in uint node_index) {
+void PushNode(in uint node_index)
+{
     uint stack_idx = uint(atomicAdd(gs_StackPtr, 1));
-    if (stack_idx < 1024u) {
+    if (stack_idx < 1024u)
+    {
         gs_NodeStack[stack_idx] = node_index;
     }
 }
 
-uint PopNode() {
+uint PopNode()
+{
     uint stack_idx = uint(atomicAdd(gs_StackPtr, -1));
     uint node_idx = 0u;
-    if (stack_idx > 0u && stack_idx < 1024u) {
+    if (stack_idx > 0u && stack_idx < 1024u)
+    {
         node_idx = gs_NodeStack[stack_idx - 1];
     }
 
@@ -53,21 +57,25 @@ uint PopNode() {
 }
 
 // Gets the index of the first node in the current bvh
-uint GetFirstChild(in uint num_levels) {
+uint GetFirstChild(in uint num_levels)
+{
     return (num_levels > 0u) ? gs_ParentIdx * 32u + 1u : 0u;
 }
 
-bool IsLeafNode(in uint child_index, in uint num_levels) {
+bool IsLeafNode(in uint child_index, in uint num_levels)
+{
     return (num_levels > 0u) ? child_index > (NumChildNodes[num_levels - 1u] - 1u) : true;
 }
 
-uint GetLeafIndex(in uint node_index, in uint num_levels) {
+uint GetLeafIndex(in uint node_index, in uint num_levels)
+{
     return (num_levels > 0u) ? node_index - NumChildNodes[num_levels - 1] : node_index;
 }
 
 void main() {
 
-    if (gl_LocalInvocationIndex == 0u) {
+    if (gl_LocalInvocationIndex == 0u)
+    {
         gs_ParentIdx = 0;
         gs_StackPtr = 0u;
         gs_PointLightCount = 0u;
@@ -92,7 +100,6 @@ void main() {
         {
             uint leaf_index = GetLeafIndex(child_index, BVHParams.PointLightLevels);
 
-            [[flatten]]
             if (leaf_index < LightCounts.NumPointLights)
             {
                 uint light_index = imageLoad(PointLightIndices, int(leaf_index)).r;
@@ -100,7 +107,6 @@ void main() {
                 sphere.c = PointLights.Data[light_index].PositionViewSpace.xyz;
                 sphere.r = PointLights.Data[light_index].Range;
 
-                [[flatten]]
                 if (SphereInsideAABB(sphere, gs_ClusterAABB))
                 {
                     uint idx = atomicAdd(gs_PointLightCount, 1u);
@@ -134,7 +140,6 @@ void main() {
     groupMemoryBarrier();
     barrier();
 
-    [[flatten]]
     if (gl_LocalInvocationIndex == 0u)
     {
         gs_StackPtr = 0u;
@@ -149,12 +154,10 @@ void main() {
     {
         uint child_index = GetFirstChild(BVHParams.SpotLightLevels) + gl_LocalInvocationIndex;
 
-        [[flatten]]
         if (IsLeafNode(child_index, BVHParams.SpotLightLevels))
         {
             uint leaf_index = GetLeafIndex(child_index, BVHParams.SpotLightLevels);
 
-            [[flatten]]
             if (leaf_index < LightCounts.NumSpotLights)
             {
                 uint light_index = imageLoad(SpotLightIndices, int(leaf_index)).r;
@@ -209,12 +212,14 @@ void main() {
     barrier();
     
     [[unroll]]
-    for (int i = int(gl_LocalInvocationIndex); i < gs_PointLightCount; i += 32) {
+    for (int i = int(gl_LocalInvocationIndex); i < gs_PointLightCount; i += 32)
+    {
         imageStore(PointLightIndexList, int(gs_PointLightStartOffset) + i, uvec4(gs_PointLightList[i], 0, 0, 0));
     }
 
     [[unroll]]
-    for (int i = int(gl_LocalInvocationIndex); i < gs_SpotLightCount; i += 32) {
+    for (int i = int(gl_LocalInvocationIndex); i < gs_SpotLightCount; i += 32)
+    {
         imageStore(SpotLightIndexList, int(gs_SpotLightStartOffset) + i, uvec4(gs_SpotLightList[i], 0, 0, 0));
     }
 

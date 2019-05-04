@@ -29,5 +29,5 @@ void main() {
     imageStore(ClusterFlags, int(idx), uvec4(1, 0, 0, 0));
     // cluster color written out is used for debugging.
     backbuffer = imageLoad(ClusterColors, int(idx));
-    backbuffer.a = 0.50f;
+    backbuffer.a = 0.2f;
 }

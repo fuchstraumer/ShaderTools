@@ -41,7 +41,8 @@ shared vec4 gs_AABBMax[NUM_THREADS];
 void LogStepReduction()
 {
     uint reduceIndex = 32 >> 1;
-    uint mod32GroupIndex = gl_LocalInvocationIndex % 32;
+    const uint mod32GroupIndex = gl_LocalInvocationIndex % 32;
+    [[unroll]]
     while (mod32GroupIndex < reduceIndex)
     {
         gs_AABBMin[gl_LocalInvocationIndex] = min(gs_AABBMin[gl_LocalInvocationIndex], gs_AABBMin[gl_LocalInvocationIndex + reduceIndex]);
