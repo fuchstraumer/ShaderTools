@@ -44,8 +44,17 @@ resource_groups :
                 float clearcoat_roughness;
                 float anisotropy;
                 float anisotropy_rotation;
+                float height_scale;
         AlbedoMap : 
-            Type : "SampledImage"        
+            Type : "SampledImage"
+        AlphaMap :
+            Type : "SampledImage"
+        SpecularMap :
+            Type : "SampledImage"
+        BumpMap :
+            Type : "SampledImage"
+        DisplacementMap :
+            Type : "SampledImage"   
         NormalMap : 
             Type : "SampledImage"         
         AmbientOcclusionMap : 
@@ -330,10 +339,7 @@ shader_groups :
         Shaders : 
             Vertex : "Default.vert"
             Fragment : "Clustered.frag"
-        # Draw pass reads depth but has no ability to write to it
-        Tags : [ "DepthOnlyAsInput" ]
-    # Run before everything else but only once per window resizing
-    # So I'm putting it down here
+        OptimizationDisabled : true
     ComputeClusterAABBs : 
         Shaders : 
             Compute : "compute/ComputeClusterAABBs.comp"

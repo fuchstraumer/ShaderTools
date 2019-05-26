@@ -15,6 +15,8 @@ SET(SPIRV_WERROR OFF CACHE BOOL "Enable error on warning")
 SET(ENABLE_GLSLANG_BINARIES OFF CACHE BOOL "Builds glslangValidator and spirv-remap")
 SET(SKIP_GLSLANG_INSTALL ON CACHE BOOL "Skip installation")
 ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/shaderc" EXCLUDE_FROM_ALL)
+SET(SPIRV_CROSS_ENABLE_C_API OFF CACHE BOOL "Enable C API wrapper support in static library.")
+SET(SPIRV_CROSS_ENABLE_REFLECT OFF CACHE BOOL "Enable JSON reflection target support.")
 ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/spirv-cross" EXCLUDE_FROM_ALL)
 
 SET(YAML_CPP_BUILD_CONTRIB OFF CACHE BOOL "Enable contrib stuff in library")
