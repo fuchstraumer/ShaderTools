@@ -37,15 +37,6 @@ namespace st {
         uint32_t AccelerationStructureNVX{ 0u };
     };
 
-    struct ST_API engine_environment_callbacks_t {
-        std::add_pointer<int()>::type GetScreenSizeX{ nullptr };
-        std::add_pointer<int()>::type GetScreenSizeY{ nullptr };
-        std::add_pointer<double()>::type GetZNear{ nullptr };
-        std::add_pointer<double()>::type GetZFar{ nullptr };
-        std::add_pointer<double()>::type GetFOVY{ nullptr };
-    };
-
-
     struct ST_API SpecializationConstant {
         enum class constant_type : uint32_t {
             b32,

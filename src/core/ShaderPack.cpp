@@ -6,26 +6,6 @@
 
 namespace st {
 
-    static int screen_x() {
-        return 1920;
-    }
-
-    static int screen_y() {
-        return 1080;
-    }
-
-    static double z_near() {
-        return 0.1;
-    }
-
-    static double z_far() {
-        return 3000.0;
-    }
-
-    static double fov_y() {
-        return 75.0;
-    }
-
     void SetLoggingRepository(void* repo) {
         el::base::type::StoragePointer* storage_ptr = reinterpret_cast<el::base::type::StoragePointer*>(repo);
         el::Helpers::setStorage(*storage_ptr);
@@ -98,17 +78,6 @@ namespace st {
         }
         
         return nullptr;
-    }
-
-    engine_environment_callbacks_t & ShaderPack::RetrievalCallbacks() {
-        static engine_environment_callbacks_t callbacks = engine_environment_callbacks_t{
-            &screen_x,
-            &screen_y,
-            &z_near,
-            &z_far,
-            &fov_y
-        };
-        return callbacks;
     }
 
 }

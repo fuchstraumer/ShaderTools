@@ -29,8 +29,6 @@ namespace st {
         // Avoid using this, has to do a fair bit of searching.
         const ShaderResource* GetResource(const char* rsrc_name) const;
 
-        static engine_environment_callbacks_t& RetrievalCallbacks();
-
     private:
         friend struct ShaderFileTracker;
         friend struct ShaderPackBinary;
