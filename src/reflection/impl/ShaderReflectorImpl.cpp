@@ -190,11 +190,24 @@ namespace st {
     PushConstantInfo parsePushConstants(const spirv_cross::Compiler& cmplr, const VkShaderStageFlags& stage) {
         const auto push_constants = cmplr.get_shader_resources();
         const auto& pconstant = push_constants.push_constant_buffers.front();
-        auto ranges = cmplr.get_active_buffer_ranges(pconstant.id);
+
+        std::vector<spirv_cross::BufferRange> ranges;
+        {
+            auto ranges_sv = cmplr.get_active_buffer_ranges(pconstant.id);
+            std::copy(std::begin(ranges_sv), std::end(ranges_sv), std::back_inserter(ranges));
+        }
+
         PushConstantInfo result;
         result.SetStages(stage);
         result.SetName(cmplr.get_name(pconstant.id).c_str());
         std::vector<ShaderResourceSubObject> members;
+
+        auto sort_buffer_range = [](const spirv_cross::BufferRange& br0, const spirv_cross::BufferRange& br1) {
+            return br0.offset < br1.offset;
+        };
+
+        std::sort(std::begin(ranges), std::end(ranges), sort_buffer_range);
+
         for(auto& range : ranges) {
             ShaderResourceSubObject member;
             member.Name = strdup(cmplr.get_member_name(pconstant.base_type_id, range.index).c_str());

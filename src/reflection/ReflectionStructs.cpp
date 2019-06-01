@@ -37,7 +37,11 @@ namespace st {
     }
 
     void PushConstantInfo::SetMembers(const size_t num_members, ShaderResourceSubObject * members) {
-        impl->members = std::vector<ShaderResourceSubObject>{ members, members + num_members };
+        impl->members.resize(num_members);
+        for (size_t i = 0; i < num_members; ++i)
+        {
+            impl->members[i] = members[i];
+        }
     }
 
     const VkShaderStageFlags & PushConstantInfo::Stages() const noexcept {
@@ -59,15 +63,26 @@ namespace st {
         }
     }
 
+    // Weird logic of potentially optimized out members makes this one more complex than it should have to be...
     PushConstantInfo::operator VkPushConstantRange() const noexcept {
         VkPushConstantRange result;
         result.stageFlags = impl->stages;
         result.offset = impl->offset;
-        uint32_t size = 0;
-        for (auto& obj : impl->members) {
-            size += obj.Size;
+
+        // early out for single-member case
+        if (impl->members.size() == 1)
+        {
+            result.size = impl->members.front().Size;
+            return result;
         }
-        result.size = size;
+
+        uint32_t size = 0;
+        // Weird size calculation: sometimes, a variable in the middle of our range
+        // will be optimized out.
+        for (auto& obj : impl->members) {
+            size = std::max(size, obj.Offset);
+        }
+        result.size = size + impl->members.back().Size;
         return result;
     }
 
