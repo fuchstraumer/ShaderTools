@@ -79,8 +79,8 @@ namespace st {
         std::string getResourceQualifiers(const ShaderResource& rsrc) const;
         std::string getResourcePrefix(size_t active_set, const std::string & image_format, const ShaderResource& rsrc) const;
         std::string getBufferMembersString(const ShaderResource & resource) const;
-        std::string getUniformBufferString(const size_t& active_set, const ShaderResource & buffer, const std::string & name) const;
-        std::string getStorageBufferString(const size_t & active_set, const ShaderResource & buffer, const std::string & name) const;
+        std::string generateBufferAccessorString(const std::string& type_name, const std::string& buffer_name) const;
+        std::string getBufferDescriptorString(const size_t& active_set, const ShaderResource& buffer, const std::string& name, const bool isArray, const bool isStorage) const;
         std::string getStorageTexelBufferString(const size_t & active_set, const ShaderResource & buffer, const std::string & name) const;
         std::string getUniformTexelBufferString(const size_t & active_set, const ShaderResource & texel_buffer, const std::string & name) const;
         std::string getImageTypeSuffix(const VkImageCreateInfo & info) const;

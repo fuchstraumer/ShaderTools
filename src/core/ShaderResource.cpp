@@ -30,6 +30,8 @@ namespace st {
         std::set<glsl_qualifier> qualifiers;
         std::unordered_map<std::string, std::set<glsl_qualifier>> perUsageQualifiers;
         bool needsMipMaps{ false };
+        bool isDescriptorArray{ false };
+        uint32_t arraySize{ 0u };
 
     };
 
@@ -146,6 +148,16 @@ namespace st {
         return impl->membersStr.c_str();
     }
 
+    bool ShaderResource::IsDescriptorArray() const noexcept
+    {
+        return impl->isDescriptorArray;
+    }
+
+    uint32_t ShaderResource::ArraySize() const noexcept
+    {
+        return impl->arraySize;
+    }
+
     void ShaderResource::SetBindingIndex(size_t idx) {
         impl->bindingIdx = std::move(idx);
     }
@@ -203,6 +215,16 @@ namespace st {
 
     void ShaderResource::SetImageSamplerSubtype(const char * subtype) {
         impl->imageSamplerSubtype = std::string(subtype);
+    }
+
+    void ShaderResource::SetDescriptorArray(bool val)
+    {
+        impl->isDescriptorArray = val;
+    }
+
+    void ShaderResource::SetArraySize(uint32_t val)
+    {
+        impl->arraySize = val;
     }
 
 }

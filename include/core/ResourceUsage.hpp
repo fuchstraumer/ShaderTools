@@ -36,8 +36,8 @@ namespace st {
         const ShaderStage& UsedBy() const noexcept;
         const ShaderResource* BackingResource() const noexcept;
         const VkDescriptorType& Type() const noexcept;
-        const uint32_t& BindingIdx() const noexcept;
-        const uint32_t& SetIdx() const noexcept;
+        uint32_t BindingIdx() const noexcept;
+        uint32_t SetIdx() const noexcept;
         const access_modifier& AccessModifier() const noexcept;
         bool ReadOnly() const noexcept;
         bool WriteOnly() const noexcept;

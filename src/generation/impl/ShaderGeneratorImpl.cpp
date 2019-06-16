@@ -278,7 +278,7 @@ namespace st {
     std::string ShaderGeneratorImpl::getResourcePrefix(size_t active_set, const std::string& format_specifier, const ShaderResource& rsrc) const {
 
         std::string prefix{
-            std::string{ "layout (set = " } +std::to_string(active_set) + std::string{ ", binding = " } +std::to_string(rsrc.BindingIndex())
+            std::string("layout (set = ") +std::to_string(active_set) + std::string(", binding = ") + std::to_string(rsrc.BindingIndex())
         };
 
         if (!format_specifier.empty()) {
@@ -301,22 +301,58 @@ namespace st {
         return resource.GetMembersStr();
     }
 
-    std::string ShaderGeneratorImpl::getUniformBufferString(const size_t& active_set, const ShaderResource& buffer, const std::string& name) const {
-        const std::string prefix = getResourcePrefix(active_set, "", buffer);
-        const std::string alt_name = std::string{ "_" } +name + std::string{ "_" };
-        std::string result = prefix + std::string{ "uniform " } +alt_name + std::string{ " {\n" };
-        result += getBufferMembersString(buffer);
-        result += std::string{ "} " } +name + std::string{ ";\n\n" };
+    std::string ShaderGeneratorImpl::generateBufferAccessorString(const std::string& type_name, const std::string& buffer_name) const
+    {
+        std::string result = type_name;
+        result += " " + std::string("Get") + buffer_name + std::string("(const in int idx)\n{\n");
+        result += std::string("    return ") + buffer_name + std::string(".Data[idx];\n}\n");
         return result;
     }
 
-    std::string ShaderGeneratorImpl::getStorageBufferString(const size_t& active_set, const ShaderResource& buffer, const std::string& name) const {
-        const std::string prefix = getResourcePrefix(active_set, "std430", buffer);
-        const std::string alt_name = std::string{ "buffer " } +std::string{ "_" } +name + std::string{ "_" };
-        std::string result = prefix + alt_name + std::string{ " {\n" };
-        result += getBufferMembersString(buffer);
-        result += std::string{ "} " } +name + std::string{ ";\n\n" };
-        return result;
+    std::string ShaderGeneratorImpl::getBufferDescriptorString(const size_t& active_set, const ShaderResource& buffer, const std::string& name, const bool isArray, const bool isStorage) const {
+        const std::string descrTypeStr = isStorage ? std::string("buffer ") : std::string("uniform ");
+
+        if (isArray)
+        {
+            // insert structure declaration then make array of them
+            const std::string typeName = name + std::string("Type");
+            const std::string structName = std::string("struct ") + typeName + std::string("\n{\n");
+            const std::string membersStr = getBufferMembersString(buffer);
+            const static std::string endOfBlock("\n};\n");
+
+            std::string result{ structName + membersStr + endOfBlock };
+            result += getResourcePrefix(active_set, "", buffer);
+            result += descrTypeStr;
+            result += std::string("_") + name + std::string("Declaration_\n{\n");
+            result += std::string("    ") + typeName + std::string(" Data");
+
+            // dimensionality/range of array is either given or unbounded, depending on this value
+            std::string arrayDims;
+
+            if (buffer.ArraySize() == std::numeric_limits<uint32_t>::max())
+            {
+                arrayDims = std::string("[]");
+            }
+            else
+            {
+                arrayDims = "[" + std::to_string(buffer.ArraySize()) + "]";
+            }
+
+            result += arrayDims + std::string(";\n} ") + name + std::string(";\n");
+
+            result += generateBufferAccessorString(typeName, name);
+
+            return result;
+        }
+        else
+        {
+            const std::string prefix = getResourcePrefix(active_set, "", buffer);
+            const std::string alt_name = std::string("_") + name + std::string("_");
+            std::string result = prefix + descrTypeStr + alt_name + std::string(" {\n");
+            result += getBufferMembersString(buffer);
+            result += std::string("} ") + name + std::string(";\n\n");
+            return result;
+        }
     }
 
     std::string ShaderGeneratorImpl::getStorageTexelBufferString(const size_t& active_set, const ShaderResource& image, const std::string& name) const {
@@ -422,26 +458,30 @@ namespace st {
         const std::string fmt_string = VkFormatEnumToString(fmt);
         const std::string prefix = getResourcePrefix(active_set, fmt_string, storage_image);
         const std::string resource_type = get_image_subtype(fmt_string) + storage_image.ImageSamplerSubtype();
-        return prefix + std::string("uniform ") + resource_type + std::string(" ") + name + std::string(";\n");
+        const std::string arrayName = storage_image.IsDescriptorArray() ? name + std::string("[]") : name;
+        return prefix + std::string("uniform ") + resource_type + std::string(" ") + arrayName + std::string(";\n");
     }
 
     std::string ShaderGeneratorImpl::getSamplerString(const size_t& active_set, const ShaderResource& sampler, const std::string& name) const {
         const std::string prefix = getResourcePrefix(active_set, "", sampler);
-        return prefix + std::string("uniform sampler ") + name + std::string(";\n");
+        const std::string arrayName = sampler.IsDescriptorArray() ? name + std::string("[]") : name;
+        return prefix + std::string("uniform sampler ") + arrayName + std::string(";\n");
     }
 
     std::string ShaderGeneratorImpl::getSampledImageString(const size_t& active_set, const ShaderResource& sampled_image, const std::string& name) const {
         const std::string prefix = getResourcePrefix(active_set, "", sampled_image);
         std::string resource_type = std::string("texture");
         resource_type += sampled_image.ImageSamplerSubtype();
-        return prefix + std::string("uniform ") + resource_type + std::string(" ") + name + std::string(";\n");
+        const std::string arrayName = sampled_image.IsDescriptorArray() ? name + std::string("[]") : name;
+        return prefix + std::string("uniform ") + resource_type + std::string(" ") + arrayName + std::string(";\n");
     }
 
     std::string ShaderGeneratorImpl::getCombinedImageSamplerString(const size_t& active_set, const ShaderResource& combined_image_sampler, const std::string& name) const {
         const std::string prefix = getResourcePrefix(active_set, "", combined_image_sampler);
         std::string resource_type = std::string("sampler");
         resource_type += combined_image_sampler.ImageSamplerSubtype();
-        return prefix + std::string("uniform ") + resource_type + std::string(" ") + name + std::string(";\n");
+        const std::string arrayName = combined_image_sampler.IsDescriptorArray() ? name + std::string("[]") : name;
+        return prefix + std::string("uniform ") + resource_type + std::string(" ") + arrayName + std::string(";\n");
     }
 
     std::string ShaderGeneratorImpl::getInputAttachmentString(const size_t& active_set, const ShaderResource& input_attachment, const std::string& name) const {
@@ -516,16 +556,16 @@ namespace st {
                 resource_block_string += getStorageTexelBufferString(active_set, resource_item, resource_name);
                 break;
             case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
-                resource_block_string += getUniformBufferString(active_set, resource_item, resource_name);
+                resource_block_string += getBufferDescriptorString(active_set, resource_item, resource_name, resource.IsDescriptorArray(), false);
                 break;
             case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
-                resource_block_string += getStorageBufferString(active_set, resource_item, resource_name);
+                resource_block_string += getBufferDescriptorString(active_set, resource_item, resource_name, resource.IsDescriptorArray(), true);
                 break;
             case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
-                resource_block_string += getUniformBufferString(active_set, resource_item, resource_name);
+                resource_block_string += getBufferDescriptorString(active_set, resource_item, resource_name, false, false);
                 break;
             case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
-                resource_block_string += getStorageBufferString(active_set, resource_item, resource_name);
+                resource_block_string += getBufferDescriptorString(active_set, resource_item, resource_name, false, true);
                 break;
             case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
                 resource_block_string += getInputAttachmentString(active_set, resource_item, resource_name);

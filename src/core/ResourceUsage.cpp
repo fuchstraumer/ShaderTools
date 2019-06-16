@@ -70,11 +70,11 @@ namespace st {
         return type;
     }
 
-    const uint32_t& ResourceUsage::BindingIdx() const noexcept {
+    uint32_t ResourceUsage::BindingIdx() const noexcept {
         return bindingIdx;
     }
 
-    const uint32_t& ResourceUsage::SetIdx() const noexcept {
+    uint32_t ResourceUsage::SetIdx() const noexcept {
         return setIdx;
     }
 

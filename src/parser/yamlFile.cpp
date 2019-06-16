@@ -13,17 +13,31 @@ namespace st {
 
     namespace fs = std::experimental::filesystem;
 
+    constexpr static VkDescriptorType ARRAY_TYPE_FLAG_BITS = static_cast<VkDescriptorType>(1 << 16);
+    constexpr VkDescriptorType MakeArrayType(VkDescriptorType type)
+    {
+        return static_cast<VkDescriptorType>(type | ARRAY_TYPE_FLAG_BITS);
+    }
+
     static const std::unordered_map<std::string, VkDescriptorType> descriptor_type_from_str_map = {
         { "UniformBuffer", VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
+        { "UniformBufferArray", MakeArrayType(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER) },
         { "DynamicUniformBuffer", VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC },
         { "StorageBuffer", VK_DESCRIPTOR_TYPE_STORAGE_BUFFER },
+        { "StorageBufferArray", MakeArrayType(VK_DESCRIPTOR_TYPE_STORAGE_BUFFER) },
         { "DynamicStorageBuffer", VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC },
         { "StorageImage", VK_DESCRIPTOR_TYPE_STORAGE_IMAGE },
+        { "StorageImageArray", MakeArrayType(VK_DESCRIPTOR_TYPE_STORAGE_IMAGE) },
         { "UniformTexelBuffer", VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER },
+        { "UniformTexelBufferArray", MakeArrayType(VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER) },
         { "StorageTexelBuffer", VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER },
+        { "StorageTexelBufferArray", MakeArrayType(VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER) },
         { "Sampler", VK_DESCRIPTOR_TYPE_SAMPLER },
+        { "SamplerArray", MakeArrayType(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE) },
         { "SampledImage", VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE },
+        { "SampledImageArray", MakeArrayType(VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE) },
         { "CombinedImageSampler", VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER },
+        { "CombinedImageSamplerArray", MakeArrayType(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER) },
         { "InputAttachment", VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT }
     };
 
@@ -96,7 +110,7 @@ namespace st {
 
     yamlFile::~yamlFile() {}
 
-    ShaderResource * yamlFile::FindResource(const std::string& name) {
+    ShaderResource* yamlFile::FindResource(const std::string& name) {
 
         auto find_single_resource = [&name](std::vector<st::ShaderResource>& resources)->ShaderResource* {
             for (auto iter = resources.begin(); iter != resources.end(); ++iter) {
@@ -228,7 +242,28 @@ namespace st {
                 ShaderResource rsrc;
                 rsrc.SetParentGroupName(group_name.c_str());
                 rsrc.SetName(rsrc_name.c_str());
-                rsrc.SetType(type_iter->second);
+                if (const VkDescriptorType rsrc_type = type_iter->second; rsrc_type & ARRAY_TYPE_FLAG_BITS)
+                {
+                    const VkDescriptorType actual_type = static_cast<VkDescriptorType>(uint32_t(rsrc_type) & ~uint32_t(ARRAY_TYPE_FLAG_BITS));
+                    rsrc.SetType(actual_type);
+                    rsrc.SetDescriptorArray(true); // defaults false
+                    if (rsrc_node["ArraySize"])
+                    {
+                        const uint32_t arraySz = rsrc_node["ArraySize"].as<uint32_t>();
+                        rsrc.SetArraySize(arraySz);
+                    }
+                    else
+                    {
+                        // If not provided, it's an unbounded descriptor array: set size as largest uint val so we 
+                        // can check against it elsewhere (at higher levels, mostly)
+                        rsrc.SetArraySize(std::numeric_limits<uint32_t>::max());
+                    }
+                }
+                else
+                {
+                    rsrc.SetType(type_iter->second);
+                }
+
                 if (rsrc_node["ImageSubtype"]) {
                     auto subtype_str = rsrc_node["ImageSubtype"].as<std::string>();
                     rsrc.SetImageSamplerSubtype(subtype_str.c_str());

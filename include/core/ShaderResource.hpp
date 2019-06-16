@@ -43,6 +43,8 @@ namespace st {
         glsl_qualifier GetReadWriteQualifierForShader(const char* shader_name) const noexcept;
         dll_retrieved_strings_t GetTags() const noexcept;
         const char* GetMembersStr() const noexcept;
+        bool IsDescriptorArray() const noexcept;
+        uint32_t ArraySize() const noexcept;
 
         void SetBindingIndex(size_t idx);
         void SetInputAttachmentIndex(size_t idx);
@@ -57,6 +59,8 @@ namespace st {
         void SetFormat(VkFormat fmt);
         void SetTags(const size_t num_tags, const char** tags);
         void SetImageSamplerSubtype(const char* subtype);
+        void SetDescriptorArray(bool val);
+        void SetArraySize(uint32_t val);
 
     private:
         friend struct yamlFile;
