@@ -13,7 +13,7 @@ namespace st {
         shaderc::CompileOptions options;
         options.SetGenerateDebugInfo();
         options.SetOptimizationLevel(shaderc_optimization_level_performance);
-        options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_0);
+        options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_1);
         options.SetSourceLanguage(shaderc_source_language_glsl);
         return options;
     }
@@ -103,10 +103,10 @@ namespace st {
             options.SetOptimizationLevel(FileTracker.StageOptimizationDisabled.at(handle) ? shaderc_optimization_level_zero : shaderc_optimization_level_performance);
         }
 
-        shaderc::AssemblyCompilationResult assembly_result = compiler.CompileGlslToSpvAssembly(src_str, kind, name.c_str(), options);
+        shaderc::SpvCompilationResult compiliation_result = compiler.CompileGlslToSpv(src_str, kind, name.c_str(), options);
 
-        if (assembly_result.GetCompilationStatus() != shaderc_compilation_status_success) {
-            const std::string err_msg = assembly_result.GetErrorMessage();
+        if (compiliation_result.GetCompilationStatus() != shaderc_compilation_status_success) {
+            const std::string err_msg = compiliation_result.GetErrorMessage();
             LOG(ERROR) << "Shader compiliation to assembly failed: " << err_msg.c_str() << "\n";
 #ifndef NDEBUG
             LOG(ERROR) << "Dumping shader source to file...";
@@ -116,33 +116,12 @@ namespace st {
             throw std::runtime_error(except_msg.c_str());
         }
 
-        if (FileTracker.AssemblyStrings.count(handle) != 0) {
-            // Erase pre-existing
-            FileTracker.AssemblyStrings.erase(handle);
-        }
-
-        auto assembly_iter = FileTracker.AssemblyStrings.emplace(handle, std::string{ assembly_result.cbegin(), assembly_result.cend() });
-        if (!assembly_iter.second) {
-            LOG(ERROR) << "Failed to emplace generated assembly string into program's storage!";
-            throw std::runtime_error("Emplacement of shader assembly string failed!");
-        }
-
-        // Now compile to binary.
-        shaderc::SpvCompilationResult binary_result = compiler.AssembleToSpv(assembly_iter.first->second, options);
-        if (binary_result.GetCompilationStatus() != shaderc_compilation_status_success) {
-            const std::string err_msg = binary_result.GetErrorMessage();
-            LOG(ERROR) << "Shader assembly into final SPIR-V result failed.\n";
-            LOG(ERROR) << "Error message(s): \n" << err_msg << "\n";
-            const std::string except_msg = std::string("Failed to assemble SPIR-V assembly into final binary result: ") + err_msg + std::string("\n");
-            throw std::runtime_error(except_msg.c_str());
-        }
-
         if (FileTracker.Binaries.count(handle) != 0) {
             // erase as we're gonna replace with an updated binary
             FileTracker.Binaries.erase(handle);
         }
 
-        auto binary_iter = FileTracker.Binaries.emplace(handle, std::vector<uint32_t>{binary_result.begin(), binary_result.end()});
+        auto binary_iter = FileTracker.Binaries.emplace(handle, std::vector<uint32_t>{compiliation_result.begin(), compiliation_result.end()});
         if (!binary_iter.second) {
             LOG(ERROR) << "Failed to emplace compiled SPIR-V binary into program's storage!";
             throw std::runtime_error("Emplacement of shader SPIR-V binary failed.");
