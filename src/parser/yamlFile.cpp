@@ -298,7 +298,7 @@ namespace st {
                     rsrc.SetQualifiers(qualifiers.size(), qualifiers.data());
                 }
 
-                rsrc.SetBindingIndex(group_resources.size());
+                rsrc.SetBindingIndex(static_cast<uint32_t>(group_resources.size()));
                 group_resources.emplace_back(std::move(rsrc));
 
             }

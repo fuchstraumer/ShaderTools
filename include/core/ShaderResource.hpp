@@ -35,6 +35,8 @@ namespace st {
         const char* ParentGroupName() const;
         VkShaderStageFlags ShaderStages() const noexcept;
         VkDescriptorType DescriptorType() const noexcept;
+        operator VkDescriptorSetLayoutBinding() const noexcept;
+        VkDescriptorSetLayoutBinding AsLayoutBinding() const noexcept;
         const char* ImageSamplerSubtype() const;
         bool HasQualifiers() const noexcept;
         void GetQualifiers(size_t* num_qualifiers, glsl_qualifier* qualifiers) const noexcept;
@@ -45,8 +47,9 @@ namespace st {
         const char* GetMembersStr() const noexcept;
         bool IsDescriptorArray() const noexcept;
         uint32_t ArraySize() const noexcept;
+        uint32_t BindingIdx() const noexcept;
 
-        void SetBindingIndex(size_t idx);
+        void SetBindingIndex(uint32_t idx);
         void SetInputAttachmentIndex(size_t idx);
         void SetStages(VkShaderStageFlags stages);
         void SetType(VkDescriptorType _type);

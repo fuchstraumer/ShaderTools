@@ -16,7 +16,7 @@ namespace st {
         ShaderResourceImpl& operator=(const ShaderResourceImpl& other) = default;
         ShaderResourceImpl& operator=(ShaderResourceImpl&& other) = default;
 
-        size_t bindingIdx{ std::numeric_limits<size_t>::max() };
+        uint32_t bindingIdx{ std::numeric_limits<uint32_t>::max() };
         std::string name{ "" };
         VkFormat format{ VK_FORMAT_UNDEFINED };
         VkDescriptorType type{ VK_DESCRIPTOR_TYPE_MAX_ENUM };
@@ -83,6 +83,22 @@ namespace st {
 
     VkDescriptorType ShaderResource::DescriptorType() const noexcept {
         return impl->type;
+    }
+
+    ShaderResource::operator VkDescriptorSetLayoutBinding() const noexcept
+    {
+        return VkDescriptorSetLayoutBinding{
+            impl->bindingIdx,
+            impl->type,
+            impl->isDescriptorArray ? impl->arraySize : 1u,
+            impl->stages,
+            nullptr
+        };
+    }
+
+    VkDescriptorSetLayoutBinding ShaderResource::AsLayoutBinding() const noexcept
+    {
+        return this->operator VkDescriptorSetLayoutBinding();
     }
 
     const char * ShaderResource::ImageSamplerSubtype() const {
@@ -158,7 +174,12 @@ namespace st {
         return impl->arraySize;
     }
 
-    void ShaderResource::SetBindingIndex(size_t idx) {
+    uint32_t ShaderResource::BindingIdx() const noexcept
+    {
+        return impl->bindingIdx;
+    }
+
+    void ShaderResource::SetBindingIndex(uint32_t idx) {
         impl->bindingIdx = std::move(idx);
     }
 
