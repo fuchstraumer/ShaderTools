@@ -1,4 +1,11 @@
-
+#pragma INTERFACE_OVERRIDE
+layout (location = 0) in vec4 vPosition;
+layout (location = 1) in vec3 vNormal;
+layout (location = 2) in vec3 vTangent;
+layout (location = 3) in vec2 vUV;
+layout (location = 4) flat in int drawIdx;
+layout (location = 0) out vec4 backbuffer;
+#pragma END_INTERFACE_OVERRIDE
 layout(early_fragment_tests) in;
 
 // can adjust range based on hardware
@@ -12,20 +19,6 @@ SPC const uint maxParallaxLayersUINT = 32u;
 #pragma USE_RESOURCES VolumetricForward
 #pragma USE_RESOURCES VolumetricForwardLights
 #pragma USE_RESOURCES Material
-
-layout (push_constant) uniform push_consts {
-    layout (offset = 0) bool hasAlbedoMap;
-    layout (offset = 4) bool hasAlphaMap;
-    layout (offset = 8) bool hasSpecularMap;
-    layout (offset =12) bool hasBumpMap;
-    layout (offset =16) bool hasDisplacementMap;
-    layout (offset =20) bool hasNormalMap;
-    layout (offset =24) bool hasAmbientOcclusionMap;
-    layout (offset =28) bool hasMetallicMap;
-    layout (offset =32) bool hasRoughnessMap;
-    layout (offset =36) bool hasEmissiveMap;
-    layout (offset =40) bool materialLoading;
-};
 
 struct lightingInput
 {
@@ -77,15 +70,15 @@ mat3 getTBN()
     return mat3(T, B, N);
 }
 
-vec3 doNormalMapping(in vec2 input_uv, in mat3 TBN)
+vec3 doNormalMapping(in vec2 input_uv, in mat3 TBN, in const int normalMapIdx)
 {
-    vec3 sampled_normal = ExpandNormal(texture(sampler2D(NormalMap, LinearRepeatSampler), input_uv).xyz);
+    vec3 sampled_normal = ExpandNormal(texture(sampler2D(NormalMaps[normalMapIdx], LinearRepeatSampler), input_uv).xyz);
     return normalize(TBN * sampled_normal);
 }
 
-vec3 doBumpMapping(in vec2 uv, in mat3 TBN)
+vec3 doBumpMapping(in vec2 uv, in mat3 TBN, in const int bumpMapIdx)
 {
-    float height00 = texture(sampler2D(BumpMap, LinearRepeatSampler), uv).r;
+    float height00 = texture(sampler2D(BumpMaps[bumpMapIdx], LinearRepeatSampler), uv).r;
     float height10 = dFdxFine(height00);
     float height01 = dFdyFine(height10);
 
@@ -98,7 +91,8 @@ vec3 doBumpMapping(in vec2 uv, in mat3 TBN)
     return normalize(TBN * normal);
 }
 
-vec2 doParallaxMapping(in vec2 uv, in vec3 viewDir)
+vec2 doParallaxMapping(in vec2 uv, in vec3 viewDir, in const int displacementMapIdx,
+    in const float heightScale)
 {
     const float minLayers = float(minParallaxLayersUINT);
     const float maxLayers = float(maxParallaxLayersUINT);
@@ -107,38 +101,39 @@ vec2 doParallaxMapping(in vec2 uv, in vec3 viewDir)
     float layerDepth = 1.0f / numLayers;
     float currDepth = 0.0f;
 
-    vec2 P = viewDir.xy / viewDir.z * MaterialParameters.height_scale;
+    vec2 P = viewDir.xy / viewDir.z * heightScale;
     vec2 deltaP = P / numLayers;
 
     vec2 currentUV = uv;
-    float currentDepthMapVal = texture(sampler2D(DisplacementMap, LinearRepeatSampler), currentUV).r;
+    float currentDepthMapVal = texture(sampler2D(DisplacementMaps[displacementMapIdx], LinearRepeatSampler), currentUV).r;
 
     while (currDepth < currentDepthMapVal)
     {
         currentUV -= deltaP;
-        currentDepthMapVal = texture(sampler2D(DisplacementMap, LinearRepeatSampler), currentUV).r;
+        currentDepthMapVal = texture(sampler2D(DisplacementMaps[displacementMapIdx], LinearRepeatSampler), currentUV).r;
         currDepth += layerDepth;
     }
 
     vec2 prevCoords = currentUV + P;
     float afterDepth = currentDepthMapVal - currDepth;
-    float beforeDepth = texture(sampler2D(DisplacementMap, LinearRepeatSampler), prevCoords).r - currDepth + layerDepth;
+    float beforeDepth = texture(sampler2D(DisplacementMaps[displacementMapIdx], LinearRepeatSampler), prevCoords).r - currDepth + layerDepth;
     float weight = afterDepth / (afterDepth - beforeDepth);
     
     return prevCoords * weight + currentUV * (1.0f - weight);
 }
 
-void calculateLight(in const lightingInput lighting_input, inout LightingResult result)
+void calculateLight(in const lightingInput lighting_input, inout LightingResult result, in const int normalMapIdx,
+    in const int bumpMapIdx)
 {
     vec3 N = vec3(0.0f);
 
-    if (hasNormalMap)
+    if (normalMapIdx != -1)
     {
-        N = doNormalMapping(lighting_input.uv, lighting_input.TBN);
+        N = doNormalMapping(lighting_input.uv, lighting_input.TBN, normalMapIdx);
     }
-    else if (hasBumpMap)
+    else if (bumpMapIdx != -1)
     {
-        N = doBumpMapping(lighting_input.uv, lighting_input.TBN);
+        N = doBumpMapping(lighting_input.uv, lighting_input.TBN, bumpMapIdx);
     }
     else
     {
@@ -176,7 +171,7 @@ LightingResult CalculateDirectionalLight(in const DirectionalLight light, vec4 V
     return result;
 }
 
-LightingResult Lighting(in uint cluster_index, in lightingInput lighting_input)
+LightingResult Lighting(in uint cluster_index, in lightingInput lighting_input, in const int normalMapIdx, in const int bumpMapIdx)
 {
     vec3 v = normalize(lighting_input.viewPos.xyz - lighting_input.fragPos.xyz);
     lighting_input.viewDir = v;
@@ -206,7 +201,7 @@ LightingResult Lighting(in uint cluster_index, in lightingInput lighting_input)
         lighting_input.lightRange = pointLight.Range;
         lighting_input.lightPos = pointLight.PositionViewSpace.xyz;
 
-        calculateLight(lighting_input, results);
+        calculateLight(lighting_input, results, normalMapIdx, bumpMapIdx);
     }
 
     startOffset = imageLoad(SpotLightGrid, int(cluster_index)).r;
@@ -237,6 +232,9 @@ LightingResult Lighting(in uint cluster_index, in lightingInput lighting_input)
 
 void main() {
 
+    MaterialIndicesType indices = GetMaterialIndices(drawIdx);
+    MaterialParametersType mtlParameters = GetMaterialParameters(indices.parametersIdx);
+
     vec4 eye_pos = globals.viewPosition;
     uvec3 index_3d = ComputeClusterIndex3D(gl_FragCoord.xy, vPosition.z);
     uint index_1d = CoordToIdx(index_3d);
@@ -254,30 +252,14 @@ void main() {
     lighting_input.worldPos = vec3(0.0f);
     lighting_input.fragPos = vertexPosViewSpace.xyz;
 
-    if (materialLoading)
-    {
-        LightingResult lit = Lighting(index_1d, lighting_input);
-        // material loading. set base color as light grey then add lighting contribution.
-        if (any(notEqual(MaterialParameters.diffuse.rgb, zero_vec)))
-        {
-            backbuffer.rgb = MaterialParameters.diffuse.rgb;
-            backbuffer.a = 1.0f;
-        }
-        else
-        {
-            backbuffer = vec4(0.4f, 0.4f, 0.41f, 1.0f);
-        }
-        backbuffer.rgb += lit.Diffuse.rgb;
-        return;
-    }
-
     vec2 fragmentUV = vUV;
+    const bool hasDisplacementMap = indices.displacementMapIdx != -1;
     if (hasDisplacementMap)
     {
         vec3 tViewPos = TBN * globals.viewPosition.xyz;
         vec3 tFragPos = TBN * gl_FragCoord.xyz;
         vec3 tViewDir = normalize(tViewPos - tFragPos);
-        fragmentUV = doParallaxMapping(fragmentUV, tViewDir);
+        fragmentUV = doParallaxMapping(fragmentUV, tViewDir, indices.displacementMapIdx, mtlParameters.height_scale);
         if (fragmentUV.x < 0.0f || fragmentUV.y < 0.0f ||
             fragmentUV.x > 1.0f || fragmentUV.y > 1.0f)
         {
@@ -285,10 +267,11 @@ void main() {
         }
     }
 
-    vec4 diffuse = vec4(MaterialParameters.diffuse, 1.0f);
+    vec4 diffuse = vec4(mtlParameters.diffuse, 1.0f);
+    const bool hasAlbedoMap = indices.albedoMapIdx != -1;
     if (hasAlbedoMap)
     {
-        vec4 diffuse_sample = texture(sampler2D(AlbedoMap, LinearRepeatSampler), fragmentUV);
+        vec4 diffuse_sample = texture(sampler2D(AlbedoMaps[indices.albedoMapIdx], LinearRepeatSampler), fragmentUV);
         if (any(notEqual(diffuse.rgb, zero_vec)))
         {
             diffuse *= diffuse_sample;
@@ -299,16 +282,18 @@ void main() {
         }
     }
 
+    const bool hasAlphaMap = indices.alphaMapIdx != -1;
     if (hasAlphaMap)
     {
-        diffuse.a = texture(sampler2D(AlphaMap, LinearRepeatSampler), fragmentUV).r;
+        diffuse.a = texture(sampler2D(AlphaMaps[indices.alphaMapIdx], LinearRepeatSampler), fragmentUV).r;
     }
 
-    vec3 specular = MaterialParameters.specular;
+    vec3 specular = mtlParameters.specular;
     const bool noUboSpec = any(notEqual(specular.rgb, zero_vec));
+    const bool hasSpecularMap = indices.specularMapIdx != -1;
     if (hasSpecularMap)
     {
-        vec3 specular_sample = texture(sampler2D(SpecularMap, LinearRepeatSampler), fragmentUV).rgb;
+        vec3 specular_sample = texture(sampler2D(SpecularMaps[indices.specularMapIdx], LinearRepeatSampler), fragmentUV).rgb;
         if (noUboSpec)
         {
             specular *= specular_sample;
@@ -319,10 +304,11 @@ void main() {
         }
     }
 
-    float roughness = MaterialParameters.roughness;
+    float roughness = mtlParameters.roughness;
+    const bool hasRoughnessMap = indices.roughnessMapIdx != -1;
     if (hasRoughnessMap)
     {
-        float roughness_sample = texture(sampler2D(RoughnessMap, LinearRepeatSampler), fragmentUV).r;
+        float roughness_sample = texture(sampler2D(RoughnessMaps[indices.roughnessMapIdx], LinearRepeatSampler), fragmentUV).r;
         if (roughness != 0.0f)
         {
             roughness *= roughness_sample;
@@ -334,10 +320,11 @@ void main() {
     }
 
 
-    vec4 ambient = vec4(MaterialParameters.ambient, 1.0f);
+    vec4 ambient = vec4(mtlParameters.ambient, 1.0f);
+    const bool hasAmbientOcclusionMap = indices.aoMapIdx != -1;
     if (hasAmbientOcclusionMap)
     {
-        vec4 ambient_sample = texture(sampler2D(AmbientOcclusionMap, LinearRepeatSampler), fragmentUV);
+        vec4 ambient_sample = texture(sampler2D(AmbientOcclusionMaps[indices.aoMapIdx], LinearRepeatSampler), fragmentUV);
         if (any(notEqual(ambient.rgb, zero_vec)))
         {
             ambient *= ambient_sample;
@@ -348,10 +335,11 @@ void main() {
         }
     }
 
-    vec3 emissive = MaterialParameters.emissive;
+    vec3 emissive = mtlParameters.emissive;
+    const bool hasEmissiveMap = indices.emissiveMapIdx != -1;
     if (hasEmissiveMap)
     {
-        float emissive_sample = texture(sampler2D(EmissiveMap, LinearRepeatSampler), fragmentUV).r;
+        float emissive_sample = texture(sampler2D(EmissiveMaps[indices.emissiveMapIdx], LinearRepeatSampler), fragmentUV).r;
         if (any(notEqual(emissive, zero_vec)))
         {
             emissive *= emissive_sample;
@@ -362,10 +350,11 @@ void main() {
         }
     }
 
-    float metallic = MaterialParameters.metallic;
+    float metallic = mtlParameters.metallic;
+    const bool hasMetallicMap = indices.metallicMapIdx != -1;
     if (hasMetallicMap)
     {
-        float metallic_sample = texture(sampler2D(MetallicMap, LinearRepeatSampler), fragmentUV).r;
+        float metallic_sample = texture(sampler2D(MetallicMaps[indices.metallicMapIdx], LinearRepeatSampler), fragmentUV).r;
         if (metallic != 0.0f)
         {
             metallic *= metallic_sample;
@@ -382,7 +371,7 @@ void main() {
     lighting_input.roughness = roughness;
     lighting_input.metallic = metallic;
 
-    LightingResult lit = Lighting(index_1d, lighting_input);
+    LightingResult lit = Lighting(index_1d, lighting_input, indices.normalMapIdx, indices.bumpMapIdx);
 
     vec3 out_color = (diffuse.rgb * ambient.rgb * baseDiffuse) + lit.Diffuse.rgb + lit.Specular.rgb + emissive.rgb;
     out_color = out_color / (out_color + vec3(1.0f));

@@ -24,9 +24,24 @@ resource_groups :
                 float exposure;
                 float gamma;
                 float brightness;
-    Material : 
+    Material :
+        MaterialIndices :
+            Type : "StorageBufferArray"
+            Members : |+1
+                int parametersIdx;
+                int albedoMapIdx;
+                int alphaMapIdx;
+                int specularMapIdx;
+                int bumpMapIdx;
+                int displacementMapIdx;
+                int normalMapIdx;
+                int aoMapIdx;
+                int metallicMapIdx;
+                int roughnessMapIdx;
+                int emissiveMapIdx;
+            Qualifiers: "restrict readonly"
         MaterialParameters : 
-            Type : "UniformBuffer"   
+            Type : "StorageBufferArray"   
             Members : |+1
                 vec3 ambient;
                 vec3 diffuse;
@@ -45,26 +60,27 @@ resource_groups :
                 float anisotropy;
                 float anisotropy_rotation;
                 float height_scale;
-        AlbedoMap : 
-            Type : "SampledImage"
-        AlphaMap :
-            Type : "SampledImage"
-        SpecularMap :
-            Type : "SampledImage"
-        BumpMap :
-            Type : "SampledImage"
-        DisplacementMap :
-            Type : "SampledImage"   
-        NormalMap : 
-            Type : "SampledImage"         
-        AmbientOcclusionMap : 
-            Type : "SampledImage"      
-        MetallicMap : 
-            Type : "SampledImage" 
-        RoughnessMap :
-            Type : "SampledImage"
-        EmissiveMap :
-            Type : "SampledImage"
+            Qualifiers: "restrict readonly"
+        AlbedoMaps : 
+            Type : "SampledImageArray"
+        AlphaMaps :
+            Type : "SampledImageArray"
+        SpecularMaps :
+            Type : "SampledImageArray"
+        BumpMaps :
+            Type : "SampledImageArray"
+        DisplacementMaps :
+            Type : "SampledImageArray"
+        NormalMaps : 
+            Type : "SampledImageArray"
+        AmbientOcclusionMaps : 
+            Type : "SampledImageArray"      
+        MetallicMaps : 
+            Type : "SampledImageArray" 
+        RoughnessMaps :
+            Type : "SampledImageArray"
+        EmissiveMaps :
+            Type : "SampledImageArray"
         LinearRepeatSampler : 
             Type : "Sampler"
         LinearClampSampler : 
@@ -333,13 +349,16 @@ shader_groups :
         Shaders :
             Compute : "compute/AssignLightsToClusters.comp"
         Extensions : [
-                "GL_EXT_control_flow_attributes"
-            ]
+            "GL_EXT_control_flow_attributes"
+        ]
     DrawPass : 
         Shaders : 
-            Vertex : "Default.vert"
+            Vertex : "DrawID.vert"
             Fragment : "Clustered.frag"
-        OptimizationDisabled : true
+        Extensions : [
+            "GL_ARB_shader_draw_parameters",
+            "GL_EXT_nonuniform_qualifier"
+        ]
     ComputeClusterAABBs : 
         Shaders : 
             Compute : "compute/ComputeClusterAABBs.comp"
