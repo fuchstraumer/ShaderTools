@@ -5,7 +5,7 @@ PROJECT(ShaderTools)
 # Much better than cluttering up an entire IDE just with our dependencies lol
 SET_PROPERTY(GLOBAL PROPERTY USE_FOLDERS ON)
 
-ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/spirv-headers" EXCLUDE_FROM_ALL)
+#ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/spirv-headers" EXCLUDE_FROM_ALL)
 ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/spirv-tools")
 ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/glslang")
 
