@@ -6,7 +6,12 @@ PROJECT(ShaderTools)
 SET_PROPERTY(GLOBAL PROPERTY USE_FOLDERS ON)
 
 #ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/spirv-headers" EXCLUDE_FROM_ALL)
+SET(SKIP_SPIRV_TOOLS_INSTALL ON CACHE BOOL "Skip installation")
+SET(SPIRV_SKIP_EXECUTABLES ON CACHE BOOL "Skip building the executable and tests along with the library")
+SET(SPIRV_SKIP_TESTS ON CACHE BOOL "Skip building tests along with the library")
+SET(SPIRV_WERROR OFF CACHE BOOL "Enable error on warning")
 ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/spirv-tools")
+SET(SKIP_GLSLANG_INSTALL ON CACHE BOOL "Skip installation")
 ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/glslang")
 
 SET(SHADERC_SKIP_TESTS ON)
@@ -14,12 +19,16 @@ SET(SHADERC_THIRD_PARTY_ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party")
 SET(SHADERC_SPIRV_HEADERS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/spirv-headers")
 SET(SHADERC_GLSLANG_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/glslang")
 SET(SHADERC_SPIRV_TOOLS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/spirv-tools")
-SET(SPIRV_SKIP_EXECUTABLES ON CACHE BOOL "Skip building the executable and tests along with the library")
-SET(SPIRV_WERROR OFF CACHE BOOL "Enable error on warning")
+SET(SHADERC_SKIP_INSTALL ON CACHE BOOL "Skip installation")
+SET(SHADERC_ENABLE_SHARED_CRT ON CACHE BOOL "Use the shared CRT instead of the static CRT")
 SET(ENABLE_GLSLANG_BINARIES OFF CACHE BOOL "Builds glslangValidator and spirv-remap")
 SET(SKIP_GLSLANG_INSTALL ON CACHE BOOL "Skip installation")
 ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/shaderc" EXCLUDE_FROM_ALL)
 SET(SPIRV_CROSS_ENABLE_C_API OFF CACHE BOOL "Enable C API wrapper support in static library.")
+SET(SPIRV_CROSS_CLI OFF CACHE BOOL "Build the CLI binary. Requires SPIRV_CROSS_STATIC.")
+SET(SPIRV_CROSS_ENABLE_REFLECT OFF CACHE BOOL "Enable JSON reflection target support.")
+SET(SPIRV_CROSS_ENABLE_TESTS OFF CACHE BOOL "Enable SPIRV-Cross tests.")
+SET(SPIRV_CROSS_ENABLE_UTIL OFF CACHE BOOL "Enable util module support.")
 ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/spirv-cross" EXCLUDE_FROM_ALL)
 
 SET(YAML_CPP_BUILD_CONTRIB OFF CACHE BOOL "Enable contrib stuff in library")
@@ -155,6 +164,13 @@ ENDIF()
 SET_TARGET_PROPERTIES(
     shaderc spirv-cross-core spirv-cross-glsl spirv-cross-cpp glslang format yaml-cpp
     HLSL shaderc_util OGLCompiler OSDependent SPIRV SPIRV-Tools SPIRV-Tools-opt
+    glslang-default-resource-limits SPVRemapper enum_string_mapping core_tables
+    extinst_tables spirv-tools-pkg-config spirv-tools-shared-pkg-config
+    spirv-tools-build-version spirv-tools-header-DebugInfo spv-tools-spv-amd-gs
+    spv-tools-spv-amd-sb spv-tools-spv-amd-sevp spv-tools-spv-amd-stm
+    SPIRV-Tools-link SPIRV-Tools-reduce SPIRV-Tools-shared spirv-tools-vimsyntax
+    spv-tools-debuginfo glslangValidator spirv-remap Continuous Experimental
+    Nightly NightlyMemoryCheck
     PROPERTIES FOLDER "ShaderTools Dependencies")
 
 ## 
@@ -164,12 +180,13 @@ INSTALL(TARGETS ShaderTools RUNTIME DESTINATION "bin" LIBRARY DESTINATION "lib" 
 INSTALL(TARGETS ShaderTools RUNTIME DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/")
 
 ##
-OPTION(BUILD_TESTS "Build some test executables for shader parsing and compiliation." OFF)
-IF(BUILD_TESTS)
+OPTION(SHADERTOOLS_BUILD_TESTS "Build some test executables for shader parsing and compiliation." OFF)
+IF(SHADERTOOLS_BUILD_TESTS)
     ADD_EXECUTABLE(ParseTest0 "${CMAKE_CURRENT_SOURCE_DIR}/tests/test.cpp"  "${CMAKE_CURRENT_SOURCE_DIR}/third_party/easyloggingpp/src/easylogging++.cc")
     TARGET_COMPILE_DEFINITIONS(ParseTest0 PRIVATE "-DSHADERTOOLS_DLL")
     ADD_DEPENDENCIES(ParseTest0 ShaderTools)
     TARGET_LINK_LIBRARIES(ParseTest0 ShaderTools)
     TARGET_INCLUDE_DIRECTORIES(ParseTest0 PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/luajit/src"
     "${CMAKE_CURRENT_SOURCE_DIR}/third_party/luabridge/Source" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/easyloggingpp/src")
+    SET_TARGET_PROPERTIES(ParseTest0 PROPERTIES FOLDER "ShaderTools Tests")
 ENDIF()
