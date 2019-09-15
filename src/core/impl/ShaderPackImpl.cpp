@@ -33,7 +33,7 @@ namespace st {
     }
 
     ShaderPackImpl::ShaderPackImpl(ShaderPackBinary * binary_data) {
-        detail::LoadPackFromBinary(this, binary_data);
+        Experimental::LoadPackFromBinary(this, binary_data);
         processShaderStages();
         createShaders();
         createResourceGroups();
