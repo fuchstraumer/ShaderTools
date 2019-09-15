@@ -61,25 +61,7 @@ resource_groups :
                 float anisotropy_rotation;
                 float height_scale;
             Qualifiers: "restrict readonly"
-        AlbedoMaps : 
-            Type : "SampledImageArray"
-        AlphaMaps :
-            Type : "SampledImageArray"
-        SpecularMaps :
-            Type : "SampledImageArray"
-        BumpMaps :
-            Type : "SampledImageArray"
-        DisplacementMaps :
-            Type : "SampledImageArray"
-        NormalMaps : 
-            Type : "SampledImageArray"
-        AmbientOcclusionMaps : 
-            Type : "SampledImageArray"      
-        MetallicMaps : 
-            Type : "SampledImageArray" 
-        RoughnessMaps :
-            Type : "SampledImageArray"
-        EmissiveMaps :
+        BindlessTextureArray : 
             Type : "SampledImageArray"
         LinearRepeatSampler : 
             Type : "Sampler"

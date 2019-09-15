@@ -72,13 +72,13 @@ mat3 getTBN()
 
 vec3 doNormalMapping(in vec2 input_uv, in mat3 TBN, in const int normalMapIdx)
 {
-    vec3 sampled_normal = ExpandNormal(texture(sampler2D(NormalMaps[normalMapIdx], LinearRepeatSampler), input_uv).xyz);
+    vec3 sampled_normal = ExpandNormal(texture(sampler2D(BindlessTextureArray[normalMapIdx], LinearRepeatSampler), input_uv).xyz);
     return normalize(TBN * sampled_normal);
 }
 
 vec3 doBumpMapping(in vec2 uv, in mat3 TBN, in const int bumpMapIdx)
 {
-    float height00 = texture(sampler2D(BumpMaps[bumpMapIdx], LinearRepeatSampler), uv).r;
+    float height00 = texture(sampler2D(BindlessTextureArray[bumpMapIdx], LinearRepeatSampler), uv).r;
     float height10 = dFdxFine(height00);
     float height01 = dFdyFine(height10);
 
@@ -105,18 +105,18 @@ vec2 doParallaxMapping(in vec2 uv, in vec3 viewDir, in const int displacementMap
     vec2 deltaP = P / numLayers;
 
     vec2 currentUV = uv;
-    float currentDepthMapVal = texture(sampler2D(DisplacementMaps[displacementMapIdx], LinearRepeatSampler), currentUV).r;
+    float currentDepthMapVal = texture(sampler2D(BindlessTextureArray[displacementMapIdx], LinearRepeatSampler), currentUV).r;
 
     while (currDepth < currentDepthMapVal)
     {
         currentUV -= deltaP;
-        currentDepthMapVal = texture(sampler2D(DisplacementMaps[displacementMapIdx], LinearRepeatSampler), currentUV).r;
+        currentDepthMapVal = texture(sampler2D(BindlessTextureArray[displacementMapIdx], LinearRepeatSampler), currentUV).r;
         currDepth += layerDepth;
     }
 
     vec2 prevCoords = currentUV + P;
     float afterDepth = currentDepthMapVal - currDepth;
-    float beforeDepth = texture(sampler2D(DisplacementMaps[displacementMapIdx], LinearRepeatSampler), prevCoords).r - currDepth + layerDepth;
+    float beforeDepth = texture(sampler2D(BindlessTextureArray[displacementMapIdx], LinearRepeatSampler), prevCoords).r - currDepth + layerDepth;
     float weight = afterDepth / (afterDepth - beforeDepth);
     
     return prevCoords * weight + currentUV * (1.0f - weight);
@@ -271,7 +271,7 @@ void main() {
     const bool hasAlbedoMap = indices.albedoMapIdx != -1;
     if (hasAlbedoMap)
     {
-        vec4 diffuse_sample = texture(sampler2D(AlbedoMaps[indices.albedoMapIdx], LinearRepeatSampler), fragmentUV);
+        vec4 diffuse_sample = texture(sampler2D(BindlessTextureArray[indices.albedoMapIdx], LinearRepeatSampler), fragmentUV);
         if (any(notEqual(diffuse.rgb, zero_vec)))
         {
             diffuse *= diffuse_sample;
@@ -285,7 +285,7 @@ void main() {
     const bool hasAlphaMap = indices.alphaMapIdx != -1;
     if (hasAlphaMap)
     {
-        diffuse.a = texture(sampler2D(AlphaMaps[indices.alphaMapIdx], LinearRepeatSampler), fragmentUV).r;
+        diffuse.a = texture(sampler2D(BindlessTextureArray[indices.alphaMapIdx], LinearRepeatSampler), fragmentUV).r;
     }
 
     vec3 specular = mtlParameters.specular;
@@ -293,7 +293,7 @@ void main() {
     const bool hasSpecularMap = indices.specularMapIdx != -1;
     if (hasSpecularMap)
     {
-        vec3 specular_sample = texture(sampler2D(SpecularMaps[indices.specularMapIdx], LinearRepeatSampler), fragmentUV).rgb;
+        vec3 specular_sample = texture(sampler2D(BindlessTextureArray[indices.specularMapIdx], LinearRepeatSampler), fragmentUV).rgb;
         if (noUboSpec)
         {
             specular *= specular_sample;
@@ -308,7 +308,7 @@ void main() {
     const bool hasRoughnessMap = indices.roughnessMapIdx != -1;
     if (hasRoughnessMap)
     {
-        float roughness_sample = texture(sampler2D(RoughnessMaps[indices.roughnessMapIdx], LinearRepeatSampler), fragmentUV).r;
+        float roughness_sample = texture(sampler2D(BindlessTextureArray[indices.roughnessMapIdx], LinearRepeatSampler), fragmentUV).r;
         if (roughness != 0.0f)
         {
             roughness *= roughness_sample;
@@ -324,7 +324,7 @@ void main() {
     const bool hasAmbientOcclusionMap = indices.aoMapIdx != -1;
     if (hasAmbientOcclusionMap)
     {
-        vec4 ambient_sample = texture(sampler2D(AmbientOcclusionMaps[indices.aoMapIdx], LinearRepeatSampler), fragmentUV);
+        vec4 ambient_sample = texture(sampler2D(BindlessTextureArray[indices.aoMapIdx], LinearRepeatSampler), fragmentUV);
         if (any(notEqual(ambient.rgb, zero_vec)))
         {
             ambient *= ambient_sample;
@@ -339,7 +339,7 @@ void main() {
     const bool hasEmissiveMap = indices.emissiveMapIdx != -1;
     if (hasEmissiveMap)
     {
-        float emissive_sample = texture(sampler2D(EmissiveMaps[indices.emissiveMapIdx], LinearRepeatSampler), fragmentUV).r;
+        float emissive_sample = texture(sampler2D(BindlessTextureArray[indices.emissiveMapIdx], LinearRepeatSampler), fragmentUV).r;
         if (any(notEqual(emissive, zero_vec)))
         {
             emissive *= emissive_sample;
@@ -354,7 +354,7 @@ void main() {
     const bool hasMetallicMap = indices.metallicMapIdx != -1;
     if (hasMetallicMap)
     {
-        float metallic_sample = texture(sampler2D(MetallicMaps[indices.metallicMapIdx], LinearRepeatSampler), fragmentUV).r;
+        float metallic_sample = texture(sampler2D(BindlessTextureArray[indices.metallicMapIdx], LinearRepeatSampler), fragmentUV).r;
         if (metallic != 0.0f)
         {
             metallic *= metallic_sample;

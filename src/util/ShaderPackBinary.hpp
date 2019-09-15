@@ -4,7 +4,8 @@
 #include <cstdint>
 #include "common/CommonInclude.hpp"
 
-namespace st {
+namespace st
+{
 
     class Shader;
     class ShaderPack;
@@ -32,7 +33,8 @@ namespace st {
     ST_API ShaderPackBinary* LoadShaderPackBinary(const char* fname);
     void ST_API SaveBinaryToFile(ShaderPackBinary* binary, const char* fname);
 
-    namespace detail {
+    namespace Experimental
+    {
         void LoadPackFromBinary(ShaderPackImpl* pack, ShaderPackBinary* bin);
     }
 

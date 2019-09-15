@@ -93,15 +93,26 @@ namespace st {
         shaderc::Compiler compiler;
         auto options = getCompilerOptions();
 
-        // Note: optimizer seems to behave weird and generally break for geometry shaders. Currently safest to just disable it.
-        if (kind == shaderc_glsl_geometry_shader) 
+        // We allow for optimization to be disabled for shaders in case they break or need debugging
+        // Should probably make this part of a try-catch with compiling shaders, where we try a second pass and notify the user if their shader fails optimized compile
+        auto disableOptsIter = FileTracker.StageOptimizationDisabled.find(handle);
+        bool configDisableOptimization = disableOptsIter != std::end(FileTracker.StageOptimizationDisabled) ? disableOptsIter->second : false;
+        shaderc_optimization_level optimizationLevel = configDisableOptimization ? shaderc_optimization_level_zero : shaderc_optimization_level_performance;
+
+        options.SetOptimizationLevel(optimizationLevel);
+
+        // Wholly unneeded and is going to artifically inflate our compile times. ifdef'd out in non-debug builds because of that
+#ifndef NDEBUG
+        shaderc::AssemblyCompilationResult assembly_result = compiler.CompileGlslToSpvAssembly(src_str, kind, name.c_str(), options);
+        if (assembly_result.GetCompilationStatus() == shaderc_compilation_status_success)
         {
-            options.SetOptimizationLevel(shaderc_optimization_level_zero);
+            auto assemblyIter = FileTracker.AssemblyStrings.emplace(handle, std::string{ assembly_result.begin(), assembly_result.end() });
+            if (!assemblyIter.second)
+            {
+                LOG(WARNING) << "Failed to emplace non-critical assembly string into state storage.";
+            }
         }
-        else if (FileTracker.StageOptimizationDisabled.count(handle) != 0u)
-        {
-            options.SetOptimizationLevel(FileTracker.StageOptimizationDisabled.at(handle) ? shaderc_optimization_level_zero : shaderc_optimization_level_performance);
-        }
+#endif
 
         shaderc::SpvCompilationResult compiliation_result = compiler.CompileGlslToSpv(src_str, kind, name.c_str(), options);
 
