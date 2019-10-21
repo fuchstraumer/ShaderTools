@@ -1,10 +1,10 @@
 #include "ShaderFileTracker.hpp"
 #include <fstream>
-#include <experimental/filesystem>
+#include <filesystem>
 #include "easyloggingpp/src/easylogging++.h"
 #include "ResourceFormats.hpp"
 
-namespace fs = std::experimental::filesystem;
+namespace fs = std::filesystem;
 
 namespace st {
 

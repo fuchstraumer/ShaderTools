@@ -7,7 +7,7 @@
 #include <unordered_map>
 #include <string>
 #include <vector>
-#include <experimental/filesystem>
+#include <filesystem>
 #include <unordered_set>
 #include <memory>
 #include <mutex>
@@ -33,8 +33,8 @@ namespace st {
         static ShaderFileTracker& GetFileTracker();
 
         std::recursive_mutex mapMutex;
-        std::experimental::filesystem::path cacheDir{ std::experimental::filesystem::temp_directory_path() };
-        std::unordered_map<ShaderStage, std::experimental::filesystem::file_time_type> StageLastModificationTimes;
+        std::filesystem::path cacheDir{ std::filesystem::temp_directory_path() };
+        std::unordered_map<ShaderStage, std::filesystem::file_time_type> StageLastModificationTimes;
         std::unordered_map<ShaderStage, std::string> ShaderBodies;
         std::unordered_map<ShaderStage, std::string> RecompiledSourcesFromBinaries;
         std::unordered_map<ShaderStage, std::string> AssemblyStrings;
@@ -44,8 +44,8 @@ namespace st {
         // first key is resource group, second map is stage and index of group in that stage
         std::unordered_map<std::string, std::unordered_map<ShaderStage, uint32_t>> ResourceGroupSetIndexMaps;
         std::unordered_map<ShaderStage, bool> StageOptimizationDisabled;
-        std::unordered_map<ShaderStage, std::experimental::filesystem::path> BodyPaths;
-        std::unordered_map<ShaderStage, std::experimental::filesystem::path> BinaryPaths;
+        std::unordered_map<ShaderStage, std::filesystem::path> BodyPaths;
+        std::unordered_map<ShaderStage, std::filesystem::path> BinaryPaths;
         std::unordered_map<std::string, std::unique_ptr<ShaderPackBinary, decltype(&DestroyShaderPackBinary)>> ShaderPackBinaries;
     };
 

@@ -1,7 +1,6 @@
 #pragma once
 #include "common/CommonInclude.hpp"
 #include <string>
-#include <experimental/filesystem>
 #include "common/ShaderStage.hpp"
 
 namespace st {

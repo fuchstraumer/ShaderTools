@@ -18,7 +18,7 @@
 namespace st
 {
 
-    namespace fs = std::experimental::filesystem;
+    namespace fs = std::filesystem;
     constexpr static uint32_t SHADER_TOOLS_VERSION = VK_MAKE_VERSION(0, 5, 0);
     constexpr static uint32_t SHADER_BINARY_MAGIC_VALUE{ 0x70cd20ae };
     constexpr static uint32_t SHADER_PACK_BINARY_MAGIC_VALUE{ 0x9db3bb66 };

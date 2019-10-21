@@ -2,7 +2,7 @@
 #include "yaml-cpp/yaml.h"
 #include "../util/ResourceFormats.hpp"
 #include "../util/ShaderFileTracker.hpp"
-#include <experimental/filesystem>
+#include <filesystem>
 #include <cassert>
 #include "easyloggingpp/src/easylogging++.h"
 #ifdef FindResource
@@ -11,7 +11,7 @@
 
 namespace st {
 
-    namespace fs = std::experimental::filesystem;
+    namespace fs = std::filesystem;
 
     constexpr static VkDescriptorType ARRAY_TYPE_FLAG_BITS = static_cast<VkDescriptorType>(1 << 16);
     constexpr VkDescriptorType MakeArrayType(VkDescriptorType type)

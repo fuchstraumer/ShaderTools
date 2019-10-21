@@ -5,7 +5,7 @@
 #include "core/ShaderResource.hpp"
 #include <string>
 #include <fstream>
-#include <experimental/filesystem>
+#include <filesystem>
 #include <vector>
 #include <set>
 #include <unordered_map>
@@ -14,7 +14,7 @@
 
 namespace st {
 
-    namespace fs = std::experimental::filesystem;
+    namespace fs = std::filesystem;
 
     struct yamlFile;
 

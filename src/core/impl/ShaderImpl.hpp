@@ -6,7 +6,7 @@
 #include <string>
 #include <unordered_set>
 #include <unordered_map>
-#include <experimental/filesystem>
+#include <filesystem>
 
 namespace st {
 
@@ -36,7 +36,7 @@ namespace st {
         std::vector<std::string> tags;
         std::unordered_map<std::string, size_t> resourceGroupBindingIndices;
 
-        std::experimental::filesystem::path resourceScriptPath;
+        std::filesystem::path resourceScriptPath;
     };
 
 }

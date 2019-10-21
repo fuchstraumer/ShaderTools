@@ -1,5 +1,5 @@
 #include "CompilerImpl.hpp"
-#include <experimental/filesystem>
+#include <filesystem>
 #include <fstream>
 #include "spirv_glsl.hpp"
 #include "easyloggingpp/src/easylogging++.h"
@@ -7,7 +7,7 @@
 
 namespace st {
 
-    namespace fs = std::experimental::filesystem;
+    namespace fs = std::filesystem;
 
     shaderc::CompileOptions ShaderCompilerImpl::getCompilerOptions() const {
         shaderc::CompileOptions options;

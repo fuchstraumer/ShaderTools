@@ -7,6 +7,7 @@
 #include "core/ResourceGroup.hpp"
 #include "easyloggingpp/src/easylogging++.h"
 #include <array>
+#include <filesystem>
 
 #if !defined(ST_BUILDING_STATIC)
 INITIALIZE_EASYLOGGINGPP
@@ -18,7 +19,7 @@ INITIALIZE_EASYLOGGINGPP
 
 namespace st {
 
-    namespace fs = std::experimental::filesystem;
+    namespace fs = std::filesystem;
 
     ShaderPackImpl::ShaderPackImpl(const char * shader_pack_file_path) : filePack(std::make_unique<yamlFile>(shader_pack_file_path)), workingDir(shader_pack_file_path) {
 

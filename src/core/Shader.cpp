@@ -6,7 +6,6 @@
 #include "reflection/ShaderReflector.hpp"
 #include "../reflection/impl/ShaderReflectorImpl.hpp"
 #include <unordered_set>
-#include <experimental/filesystem>
 #include "easyloggingpp/src/easylogging++.h"
 
 namespace st {

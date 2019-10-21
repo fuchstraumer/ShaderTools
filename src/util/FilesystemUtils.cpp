@@ -3,11 +3,12 @@
 #include <fstream>
 #include <mutex>
 #include <unordered_map>
+#include <filesystem>
 
 namespace st
 {
 
-    namespace fs = std::experimental::filesystem;
+    namespace fs = std::filesystem;
 
     fs::path OutputPath = fs::temp_directory_path();
     std::unordered_map<ShaderStage, std::string> shaderFiles = std::unordered_map<ShaderStage, std::string>{ };

@@ -5,7 +5,7 @@
 #include "core/ShaderResource.hpp"
 #include "generation/ShaderGenerator.hpp"
 #include "../../parser/yamlFile.hpp"
-#include <experimental/filesystem>
+#include <filesystem>
 #include <future>
 #include <memory>
 
@@ -37,7 +37,7 @@ namespace st {
         std::unordered_map<ShaderStage, std::future<void>> processorFutures;
         std::unordered_map<ShaderStage, std::unique_ptr<ShaderStageProcessor>> processors;
         std::unique_ptr<yamlFile> filePack{ nullptr };
-        std::experimental::filesystem::path workingDir;
+        std::filesystem::path workingDir;
         std::mutex guardMutex;
         std::unordered_map<std::string, std::unique_ptr<ResourceGroup>> resourceGroups;
         mutable descriptor_type_counts_t typeCounts;

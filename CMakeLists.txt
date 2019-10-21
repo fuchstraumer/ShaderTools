@@ -169,8 +169,7 @@ SET_TARGET_PROPERTIES(
     spirv-tools-build-version spirv-tools-header-DebugInfo spv-tools-spv-amd-gs
     spv-tools-spv-amd-sb spv-tools-spv-amd-sevp spv-tools-spv-amd-stm
     SPIRV-Tools-link SPIRV-Tools-reduce SPIRV-Tools-shared spirv-tools-vimsyntax
-    spv-tools-debuginfo glslangValidator spirv-remap Continuous Experimental
-    Nightly NightlyMemoryCheck
+    spv-tools-debuginfo glslangValidator spirv-remap
     PROPERTIES FOLDER "ShaderTools Dependencies")
 
 ## 

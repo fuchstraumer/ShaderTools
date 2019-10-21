@@ -4,7 +4,7 @@
 #include <cassert>
 #include "../util/FilesystemUtils.hpp"
 #include "easyloggingpp/src/easylogging++.h"
-namespace fs = std::experimental::filesystem;
+namespace fs = std::filesystem;
 
 namespace st {
 
