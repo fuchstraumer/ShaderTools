@@ -1,9 +1,11 @@
 #pragma once
 #include "common/CommonInclude.hpp"
-#include <string>
 #include "common/ShaderStage.hpp"
+#include <string>
+#include <vector>
 
-namespace st {
+namespace st
+{
 
     ShaderStage WriteAndAddShaderSource(const std::string file_name, const std::string& file_contents, const VkShaderStageFlagBits stage);
     void WriteAndAddShaderBinary(const std::string base_name, const std::vector<uint32_t>& file_contents, const VkShaderStageFlagBits stage);
