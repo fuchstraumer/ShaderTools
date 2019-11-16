@@ -15,7 +15,7 @@ void VerifyLoadedPack(st::ShaderPackBinary* bin0, st::ShaderPackBinary* bin1) {
 int main(int argc, char* argv[]) {
     using namespace st; 
     
-    for (size_t i = 0; i < 4; ++i) {
+    for (size_t i = 0; i < 1; ++i) {
 
         std::chrono::high_resolution_clock::time_point beforeExec;
         beforeExec = std::chrono::high_resolution_clock::now();

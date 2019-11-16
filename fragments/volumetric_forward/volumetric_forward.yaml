@@ -63,9 +63,9 @@ resource_groups :
                 float height_scale;
             Qualifiers: "restrict readonly"
             ArraySize : 16384
-        BindlessTextureArray : 
-            Type : "SampledImageArray"
+        BindlessTextureArray :
             ArraySize : 16384
+            Type : "SampledImageArray"
         LinearRepeatSampler : 
             Type : "Sampler"
         LinearClampSampler : 
