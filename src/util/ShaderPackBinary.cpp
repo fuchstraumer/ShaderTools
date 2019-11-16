@@ -207,7 +207,7 @@ namespace st
 
 }
 
-void st::Experimental::LoadPackFromBinary(ShaderPackImpl* pack, ShaderPackBinary* bin)
+void st::LoadPackFromBinary(ShaderPackImpl* pack, ShaderPackBinary* bin)
 {
 
     if (bin->ShaderToolsVersion != SHADER_TOOLS_VERSION)

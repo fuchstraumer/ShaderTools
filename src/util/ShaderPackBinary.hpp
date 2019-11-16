@@ -32,11 +32,7 @@ namespace st
     void ST_API DestroyShaderPackBinary(ShaderPackBinary* shader_pack);
     ST_API ShaderPackBinary* LoadShaderPackBinary(const char* fname);
     void ST_API SaveBinaryToFile(ShaderPackBinary* binary, const char* fname);
-
-    namespace Experimental
-    {
-        void LoadPackFromBinary(ShaderPackImpl* pack, ShaderPackBinary* bin);
-    }
+    void ST_API LoadPackFromBinary(ShaderPackImpl* pack, ShaderPackBinary* bin);
 
 }
 
