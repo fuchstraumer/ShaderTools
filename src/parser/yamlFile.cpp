@@ -106,6 +106,7 @@ namespace st {
         }
         parseGroups();
         parseResources();
+        sortResourcesAndSetBindingIndices();
     }
 
     yamlFile::~yamlFile() {}
@@ -210,6 +211,47 @@ namespace st {
 
     }
 
+    void yamlFile::sortResourcesAndSetBindingIndices()
+    {
+        for (auto& resource_block : resourceGroups)
+        {
+
+            // Used to put bindless or array resources at the end of the array
+            auto resource_block_sort = [](const st::ShaderResource& rsrc0, const st::ShaderResource& rsrc1)
+            {
+                const bool rsrc0isArray = rsrc0.IsDescriptorArray();
+                const bool rsrc1isArray = rsrc1.IsDescriptorArray();
+                if (rsrc0isArray && !rsrc1isArray)
+                {
+                    // this is used as if it was <, so we want array resources to never be lesser than
+                    return false;
+                }
+                else if (!rsrc0isArray && rsrc1isArray)
+                {
+                    return true;
+                }
+                else if (rsrc0isArray && rsrc1isArray)
+                {
+                    // Both are arrays. Unbounded arrays must always be at the end, and otherwise we'll sort by array size
+                    return rsrc0.ArraySize() < rsrc1.ArraySize();
+                }
+                else
+                {
+                    // In cases where neither is an array, just use descriptor type since it'll generally favor putting samplers in the root
+                    return rsrc0.DescriptorType() < rsrc1.DescriptorType();
+                }
+            };
+
+            std::sort(resource_block.second.begin(), resource_block.second.end(), resource_block_sort);
+
+            for (uint32_t i = 0; i < static_cast<uint32_t>(resource_block.second.size()); ++i)
+            {
+                resource_block.second[i].SetBindingIndex(i);
+            }
+        }
+
+    }
+
     void yamlFile::parseResources() {
         using namespace YAML;
 
@@ -298,7 +340,6 @@ namespace st {
                     rsrc.SetQualifiers(qualifiers.size(), qualifiers.data());
                 }
 
-                rsrc.SetBindingIndex(static_cast<uint32_t>(group_resources.size()));
                 group_resources.emplace_back(std::move(rsrc));
 
             }

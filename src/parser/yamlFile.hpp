@@ -1,7 +1,7 @@
 #pragma once
 #ifndef ST_PARSER_YAML_FILE_HPP
 #define ST_PARSER_YAML_FILE_HPP
-#include "core/ShaderResource.hpp"
+#include "resources/ShaderResource.hpp"
 #include "common/ShaderStage.hpp"
 #include <memory>
 #include <unordered_map>
@@ -31,6 +31,7 @@ namespace st {
     private:
         void parseResources();
         void parseGroups();
+        void sortResourcesAndSetBindingIndices();
         std::unique_ptr<yamlFileImpl> impl;
     };
 
