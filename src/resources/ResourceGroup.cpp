@@ -1,4 +1,4 @@
-#include "core/ResourceGroup.hpp"
+#include "resources/ResourceGroup.hpp"
 #include "../parser/yamlFile.hpp"
 #include "../util/ShaderFileTracker.hpp"
 #include "common/ShaderStage.hpp"

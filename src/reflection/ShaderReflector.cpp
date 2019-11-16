@@ -1,6 +1,6 @@
 #include "reflection/ShaderReflector.hpp"
 #include "impl/ShaderReflectorImpl.hpp"
-#include "core/ResourceUsage.hpp"
+#include "resources/ResourceUsage.hpp"
 #include "reflection/ReflectionStructs.hpp"
 #include "easyloggingpp/src/easylogging++.h"
 

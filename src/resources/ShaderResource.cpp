@@ -1,4 +1,4 @@
-#include "core/ShaderResource.hpp"
+#include "resources/ShaderResource.hpp"
 #include "common/UtilityStructs.hpp"
 #include "easyloggingpp/src/easylogging++.h"
 #include <set>

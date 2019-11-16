@@ -1,5 +1,6 @@
-#include "core/ResourceUsage.hpp"
-#include "core/ShaderResource.hpp"
+#include "resources/ResourceUsage.hpp"
+#include "resources/ShaderResource.hpp"
+
 namespace st {
 
     constexpr const char* const INVALID_SHADER_NAME = "INVALID_SHADER";

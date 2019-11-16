@@ -2,8 +2,8 @@
 #include "easyloggingpp/src/easylogging++.h"
 #include "../../util/ShaderFileTracker.hpp"
 #include "../../parser/yamlFile.hpp"
-#include "core/ShaderResource.hpp"
-#include "core/ResourceUsage.hpp"
+#include "resources/ShaderResource.hpp"
+#include "resources/ResourceUsage.hpp"
 #include <array>
 #include "spirv_cross_containers.hpp"
 #ifdef FindResource

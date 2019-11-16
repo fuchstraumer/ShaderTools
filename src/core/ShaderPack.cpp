@@ -1,7 +1,7 @@
 #include "core/ShaderPack.hpp"
 #include "impl/ShaderPackImpl.hpp"
 #include "common/UtilityStructs.hpp"
-#include "core/ResourceGroup.hpp"
+#include "resources/ResourceGroup.hpp"
 #include "easyloggingpp/src/easylogging++.h"
 
 namespace st {

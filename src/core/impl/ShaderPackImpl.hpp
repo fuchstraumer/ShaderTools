@@ -2,7 +2,6 @@
 #ifndef ST_SHADER_PACK_IMPL_HPP
 #define ST_SHADER_PACK_IMPL_HPP
 #include "core/Shader.hpp"
-#include "core/ShaderResource.hpp"
 #include "generation/ShaderGenerator.hpp"
 #include "../../parser/yamlFile.hpp"
 #include <filesystem>
@@ -42,7 +41,7 @@ namespace st {
         std::unordered_map<std::string, std::unique_ptr<ResourceGroup>> resourceGroups;
         mutable descriptor_type_counts_t typeCounts;
     private:
-        friend void LoadPackFromBinary(ShaderPackImpl* pack, ShaderPackBinary* bin);
+        friend void ST_API LoadPackFromBinary(ShaderPackImpl* pack, ShaderPackBinary* bin);
         friend struct ShaderPackBinary;
     };
 

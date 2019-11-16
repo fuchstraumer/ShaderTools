@@ -3,6 +3,7 @@
 #define ST_SHADER_RESOURCE_HPP
 #include "common/CommonInclude.hpp"
 #include "common/UtilityStructs.hpp"
+
 namespace st {
 
     class ShaderResourceImpl;
