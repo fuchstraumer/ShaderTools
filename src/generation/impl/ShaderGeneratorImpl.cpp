@@ -71,7 +71,7 @@ namespace st {
                 LOG(WARNING) << "Failed to emplace loaded source string into fileContents map.";
             }
 
-            auto frag_iter = fragments.emplace(shaderFragment{ fragment_type::Preamble, preamble });
+            auto frag_iter = fragments.emplace(fragment_type::Preamble, preamble);
             if (frag_iter == fragments.end()) {
                 LOG(ERROR) << "Couldn't add premamble to generator's fragments container! Generation cannot proceed without this component.";
                 throw std::runtime_error("Failed to add preamble to generator's fragments multimap!");
@@ -79,7 +79,7 @@ namespace st {
 
         }
         else {
-            auto frag_iter = fragments.emplace(shaderFragment{ fragment_type::Preamble, fileContents.at(fs::canonical(path)) });
+            auto frag_iter = fragments.emplace(fragment_type::Preamble, fileContents.at(fs::canonical(path)));
             if (frag_iter == fragments.end()) {
                 throw std::runtime_error("Failed to add preamble to generator's fragments multimap!");
             }
@@ -120,12 +120,12 @@ namespace st {
         while (!local_str.empty()) {
             if (std::regex_search(local_str, match, interface_var_in)) {
                 const std::string prefix("layout (location = " + std::to_string(ShaderResources.LastInputIndex++) + ") ");
-                fragments.insert(shaderFragment{ fragment_type::InputAttribute, std::string(prefix + match[0].str()) });
+                fragments.emplace(fragment_type::InputAttribute, std::string(prefix + match[0].str()));
                 local_str.erase(local_str.cbegin(), local_str.cbegin() + match[0].length());
             }
             else if (std::regex_search(local_str, match, interface_var_out)) {
                 const std::string prefix("layout (location = " + std::to_string(ShaderResources.LastOutputIndex++) + ") ");
-                fragments.insert(shaderFragment{ fragment_type::OutputAttribute, std::string(prefix + match[0].str()) });
+                fragments.emplace(fragment_type::OutputAttribute, std::string(prefix + match[0].str()));
                 local_str.erase(local_str.cbegin(), local_str.cbegin() + match[0].length());
             }
             else {
@@ -138,7 +138,7 @@ namespace st {
         static const std::string per_vertex{
             "out gl_PerVertex {\n    vec4 gl_Position;\n};\n\n"
         };
-        fragments.insert(shaderFragment{ fragment_type::glPerVertex, per_vertex });
+        fragments.emplace(fragment_type::glPerVertex, per_vertex);
     }
 
     const std::string& ShaderGeneratorImpl::getFullSource() const {
@@ -177,7 +177,7 @@ namespace st {
                     break;
                 }
                 const std::string prefix("layout (constant_id = " + std::to_string(ShaderResources.LastConstantIndex++) + ") ");
-                fragments.insert(shaderFragment{ fragment_type::SpecConstant, std::string(prefix + match[1].str()) });
+                fragments.emplace(fragment_type::SpecConstant, std::string(prefix + match[1].str()));
                 local_str.erase(local_str.cbegin(), local_str.cbegin() + match[0].length());
             }
         }
@@ -212,7 +212,7 @@ namespace st {
         }
 
         if (fileContents.count(include_path)) {
-            fragments.emplace(shaderFragment{ fragment_type::IncludedFragment, fileContents.at(include_path) });
+            fragments.emplace(fragment_type::IncludedFragment, fileContents.at(include_path));
             return;
         }
 
@@ -225,7 +225,7 @@ namespace st {
 
         std::string file_content{ std::istreambuf_iterator<char>(include_file), std::istreambuf_iterator<char>() };
         fileContents.emplace(include_path, file_content);
-        fragments.emplace(shaderFragment{ fragment_type::IncludedFragment, file_content });
+        fragments.emplace(fragment_type::IncludedFragment, file_content);
 
     }
 
@@ -472,7 +472,12 @@ namespace st {
         const std::string prefix = getResourcePrefix(active_set, "", sampled_image);
         std::string resource_type = std::string("texture");
         resource_type += sampled_image.ImageSamplerSubtype();
-        const std::string arrayName = sampled_image.IsDescriptorArray() ? name + std::string("[]") : name;
+        std::string arrayString("[]");
+        if (sampled_image.ArraySize() != std::numeric_limits<uint32_t>::max())
+        {
+            arrayString = "[" + std::to_string(sampled_image.ArraySize()) + "]";
+        }
+        const std::string arrayName = sampled_image.IsDescriptorArray() ? name + arrayString : name;
         return prefix + std::string("uniform ") + resource_type + std::string(" ") + arrayName + std::string(";\n");
     }
 
@@ -528,7 +533,7 @@ namespace st {
         size_t active_set = ShaderResources.LastSetIdx;
 
 
-        fragments.emplace(shaderFragment{ fragment_type::ResourceBlock, std::string("// Resource block: ") + block_name + std::string("\n") });
+        fragments.emplace(fragment_type::ResourceBlock, std::string("// Resource block: ") + block_name + std::string("\n"));
 
         auto& resource_block = resourceFile->resourceGroups.at(block_name);
         std::string resource_block_string{ "" };
@@ -603,8 +608,8 @@ namespace st {
     void ShaderGeneratorImpl::checkInterfaceOverrides(std::string& body_src_str) {
         std::smatch match;
         if (std::regex_search(body_src_str, match, interface_override)) {
-            fragments.erase(shaderFragment{ fragment_type::InputAttribute });
-            fragments.erase(shaderFragment{ fragment_type::OutputAttribute });
+            fragments.erase(shaderFragment{ fragment_type::InputAttribute, std::string() });
+            fragments.erase(shaderFragment{ fragment_type::OutputAttribute, std::string() });
             body_src_str.erase(body_src_str.begin() + match.position(), body_src_str.begin() + match.position() + match.length());
             if (!std::regex_search(body_src_str, match, end_interface_override)) {
                 throw std::runtime_error("Found opening of an override interface block, but couldn't find closing #pragma.");
@@ -632,7 +637,7 @@ namespace st {
         std::string result = extension_begin + extension_str;
         const std::string extension_close(" : enable \n");
         result += extension_close;
-        fragments.emplace(shaderFragment{ fragment_type::Extension, result });
+        fragments.emplace( fragment_type::Extension, result);
     }
 
     void ShaderGeneratorImpl::processBodyStrSpecializationConstants(std::string& body_src_str) {
@@ -641,7 +646,7 @@ namespace st {
             std::smatch match;
             if (std::regex_search(body_src_str, match, specialization_constant)) {
                 const std::string prefix("layout (constant_id = " + std::to_string(ShaderResources.LastConstantIndex++) + ") ");
-                fragments.emplace(shaderFragment{ fragment_type::SpecConstant, std::string(prefix + match[1].str() + "\n") });
+                fragments.emplace(fragment_type::SpecConstant, std::string(prefix + match[1].str() + "\n"));
                 body_src_str.erase(body_src_str.begin() + match.position(), body_src_str.begin() + match.position() + match.length());
             }
             else {
@@ -694,7 +699,8 @@ namespace st {
         }
     }
 
-    void ShaderGeneratorImpl::generate(const ShaderStage& handle, const std::string& path_to_source, const size_t num_extensions, const char* const* extensions) {
+    void ShaderGeneratorImpl::generate(const ShaderStage& handle, const std::string& path_to_source, const size_t num_extensions, const char* const* extensions)
+    {
         std::string body_str{ fetchBodyStr(handle, path_to_source) };
         // Includes can be any of the following: resource blocks, overrides, specialization_constants. 
         // Get them imported first so any potentially unique elements included are processed properly.
@@ -708,7 +714,7 @@ namespace st {
         processBodyStrSpecializationConstants(body_str);
         processBodyStrResourceBlocks(handle, body_str);
         processBodyStrInlineResources(handle, body_str);
-        fragments.emplace(shaderFragment{ fragment_type::Main, body_str });
+        fragments.emplace(fragment_type::Main, body_str);
     }
 
 }

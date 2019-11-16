@@ -2,7 +2,7 @@
 #ifndef ST_SHADER_GENERATOR_IMPL_HPP
 #define ST_SHADER_GENERATOR_IMPL_HPP
 #include "common/ShaderStage.hpp"
-#include "core/ShaderResource.hpp"
+#include "resources/ShaderResource.hpp"
 #include <string>
 #include <fstream>
 #include <filesystem>
@@ -34,15 +34,18 @@ namespace st {
     };
 
     struct shaderFragment {
+        shaderFragment(fragment_type type, std::string data) noexcept : Type(type), Data(std::move(data)) {}
         shaderFragment() = default;
         shaderFragment(const shaderFragment&) = default;
         shaderFragment& operator=(const shaderFragment&) = default;
         fragment_type Type = fragment_type::Invalid;
         std::string Data;
-        bool operator==(const shaderFragment& other) const noexcept {
+        bool operator==(const shaderFragment& other) const noexcept
+        {
             return Type == other.Type;
         }
-        bool operator<(const shaderFragment& other) const noexcept {
+        bool operator<(const shaderFragment& other) const noexcept
+        {
             return Type < other.Type;
         }
     };
