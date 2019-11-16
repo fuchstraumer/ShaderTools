@@ -48,22 +48,14 @@ SET(ST_COMMON_SRCS
 )
 
 SET(ST_CORE_SRCS
-    "${CMAKE_CURRENT_SOURCE_DIR}/include/core/ResourceGroup.hpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/include/core/ResourceUsage.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/include/core/Shader.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/include/core/ShaderPack.hpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/include/core/ShaderResource.hpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/core/ResourceGroup.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/core/ResourceUsage.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/core/Shader.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/core/ShaderPack.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/core/ShaderResource.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/core/impl/ShaderPackImpl.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/core/impl/ShaderPackImpl.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/core/impl/ShaderImpl.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/core/impl/ShaderImpl.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/core/impl/ShaderStageProcessor.hpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/core/impl/ShaderStageProcessor.cpp"
 )
 
 SET(ST_GENERATION_SRCS
@@ -76,6 +68,13 @@ SET(ST_GENERATION_SRCS
     "${CMAKE_CURRENT_SOURCE_DIR}/src/generation/impl/CompilerImpl.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/generation/impl/ShaderGeneratorImpl.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/generation/impl/ShaderGeneratorImpl.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/generation/impl/ShaderStageProcessor.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/generation/impl/ShaderStageProcessor.cpp"
+)
+
+SET(ST_PARSER_SRCS
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/parser/yamlFile.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/parser/yamlFile.cpp"
 )
 
 SET(ST_REFLECTION_SRCS
@@ -87,9 +86,13 @@ SET(ST_REFLECTION_SRCS
     "${CMAKE_CURRENT_SOURCE_DIR}/src/reflection/impl/ShaderReflectorImpl.cpp"
 )
 
-SET(ST_PARSER_SRCS
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/parser/yamlFile.hpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/parser/yamlFile.cpp"
+SET(ST_RESOURCES_SRCS
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/resources/ResourceGroup.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/resources/ResourceUsage.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/resources/ShaderResource.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/resources/ResourceGroup.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/resources/ResourceUsage.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/resources/ShaderResource.cpp"
 )
 
 SET(ST_UTIL_SRCS
@@ -104,29 +107,32 @@ SET(ST_UTIL_SRCS
 )
 
 SOURCE_GROUP("common" FILES ${ST_COMMON_SRCS})
-SOURCE_GROUP("util" FILES ${ST_UTIL_SRCS})
-SOURCE_GROUP("generation" FILES ${ST_GENERATION_SRCS})
-SOURCE_GROUP("reflection" FILES ${ST_REFLECTION_SRCS})
 SOURCE_GROUP("core" FILES ${ST_CORE_SRCS})
+SOURCE_GROUP("generation" FILES ${ST_GENERATION_SRCS})
 SOURCE_GROUP("parser" FILES ${ST_PARSER_SRCS})
+SOURCE_GROUP("reflection" FILES ${ST_REFLECTION_SRCS})
+SOURCE_GROUP("resources" FILES ${ST_RESOURCES_SRCS})
+SOURCE_GROUP("util" FILES ${ST_UTIL_SRCS})
 
 FIND_PACKAGE(Vulkan REQUIRED)
 
-OPTION(BUILD_STATIC "Build as a static library instead of a DLL. Not recommended." OFF)
+OPTION(SHADERTOOLS_BUILD_STATIC "Build as a static library instead of a DLL. Not recommended." OFF)
 
-IF(BUILD_STATIC) 
+IF(SHADERTOOLS_BUILD_STATIC) 
     ADD_LIBRARY(ShaderTools STATIC ${ST_COMMON_SRCS} ${ST_UTIL_SRCS} ${ST_GENERATION_SRCS} 
-        ${ST_REFLECTION_SRCS} ${ST_CORE_SRCS} ${ST_PARSER_SRCS}
+        ${ST_REFLECTION_SRCS} ${ST_CORE_SRCS} ${ST_PARSER_SRCS} ${ST_RESOURCES_SRCS}
         "${CMAKE_CURRENT_SOURCE_DIR}/third_party/easyloggingpp/src/easylogging++.cc")
     # Used to avoid initializing easyloggingpp when built as static library. Causes 
     # duplicate symbol errors otherwise
     TARGET_COMPILE_DEFINITIONS(ShaderTools PRIVATE "ST_BUILDING_STATIC")
 ELSE()
     ADD_LIBRARY(ShaderTools SHARED ${ST_COMMON_SRCS} ${ST_UTIL_SRCS} ${ST_GENERATION_SRCS} 
-        ${ST_REFLECTION_SRCS} ${ST_CORE_SRCS} ${ST_PARSER_SRCS}
+        ${ST_REFLECTION_SRCS} ${ST_CORE_SRCS} ${ST_PARSER_SRCS} ${ST_RESOURCES_SRCS}
         "${CMAKE_CURRENT_SOURCE_DIR}/third_party/easyloggingpp/src/easylogging++.cc")
     TARGET_COMPILE_DEFINITIONS(ShaderTools PUBLIC "$<BUILD_INTERFACE:SHADERTOOLS_BUILD_DLL>" "$<INSTALL_INTERFACE:SHADERTOOLS_DLL>")
 ENDIF()
+
+set_target_properties(ShaderTools PROPERTIES FOLDER "ShaderTools")
 
 # Require CXX17 for all compilers
 SET_PROPERTY(TARGET ShaderTools PROPERTY CXX_STANDARD 17)
@@ -171,7 +177,6 @@ SET_TARGET_PROPERTIES(
     SPIRV-Tools-link SPIRV-Tools-reduce SPIRV-Tools-shared spirv-tools-vimsyntax
     spv-tools-debuginfo glslangValidator spirv-remap
     PROPERTIES FOLDER "ShaderTools Dependencies")
-
 ## 
 
 INSTALL(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include/" DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/ShaderTools/")
@@ -187,5 +192,5 @@ IF(SHADERTOOLS_BUILD_TESTS)
     TARGET_LINK_LIBRARIES(ParseTest0 ShaderTools)
     TARGET_INCLUDE_DIRECTORIES(ParseTest0 PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/luajit/src"
     "${CMAKE_CURRENT_SOURCE_DIR}/third_party/luabridge/Source" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/easyloggingpp/src")
-    SET_TARGET_PROPERTIES(ParseTest0 PROPERTIES FOLDER "ShaderTools Tests")
+    SET_TARGET_PROPERTIES(ParseTest0 PROPERTIES FOLDER "ShaderTools")
 ENDIF()

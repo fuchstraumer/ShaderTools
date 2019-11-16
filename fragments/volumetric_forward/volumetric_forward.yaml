@@ -40,6 +40,7 @@ resource_groups :
                 int roughnessMapIdx;
                 int emissiveMapIdx;
             Qualifiers: "restrict readonly"
+            ArraySize : 16384
         MaterialParameters : 
             Type : "StorageBufferArray"   
             Members : |+1
@@ -61,8 +62,10 @@ resource_groups :
                 float anisotropy_rotation;
                 float height_scale;
             Qualifiers: "restrict readonly"
+            ArraySize : 16384
         BindlessTextureArray : 
             Type : "SampledImageArray"
+            ArraySize : 16384
         LinearRepeatSampler : 
             Type : "Sampler"
         LinearClampSampler : 

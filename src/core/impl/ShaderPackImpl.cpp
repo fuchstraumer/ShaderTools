@@ -3,8 +3,8 @@
 #include "../../util/ShaderFileTracker.hpp"
 #include "../../util/ShaderPackBinary.hpp"
 #include "../../reflection/impl/ShaderReflectorImpl.hpp"
-#include "ShaderStageProcessor.hpp"
-#include "core/ResourceGroup.hpp"
+#include "../../generation/impl/ShaderStageProcessor.hpp"
+#include "resources/ResourceGroup.hpp"
 #include "easyloggingpp/src/easylogging++.h"
 #include <array>
 #include <filesystem>
