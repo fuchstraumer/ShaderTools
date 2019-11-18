@@ -22,6 +22,6 @@
 #pragma warning(disable: 4251 )
 #endif
 
-#include <vulkan/vulkan.h>
+#include <vulkan/vulkan_core.h>
 #include <cstdint>
 #include <memory>
