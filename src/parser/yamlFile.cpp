@@ -145,7 +145,7 @@ namespace st {
         for (auto iter = groups.begin(); iter != groups.end(); ++iter) {
             std::string group_name = iter->first.as<std::string>();
 
-            auto add_stage = [this, &group_name](std::string shader_name, VkShaderStageFlagBits stage)->ShaderStage {
+            auto add_stage = [this, &group_name](std::string shader_name, VkShaderStageFlags stage)->ShaderStage {
                 if (stages.count(shader_name) == 0) {
                     auto iter = stages.emplace(shader_name, ShaderStage{ shader_name.c_str(), stage });
                     shaderGroups[group_name].emplace(iter.first->second);

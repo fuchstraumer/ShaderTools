@@ -62,4 +62,29 @@ namespace st {
         }
     }
 
+    ShaderStage ST_API CompileStandaloneShader(const char* shader_name, const VkShaderStageFlags shader_stage, const char* src_str, const size_t src_len)
+    {
+        ShaderStage resultHandle(shader_name, shader_stage);
+        const std::string copiedSourceString(src_str, src_str + src_len);
+        ShaderCompilerImpl compiler;
+        const auto compilerStage = compiler.getShaderKind(resultHandle.GetStage());
+        compiler.compile(resultHandle, compilerStage, shader_name, copiedSourceString);
+        return resultHandle;
+    }
+
+    void ST_API RetrieveCompiledStandaloneShader(const ShaderStage shader_handle, size_t* binary_sz, uint32_t* binary_dest)
+    {
+        auto& fileTracker = ShaderFileTracker::GetFileTracker();
+        auto binary_iter = fileTracker.Binaries.find(shader_handle);
+        if (binary_iter != std::end(fileTracker.Binaries))
+        {
+            auto& binaryVec = binary_iter->second;
+            *binary_sz = binaryVec.size();
+            if (binary_dest != nullptr)
+            {
+                std::copy(binaryVec.begin(), binaryVec.end(), binary_dest);
+            }
+        }
+    }
+
 }

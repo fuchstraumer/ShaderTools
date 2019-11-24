@@ -15,7 +15,7 @@ namespace st
     std::unordered_map<ShaderStage, std::vector<uint32_t>> shaderBinaries = std::unordered_map<ShaderStage, std::vector<uint32_t>>{ };
     std::unordered_multimap<ShaderStage, fs::path> shaderPaths = std::unordered_multimap<ShaderStage, fs::path>{};
     
-    static const std::map<VkShaderStageFlagBits, std::string> stage_extension_map
+    static const std::map<VkShaderStageFlags, std::string> stage_extension_map
     {
         { VK_SHADER_STAGE_VERTEX_BIT, ".vert" },
         { VK_SHADER_STAGE_FRAGMENT_BIT, ".frag" },
@@ -25,7 +25,7 @@ namespace st
         { VK_SHADER_STAGE_COMPUTE_BIT, ".comp" }
     };
 
-    static const std::map<std::string, VkShaderStageFlagBits> extension_stage_map
+    static const std::map<std::string, VkShaderStageFlags> extension_stage_map
     {
         { ".vert", VK_SHADER_STAGE_VERTEX_BIT },
         { ".frag", VK_SHADER_STAGE_FRAGMENT_BIT },
@@ -35,7 +35,7 @@ namespace st
         { ".comp", VK_SHADER_STAGE_COMPUTE_BIT }
     };
 
-    ShaderStage WriteAndAddShaderSource(const std::string file_name, const std::string& file_contents, const VkShaderStageFlagBits stage)
+    ShaderStage WriteAndAddShaderSource(const std::string file_name, const std::string& file_contents, const VkShaderStageFlags stage)
     {
         const std::string output_name = file_name + stage_extension_map.at(stage);
         const fs::path output_path = OutputPath / fs::path(output_name);
@@ -64,7 +64,7 @@ namespace st
         return result;
     }
     
-    void WriteAndAddShaderBinary(const std::string base_name, const std::vector<uint32_t>& file_contents, const VkShaderStageFlagBits stage)
+    void WriteAndAddShaderBinary(const std::string base_name, const std::vector<uint32_t>& file_contents, const VkShaderStageFlags stage)
     {
         const std::string extension = fs::path(base_name).extension().string();
 
