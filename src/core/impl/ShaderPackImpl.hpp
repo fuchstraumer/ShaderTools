@@ -11,7 +11,6 @@
 namespace st {
 
     class ResourceGroup;
-    struct ShaderPackBinary;
     class ShaderStageProcessor;
 
     class ShaderPackImpl {
@@ -20,7 +19,6 @@ namespace st {
         ShaderPackImpl& operator=(const ShaderPackImpl&) = delete;
 
         ShaderPackImpl(const char* shader_pack_file_path);
-        ShaderPackImpl(ShaderPackBinary* binary_data);
         ~ShaderPackImpl();
 
         void createPackScript(const char * fname);
@@ -40,9 +38,6 @@ namespace st {
         std::mutex guardMutex;
         std::unordered_map<std::string, std::unique_ptr<ResourceGroup>> resourceGroups;
         mutable descriptor_type_counts_t typeCounts;
-    private:
-        friend void ST_API LoadPackFromBinary(ShaderPackImpl* pack, ShaderPackBinary* bin);
-        friend struct ShaderPackBinary;
     };
 
 }

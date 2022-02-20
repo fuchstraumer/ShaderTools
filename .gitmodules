@@ -13,9 +13,6 @@
 [submodule "third_party/easyloggingpp"]
 	path = third_party/easyloggingpp
 	url = https://github.com/muflihun/easyloggingpp
-[submodule "third_party/bitsery"]
-	path = third_party/bitsery
-	url = https://github.com/fraillt/bitsery
 [submodule "third_party/yaml-cpp"]
 	path = third_party/yaml-cpp
 	url = https://github.com/jbeder/yaml-cpp

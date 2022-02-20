@@ -5,7 +5,6 @@
 #include "../../generation/impl/ShaderStageProcessor.hpp"
 #include "../../reflection/impl/ShaderReflectorImpl.hpp"
 #include "../../util/ShaderFileTracker.hpp"
-#include "../../util/ShaderPackBinary.hpp"
 #include "easyloggingpp/src/easylogging++.h"
 #include <array>
 #include <filesystem>
@@ -31,15 +30,6 @@ namespace st
         workingDir = workingDir.remove_filename();
         processShaderStages();
 
-        createShaders();
-        createResourceGroups();
-        setDescriptorTypeCounts();
-    }
-
-    ShaderPackImpl::ShaderPackImpl(ShaderPackBinary * binary_data)
-    {
-        LoadPackFromBinary(this, binary_data);
-        processShaderStages();
         createShaders();
         createResourceGroups();
         setDescriptorTypeCounts();

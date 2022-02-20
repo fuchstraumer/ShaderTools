@@ -13,8 +13,6 @@ namespace st {
 
     ShaderPack::ShaderPack(const char* fpath) : impl(std::make_unique<ShaderPackImpl>(fpath)) {}
 
-    ShaderPack::ShaderPack(ShaderPackBinary * shader_pack_bin) : impl(std::make_unique<ShaderPackImpl>(shader_pack_bin)) {}
-
     ShaderPack::~ShaderPack() {}
 
     const Shader* ShaderPack::GetShaderGroup(const char * name) const {

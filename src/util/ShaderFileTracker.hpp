@@ -3,7 +3,6 @@
 #define ST_SHADER_FILE_TRACKER_HPP
 #include "common/CommonInclude.hpp"
 #include "common/ShaderStage.hpp"
-#include "ShaderPackBinary.hpp"
 #include <unordered_map>
 #include <string>
 #include <vector>
@@ -46,7 +45,6 @@ namespace st {
         std::unordered_map<ShaderStage, bool> StageOptimizationDisabled;
         std::unordered_map<ShaderStage, std::filesystem::path> BodyPaths;
         std::unordered_map<ShaderStage, std::filesystem::path> BinaryPaths;
-        std::unordered_map<std::string, std::unique_ptr<ShaderPackBinary, decltype(&DestroyShaderPackBinary)>> ShaderPackBinaries;
     };
 
 }

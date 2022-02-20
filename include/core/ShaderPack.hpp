@@ -9,7 +9,6 @@ namespace st {
     class Shader;
     class ShaderResource;
     class ResourceGroup;
-    struct ShaderPackBinary;
 
     class ST_API ShaderPack {
         ShaderPack(const ShaderPack&) = delete;
@@ -17,7 +16,6 @@ namespace st {
     public:
 
         ShaderPack(const char* shader_pack_lua_script_path);
-        ShaderPack(ShaderPackBinary* shader_pack_bin);
         ~ShaderPack();
 
         const Shader* GetShaderGroup(const char* name) const;

@@ -43,7 +43,6 @@ namespace st {
         ResourceGroupSetIndexMaps.clear();
         BodyPaths.clear();
         BinaryPaths.clear();
-        ShaderPackBinaries.clear();
     }
 
     void ShaderFileTracker::DumpContentsToCacheDir()
