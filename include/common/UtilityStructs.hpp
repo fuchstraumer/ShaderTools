@@ -56,7 +56,7 @@ namespace st {
         uint32_t ConstantID;
         union
         {
-            VkBool32 value_b32;
+            VkBool32 value_b32 = VK_FALSE;
             float value_f32;
             int32_t value_i32;
             uint32_t value_ui32;

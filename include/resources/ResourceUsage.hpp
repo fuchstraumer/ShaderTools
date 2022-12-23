@@ -14,7 +14,7 @@ namespace st
         Read = 0,
         Write,
         ReadWrite,
-        INVALID = std::numeric_limits<uint32_t>::max()
+        INVALID = std::numeric_limits<uint8_t>::max()
     };
 
     class ST_API ResourceUsage

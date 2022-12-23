@@ -10,11 +10,11 @@
 #include <unordered_set>
 #include <map>
 #include <set>
-#include <vulkan/vulkan_enums.hpp>
+#include <vulkan/vulkan_core.h>
 
 namespace st
 {
-
+    struct ShaderStage;
     class ResourceUsage;
     struct yamlFile;
 
