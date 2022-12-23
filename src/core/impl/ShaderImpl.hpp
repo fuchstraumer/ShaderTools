@@ -8,14 +8,16 @@
 #include <unordered_map>
 #include <filesystem>
 
-namespace st {
+namespace st
+{
 
     class ShaderGenerator;
     class ShaderCompiler;
     class ShaderReflector;
     struct yamlFile;
 
-    class ShaderGroupImpl {
+    class ShaderGroupImpl
+    {
         ShaderGroupImpl(const ShaderGroupImpl& other) = delete;
         ShaderGroupImpl& operator=(const ShaderGroupImpl& other) = delete;
     public:

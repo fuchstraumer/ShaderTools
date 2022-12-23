@@ -45,7 +45,7 @@ namespace st
 
     void ShaderGenerator::GetFullSource(size_t* len, char* dest) const
     {
-        
+
         const std::string source = impl->getFullSource();
         *len = source.size();
 
@@ -53,7 +53,7 @@ namespace st
         {
             std::copy(source.cbegin(), source.cend(), dest);
         }
-        
+
     }
 
     ShaderStage ShaderGenerator::SaveCurrentToFile(const char* fname) const
@@ -66,7 +66,7 @@ namespace st
         {
             throw std::runtime_error("Shader generator could not open file to write completed plaintext shader to");
         }
-        
+
         return WriteAndAddShaderSource(fname, source_str, impl->Stage.GetStage());
     }
 

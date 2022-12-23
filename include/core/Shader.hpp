@@ -5,7 +5,9 @@
 #include "common/ShaderStage.hpp"
 #include "common/UtilityStructs.hpp"
 #include "reflection/ReflectionStructs.hpp"
-namespace st {
+
+namespace st
+{
 
     class ShaderGroupImpl;
     class ShaderPackImpl;
@@ -16,7 +18,8 @@ namespace st {
     /*  Designed to be used to group shaders into the groups that they are used in
         when bound to a pipeline, to simplify a few key things.
     */
-    class ST_API Shader {
+    class ST_API Shader
+    {
         Shader(const Shader&) = delete;
         Shader& operator=(const Shader&) = delete;
     public:
@@ -27,7 +30,7 @@ namespace st {
         Shader& operator=(Shader&& other) noexcept;
 
         ShaderStage AddShaderStage(const char* shader_name,const VkShaderStageFlagBits& flags);
-        
+
         void GetInputAttributes(const VkShaderStageFlags stage, size_t* num_attrs, VertexAttributeInfo* attributes) const;
         void GetOutputAttributes(const VkShaderStageFlags stage, size_t* num_attrs, VertexAttributeInfo* attributes) const;
         PushConstantInfo GetPushConstantInfo(const VkShaderStageFlags stage) const;

@@ -2,7 +2,8 @@
 #ifndef ST_BUILT_IN_FRAGMENTS_HPP
 #define ST_BUILT_IN_FRAGMENTS_HPP
 #include <string>
-namespace st {
+namespace st
+{
 
     const char* VertexInterfaceStr = R"(
     #pragma VERT_INTERFACE_BEGIN

@@ -11,11 +11,13 @@
 #include <memory>
 #include <mutex>
 
-namespace st {
+namespace st
+{
 
     void ST_API ClearProgramState();
 
-    struct ShaderFileTracker {
+    struct ShaderFileTracker
+    {
         ShaderFileTracker(const std::string& initial_directory = std::string{ "" });
         ~ShaderFileTracker();
 

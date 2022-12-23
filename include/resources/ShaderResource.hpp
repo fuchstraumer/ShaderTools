@@ -30,7 +30,7 @@ namespace st
         ShaderResource(ShaderResource&& other) noexcept;
         ShaderResource& operator=(const ShaderResource& other) noexcept;
         ShaderResource& operator=(ShaderResource&& other) noexcept;
-        
+
         size_t BindingIndex() const noexcept;
         size_t InputAttachmentIndex() const noexcept;
         VkFormat Format() const noexcept;

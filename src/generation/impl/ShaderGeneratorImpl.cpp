@@ -177,7 +177,7 @@ namespace st
             {
                 result_stream << fragment.Data;
             }
-            
+
             auto iter = ftracker.FullSourceStrings.emplace(Stage, result_stream.str());
             if (!iter.second)
             {
@@ -810,7 +810,7 @@ namespace st
     void ShaderGeneratorImpl::generate(const ShaderStage& handle, const std::string& path_to_source, const size_t num_extensions, const char* const* extensions)
     {
         std::string body_str{ fetchBodyStr(handle, path_to_source) };
-        // Includes can be any of the following: resource blocks, overrides, specialization_constants. 
+        // Includes can be any of the following: resource blocks, overrides, specialization_constants.
         // Get them imported first so any potentially unique elements included are processed properly.
         processBodyStrIncludes(body_str);
         checkInterfaceOverrides(body_str);

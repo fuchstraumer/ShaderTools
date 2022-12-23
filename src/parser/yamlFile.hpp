@@ -7,11 +7,9 @@
 #include <unordered_map>
 #include <set>
 #include <vector>
-#ifdef FindResource
-#undef FindResource
-#endif
 
-namespace st {
+namespace st
+{
 
     struct yamlFileImpl;
 

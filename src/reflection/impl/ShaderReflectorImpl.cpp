@@ -81,7 +81,7 @@ namespace st
             {
                 results = rsrc_name;
             }
-            
+
             size_t second_idx = results.find_last_of('_');
             if (second_idx != std::string::npos)
             {
@@ -90,7 +90,7 @@ namespace st
 
             return results;
         };
-     
+
         auto extract_buffer_members = [](const spirv_cross::Resource& rsrc, const spirv_cross::Compiler& cmplr)->std::vector<ShaderResourceSubObject>
         {
             std::vector<ShaderResourceSubObject> results;
@@ -105,7 +105,7 @@ namespace st
             }
             return results;
         };
-        
+
         const auto resources_all = recompiler->get_shader_resources();
         spirv_cross::SmallVector<spirv_cross::Resource> resources;
         switch (type_being_parsed)
@@ -187,13 +187,13 @@ namespace st
                 }
             }
             const uint32_t set_idx = recompiler->get_decoration(rsrc.id, spv::DecorationDescriptorSet);
-            
+
             if (resourceGroupSetIndices.count(parent_group_name) == 0)
             {
                 resourceGroupSetIndices.emplace(parent_group_name, set_idx);
             }
 
-            auto iter = tempResources.emplace(set_idx, 
+            auto iter = tempResources.emplace(set_idx,
                 ResourceUsage(shader_handle, parent_resource, modifier, parent_resource->DescriptorType()));
             iter->second.bindingIdx = binding_idx;
             iter->second.setIdx = set_idx;
@@ -302,7 +302,7 @@ namespace st
 
                 const SPIRConstant & spc_value = recompiler->get_constant(spc.id);
                 const SPIRType& spc_type = recompiler->get_type(spc_value.constant_type);
-                
+
                 if (spc_type.columns > 1 || spc_type.vecsize > 1)
                 {
                     throw std::runtime_error("Attempted to use a vector or matrix specialization constant, which is not possible");
@@ -351,7 +351,7 @@ namespace st
     {
         using namespace spirv_cross;
 
-        recompiler = std::make_unique<CompilerGLSL>(binary_data); 
+        recompiler = std::make_unique<CompilerGLSL>(binary_data);
         CompilerGLSL::Options options;
         options.vulkan_semantics = true;
         // we set this ourselves in most locations!
@@ -376,12 +376,12 @@ namespace st
             output_stream << recompiled_source;
             output_stream.flush();
             output_stream.close();
-            
+
             throw e;
         }
 
-		auto& sft = ShaderFileTracker::GetFileTracker();
-		auto iter = sft.RecompiledSourcesFromBinaries.emplace(handle, recompiled_source);
+        auto& sft = ShaderFileTracker::GetFileTracker();
+        auto iter = sft.RecompiledSourcesFromBinaries.emplace(handle, recompiled_source);
 
         constexpr static VkDescriptorType supportedDescriptorTypes[]
         {
@@ -442,5 +442,5 @@ namespace st
     {
         return sortedSets.size();
     }
-    
+
 }

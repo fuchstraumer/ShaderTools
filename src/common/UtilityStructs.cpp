@@ -62,7 +62,7 @@ namespace st
         Offset(other.Offset),
         Size(other.Size) {}
 
-    ShaderResourceSubObject::ShaderResourceSubObject(ShaderResourceSubObject&& other) noexcept : 
+    ShaderResourceSubObject::ShaderResourceSubObject(ShaderResourceSubObject&& other) noexcept :
         Type(std::move(other.Type)),
         Name(std::move(other.Name)),
         NumElements(std::move(other.NumElements)),

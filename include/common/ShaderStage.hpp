@@ -3,9 +3,11 @@
 #define ST_SHADER_HPP
 #include "CommonInclude.hpp"
 
-namespace st {
+namespace st
+{
 
-    struct ST_API ShaderStage {
+    struct ST_API ShaderStage
+    {
         ShaderStage(const char* shader_name, const VkShaderStageFlags stages);
         explicit ShaderStage(uint64_t id_val) noexcept;
         ShaderStage(const ShaderStage& other) noexcept;
@@ -20,11 +22,14 @@ namespace st {
 
 }
 
-namespace std {
+namespace std
+{
 
     template<>
-    struct hash<st::ShaderStage> {
-        size_t operator()(const st::ShaderStage& shader) const {
+    struct hash<st::ShaderStage>
+    {
+        constexpr size_t operator()(const st::ShaderStage& shader) const noexcept
+        {
             return std::hash<uint64_t>()(shader.ID);
         }
     };

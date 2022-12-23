@@ -6,13 +6,15 @@
 #include <string>
 #include <memory>
 
-namespace st {
+namespace st
+{
 
     class ShaderGeneratorImpl;
     class ShaderCompilerImpl;
     struct yamlFile;
 
-    class ShaderStageProcessor {
+    class ShaderStageProcessor
+    {
     public:
 
         ShaderStageProcessor(ShaderStage stage, yamlFile* yfile);

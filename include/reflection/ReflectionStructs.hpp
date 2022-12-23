@@ -9,7 +9,7 @@ namespace st
 
     struct PushConstantInfoImpl;
     struct VertexAttributeInfoImpl;
-  
+
     struct ST_API PushConstantInfo
     {
         PushConstantInfo() noexcept;

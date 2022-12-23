@@ -12,7 +12,7 @@ namespace st
 {
     namespace fs = std::filesystem;
 
-    ShaderPackImpl::ShaderPackImpl(const char * shader_pack_file_path) : filePack(std::make_unique<yamlFile>(shader_pack_file_path)), workingDir(shader_pack_file_path)
+    ShaderPackImpl::ShaderPackImpl(const char* shader_pack_file_path) : filePack(std::make_unique<yamlFile>(shader_pack_file_path)), workingDir(shader_pack_file_path)
     {
         workingDir = fs::canonical(workingDir);
         packPath = workingDir.string();
@@ -122,7 +122,7 @@ namespace st
                     typeCounts.StorageBuffersDynamic++;
                     break;
                 default:
-                    throw std::domain_error("Invalid VkDescriptor type value when counting up descriptors of each type");
+                    throw std::runtime_error("Invalid VkDescriptor type value when counting up descriptors of each type");
                 }
             }
         }

@@ -4,7 +4,8 @@
 #include "../../util/ShaderFileTracker.hpp"
 #include <filesystem>
 
-namespace st {
+namespace st
+{
 
     namespace fs = std::filesystem;
 
@@ -102,7 +103,7 @@ namespace st {
                 }
             }
         }
-        
+
         if (ftracker.Binaries.count(stage) != 0)
         {
             return ftracker.Binaries.at(stage);

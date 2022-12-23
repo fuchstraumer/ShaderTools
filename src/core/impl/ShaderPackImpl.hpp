@@ -8,12 +8,14 @@
 #include <future>
 #include <memory>
 
-namespace st {
+namespace st
+{
 
     class ResourceGroup;
     class ShaderStageProcessor;
 
-    class ShaderPackImpl {
+    class ShaderPackImpl
+    {
     public:
         ShaderPackImpl(const ShaderPackImpl&) = delete;
         ShaderPackImpl& operator=(const ShaderPackImpl&) = delete;

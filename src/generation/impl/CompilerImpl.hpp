@@ -6,12 +6,14 @@
 #include <vector>
 #include <iostream>
 #include <unordered_map>
-#include <vulkan/vulkan.h>
+#include <vulkan/vulkan_core.h>
 #include "shaderc/shaderc.hpp"
 
-namespace st {
+namespace st
+{
 
-    class ShaderCompilerImpl {
+    class ShaderCompilerImpl
+    {
         ShaderCompilerImpl(const ShaderCompilerImpl&) = delete;
         ShaderCompilerImpl& operator=(const ShaderCompilerImpl&) = delete;
     public:

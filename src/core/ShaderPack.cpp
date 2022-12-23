@@ -70,7 +70,7 @@ namespace st
 
     const ShaderResource* ShaderPack::GetResource(const char* rsrc_name) const
     {
-        
+
         for (auto& group : impl->resourceGroups)
         {
             const ShaderResource* result = (*impl->resourceGroups.at(group.first))[rsrc_name];
@@ -80,7 +80,7 @@ namespace st
                 return result;
             }
         }
-        
+
         return nullptr;
     }
 

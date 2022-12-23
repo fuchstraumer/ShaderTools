@@ -8,7 +8,8 @@
 #include <unordered_set>
 #include <iostream>
 
-namespace st {
+namespace st
+{
 
     size_t Shader::GetNumSetsRequired() const
     {
@@ -25,7 +26,7 @@ namespace st {
         impl->idx = std::move(_idx);
     }
 
-    void Shader::SetTags(const size_t num_tags, const char ** tag_strings)
+    void Shader::SetTags(const size_t num_tags, const char** tag_strings)
     {
         for (size_t i = 0; i < num_tags; ++i)
         {
@@ -43,7 +44,7 @@ namespace st {
         return impl->reflector->GetImpl();
     }
 
-    Shader::Shader(const char* group_name, const size_t num_stages, const ShaderStage * stages, yamlFile* resource_file) : impl(std::make_unique<ShaderGroupImpl>(group_name, resource_file))
+    Shader::Shader(const char* group_name, const size_t num_stages, const ShaderStage* stages, yamlFile* resource_file) : impl(std::make_unique<ShaderGroupImpl>(group_name, resource_file))
     {
         for (size_t i = 0; i < num_stages; ++i)
         {
@@ -62,7 +63,7 @@ namespace st {
         return *this;
     }
 
-    ShaderStage Shader::AddShaderStage(const char * shader_name, const VkShaderStageFlagBits & flags)
+    ShaderStage Shader::AddShaderStage(const char* shader_name, const VkShaderStageFlagBits& flags)
     {
         ShaderStage handle(shader_name, flags);
         auto iter = impl->stHandles.emplace(handle);
@@ -74,12 +75,12 @@ namespace st {
         return handle;
     }
 
-    void Shader::GetInputAttributes(const VkShaderStageFlags stage, size_t * num_attrs, VertexAttributeInfo * attributes) const
+    void Shader::GetInputAttributes(const VkShaderStageFlags stage, size_t* num_attrs, VertexAttributeInfo* attributes) const
     {
         impl->reflector->GetInputAttributes(stage, num_attrs, attributes);
     }
 
-    void Shader::GetOutputAttributes(const VkShaderStageFlags stage, size_t * num_attrs, VertexAttributeInfo * attributes) const
+    void Shader::GetOutputAttributes(const VkShaderStageFlags stage, size_t* num_attrs, VertexAttributeInfo* attributes) const
     {
         impl->reflector->GetOutputAttributes(stage, num_attrs, attributes);
     }
@@ -88,7 +89,7 @@ namespace st {
         return impl->reflector->GetStagePushConstantInfo(stage);
     }
 
-    void Shader::GetShaderStages(size_t * num_stages, ShaderStage * stages) const {
+    void Shader::GetShaderStages(size_t * num_stages, ShaderStage* stages) const {
         *num_stages = impl->stHandles.size();
         if (stages != nullptr) {
             std::vector<ShaderStage> stages_buffer;
@@ -100,7 +101,7 @@ namespace st {
         }
     }
 
-    void Shader::GetShaderBinary(const ShaderStage & handle, size_t * binary_size, uint32_t * dest_binary_ptr) const
+    void Shader::GetShaderBinary(const ShaderStage& handle, size_t* binary_size, uint32_t* dest_binary_ptr) const
     {
         auto& FileTracker = ShaderFileTracker::GetFileTracker();
         auto iter = impl->stHandles.find(handle);
@@ -123,10 +124,10 @@ namespace st {
         }
     }
 
-    void Shader::GetSetLayoutBindings(const size_t & set_idx, size_t * num_bindings, VkDescriptorSetLayoutBinding * bindings) const
+    void Shader::GetSetLayoutBindings(const size_t& set_idx, size_t* num_bindings, VkDescriptorSetLayoutBinding* bindings) const
     {
         const auto* b_impl = GetShaderReflectorImpl();
-        
+
         auto iter = b_impl->sortedSets.find(static_cast<uint32_t>(set_idx));
         if (iter != b_impl->sortedSets.cend())
         {
@@ -147,7 +148,7 @@ namespace st {
         }
     }
 
-    void Shader::GetSpecializationConstants(size_t * num_constants, SpecializationConstant * constants) const
+    void Shader::GetSpecializationConstants(size_t* num_constants, SpecializationConstant* constants) const
     {
         const ShaderReflectorImpl* b_impl = GetShaderReflectorImpl();
         if (!b_impl->specializationConstants.empty())
@@ -169,7 +170,7 @@ namespace st {
         }
     }
 
-    void Shader::GetResourceUsages(const size_t & _set_idx, size_t * num_resources, ResourceUsage * resources) const
+    void Shader::GetResourceUsages(const size_t& _set_idx, size_t* num_resources, ResourceUsage* resources) const
     {
         const ShaderReflectorImpl* b_impl = GetShaderReflectorImpl();
         const uint32_t set_idx = static_cast<uint32_t>(_set_idx);
@@ -189,7 +190,7 @@ namespace st {
                     resources_vec.emplace_back(rsrc.second);
                 }
                 std::copy(resources_vec.begin(), resources_vec.end(), resources);
-            }   
+            }
         }
     }
 
@@ -203,7 +204,7 @@ namespace st {
         return result;
     }
 
-    bool Shader::OptimizationEnabled(const ShaderStage & handle) const noexcept
+    bool Shader::OptimizationEnabled(const ShaderStage& handle) const noexcept
     {
         if (auto iter = impl->optimizationEnabled.find(handle); iter != std::end(impl->optimizationEnabled))
         {
@@ -215,7 +216,7 @@ namespace st {
         }
     }
 
-    uint32_t Shader::ResourceGroupSetIdx(const char * name) const
+    uint32_t Shader::ResourceGroupSetIdx(const char* name) const
     {
         const auto* refl_impl = GetShaderReflectorImpl();
         auto iter = refl_impl->resourceGroupSetIndices.find(name);
@@ -244,7 +245,7 @@ namespace st {
     {
         const auto& b_impl = GetShaderReflectorImpl();
         auto iter = b_impl->sortedSets.find(set_idx);
-        
+
         if (iter != b_impl->sortedSets.cend())
         {
             dll_retrieved_strings_t results;
@@ -261,7 +262,7 @@ namespace st {
         {
             return dll_retrieved_strings_t();
         }
-        
+
     }
 
     dll_retrieved_strings_t Shader::GetUsedResourceBlocks() const

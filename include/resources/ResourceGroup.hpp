@@ -4,14 +4,16 @@
 #include "common/CommonInclude.hpp"
 #include "common/UtilityStructs.hpp"
 
-namespace st {
+namespace st
+{
 
     class ShaderResource;
     class ResourceGroupImpl;
     struct yamlFile;
     struct ShaderStage;
 
-    class ST_API ResourceGroup {
+    class ST_API ResourceGroup
+    {
         ResourceGroup(const ResourceGroup&) = delete;
         ResourceGroup& operator=(const ResourceGroup&) = delete;
         friend class ResourceFile;

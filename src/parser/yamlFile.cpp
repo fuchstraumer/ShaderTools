@@ -4,9 +4,6 @@
 #include "../util/ShaderFileTracker.hpp"
 #include <filesystem>
 #include <cassert>
-#ifdef FindResource
-#undef FindResource
-#endif
 
 namespace st
 {
@@ -50,7 +47,7 @@ namespace st
         { "volatile", glsl_qualifier::Volatile },
         { "restrict", glsl_qualifier::Restrict }
     };
-    
+
     glsl_qualifier singleQualifierFromString(const std::string& single_qualifier)
     {
         auto iter = qualifier_from_str_map.find(single_qualifier);
@@ -63,7 +60,7 @@ namespace st
             return glsl_qualifier::InvalidQualifier;
         }
     }
-    
+
     std::vector<glsl_qualifier> qualifiersFromString(std::string qualifiers_str)
     {
         // find if we have multiple qualifiers
@@ -156,7 +153,7 @@ namespace st
     void yamlFile::parseGroups()
     {
         using namespace YAML;
-        
+
         auto& file_node = impl->rootFileNode;
         if (!file_node["shader_groups"])
         {
@@ -340,7 +337,7 @@ namespace st
                     }
                     else
                     {
-                        // If not provided, it's an unbounded descriptor array: set size as largest uint val so we 
+                        // If not provided, it's an unbounded descriptor array: set size as largest uint val so we
                         // can check against it elsewhere (at higher levels, mostly)
                         rsrc.SetArraySize(std::numeric_limits<uint32_t>::max());
                     }

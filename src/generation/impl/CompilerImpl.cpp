@@ -4,7 +4,8 @@
 #include <filesystem>
 #include <fstream>
 
-namespace st {
+namespace st
+{
 
     namespace fs = std::filesystem;
 
@@ -27,14 +28,14 @@ namespace st {
         case VK_SHADER_STAGE_FRAGMENT_BIT:
             return shaderc_glsl_fragment_shader;
             // MoltenVK cannot yet use the geometry or tesselation shaders.
-#ifndef __APPLE__ 
+#ifndef __APPLE__
         case VK_SHADER_STAGE_GEOMETRY_BIT:
             return shaderc_glsl_geometry_shader;
         case VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT:
             return shaderc_glsl_tess_control_shader;
         case VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT:
             return shaderc_glsl_tess_evaluation_shader;
-#endif 
+#endif
         case VK_SHADER_STAGE_COMPUTE_BIT:
             return shaderc_glsl_compute_shader;
         default:

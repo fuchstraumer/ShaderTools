@@ -281,7 +281,7 @@ namespace st
         if (idx != std::string::npos)
         {
             std::string type_substr = str.substr(0, idx);
-            result.basetype = SPIR_BaseTypeEnumFromString(type_substr); 
+            result.basetype = SPIR_BaseTypeEnumFromString(type_substr);
             // set vec size now.
             std::string vec_substr = str.substr(0, idx + 1);
             vec_substr.erase(0, 6);
@@ -721,7 +721,7 @@ namespace st
             { VK_FORMAT_R16G16B16_UNORM, "rgb16" },
             { VK_FORMAT_R16G16B16_SNORM, "rgb16_snorm" },
             { VK_FORMAT_R16G16B16_USCALED, "rgb16_scaled" },
-            { VK_FORMAT_R16G16B16_SSCALED, "rgb16_sscaled" }, 
+            { VK_FORMAT_R16G16B16_SSCALED, "rgb16_sscaled" },
             { VK_FORMAT_R16G16B16_UINT, "rgb16ui" },
             { VK_FORMAT_R16G16B16_SINT, "rgb16i" },
             { VK_FORMAT_R16G16B16_SFLOAT, "rgb16f" },

@@ -2,7 +2,8 @@
 #include "../util/ResourceFormats.hpp"
 #include "spirv-cross/spirv_cross.hpp"
 
-namespace st {
+namespace st
+{
 
     struct PushConstantInfoImpl
     {
@@ -14,7 +15,8 @@ namespace st {
 
     PushConstantInfo::PushConstantInfo() noexcept : impl(std::make_unique<PushConstantInfoImpl>()) {}
 
-    PushConstantInfo::~PushConstantInfo() noexcept {
+    PushConstantInfo::~PushConstantInfo() noexcept
+    {
         impl.reset();
     }
 

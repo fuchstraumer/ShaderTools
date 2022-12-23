@@ -23,8 +23,8 @@ namespace st
     VkFormat VkFormatFromSPIRType(const spirv_cross::SPIRType& type);
     VkFormat VkFormatFromString(const std::string& string);
     std::string VkFormatEnumToString(const VkFormat& string);
-    size_t VkFormatSize(const VkFormat& fmt); 
-      
+    size_t VkFormatSize(const VkFormat& fmt);
+
 }
 
 #endif //!ST_RESOURCE_FORMATS_HPP

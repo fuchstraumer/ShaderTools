@@ -1,7 +1,8 @@
 #include "resources/ResourceUsage.hpp"
 #include "resources/ShaderResource.hpp"
 
-namespace st {
+namespace st
+{
 
     constexpr const char* const INVALID_SHADER_NAME = "INVALID_SHADER";
     const static ShaderStage INVALID_SHADER(INVALID_SHADER_NAME, VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM);
@@ -13,7 +14,7 @@ namespace st {
         backingResource(nullptr),
         usedBy(INVALID_SHADER),
         type(VK_DESCRIPTOR_TYPE_MAX_ENUM),
-        stages(VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM) 
+        stages(VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM)
     {}
 
     ResourceUsage::ResourceUsage(const ShaderStage& used_by, const ShaderResource* backing_resource, access_modifier _access_modifier, VkDescriptorType type) :
@@ -88,14 +89,14 @@ namespace st {
     }
 
     // briefly wondered if set index was actually relevant, but yes it is - for a higher level backing resource it wouldn't
-    // matter, but we're tracking and comparing 
-    bool ResourceUsage::operator==(const ResourceUsage& other) const noexcept 
+    // matter, but we're tracking and comparing
+    bool ResourceUsage::operator==(const ResourceUsage& other) const noexcept
     {
         return
             (setIdx == other.setIdx) &&
             (bindingIdx == other.bindingIdx) &&
             (accessModifier == other.accessModifier) &&
-            (backingResource == other.backingResource) && 
+            (backingResource == other.backingResource) &&
             (usedBy == other.usedBy) &&
             (type == other.type) &&
             (stages == other.stages);

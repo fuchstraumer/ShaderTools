@@ -4,12 +4,14 @@
 #include "common/CommonInclude.hpp"
 #include "common/ShaderStage.hpp"
 
-namespace st {
+namespace st
+{
 
     class ShaderGeneratorImpl;
     struct yamlFile;
 
-    class ST_API ShaderGenerator { 
+    class ST_API ShaderGenerator
+    {
         ShaderGenerator(const ShaderGenerator&) = delete;
         ShaderGenerator& operator=(const ShaderGenerator&) = delete;
     public:
@@ -20,7 +22,7 @@ namespace st {
         ShaderGenerator& operator=(ShaderGenerator&& other) noexcept;
 
         void SetResourceFile(yamlFile* rsrc_file);
-        void Generate(const ShaderStage& handle, const char* path_to_src, const size_t num_extensions, const char* const* extensions, 
+        void Generate(const ShaderStage& handle, const char* path_to_src, const size_t num_extensions, const char* const* extensions,
             const size_t num_includes, const char* const* paths);
         void AddIncludePath(const char* path_to_include);
         void GetFullSource(size_t* len, char* dest) const;

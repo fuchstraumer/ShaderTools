@@ -3,7 +3,8 @@
 #include <set>
 #include <unordered_map>
 
-namespace st {
+namespace st
+{
 
     class ShaderResourceImpl
     {

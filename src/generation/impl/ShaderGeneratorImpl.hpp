@@ -12,7 +12,8 @@
 #include <map>
 #include <vulkan/vulkan.h>
 
-namespace st {
+namespace st
+{
 
     namespace fs = std::filesystem;
 
@@ -113,7 +114,7 @@ namespace st {
         mutable shader_resources_t ShaderResources;
         yamlFile* resourceFile;
         std::vector<fs::path> includes;
-        
+
 
         inline static std::string BasePath{ "../fragments/" };
         inline static std::string LibPath{ "../fragments/include" };

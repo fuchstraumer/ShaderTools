@@ -111,7 +111,7 @@ namespace st
 
             dest_str = iter.first->second;
             return true;
-        } 
+        }
         else {
             return false;
         }
@@ -221,7 +221,7 @@ namespace st
         {
             return std::string{};
         }
-        
+
         std::string filename = iter->second.filename().string();
         // now strip .(stage) if found
         size_t idx = filename.find_first_of('.');

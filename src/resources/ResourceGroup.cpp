@@ -7,9 +7,11 @@
 #include <set>
 #include <algorithm>
 
-namespace st {
+namespace st
+{
 
-    class ResourceGroupImpl {
+    class ResourceGroupImpl
+    {
     public:
         ResourceGroupImpl(yamlFile* resource_file, const char* group_name);
         ~ResourceGroupImpl() = default;
@@ -25,13 +27,17 @@ namespace st {
     };
 
     ResourceGroupImpl::ResourceGroupImpl(yamlFile* resource_file, const char* group_name) : name(group_name),
-        resources(resource_file->resourceGroups.at(group_name)) {
-        if (resource_file->groupTags.count(name) != 0) {
+        resources(resource_file->resourceGroups.at(group_name))
+    {
+        if (resource_file->groupTags.count(name) != 0)
+        {
             tags = resource_file->groupTags.at(name);
         }
 
-        for (const auto& rsrc : resources) {
-            switch (rsrc.DescriptorType()) {
+        for (const auto& rsrc : resources)
+        {
+            switch (rsrc.DescriptorType())
+            {
             case VK_DESCRIPTOR_TYPE_SAMPLER:
                 descriptorCounts.Samplers++;
                 break;
@@ -78,130 +84,162 @@ namespace st {
 
     }
 
-    bool ResourceGroupImpl::hasResource(const char* str) const {
-        for (const auto& rsrc : resources) {
-            if (strcmp(str, rsrc.Name()) == 0) {
+    bool ResourceGroupImpl::hasResource(const char* str) const
+    {
+        for (const auto& rsrc : resources)
+        {
+            if (strcmp(str, rsrc.Name()) == 0)
+            {
                 return true;
             }
         }
         return false;
     }
 
-    ResourceGroup::ResourceGroup(yamlFile* resource_file, const char* group_name) : 
-        impl(std::make_unique<ResourceGroupImpl>(resource_file, group_name)) {}
-    
-    ResourceGroup::~ResourceGroup() {
+    ResourceGroup::ResourceGroup(yamlFile* resource_file, const char* group_name) :
+        impl(std::make_unique<ResourceGroupImpl>(resource_file, group_name))
+    {}
+
+    ResourceGroup::~ResourceGroup()
+    {
         impl.reset();
     }
 
-    dll_retrieved_strings_t ResourceGroup::ResourceNames() const noexcept {
+    dll_retrieved_strings_t ResourceGroup::ResourceNames() const noexcept
+    {
         dll_retrieved_strings_t results;
         results.SetNumStrings(impl->resources.size());
-        for (size_t i = 0; i < results.NumStrings; ++i) {
+        for (size_t i = 0; i < results.NumStrings; ++i)
+        {
             results.Strings[i] = strdup(impl->resources[i].Name());
         }
         return results;
     }
 
-    dll_retrieved_strings_t ResourceGroup::UsedByGroups() const noexcept {
+    dll_retrieved_strings_t ResourceGroup::UsedByGroups() const noexcept
+    {
         dll_retrieved_strings_t results;
         results.SetNumStrings(impl->usedByShaders.size());
         size_t i = 0;
-        for (auto& entry : impl->usedByShaders) {
+        for (auto& entry : impl->usedByShaders)
+        {
             results.Strings[i] = strdup(entry.c_str());
             ++i;
         }
         return results;
     }
 
-    dll_retrieved_strings_t ResourceGroup::GetTags() const noexcept {
+    dll_retrieved_strings_t ResourceGroup::GetTags() const noexcept
+    {
         dll_retrieved_strings_t results;
         results.SetNumStrings(impl->tags.size());
         size_t i = 0;
-        for (auto& entry : impl->tags) {
+        for (auto& entry : impl->tags)
+        {
             results.Strings[i] = strdup(entry.c_str());
             ++i;
         }
         return results;
     }
 
-    const descriptor_type_counts_t& ResourceGroup::DescriptorCounts() const noexcept {
+    const descriptor_type_counts_t& ResourceGroup::DescriptorCounts() const noexcept
+    {
         return impl->descriptorCounts;
     }
 
-    const char* ResourceGroup::Name() const noexcept {
+    const char* ResourceGroup::Name() const noexcept
+    {
         return impl->name.c_str();
     }
 
-    uint32_t ResourceGroup::DescriptorSetIdxInStage(const ShaderStage & handle) const {
-        if (impl->stageSetIndices.empty()) {
+    uint32_t ResourceGroup::DescriptorSetIdxInStage(const ShaderStage & handle) const
+    {
+        if (impl->stageSetIndices.empty())
+        {
             // grab the map from the file tracker
             auto& f_tracker = ShaderFileTracker::GetFileTracker();
             impl->stageSetIndices = f_tracker.ResourceGroupSetIndexMaps.at(impl->name);
         }
 
         auto iter = impl->stageSetIndices.find(handle);
-        if (iter != std::cend(impl->stageSetIndices)) {
+        if (iter != std::cend(impl->stageSetIndices))
+        {
             return iter->second;
         }
-        else {
+        else
+        {
             return std::numeric_limits<uint32_t>::max();
         }
     }
 
-    ShaderResource* ResourceGroup::operator[](const char* name) noexcept {
-        auto iter = std::find_if(impl->resources.begin(), impl->resources.end(), 
+    ShaderResource* ResourceGroup::operator[](const char* name) noexcept
+    {
+        auto iter = std::find_if(impl->resources.begin(), impl->resources.end(),
             [name](ShaderResource& rsrc){ return rsrc.Name() == name; });
-        
-        if (iter != std::end(impl->resources)) {
+
+        if (iter != std::end(impl->resources))
+        {
             return &(*iter);
         }
-        else {
+        else
+        {
             return nullptr;
         }
     }
 
-    const ShaderResource* ResourceGroup::operator[](const char* name) const noexcept {
-        auto iter = std::find_if(impl->resources.cbegin(), impl->resources.cend(), 
+    const ShaderResource* ResourceGroup::operator[](const char* name) const noexcept
+    {
+        auto iter = std::find_if(impl->resources.cbegin(), impl->resources.cend(),
             [name](const ShaderResource& rsrc){ return rsrc.Name() == name; });
-        
-        if (iter != std::cend(impl->resources)) {
+
+        if (iter != std::cend(impl->resources))
+        {
             return &(*iter);
         }
-        else {
+        else
+        {
             return nullptr;
         }
     }
 
-    void ResourceGroup::GetResources(size_t* num_resources, ShaderResource* resources) const {
+    void ResourceGroup::GetResources(size_t* num_resources, ShaderResource* resources) const
+    {
         *num_resources = impl->resources.size();
-        if (resources != nullptr) {
+        if (resources != nullptr)
+        {
             std::copy(std::begin(impl->resources), std::end(impl->resources), resources);
         }
     }
 
-    void ResourceGroup::GetResourcePtrs(size_t* num_resources, const ShaderResource** resources) const {
+    void ResourceGroup::GetResourcePtrs(size_t* num_resources, const ShaderResource** resources) const
+    {
         *num_resources = impl->resources.size();
-        if (resources != nullptr) {
+        if (resources != nullptr)
+        {
             size_t i = 0;
-            for (auto& rsrc : impl->resources) {
+            for (auto& rsrc : impl->resources)
+            {
                 resources[i] = &rsrc;
                 ++i;
             }
         }
     }
 
-    void ResourceGroup::SetName(const char* _name) {
+    void ResourceGroup::SetName(const char* _name)
+    {
         impl->name = _name;
     }
 
-    void ResourceGroup::UsedByGroup(const char* new_group) {
+    void ResourceGroup::UsedByGroup(const char* new_group)
+    {
         impl->usedByShaders.emplace(new_group);
     }
 
-    void ResourceGroup::SetTags(const size_t num_tags, const char** tags) {
+    void ResourceGroup::SetTags(const size_t num_tags, const char** tags)
+    {
         std::vector<const char*> tags_buffer{ tags, tags + num_tags };
-        for (auto& str : tags_buffer) {
+        for (auto& str : tags_buffer)
+        {
             impl->tags.emplace_back(str);
         }
     }

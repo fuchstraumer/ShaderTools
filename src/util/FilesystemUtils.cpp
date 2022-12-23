@@ -14,7 +14,7 @@ namespace st
     std::unordered_map<ShaderStage, std::string> shaderFiles = std::unordered_map<ShaderStage, std::string>{ };
     std::unordered_map<ShaderStage, std::vector<uint32_t>> shaderBinaries = std::unordered_map<ShaderStage, std::vector<uint32_t>>{ };
     std::unordered_multimap<ShaderStage, fs::path> shaderPaths = std::unordered_multimap<ShaderStage, fs::path>{};
-    
+
     static const std::map<VkShaderStageFlags, std::string> stage_extension_map
     {
         { VK_SHADER_STAGE_VERTEX_BIT, ".vert" },
@@ -39,7 +39,7 @@ namespace st
     {
         const std::string output_name = file_name + stage_extension_map.at(stage);
         const fs::path output_path = OutputPath / fs::path(output_name);
-        
+
         std::ofstream output_stream(output_path);
 
         if (!output_stream.is_open())
@@ -63,7 +63,7 @@ namespace st
 
         return result;
     }
-    
+
     void WriteAndAddShaderBinary(const std::string base_name, const std::vector<uint32_t>& file_contents, const VkShaderStageFlags stage)
     {
         const std::string extension = fs::path(base_name).extension().string();
@@ -82,7 +82,7 @@ namespace st
         {
             throw std::runtime_error("Could not open output stream for writing shader binary file!");
         }
-        
+
         for (auto& val : file_contents)
         {
             output_stream << val;
@@ -94,7 +94,7 @@ namespace st
         std::lock_guard<std::mutex> insertion_guard{ insertion_mutex };
         auto c_str_tmp = output_path.string();
         auto inserted = shaderBinaries.emplace(ShaderStage{ c_str_tmp.c_str(), stage }, file_contents);
-        
+
     }
 
     bool ShaderSourceNewerThanBinary(const ShaderStage& handle)
@@ -155,5 +155,5 @@ namespace st
             throw std::domain_error("Passed invalid path to SetOutputDirectory");
         }
     }
-    
+
 }

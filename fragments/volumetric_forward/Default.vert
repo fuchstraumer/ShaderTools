@@ -2,7 +2,8 @@
 #include "Structures.glsl"
 #pragma USE_RESOURCES GlobalResources
 
-void main() {
+void main()
+{
     gl_Position = matrices.modelViewProjection * vec4(position, 1.0f);
     vPosition = matrices.modelView * vec4(position, 1.0f);
     vNormal = mat3(inverse(transpose(matrices.model))) * normal;

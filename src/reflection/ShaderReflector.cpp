@@ -36,7 +36,7 @@ namespace st
             for (const auto& member : set.Members)
             {
                 resources_copy.emplace_back(member.second);
-            }   
+            }
 
             if (resources != nullptr)
             {

@@ -1,8 +1,9 @@
-#pragma once 
+#pragma once
 #ifndef ST_SHADER_PACK_HPP
 #define ST_SHADER_PACK_HPP
 #include "common/CommonInclude.hpp"
 #include "common/UtilityStructs.hpp"
+
 namespace st
 {
 

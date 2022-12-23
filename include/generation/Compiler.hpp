@@ -3,15 +3,18 @@
 #define SHADER_TOOLS_COMPILER_HPP
 #include "common/CommonInclude.hpp"
 #include "common/ShaderStage.hpp"
-namespace st {
+
+namespace st
+{
 
     class ShaderCompilerImpl;
 
-    class ST_API ShaderCompiler {
+    class ST_API ShaderCompiler
+    {
         ShaderCompiler(const ShaderCompiler&) = delete;
         ShaderCompiler& operator=(const ShaderCompiler&) = delete;
     public:
-    
+
         ShaderCompiler();
         ~ShaderCompiler();
         ShaderCompiler(ShaderCompiler&& other) noexcept;
