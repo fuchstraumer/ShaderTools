@@ -112,15 +112,11 @@ OPTION(SHADERTOOLS_BUILD_STATIC "Build as a static library instead of a DLL. Not
 
 IF(SHADERTOOLS_BUILD_STATIC) 
     ADD_LIBRARY(ShaderTools STATIC ${ST_COMMON_SRCS} ${ST_UTIL_SRCS} ${ST_GENERATION_SRCS} 
-        ${ST_REFLECTION_SRCS} ${ST_CORE_SRCS} ${ST_PARSER_SRCS} ${ST_RESOURCES_SRCS}
-        "${CMAKE_CURRENT_SOURCE_DIR}/third_party/easyloggingpp/src/easylogging++.cc")
-    # Used to avoid initializing easyloggingpp when built as static library. Causes 
-    # duplicate symbol errors otherwise
+        ${ST_REFLECTION_SRCS} ${ST_CORE_SRCS} ${ST_PARSER_SRCS} ${ST_RESOURCES_SRCS})
     TARGET_COMPILE_DEFINITIONS(ShaderTools PRIVATE "ST_BUILDING_STATIC")
 ELSE()
     ADD_LIBRARY(ShaderTools SHARED ${ST_COMMON_SRCS} ${ST_UTIL_SRCS} ${ST_GENERATION_SRCS} 
-        ${ST_REFLECTION_SRCS} ${ST_CORE_SRCS} ${ST_PARSER_SRCS} ${ST_RESOURCES_SRCS}
-        "${CMAKE_CURRENT_SOURCE_DIR}/third_party/easyloggingpp/src/easylogging++.cc")
+        ${ST_REFLECTION_SRCS} ${ST_CORE_SRCS} ${ST_PARSER_SRCS} ${ST_RESOURCES_SRCS})
     TARGET_COMPILE_DEFINITIONS(ShaderTools PUBLIC "$<BUILD_INTERFACE:SHADERTOOLS_BUILD_DLL>" "$<INSTALL_INTERFACE:SHADERTOOLS_DLL>")
 ENDIF()
 
@@ -199,11 +195,10 @@ INSTALL(TARGETS ShaderTools RUNTIME DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/")
 ##
 OPTION(SHADERTOOLS_BUILD_TESTS "Build some test executables for shader parsing and compiliation." OFF)
 IF(SHADERTOOLS_BUILD_TESTS)
-    ADD_EXECUTABLE(ParseTest0 "${CMAKE_CURRENT_SOURCE_DIR}/tests/test.cpp"  "${CMAKE_CURRENT_SOURCE_DIR}/third_party/easyloggingpp/src/easylogging++.cc")
+    ADD_EXECUTABLE(ParseTest0 "${CMAKE_CURRENT_SOURCE_DIR}/tests/test.cpp")
     TARGET_COMPILE_DEFINITIONS(ParseTest0 PRIVATE "-DSHADERTOOLS_DLL")
     ADD_DEPENDENCIES(ParseTest0 ShaderTools)
     TARGET_LINK_LIBRARIES(ParseTest0 ShaderTools)
-    TARGET_INCLUDE_DIRECTORIES(ParseTest0 PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/luajit/src"
-    "${CMAKE_CURRENT_SOURCE_DIR}/third_party/luabridge/Source" "${CMAKE_CURRENT_SOURCE_DIR}/third_party/easyloggingpp/src")
+    TARGET_INCLUDE_DIRECTORIES(ParseTest0 PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include")
     SET_TARGET_PROPERTIES(ParseTest0 PROPERTIES FOLDER "ShaderTools")
 ENDIF()
