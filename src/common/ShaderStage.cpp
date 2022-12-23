@@ -4,7 +4,7 @@
 namespace st
 {
 
-    constexpr uint64_t GetShaderHash(const char* shader_name, const VkShaderStageFlags stage) noexcept
+    uint64_t GetShaderHash(const char* shader_name, const VkShaderStageFlags stage) noexcept
     {
         const uint64_t base_hash = static_cast<uint64_t>(std::hash<std::string>()(std::string(shader_name)));
         return (base_hash << 8) | (stage);
