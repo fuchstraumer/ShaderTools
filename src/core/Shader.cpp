@@ -6,7 +6,7 @@
 #include "reflection/ShaderReflector.hpp"
 #include "../reflection/impl/ShaderReflectorImpl.hpp"
 #include <unordered_set>
-#include "easyloggingpp/src/easylogging++.h"
+#include <iostream>
 
 namespace st {
 
@@ -68,7 +68,6 @@ namespace st {
         auto iter = impl->stHandles.emplace(handle);
         if (!iter.second)
         {
-            LOG(ERROR) << "Could not add/emplace Shader to Shader - handle or shader may already exist!";
             throw std::runtime_error("Could not add shader to Shader, failed to emplace into handles set: might already exist!");
         }
         impl->addShaderStage(handle);
@@ -108,7 +107,7 @@ namespace st {
         std::vector<uint32_t> binary_vec;
         if (iter == impl->stHandles.cend())
         {
-            LOG(WARNING) << "Could not find requested shader binary in Shader.";
+            std::cerr << "Could not find requested shader binary in Shader.";
             *binary_size = 0;
         }
         else if (FileTracker.FindShaderBinary(handle, binary_vec))

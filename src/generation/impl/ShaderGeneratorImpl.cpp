@@ -4,9 +4,11 @@
 #include "../../util/ResourceFormats.hpp"
 #include "../../util/ShaderFileTracker.hpp"
 #include <regex>
-#include "easyloggingpp/src/easylogging++.h"
+#include <iostream>
+#include <sstream>
 
-namespace st {
+namespace st
+{
 
     static const std::regex vertex_interface("(#pragma VERT_INTERFACE_BEGIN\n)");
     static const std::regex end_vertex_interface("#pragma VERT_INTERFACE_END\n");
@@ -68,22 +70,20 @@ namespace st {
             std::ifstream file_stream(path);
             if (!file_stream.is_open())
             {
-                LOG(ERROR) << "Couldn't find shader preamble file. Workding directory is probably set incorrectly!";
-                throw std::runtime_error("Failed to open preamble file at given path.");
+                throw std::runtime_error("Couldn't find shader preamble file. Workding directory is probably set incorrectly.");
             }
             std::string preamble{ std::istreambuf_iterator<char>(file_stream), std::istreambuf_iterator<char>() };
 
             auto fc_iter = fileContents.emplace(fs::canonical(path), preamble);
             if (!fc_iter.second)
             {
-                LOG(WARNING) << "Failed to emplace loaded source string into fileContents map.";
+                std::cerr << "Failed to emplace loaded source string into fileContents map.";
             }
 
             auto frag_iter = fragments.emplace(fragment_type::Preamble, preamble);
             if (frag_iter == fragments.end())
             {
-                LOG(ERROR) << "Couldn't add premamble to generator's fragments container! Generation cannot proceed without this component.";
-                throw std::runtime_error("Failed to add preamble to generator's fragments multimap!");
+                throw std::runtime_error("Couldn't add premamble to generator's fragments container! Generation cannot proceed without this component.");
             }
 
         }
@@ -104,7 +104,6 @@ namespace st {
         if (!fs::exists(source_file))
         {
             const std::string exception_str = std::string("Given shader fragment path \"") + source_file.string() + std::string("\" does not exist!");
-            LOG(ERROR) << exception_str;
             throw std::runtime_error(exception_str);
         }
 
@@ -129,8 +128,7 @@ namespace st {
 
         if (match.size() == 0)
         {
-            LOG(ERROR) << "Could not find match for interface block.";
-            throw std::runtime_error("Failed to find any matches.");
+            throw std::runtime_error("Shader generator could not find matching element of vertex interface block needed for completion");
         }
 
         std::string local_str{ str.cbegin() + match.length(), str.cend() };
@@ -157,7 +155,8 @@ namespace st {
 
     void ShaderGeneratorImpl::addPerVertex()
     {
-        static const std::string per_vertex{
+        static const std::string per_vertex
+        {
             "out gl_PerVertex {\n    vec4 gl_Position;\n};\n\n"
         };
         fragments.emplace(fragment_type::glPerVertex, per_vertex);
@@ -182,8 +181,7 @@ namespace st {
             auto iter = ftracker.FullSourceStrings.emplace(Stage, result_stream.str());
             if (!iter.second)
             {
-                LOG(ERROR) << "Failed to emplace freshly-generated shader complete source string!";
-                throw std::runtime_error("Failed to emplace full source string for shader.");
+                throw std::runtime_error("Failed to emplace freshly-generated shader source string");
             }
 
             return iter.first->second;
@@ -226,8 +224,9 @@ namespace st {
 
             if (!fs::exists(include_path))
             {
-                LOG(ERROR) << "Couldn't find specified include " << include_path.string() << " in library includes.";
-                throw std::runtime_error("Failed to find desired include in library includes.");
+                std::string exceptionString =
+                    std::string("Couldn't find specified include ") + include_path.string() + std::string(" in library includes.");
+                throw std::runtime_error(exceptionString);
             }
         }
         else
@@ -245,7 +244,8 @@ namespace st {
 
             if (!found)
             {
-                LOG(ERROR) << "Could not find desired include " << include_path.string() << " in shader-local include paths.";
+                std::string exceptionString =
+                    std::string("Couldn't find specified include ") + include_path.string() + std::string(" in shader-local include paths.");
                 throw std::runtime_error("Failed to find desired include in local include paths.");
             }
         }
@@ -260,8 +260,7 @@ namespace st {
 
         if (!include_file.is_open())
         {
-            LOG(ERROR) << "Include file path was valid, but failed to open input file stream!";
-            throw std::runtime_error("Failed to open include file, despite having a valid path!");
+            throw std::runtime_error("Failed to open include file, despite having a valid path");
         }
 
         std::string file_content{ std::istreambuf_iterator<char>(include_file), std::istreambuf_iterator<char>() };
@@ -281,7 +280,6 @@ namespace st {
         std::string curr_shader_name = f_tracker.GetShaderName(Stage);
         if (curr_shader_name.empty())
         {
-            LOG(ERROR) << "Couldn't find name of current shader!";
             throw std::runtime_error("Error finding shader name during generation process.");
         }
 
@@ -319,7 +317,7 @@ namespace st {
             }
             else if (qual == glsl_qualifier::InvalidQualifier)
             {
-                LOG(WARNING) << "ShaderResource had an invalid qualifier value!";
+                throw std::runtime_error("ShaderResource had an invalid qualifier value.");
             }
         }
 
@@ -329,7 +327,8 @@ namespace st {
     std::string ShaderGeneratorImpl::getResourcePrefix(size_t active_set, const std::string& format_specifier, const ShaderResource& rsrc) const
     {
 
-        std::string prefix{
+        std::string prefix
+        {
             std::string("layout (set = ") +std::to_string(active_set) + std::string(", binding = ") + std::to_string(rsrc.BindingIndex())
         };
 
@@ -493,8 +492,7 @@ namespace st {
             base_suffix = "3D";
             break;
         default:
-            LOG(ERROR) << "Encountered invalid image type.";
-            throw std::domain_error("Invalid/not set ImageType value");
+            throw std::runtime_error("Invalid/not set ImageType value");
         }
 
         if (info.flags & VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT)
@@ -670,8 +668,7 @@ namespace st {
                 resource_block_string += getInputAttachmentString(active_set, resource_item, resource_name);
                 break;
             default:
-                LOG(ERROR) << "Unsupported VkDescriptorType encountered when generating resources for resource block in ShaderGenerator!";
-                throw std::domain_error("Unsupported VkDescriptorType encountered in ShaderGenerator!");
+                throw std::domain_error("Unsupported VkDescriptorType encountered when generating resources for resource block in ShaderGenerator");
             }
 
         }
@@ -690,8 +687,7 @@ namespace st {
         {
             if (!FileTracker.AddShaderBodyPath(handle, path_to_source))
             {
-                LOG(ERROR) << "Could not find or add+load a shader body source string at path " << path_to_source;
-                throw std::runtime_error("Failed to find or add (then load) a shader body source string!");
+                throw std::runtime_error("Failed to find or add (then load) a shader body source string");
             }
             else
             {
@@ -811,16 +807,6 @@ namespace st {
         }
     }
 
-    void ShaderGeneratorImpl::processBodyStrInlineResources(const ShaderStage& handle, std::string& body_str)
-    {
-        // bad. terrible. but also worse to hit this and not have any idea that something's wrong...
-        throw std::runtime_error("Functionality unimplemented. How did you get here? That's not good...");
-        std::smatch inline_rsrc_match;
-        if (std::regex_search(body_str, inline_rsrc_match, inline_resources_begin)) {
-
-        }
-    }
-
     void ShaderGeneratorImpl::generate(const ShaderStage& handle, const std::string& path_to_source, const size_t num_extensions, const char* const* extensions)
     {
         std::string body_str{ fetchBodyStr(handle, path_to_source) };
@@ -837,7 +823,6 @@ namespace st {
         }
         processBodyStrSpecializationConstants(body_str);
         processBodyStrResourceBlocks(handle, body_str);
-        processBodyStrInlineResources(handle, body_str);
         fragments.emplace(fragment_type::Main, body_str);
     }
 

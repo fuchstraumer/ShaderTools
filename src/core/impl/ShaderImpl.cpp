@@ -4,7 +4,6 @@
 #include "generation/ShaderGenerator.hpp"
 #include "reflection/ShaderReflector.hpp"
 #include "../../reflection/impl/ShaderReflectorImpl.hpp"
-#include "easyloggingpp/src/easylogging++.h"
 
 namespace st {
 

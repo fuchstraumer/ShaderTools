@@ -53,7 +53,7 @@ namespace st {
             f64,
             invalid
         } Type{ constant_type::invalid };
-        uint32_t ConstantID;
+        uint32_t ConstantID = 0u;
         union
         {
             VkBool32 value_b32 = VK_FALSE;

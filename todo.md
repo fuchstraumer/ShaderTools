@@ -8,3 +8,4 @@
 - Build out integration tests
 - Change shader yaml spec to be "ComputeShader" for compute shaders, use "RenderShaders" + (Stage) as next subgroup for rendering shaders. More succinct, more clear.
 - Reduce lambda function usage. Untestable, hidden, cluttered.
+- Fix usage of fixed vulkan version, allow for targeting by users

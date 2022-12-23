@@ -1,8 +1,9 @@
 #include "ShaderFileTracker.hpp"
+#include "ResourceFormats.hpp"
+#include <iostream>
 #include <fstream>
 #include <filesystem>
-#include "easyloggingpp/src/easylogging++.h"
-#include "ResourceFormats.hpp"
+
 
 namespace fs = std::filesystem;
 

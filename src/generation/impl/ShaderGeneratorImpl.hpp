@@ -104,7 +104,6 @@ namespace st {
         void processBodyStrIncludes(std::string & body_src_str);
         void processBodyStrSpecializationConstants(std::string & body_src_str);
         void processBodyStrResourceBlocks(const ShaderStage& handle, std::string & body_str);
-        void processBodyStrInlineResources(const ShaderStage& handle, std::string& body_str);
         void generate(const ShaderStage& handle, const std::string& path_to_src, const size_t num_extensions, const char* const* extensions);
 
         ShaderStage Stage{ 0u };
