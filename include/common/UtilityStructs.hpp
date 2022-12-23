@@ -5,7 +5,8 @@
 
 namespace st {
 
-    struct ST_API dll_retrieved_strings_t {
+    struct ST_API dll_retrieved_strings_t
+    {
         dll_retrieved_strings_t(const dll_retrieved_strings_t&) = delete;
         dll_retrieved_strings_t& operator=(const dll_retrieved_strings_t&) = delete;
         // Names are retrieved using strdup(), so we need to free the duplicated names once done with them.
@@ -16,12 +17,14 @@ namespace st {
         dll_retrieved_strings_t(dll_retrieved_strings_t&& other) noexcept;
         dll_retrieved_strings_t& operator=(dll_retrieved_strings_t&& other) noexcept;
         void SetNumStrings(const size_t& num_names);
+        void FreeMemory();
         const char* operator[](const size_t& idx) const;
         char** Strings{ nullptr };
         size_t NumStrings{ 0 };
     };
 
-    struct ST_API descriptor_type_counts_t {
+    struct ST_API descriptor_type_counts_t
+    {
         uint32_t Samplers{ 0u };
         uint32_t CombinedImageSamplers{ 0u };
         uint32_t SampledImages{ 0u };
@@ -37,8 +40,10 @@ namespace st {
         uint32_t AccelerationStructureNVX{ 0u };
     };
 
-    struct ST_API SpecializationConstant {
-        enum class constant_type : uint32_t {
+    struct ST_API SpecializationConstant
+    {
+        enum class constant_type : uint32_t
+        {
             b32,
             ui32,
             i32,
@@ -49,7 +54,8 @@ namespace st {
             invalid
         } Type{ constant_type::invalid };
         uint32_t ConstantID;
-        union {
+        union
+        {
             VkBool32 value_b32;
             float value_f32;
             int32_t value_i32;
@@ -69,7 +75,8 @@ namespace st {
         ~ShaderResourceSubObject();
         char* Name{ nullptr };
         char* Type{ nullptr };
-        union {
+        union
+        {
             uint32_t Size{ 0u };
             uint32_t NumElements;
         };
