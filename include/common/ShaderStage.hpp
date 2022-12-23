@@ -28,7 +28,7 @@ namespace std
     template<>
     struct hash<st::ShaderStage>
     {
-        constexpr size_t operator()(const st::ShaderStage& shader) const noexcept
+        size_t operator()(const st::ShaderStage& shader) const noexcept
         {
             return std::hash<uint64_t>()(shader.ID);
         }
