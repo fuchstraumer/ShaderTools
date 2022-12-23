@@ -4,23 +4,25 @@
 #include "common/ShaderStage.hpp"
 #include "common/CommonInclude.hpp"
 
-namespace st {
+namespace st
+{
 
     class ShaderResource;
 
-
-    enum class access_modifier : uint32_t {
+    enum class access_modifier : uint8_t
+    {
         Read = 0,
         Write,
         ReadWrite,
         INVALID = std::numeric_limits<uint32_t>::max()
     };
 
-    class ST_API ResourceUsage {
+    class ST_API ResourceUsage
+    {
     public:
 
         ResourceUsage() noexcept;
-        ~ResourceUsage();
+        ~ResourceUsage() noexcept = default;
         ResourceUsage(const ShaderStage& used_by, const ShaderResource* backing_resource, access_modifier _access_modifier, VkDescriptorType type);
         ResourceUsage(const ResourceUsage& other) noexcept;
         ResourceUsage(ResourceUsage&& other) noexcept;
