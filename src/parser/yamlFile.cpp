@@ -160,7 +160,7 @@ namespace st
             throw std::runtime_error("YAML file had no shader groups specified!");
         }
 
-        auto& groups = file_node["shader_groups"];
+        auto groups = file_node["shader_groups"];
 
         for (auto iter = groups.begin(); iter != groups.end(); ++iter)
         {
@@ -296,7 +296,7 @@ namespace st
             throw std::runtime_error("YAML file had no resource groups!");
         }
 
-        auto& groups = impl->rootFileNode["resource_groups"];
+        auto groups = impl->rootFileNode["resource_groups"];
 
         for (auto iter = groups.begin(); iter != groups.end(); ++iter)
         {
@@ -371,7 +371,7 @@ namespace st
                 if (rsrc_node["Tags"])
                 {
                     std::vector<std::string> tag_strs;
-                    for (auto& tag : rsrc_node["Tags"])
+                    for (auto tag : rsrc_node["Tags"])
                     {
                         tag_strs.emplace_back(tag.as<std::string>());
                     }
