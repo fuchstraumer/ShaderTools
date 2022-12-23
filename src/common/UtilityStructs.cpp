@@ -60,7 +60,10 @@ namespace st
         NumElements(other.NumElements),
         isComplex(other.isComplex),
         Offset(other.Offset),
-        Size(other.Size) {}
+        Size(other.Size)
+    {
+
+    }
 
     ShaderResourceSubObject::ShaderResourceSubObject(ShaderResourceSubObject&& other) noexcept :
         Type(std::move(other.Type)),

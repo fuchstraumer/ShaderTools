@@ -66,7 +66,8 @@ namespace st {
         };
     };
 
-    struct ST_API ShaderResourceSubObject {
+    struct ST_API ShaderResourceSubObject
+    {
         ShaderResourceSubObject() = default;
         ShaderResourceSubObject(const ShaderResourceSubObject& other) noexcept;
         ShaderResourceSubObject(ShaderResourceSubObject&& other) noexcept;
@@ -75,12 +76,9 @@ namespace st {
         ~ShaderResourceSubObject();
         char* Name{ nullptr };
         char* Type{ nullptr };
-        union
-        {
-            uint32_t Size{ 0u };
-            uint32_t NumElements;
-        };
-        uint32_t Offset{ 0 };
+        uint32_t Size{ 0u };
+        uint32_t NumElements{ 0u };
+        uint32_t Offset{ 0u };
         bool isComplex{ false };
     };
 
