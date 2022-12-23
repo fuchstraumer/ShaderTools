@@ -1,20 +1,20 @@
 #include "resources/ShaderResource.hpp"
 #include "common/UtilityStructs.hpp"
-#include "easyloggingpp/src/easylogging++.h"
 #include <set>
 #include <unordered_map>
 
 namespace st {
 
-    class ShaderResourceImpl {
+    class ShaderResourceImpl
+    {
     public:
 
         ShaderResourceImpl() = default;
         ~ShaderResourceImpl() {};
-        ShaderResourceImpl(const ShaderResourceImpl& other) = default;
+        ShaderResourceImpl(const ShaderResourceImpl& other) noexcept = default;
         ShaderResourceImpl(ShaderResourceImpl&& other) noexcept = default;
-        ShaderResourceImpl& operator=(const ShaderResourceImpl& other) = default;
-        ShaderResourceImpl& operator=(ShaderResourceImpl&& other) = default;
+        ShaderResourceImpl& operator=(const ShaderResourceImpl& other) noexcept = default;
+        ShaderResourceImpl& operator=(ShaderResourceImpl&& other) noexcept = default;
 
         uint32_t bindingIdx{ std::numeric_limits<uint32_t>::max() };
         std::string name{ "" };
@@ -43,51 +43,61 @@ namespace st {
 
     ShaderResource::ShaderResource(ShaderResource && other) noexcept : impl(std::move(other.impl)) {}
 
-    ShaderResource & ShaderResource::operator=(const ShaderResource& other) noexcept {
+    ShaderResource & ShaderResource::operator=(const ShaderResource& other) noexcept
+    {
         impl = std::make_unique<ShaderResourceImpl>(*other.impl);
         return *this;
     }
 
-    ShaderResource & ShaderResource::operator=(ShaderResource && other) noexcept {
+    ShaderResource & ShaderResource::operator=(ShaderResource && other) noexcept
+    {
         impl = std::move(other.impl);
         return *this;
     }
 
-    size_t ShaderResource::BindingIndex() const noexcept {
+    size_t ShaderResource::BindingIndex() const noexcept
+    {
         return impl->bindingIdx;
     }
 
-    size_t ShaderResource::InputAttachmentIndex() const noexcept {
-        if (impl->type != VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT) {
-            LOG(WARNING) << "Tried to retrieve input attachment index for resource that is not an input attachment.";
-            // Default constructed value should be invalid enough to be obvious.
+    size_t ShaderResource::InputAttachmentIndex() const noexcept
+    {
+        if (impl->type != VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT)
+        {
+            return std::numeric_limits<decltype(impl->inputAttachmentIdx)>::max();
         }
         return impl->inputAttachmentIdx;
     }
 
-    VkFormat ShaderResource::Format() const noexcept {
+    VkFormat ShaderResource::Format() const noexcept
+    {
         return impl->format;
     }
 
-    const char* ShaderResource::Name() const {
+    const char* ShaderResource::Name() const
+    {
         return impl->name.c_str();
     }
 
-    const char* ShaderResource::ParentGroupName() const {
+    const char* ShaderResource::ParentGroupName() const
+    {
         return impl->parentSetName.c_str();
     }
 
-    VkShaderStageFlags ShaderResource::ShaderStages() const noexcept {
+    VkShaderStageFlags ShaderResource::ShaderStages() const noexcept
+    {
         return impl->stages;
     }
 
-    VkDescriptorType ShaderResource::DescriptorType() const noexcept {
+    VkDescriptorType ShaderResource::DescriptorType() const noexcept
+    {
         return impl->type;
     }
 
     ShaderResource::operator VkDescriptorSetLayoutBinding() const noexcept
     {
-        return VkDescriptorSetLayoutBinding{
+        return VkDescriptorSetLayoutBinding
+        {
             impl->bindingIdx,
             impl->type,
             impl->isDescriptorArray ? impl->arraySize : 1u,
@@ -101,31 +111,40 @@ namespace st {
         return this->operator VkDescriptorSetLayoutBinding();
     }
 
-    const char * ShaderResource::ImageSamplerSubtype() const {
+    const char* ShaderResource::ImageSamplerSubtype() const
+    {
         return impl->imageSamplerSubtype.c_str();
     }
 
-    bool ShaderResource::HasQualifiers() const noexcept {
+    bool ShaderResource::HasQualifiers() const noexcept
+    {
         return !impl->qualifiers.empty();
     }
 
-    void ShaderResource::GetQualifiers(size_t* num_qualifiers, glsl_qualifier* qualifiers) const noexcept {
+    void ShaderResource::GetQualifiers(size_t* num_qualifiers, glsl_qualifier* qualifiers) const noexcept
+    {
         *num_qualifiers = impl->qualifiers.size();
-        if (qualifiers != nullptr) {
+        if (qualifiers != nullptr)
+        {
             std::vector<glsl_qualifier> vector_copy;
-            for (const auto& qual : impl->qualifiers) {
+            for (const auto& qual : impl->qualifiers)
+            {
                 vector_copy.emplace_back(qual);
             }
             std::copy(vector_copy.begin(), vector_copy.end(), qualifiers);
         }
     }
 
-    void ShaderResource::GetPerUsageQualifiers(const char * shader_name, size_t * num_qualifiers, glsl_qualifier * qualifiers) const noexcept {
-        if (auto iter = impl->perUsageQualifiers.find(shader_name); iter != std::end(impl->perUsageQualifiers)) {
+    void ShaderResource::GetPerUsageQualifiers(const char* shader_name, size_t* num_qualifiers, glsl_qualifier* qualifiers) const noexcept
+    {
+        if (auto iter = impl->perUsageQualifiers.find(shader_name); iter != std::end(impl->perUsageQualifiers))
+        {
             *num_qualifiers = iter->second.size();
-            if (qualifiers != nullptr) {
+            if (qualifiers != nullptr)
+            {
                 std::vector<glsl_qualifier> vector_copy;
-                for (const auto& qual : iter->second) {
+                for (const auto& qual : iter->second)
+                {
                     vector_copy.emplace_back(qual);
                 }
                 std::copy(vector_copy.begin(), vector_copy.end(), qualifiers);
@@ -133,17 +152,22 @@ namespace st {
         }
     }
 
-    glsl_qualifier ShaderResource::GetReadWriteQualifierForShader(const char * shader_name) const noexcept {
+    glsl_qualifier ShaderResource::GetReadWriteQualifierForShader(const char* shader_name) const noexcept
+    {
         // First just check general qualifiers for R/W options
-        for (const auto& qual : impl->qualifiers) {
-            if (qual == glsl_qualifier::ReadOnly || qual == glsl_qualifier::WriteOnly) {
+        for (const auto& qual : impl->qualifiers)
+        {
+            if (qual == glsl_qualifier::ReadOnly || qual == glsl_qualifier::WriteOnly)
+            {
                 return qual;
             }
         }
 
         auto& stage_qualifiers = impl->perUsageQualifiers[std::string(shader_name)];
-        for (const auto& qual : stage_qualifiers) {
-            if (qual == glsl_qualifier::ReadOnly || qual == glsl_qualifier::WriteOnly) {
+        for (const auto& qual : stage_qualifiers)
+        {
+            if (qual == glsl_qualifier::ReadOnly || qual == glsl_qualifier::WriteOnly)
+            {
                 return qual;
             }
         }
@@ -151,16 +175,19 @@ namespace st {
         return glsl_qualifier::InvalidQualifier;
     }
 
-    dll_retrieved_strings_t ShaderResource::GetTags() const noexcept {
+    dll_retrieved_strings_t ShaderResource::GetTags() const noexcept
+    {
         dll_retrieved_strings_t result;
         result.SetNumStrings(impl->tags.size());
-        for (size_t i = 0; i < impl->tags.size(); ++i) {
+        for (size_t i = 0; i < impl->tags.size(); ++i)
+        {
             result.Strings[i] = strdup(impl->tags[i].c_str());
         }
         return result;
     }
 
-    const char* ShaderResource::GetMembersStr() const noexcept {
+    const char* ShaderResource::GetMembersStr() const noexcept
+    {
         return impl->membersStr.c_str();
     }
 
@@ -179,62 +206,79 @@ namespace st {
         return impl->bindingIdx;
     }
 
-    void ShaderResource::SetBindingIndex(uint32_t idx) {
+    void ShaderResource::SetBindingIndex(uint32_t idx)
+    {
         impl->bindingIdx = std::move(idx);
     }
 
-    void ShaderResource::SetInputAttachmentIndex(size_t idx) {
+    void ShaderResource::SetInputAttachmentIndex(size_t idx)
+    {
         impl->inputAttachmentIdx = idx;
     }
 
-    void ShaderResource::SetStages(VkShaderStageFlags stages) {
+    void ShaderResource::SetStages(VkShaderStageFlags stages)
+    {
         impl->stages = std::move(stages);
     }
 
-    void ShaderResource::SetType(VkDescriptorType _type) {
+    void ShaderResource::SetType(VkDescriptorType _type)
+    {
         impl->type = std::move(_type);
     }
-    void ShaderResource::SetName(const char* name) {
+    void ShaderResource::SetName(const char* name)
+    {
         impl->name = std::string{ name };
     }
 
-    void ShaderResource::SetMembersStr(const char * members_str) {
+    void ShaderResource::SetMembersStr(const char* members_str)
+    {
         impl->membersStr = members_str;
     }
 
-    void ShaderResource::SetParentGroupName(const char * parent_group_name) {
+    void ShaderResource::SetParentGroupName(const char* parent_group_name)
+    {
         impl->parentSetName = parent_group_name;
     }
 
-    void ShaderResource::SetQualifiers(const size_t num_qualifiers, glsl_qualifier* qualifiers) {
-        for (size_t i = 0; i < num_qualifiers; ++i) {
+    void ShaderResource::SetQualifiers(const size_t num_qualifiers, glsl_qualifier* qualifiers)
+    {
+        for (size_t i = 0; i < num_qualifiers; ++i)
+        {
             impl->qualifiers.emplace(qualifiers[i]);
         }
     }
 
-    void ShaderResource::AddPerUsageQualifier(const char * shader_name, glsl_qualifier qualifier) {
+    void ShaderResource::AddPerUsageQualifier(const char* shader_name, glsl_qualifier qualifier)
+    {
         impl->perUsageQualifiers[std::string(shader_name)].emplace(qualifier);
     }
 
-    void ShaderResource::AddPerUsageQualifiers(const char * shader_name, const size_t num_qualifiers, const glsl_qualifier * qualifiers) {
+    void ShaderResource::AddPerUsageQualifiers(const char* shader_name, const size_t num_qualifiers, const glsl_qualifier* qualifiers)
+    {
         auto& qualifier_set = impl->perUsageQualifiers[std::string(shader_name)];
-        for (size_t i = 0; i < num_qualifiers; ++i) {
+        for (size_t i = 0; i < num_qualifiers; ++i)
+        {
             qualifier_set.emplace(qualifiers[i]);
         }
     }
 
-    void ShaderResource::SetFormat(VkFormat fmt) {
+    void ShaderResource::SetFormat(VkFormat fmt)
+    {
         impl->format = std::move(fmt);
     }
 
-    void ShaderResource::SetTags(const size_t num_tags, const char ** tags) {
-        impl->tags.clear(); impl->tags.shrink_to_fit();
-        for (size_t i = 0; i < num_tags; ++i) {
+    void ShaderResource::SetTags(const size_t num_tags, const char** tags)
+    {
+        impl->tags.clear();
+        impl->tags.resize(num_tags);
+        for (size_t i = 0; i < num_tags; ++i)
+        {
             impl->tags.emplace_back(tags[i]);
         }
     }
 
-    void ShaderResource::SetImageSamplerSubtype(const char * subtype) {
+    void ShaderResource::SetImageSamplerSubtype(const char* subtype)
+    {
         impl->imageSamplerSubtype = std::string(subtype);
     }
 

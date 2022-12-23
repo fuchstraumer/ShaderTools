@@ -5,26 +5,15 @@
 #include "../../generation/impl/ShaderStageProcessor.hpp"
 #include "../../reflection/impl/ShaderReflectorImpl.hpp"
 #include "../../util/ShaderFileTracker.hpp"
-#include "easyloggingpp/src/easylogging++.h"
 #include <array>
 #include <filesystem>
 
-#if !defined(ST_BUILDING_STATIC)
-INITIALIZE_EASYLOGGINGPP
-#endif
-// Imported from windows headers included by easyloggingpp
-#ifdef FindResource
-#undef FindResource
-#endif
-
 namespace st
 {
-
     namespace fs = std::filesystem;
 
     ShaderPackImpl::ShaderPackImpl(const char * shader_pack_file_path) : filePack(std::make_unique<yamlFile>(shader_pack_file_path)), workingDir(shader_pack_file_path)
     {
-
         workingDir = fs::canonical(workingDir);
         packPath = workingDir.string();
         workingDir = workingDir.remove_filename();
@@ -133,8 +122,7 @@ namespace st
                     typeCounts.StorageBuffersDynamic++;
                     break;
                 default:
-                    LOG(ERROR) << "Got invalid VkDescriptor type value when counting up descriptors of each type!";
-                    throw std::domain_error("Invalid VkDescriptorType enum value.");
+                    throw std::domain_error("Invalid VkDescriptor type value when counting up descriptors of each type");
                 }
             }
         }

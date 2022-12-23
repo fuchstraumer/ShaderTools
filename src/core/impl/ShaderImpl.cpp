@@ -15,7 +15,8 @@ namespace st {
     ShaderGroupImpl::ShaderGroupImpl(ShaderGroupImpl && other) noexcept : stHandles(std::move(other.stHandles)), reflector(std::move(other.reflector)), rsrcFile(std::move(other.rsrcFile)), 
         groupName(std::move(other.groupName)), resourceScriptPath(std::move(other.resourceScriptPath)) {}
 
-    ShaderGroupImpl & ShaderGroupImpl::operator=(ShaderGroupImpl && other) noexcept {
+    ShaderGroupImpl & ShaderGroupImpl::operator=(ShaderGroupImpl && other) noexcept
+    {
         stHandles = std::move(other.stHandles);
         reflector = std::move(other.reflector);
         rsrcFile = std::move(other.rsrcFile);
@@ -24,7 +25,8 @@ namespace st {
         return *this;
     }
 
-    void ShaderGroupImpl::addShaderStage(const ShaderStage& handle) {
+    void ShaderGroupImpl::addShaderStage(const ShaderStage& handle)
+    {
         stHandles.emplace(handle);
         reflector->ParseBinary(handle);
     }

@@ -6,25 +6,26 @@
 #include "reflection/ReflectionStructs.hpp"
 #include "spirv-cross/spirv_cross.hpp"
 #include "spirv-cross/spirv_glsl.hpp"
-#include <fstream>
-#include <filesystem>
 #include <unordered_map>
 #include <unordered_set>
 #include <map>
 #include <set>
-#include "../../util/ShaderFileTracker.hpp"
+#include <vulkan/vulkan_enums.hpp>
 
-namespace st {
+namespace st
+{
 
     class ResourceUsage;
     struct yamlFile;
 
-    struct DescriptorSetInfo {
+    struct DescriptorSetInfo
+    {
         uint32_t Binding;
         std::map<uint32_t, ResourceUsage> Members;
     };
 
-    class ShaderReflectorImpl {
+    class ShaderReflectorImpl
+    {
         ShaderReflectorImpl(const ShaderReflectorImpl&) = delete;
         ShaderReflectorImpl& operator=(const ShaderReflectorImpl&) = delete;
     public:
@@ -36,7 +37,7 @@ namespace st {
 
         void collateSets();
         void parseSpecializationConstants();
-        void parseResourceType(const ShaderStage& shader_handle, const VkDescriptorType & type_being_parsed);
+        void parseResourceType(const ShaderStage& shader_handle, const VkDescriptorType& type_being_parsed);
         void parseBinary(const ShaderStage& shader_handle);
         void parseImpl(const ShaderStage& shader_handle, const std::vector<uint32_t>& binary_data);
 
@@ -53,7 +54,6 @@ namespace st {
         yamlFile* rsrcFile;
         size_t getNumSets() const noexcept;
 
-        decltype(sortedSets)::iterator findSetWithIdx(const uint32_t idx);
     };
 
 }

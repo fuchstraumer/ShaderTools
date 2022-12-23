@@ -6,7 +6,8 @@
 
 namespace fs = std::filesystem;
 
-namespace st {
+namespace st
+{
 
     ShaderFileTracker::ShaderFileTracker(const std::string& initial_directory)
     {
@@ -21,8 +22,9 @@ namespace st {
         }
         if (!fs::exists(cacheDir))
         {
-            if (!fs::create_directories(cacheDir)) {
-                LOG(WARNING) << "Couldn't create cache directory. File caching will not be possible.";
+            if (!fs::create_directories(cacheDir))
+            {
+                std::cerr << "Couldn't create cache directory, outputs won't be cached for future runs (non-critical).\n";
             }
         }
     }
@@ -97,14 +99,13 @@ namespace st {
             std::ifstream input_file(BodyPaths.at(handle));
             if (!input_file.is_open())
             {
-                LOG(ERROR) << "Path to source of shader existed in program map, but source file itself could not be opened!\n";
-                throw std::runtime_error("Failed to open shader source file.");
+                throw std::runtime_error("Failed to open shader source file, path existed in program state but file couldn't be opened.");
             }
 
             auto iter = ShaderBodies.emplace(handle, std::string{ std::istreambuf_iterator<char>(input_file), std::istreambuf_iterator<char>() });
-            if (!iter.second) {
-                LOG(ERROR) << "Failed to add read shader source file to programs source string map!\n";
-                throw std::runtime_error("Could not add source file string to program map!");
+            if (!iter.second)
+            {
+                throw std::runtime_error("Source path was valid, and file was read successfully: failed to embed into program state.");
             }
 
             dest_str = iter.first->second;
@@ -127,7 +128,6 @@ namespace st {
             fs::path source_body_path(shader_body_path);
             if (!fs::exists(source_body_path))
             {
-                LOG(ERROR) << "Given path does not exist.";
                 throw std::runtime_error("Failed to open given file: invalid path.");
             }
 
@@ -137,7 +137,6 @@ namespace st {
             std::ifstream input_stream(source_body_path);
             if (!input_stream.is_open())
             {
-                LOG(ERROR) << "Given shader body path exists, but opening a file stream for this path failed!";
                 throw std::runtime_error("Failed to open input stream for given shader body path.");
             }
 
@@ -165,9 +164,9 @@ namespace st {
 
             std::lock_guard map_guard(mapMutex);
             std::ifstream input_file(BinaryPaths.at(handle), std::ios::binary | std::ios::in | std::ios::ate);
-            if (!input_file.is_open()) {
-                LOG(ERROR) << "Path to binary of shader existed in programs map, but binary file itself could not be read!\n";
-                throw std::runtime_error("Failed to open shader source file.");
+            if (!input_file.is_open())
+            {
+                throw std::runtime_error("Shader binary path existed in program state, but we couldn't open the file referenced!");
             }
 
             size_t code_size = static_cast<size_t>(input_file.tellg());
@@ -180,9 +179,9 @@ namespace st {
             memcpy(imported_binary.data(), buffer.data(), buffer.size());
             auto iter = Binaries.emplace(handle, imported_binary);
 
-            if (!iter.second) {
-                LOG(ERROR) << "Failed to add shader binary to programs shader binary map!\n";
-                throw std::runtime_error("Failed to emplace shader binary into program binary map.");
+            if (!iter.second)
+            {
+                throw std::runtime_error("Path to shader binary valid, file read successfully - failure to emplace in internal state container.");
             }
 
             dest_binary_vector = iter.first->second;

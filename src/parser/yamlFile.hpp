@@ -15,7 +15,8 @@ namespace st {
 
     struct yamlFileImpl;
 
-    struct yamlFile {
+    struct yamlFile
+    {
 
         yamlFile(const char* fname);
         ~yamlFile();

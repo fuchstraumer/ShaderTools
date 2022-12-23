@@ -6,7 +6,8 @@
 #include "spirv-cross/spirv_cross.hpp"
 #include <string>
 
-namespace st {
+namespace st
+{
 
     std::string GetDescriptorTypeString(const VkDescriptorType& type);
     VkDescriptorType GetDescriptorTypeFromString(const std::string& str);

@@ -18,7 +18,8 @@ namespace st {
 
     struct yamlFile;
 
-    enum class fragment_type : uint8_t {
+    enum class fragment_type : uint8_t
+    {
         Preamble = 0,
         Extension = 1,
         glPerVertex = 2,
@@ -33,7 +34,8 @@ namespace st {
         Invalid
     };
 
-    struct shaderFragment {
+    struct shaderFragment
+    {
         shaderFragment(fragment_type type, std::string data) noexcept : Type(type), Data(std::move(data)) {}
         shaderFragment() = default;
         shaderFragment(const shaderFragment&) = default;
@@ -50,7 +52,8 @@ namespace st {
         }
     };
 
-    struct shader_resources_t {
+    struct shader_resources_t
+    {
         size_t LastConstantIndex = 0;
         size_t PushConstantOffset = 0;
         size_t LastInputIndex = 0;
@@ -61,7 +64,8 @@ namespace st {
         size_t LastSetIdx = 0;
     };
 
-    class ShaderGeneratorImpl {
+    class ShaderGeneratorImpl
+    {
     public:
 
         explicit ShaderGeneratorImpl(ShaderStage _stage);

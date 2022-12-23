@@ -1,11 +1,12 @@
 #include "ResourceFormats.hpp"
-#include "easyloggingpp/src/easylogging++.h"
 
-namespace st {
+namespace st
+{
 
     std::string GetDescriptorTypeString(const VkDescriptorType& type)
     {
-        switch (type) {
+        switch (type)
+        {
         case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
             return std::string("UniformBuffer");
         case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
@@ -29,55 +30,66 @@ namespace st {
         case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
             return std::string("StorageTexelBuffer");
         default:
-            LOG(ERROR) << "Invalid VkDescriptorType enum value passed to enum-to-string method.";
             return std::string("InvalidType");
         }
     }
 
     VkDescriptorType GetDescriptorTypeFromString(const std::string& str)
     {
-        if (str == std::string("UniformBuffer")) {
+        if (str == std::string("UniformBuffer"))
+        {
             return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         }
-        else if (str == std::string("UniformBufferDynamic")) {
+        else if (str == std::string("UniformBufferDynamic"))
+        {
             return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
         }
-        else if (str == std::string("StorageBuffer")) {
+        else if (str == std::string("StorageBuffer"))
+        {
             return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
         }
-        else if (str == std::string("StorageBufferDynamic")) {
+        else if (str == std::string("StorageBufferDynamic"))
+        {
             return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
         }
-        else if (str == std::string("CombinedImageSampler")) {
+        else if (str == std::string("CombinedImageSampler"))
+        {
             return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         }
-        else if (str == std::string("SampledImage")) {
+        else if (str == std::string("SampledImage"))
+        {
             return VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
         }
-        else if (str == std::string("StorageImage")) {
+        else if (str == std::string("StorageImage"))
+        {
             return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
         }
-        else if (str == std::string("InputAttachment")) {
+        else if (str == std::string("InputAttachment"))
+        {
             return VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
         }
-        else if (str == std::string("Sampler")) {
+        else if (str == std::string("Sampler"))
+        {
             return VK_DESCRIPTOR_TYPE_SAMPLER;
         }
-        else if (str == std::string("UniformTexelBuffer")) {
+        else if (str == std::string("UniformTexelBuffer"))
+        {
             return VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
         }
-        else if (str == std::string("StorageTexelBuffer")) {
+        else if (str == std::string("StorageTexelBuffer"))
+        {
             return VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
         }
-        else {
-            LOG(ERROR) << "Invalid string passed to string-to-enum method!";
+        else
+        {
             return VK_DESCRIPTOR_TYPE_MAX_ENUM;
         }
     }
 
     std::string GetShaderStageString(const VkShaderStageFlags& flag)
     {
-        switch (flag) {
+        switch (flag)
+        {
         case VK_SHADER_STAGE_VERTEX_BIT:
             return "Vertex";
         case VK_SHADER_STAGE_FRAGMENT_BIT:
@@ -91,33 +103,38 @@ namespace st {
         case VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT:
             return "TesselationEvaluation";
         default:
-            LOG(ERROR) << "Passed invalid shader stage flags to enum->string conversion method.";
             return "UNDEFINED_SHADER_STAGE";
         }
     }
 
     VkShaderStageFlags GetShaderStageFromString(const std::string& stage)
     {
-        if (stage == "Vertex") {
+        if (stage == "Vertex")
+        {
             return VK_SHADER_STAGE_VERTEX_BIT;
         }
-        else if (stage == "Fragment") {
+        else if (stage == "Fragment")
+        {
             return VK_SHADER_STAGE_FRAGMENT_BIT;
         }
-        else if (stage == "Compute") {
+        else if (stage == "Compute")
+        {
             return VK_SHADER_STAGE_COMPUTE_BIT;
         }
-        else if (stage == "Geometry") {
+        else if (stage == "Geometry")
+        {
             return VK_SHADER_STAGE_GEOMETRY_BIT;
         }
-        else if (stage == "TesselationControl") {
+        else if (stage == "TesselationControl")
+        {
             return VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT;
         }
-        else if (stage == "TesselationEvaluation") {
+        else if (stage == "TesselationEvaluation")
+        {
             return VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT;
         }
-        else {
-            LOG(ERROR) << "Passed invalid string of " << stage << " to string->stage enum conversion method.";
+        else
+        {
             return VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM;
         }
     }
@@ -128,7 +145,8 @@ namespace st {
         std::string result_str;
         bool add_width = true;
 
-        switch (stype.basetype) {
+        switch (stype.basetype)
+        {
         case SPIRType::Boolean:
             result_str = "bool";
             break;
@@ -171,7 +189,6 @@ namespace st {
             result_str = "sampledImage";
             break;
         default:
-            LOG(ERROR) << "Unhandled or unsupported SPIRType in TypeToStr method.";
             return "INVALID_TYPE";
         }
 
@@ -193,7 +210,7 @@ namespace st {
 
     }
 
-    spirv_cross::SPIRType::BaseType SPIR_BaseTypeEnumFromString(const std::string & str)
+    spirv_cross::SPIRType::BaseType SPIR_BaseTypeEnumFromString(const std::string& str)
     {
         using namespace spirv_cross;
         if (str == std::string("float"))
@@ -250,12 +267,11 @@ namespace st {
         }
         else
         {
-            LOG(ERROR) << "Invalid type string " << str << " passed to spirv_cross::BaseType from string conversion method.";
             return SPIRType::Unknown;
         }
     }
 
-    spirv_cross::SPIRType SPIR_TypeFromString(const std::string & str)
+    spirv_cross::SPIRType SPIR_TypeFromString(const std::string& str)
     {
         using namespace spirv_cross;
         SPIRType result;
@@ -280,12 +296,11 @@ namespace st {
         }
     }
 
-    VkFormat VkFormatFromSPIRType(const spirv_cross::SPIRType & type)
+    VkFormat VkFormatFromSPIRType(const spirv_cross::SPIRType& type)
     {
         using namespace spirv_cross;
         if (type.basetype == SPIRType::Struct || type.basetype == SPIRType::Sampler)
         {
-            LOG(WARNING) << "Tried to convert a structure or SPIR sampler into a VkFormat enum value!";
             return VK_FORMAT_UNDEFINED;
         }
         else if (type.basetype == SPIRType::Image || type.basetype == SPIRType::SampledImage)
@@ -339,7 +354,6 @@ namespace st {
             case spv::ImageFormatRgba32ui:
                 return VK_FORMAT_R32G32B32A32_UINT;
             default:
-                LOG(ERROR) << "Failed to convert an image format to a VkFormat enum.";
                 return VK_FORMAT_UNDEFINED;
             }
         }
@@ -401,7 +415,6 @@ namespace st {
             }
             else
             {
-                LOG(ERROR) << "Invalid type width for conversion of SPIR-Type to VkFormat enum value!";
                 return VK_FORMAT_UNDEFINED;
             }
         }
@@ -463,7 +476,6 @@ namespace st {
             }
             else
             {
-                LOG(ERROR) << "Invalid type width for conversion of SPIR-Type to VkFormat enum value!";
                 return VK_FORMAT_UNDEFINED;
             }
         }
@@ -525,7 +537,6 @@ namespace st {
             }
             else
             {
-                LOG(ERROR) << "Invalid type width for conversion of SPIR-Type to VkFormat enum value!";
                 return VK_FORMAT_UNDEFINED;
             }
         }
@@ -587,18 +598,16 @@ namespace st {
             }
             else
             {
-                LOG(ERROR) << "Invalid type width for conversion to a VkFormat enum";
                 return VK_FORMAT_UNDEFINED;
             }
         }
         else
-{
-            LOG(ERROR) << "Vector size in vertex input attributes isn't explicitly supported for parsing from SPIRType->VkFormat";
+        {
             return VK_FORMAT_UNDEFINED;
         }
     }
 
-    VkFormat VkFormatFromString(const std::string & string)
+    VkFormat VkFormatFromString(const std::string& string)
     {
         static const std::unordered_map<std::string, VkFormat> formats_map
         {
@@ -819,7 +828,6 @@ namespace st {
         }
         else
         {
-            LOG(WARNING) << "Couldn't find VkFormat value " << std::to_string(fmt) << " in VkFormat->MemoryFootprint map! Returning invalid value.";
             return std::numeric_limits<size_t>::max();
         }
     }

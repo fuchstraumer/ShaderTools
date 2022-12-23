@@ -3,14 +3,16 @@
 #define ST_SHADER_PACK_HPP
 #include "common/CommonInclude.hpp"
 #include "common/UtilityStructs.hpp"
-namespace st {
+namespace st
+{
 
     class ShaderPackImpl;
     class Shader;
     class ShaderResource;
     class ResourceGroup;
 
-    class ST_API ShaderPack {
+    class ST_API ShaderPack
+    {
         ShaderPack(const ShaderPack&) = delete;
         ShaderPack& operator=(const ShaderPack&) = delete;
     public:
@@ -32,8 +34,6 @@ namespace st {
         friend struct ShaderPackBinary;
         std::unique_ptr<ShaderPackImpl> impl;
     };
-
-    ST_API void SetLoggingRepository(void* easylogging_repo_ptr);
 
 }
 

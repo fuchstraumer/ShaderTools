@@ -4,12 +4,14 @@
 #include "common/CommonInclude.hpp"
 #include "common/UtilityStructs.hpp"
 
-namespace st {
+namespace st
+{
 
     class ShaderResourceImpl;
     struct ShaderResourceSubObject;
 
-    enum class glsl_qualifier : uint16_t {
+    enum class glsl_qualifier : uint16_t
+    {
         Coherent = 0,
         ReadOnly,
         WriteOnly,
@@ -18,7 +20,8 @@ namespace st {
         InvalidQualifier = std::numeric_limits<uint16_t>::max()
     };
 
-    class ST_API ShaderResource {
+    class ST_API ShaderResource
+    {
     public:
 
         ShaderResource();

@@ -4,7 +4,8 @@
 
 namespace st {
 
-    struct PushConstantInfoImpl {
+    struct PushConstantInfoImpl
+    {
         VkShaderStageFlags stages{ VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM };
         std::string name{};
         std::vector<ShaderResourceSubObject> members{};
@@ -17,26 +18,31 @@ namespace st {
         impl.reset();
     }
 
-    PushConstantInfo::PushConstantInfo(const PushConstantInfo & other) noexcept : impl(std::make_unique<PushConstantInfoImpl>(*other.impl)) {}
+    PushConstantInfo::PushConstantInfo(const PushConstantInfo& other) noexcept : impl(std::make_unique<PushConstantInfoImpl>(*other.impl)) {}
 
-    PushConstantInfo& PushConstantInfo::operator=(const PushConstantInfo & other) noexcept {
+    PushConstantInfo& PushConstantInfo::operator=(const PushConstantInfo& other) noexcept
+    {
         impl = std::make_unique<PushConstantInfoImpl>(*other.impl);
         return *this;
     }
 
-    void PushConstantInfo::SetStages(VkShaderStageFlags flags) noexcept {
+    void PushConstantInfo::SetStages(VkShaderStageFlags flags) noexcept
+    {
         impl->stages = std::move(flags);
     }
 
-    void PushConstantInfo::SetName(const char * _name) noexcept {
+    void PushConstantInfo::SetName(const char* _name) noexcept
+    {
         impl->name = _name;
     }
 
-    void PushConstantInfo::SetOffset(uint32_t amt) noexcept {
+    void PushConstantInfo::SetOffset(uint32_t amt) noexcept
+    {
         impl->offset = std::move(amt);
     }
 
-    void PushConstantInfo::SetMembers(const size_t num_members, ShaderResourceSubObject * members) {
+    void PushConstantInfo::SetMembers(const size_t num_members, ShaderResourceSubObject* members)
+    {
         impl->members.resize(num_members);
         for (size_t i = 0; i < num_members; ++i)
         {
@@ -44,27 +50,32 @@ namespace st {
         }
     }
 
-    const VkShaderStageFlags & PushConstantInfo::Stages() const noexcept {
+    const VkShaderStageFlags & PushConstantInfo::Stages() const noexcept
+    {
         return impl->stages;
     }
 
-    const char* PushConstantInfo::Name() const noexcept {
+    const char* PushConstantInfo::Name() const noexcept
+    {
         return impl->name.c_str();
     }
 
-    const uint32_t & PushConstantInfo::Offset() const noexcept {
+    const uint32_t& PushConstantInfo::Offset() const noexcept {
         return impl->offset;
     }
 
-    void PushConstantInfo::GetMembers(size_t * num_members, ShaderResourceSubObject * members) const {
+    void PushConstantInfo::GetMembers(size_t* num_members, ShaderResourceSubObject* members) const
+    {
         *num_members = impl->members.size();
-        if (members != nullptr) {
+        if (members != nullptr)
+        {
             std::copy(impl->members.cbegin(), impl->members.cend(), members);
         }
     }
 
     // Weird logic of potentially optimized out members makes this one more complex than it should have to be...
-    PushConstantInfo::operator VkPushConstantRange() const noexcept {
+    PushConstantInfo::operator VkPushConstantRange() const noexcept
+    {
         VkPushConstantRange result;
         result.stageFlags = impl->stages;
         result.offset = impl->offset;
@@ -79,14 +90,17 @@ namespace st {
         uint32_t size = 0;
         // Weird size calculation: sometimes, a variable in the middle of our range
         // will be optimized out.
-        for (auto& obj : impl->members) {
+        // note many years later: maybe we should figure out why this is happening, lol
+        for (auto& obj : impl->members)
+        {
             size = std::max(size, obj.Offset);
         }
         result.size = size + impl->members.back().Size;
         return result;
     }
 
-    struct VertexAttributeInfoImpl {
+    struct VertexAttributeInfoImpl
+    {
         std::string name;
         spirv_cross::SPIRType type;
         uint32_t location;
@@ -97,54 +111,68 @@ namespace st {
 
     VertexAttributeInfo::~VertexAttributeInfo() noexcept {}
 
-    VertexAttributeInfo::VertexAttributeInfo(const VertexAttributeInfo & other) noexcept : impl(std::make_unique<VertexAttributeInfoImpl>(*other.impl)) {}
+    VertexAttributeInfo::VertexAttributeInfo(const VertexAttributeInfo& other) noexcept : impl(std::make_unique<VertexAttributeInfoImpl>(*other.impl)) {}
 
-    VertexAttributeInfo & VertexAttributeInfo::operator=(const VertexAttributeInfo & other) noexcept {
+    VertexAttributeInfo& VertexAttributeInfo::operator=(const VertexAttributeInfo& other) noexcept
+    {
         impl = std::make_unique<VertexAttributeInfoImpl>(*other.impl);
         return *this;
     }
 
-    void VertexAttributeInfo::SetName(const char * _name) {
+    void VertexAttributeInfo::SetName(const char* _name)
+    {
         impl->name = _name;
     }
 
-    void VertexAttributeInfo::SetType(const void* spir_type_ptr) {
+    void VertexAttributeInfo::SetType(const void* spir_type_ptr)
+    {
+        // note: this is mostly just to avoid having to do stupid includes across DLL boundaries, or spreading the mega-web
+        // of SPIR-V includes further than source files (yucky)
         impl->type = *reinterpret_cast<const spirv_cross::SPIRType*>(spir_type_ptr);
     }
 
-    void VertexAttributeInfo::SetTypeFromText(const char* str) {
+    void VertexAttributeInfo::SetTypeFromText(const char* str)
+    {
         impl->type = SPIR_TypeFromString(str);
     }
 
-    void VertexAttributeInfo::SetLocation(uint32_t loc) noexcept {
+    void VertexAttributeInfo::SetLocation(uint32_t loc) noexcept
+    {
         impl->location = std::move(loc);
     }
 
-    void VertexAttributeInfo::SetOffset(uint32_t _offset) noexcept {
+    void VertexAttributeInfo::SetOffset(uint32_t _offset) noexcept
+    {
         impl->offset = std::move(_offset);
     }
 
-    const char * VertexAttributeInfo::Name() const noexcept {
+    const char* VertexAttributeInfo::Name() const noexcept
+    {
         return impl->name.c_str();
     }
 
-    const char* VertexAttributeInfo::TypeAsText() const noexcept {
+    const char* VertexAttributeInfo::TypeAsText() const noexcept
+    {
         return SPIR_TypeToString(impl->type).c_str();
     }
 
-    const uint32_t & VertexAttributeInfo::Location() const noexcept {
+    const uint32_t& VertexAttributeInfo::Location() const noexcept
+    {
         return impl->location;
     }
 
-    const uint32_t & VertexAttributeInfo::Offset() const noexcept {
+    const uint32_t& VertexAttributeInfo::Offset() const noexcept
+    {
         return impl->offset;
     }
 
-    VkFormat VertexAttributeInfo::GetAsFormat() const noexcept {
+    VkFormat VertexAttributeInfo::GetAsFormat() const noexcept
+    {
         return VkFormatFromSPIRType(impl->type);
     }
 
-    VertexAttributeInfo::operator VkVertexInputAttributeDescription() const noexcept {
+    VertexAttributeInfo::operator VkVertexInputAttributeDescription() const noexcept
+    {
         return VkVertexInputAttributeDescription{ impl->location, 0, GetAsFormat(), impl->offset };
     }
 

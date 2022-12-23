@@ -1,0 +1,10 @@
+- Vastly improve the error handling. Figure out how we could potentially sub in stub content
+- As part of the above, disable easyloggingpp. Anytime we'd log an error, store an error in the generated content. Allows users/clients to introspect on errors and decide what to do. We shouldn't do that for them.
+- Return errors, not to top level functions - just internally. Store them in binarized result.
+- Explore what we can do with the new (?) vulkan headers for enum-string mapping, could delete or simplify some code! 
+- Figure out something smarter for how we're saving the common "state" in the shader file tracker. This works for now, but we can do better
+- Identify how to handle some kind of static branching functionality
+- Distill responsibilities down to minimum. Cleanup fragments: too much content saved here. 
+- Build out integration tests
+- Change shader yaml spec to be "ComputeShader" for compute shaders, use "RenderShaders" + (Stage) as next subgroup for rendering shaders. More succinct, more clear.
+- Reduce lambda function usage. Untestable, hidden, cluttered.

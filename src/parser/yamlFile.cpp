@@ -4,22 +4,23 @@
 #include "../util/ShaderFileTracker.hpp"
 #include <filesystem>
 #include <cassert>
-#include "easyloggingpp/src/easylogging++.h"
 #ifdef FindResource
 #undef FindResource
 #endif
 
-namespace st {
+namespace st
+{
 
     namespace fs = std::filesystem;
 
     constexpr static VkDescriptorType ARRAY_TYPE_FLAG_BITS = static_cast<VkDescriptorType>(1 << 16);
-    constexpr VkDescriptorType MakeArrayType(VkDescriptorType type)
+    constexpr VkDescriptorType MakeArrayType(VkDescriptorType type) noexcept
     {
         return static_cast<VkDescriptorType>(type | ARRAY_TYPE_FLAG_BITS);
     }
 
-    static const std::unordered_map<std::string, VkDescriptorType> descriptor_type_from_str_map = {
+    static const std::unordered_map<std::string, VkDescriptorType> descriptor_type_from_str_map =
+    {
         { "UniformBuffer", VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER },
         { "UniformBufferArray", MakeArrayType(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER) },
         { "DynamicUniformBuffer", VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC },
@@ -41,7 +42,8 @@ namespace st {
         { "InputAttachment", VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT }
     };
 
-    static const std::unordered_map<std::string, glsl_qualifier> qualifier_from_str_map = {
+    static const std::unordered_map<std::string, glsl_qualifier> qualifier_from_str_map =
+    {
         { "coherent", glsl_qualifier::Coherent },
         { "readonly", glsl_qualifier::ReadOnly },
         { "writeonly", glsl_qualifier::WriteOnly },
@@ -49,59 +51,71 @@ namespace st {
         { "restrict", glsl_qualifier::Restrict }
     };
     
-    glsl_qualifier singleQualifierFromString(const std::string& single_qualifier) {
+    glsl_qualifier singleQualifierFromString(const std::string& single_qualifier)
+    {
         auto iter = qualifier_from_str_map.find(single_qualifier);
-        if (iter != qualifier_from_str_map.cend()) {
+        if (iter != qualifier_from_str_map.cend())
+        {
             return iter->second;
         }
-        else {
+        else
+        {
             return glsl_qualifier::InvalidQualifier;
         }
     }
     
-    std::vector<glsl_qualifier> qualifiersFromString(std::string qualifiers_str) {
+    std::vector<glsl_qualifier> qualifiersFromString(std::string qualifiers_str)
+    {
         // find if we have multiple qualifiers
-        if (qualifiers_str.find_first_of(' ') != std::string::npos) {
+        if (qualifiers_str.find_first_of(' ') != std::string::npos)
+        {
             std::vector<std::string> substrings;
 
-            while (!qualifiers_str.empty()) {
+            while (!qualifiers_str.empty())
+            {
                 size_t idx = qualifiers_str.find_first_of(' ');
-                if (idx == std::string::npos) {
+                if (idx == std::string::npos)
+                {
                     substrings.emplace_back(qualifiers_str);
                     qualifiers_str.clear();
                 }
-                else {
+                else
+                {
                     substrings.emplace_back(std::string{ qualifiers_str.cbegin(), qualifiers_str.cbegin() + idx });
                     qualifiers_str.erase(qualifiers_str.begin(), qualifiers_str.begin() + idx + 1);
                 }
             }
 
             std::vector<glsl_qualifier> result;
-            for (const auto& substr : substrings) {
+            for (const auto& substr : substrings)
+            {
                 result.emplace_back(singleQualifierFromString(substr));
             }
 
             return result;
         }
-        else {
+        else
+        {
             return std::vector<glsl_qualifier>{ singleQualifierFromString(qualifiers_str) };
         }
     }
 
-    struct yamlFileImpl {
+    // Impl here exists just so we can keep the YAML library entirely in this source, not in a single darn header!
+    struct yamlFileImpl
+    {
         yamlFileImpl(const char* fname) : rootFileNode{ YAML::LoadFile(fname) } {}
         ~yamlFileImpl() {}
         YAML::Node rootFileNode;
     };
 
-    yamlFile::yamlFile(const char * fname) {
+    yamlFile::yamlFile(const char* fname)
+    {
         try
         {
             impl = std::make_unique<yamlFileImpl>(fname);
         }
-        catch (const std::exception & e)
+        catch (const std::exception& e)
         {
-            LOG(ERROR) << "Failed to create/open YAML file: " << e.what();
             throw e;
         }
         parseGroups();
@@ -111,20 +125,27 @@ namespace st {
 
     yamlFile::~yamlFile() {}
 
-    ShaderResource* yamlFile::FindResource(const std::string& name) {
-
-        auto find_single_resource = [&name](std::vector<st::ShaderResource>& resources)->ShaderResource* {
-            for (auto iter = resources.begin(); iter != resources.end(); ++iter) {
-                if (strcmp(iter->Name(), name.c_str()) == 0) {
+    // Used during reflection stage to make sure mappings of client resources to compiled binary resources match
+    ShaderResource* yamlFile::FindResource(const std::string& name)
+    {
+        // Despite primitive linear search, probably not an issue. Resource count usually no more than 8-10?
+        auto find_single_resource = [&name](std::vector<st::ShaderResource>& resources)->ShaderResource*
+        {
+            for (auto iter = resources.begin(); iter != resources.end(); ++iter)
+            {
+                if (strcmp(iter->Name(), name.c_str()) == 0)
+                {
                     return &(*iter);
                 }
             }
             return nullptr;
         };
 
-        for (auto& group : resourceGroups) {
+        for (auto& group : resourceGroups)
+        {
             ShaderResource* result = find_single_resource(group.second);
-            if (result != nullptr) {
+            if (result != nullptr)
+            {
                 return result;
             }
         }
@@ -132,26 +153,32 @@ namespace st {
         return nullptr;
     }
 
-    void yamlFile::parseGroups() {
+    void yamlFile::parseGroups()
+    {
         using namespace YAML;
         
         auto& file_node = impl->rootFileNode;
-        if (!file_node["shader_groups"]) {
+        if (!file_node["shader_groups"])
+        {
             throw std::runtime_error("YAML file had no shader groups specified!");
         }
 
         auto& groups = file_node["shader_groups"];
 
-        for (auto iter = groups.begin(); iter != groups.end(); ++iter) {
+        for (auto iter = groups.begin(); iter != groups.end(); ++iter)
+        {
             std::string group_name = iter->first.as<std::string>();
 
-            auto add_stage = [this, &group_name](std::string shader_name, VkShaderStageFlags stage)->ShaderStage {
-                if (stages.count(shader_name) == 0) {
+            auto add_stage = [this, &group_name](std::string shader_name, VkShaderStageFlags stage)->ShaderStage
+            {
+                if (stages.count(shader_name) == 0)
+                {
                     auto iter = stages.emplace(shader_name, ShaderStage{ shader_name.c_str(), stage });
                     shaderGroups[group_name].emplace(iter.first->second);
                     return iter.first->second;
                 }
-                else {
+                else
+                {
                     shaderGroups[group_name].emplace(stages.at(shader_name));
                     return stages.at(shader_name);
                 }
@@ -161,23 +188,27 @@ namespace st {
                 std::vector<ShaderStage> stages_added;
                 auto shaders = iter->second["Shaders"];
 
-                if (shaders["Vertex"]) {
+                if (shaders["Vertex"])
+                {
                     stages_added.emplace_back(add_stage(shaders["Vertex"].as<std::string>(), VK_SHADER_STAGE_VERTEX_BIT));
                 }
 
-                if (shaders["Geometry"]) {
+                if (shaders["Geometry"])
+                {
                     stages_added.emplace_back(add_stage(shaders["Geometry"].as<std::string>(), VK_SHADER_STAGE_GEOMETRY_BIT));
                 }
 
-                if (shaders["Fragment"]) {
+                if (shaders["Fragment"])
+                {
                     stages_added.emplace_back(add_stage(shaders["Fragment"].as<std::string>(), VK_SHADER_STAGE_FRAGMENT_BIT));
                 }
 
-                if (shaders["Compute"]) {
+                if (shaders["Compute"])
+                {
                     stages_added.emplace_back(add_stage(shaders["Compute"].as<std::string>(), VK_SHADER_STAGE_COMPUTE_BIT));
                 }
 
-
+                // Defined inline with list of shaders. Disables optimization for all shaders in this group (so, compute/render shaders)
                 if (shaders["OptimizationDisabled"])
                 {
                     auto& sft = ShaderFileTracker::GetFileTracker();
@@ -188,21 +219,28 @@ namespace st {
                     }
                 }
 
-                if (iter->second["Extensions"]) {
+                if (iter->second["Extensions"])
+                {
                     std::vector<std::string> extension_strs;
-                    for (const auto& ext : iter->second["Extensions"]) {
+                    for (const auto& ext : iter->second["Extensions"])
+                    {
                         extension_strs.emplace_back(ext.as<std::string>());
                     }
 
-                    for (auto& stage : stages_added) {
+                    for (auto& stage : stages_added)
+                    {
                         std::unique_copy(std::begin(extension_strs), std::end(extension_strs), std::back_inserter(stageExtensions[stage]));
                     }
                 }
             }
 
-            if (iter->second["Tags"]) {
+            // Tags are our way for users to insert custom tags that we don't act on: we just preserve them throughout the process,
+            // adding them to the completed output. Makes it possible to define shaderpacks as closer to pipeline specs
+            if (iter->second["Tags"])
+            {
                 assert(iter->second["Tags"].IsSequence());
-                for (const auto& tag : iter->second["Tags"]) {
+                for (const auto& tag : iter->second["Tags"])
+                {
                     groupTags[group_name].emplace_back(tag.as<std::string>());
                 }
             }
@@ -252,32 +290,37 @@ namespace st {
 
     }
 
-    void yamlFile::parseResources() {
+    void yamlFile::parseResources()
+    {
         using namespace YAML;
 
-        if (!impl->rootFileNode["resource_groups"]) {
+        if (!impl->rootFileNode["resource_groups"])
+        {
             throw std::runtime_error("YAML file had no resource groups!");
         }
 
         auto& groups = impl->rootFileNode["resource_groups"];
 
-        for (auto iter = groups.begin(); iter != groups.end(); ++iter) {
+        for (auto iter = groups.begin(); iter != groups.end(); ++iter)
+        {
             std::string group_name = iter->first.as<std::string>();
+            std::vector<st::ShaderResource>& group_resources = resourceGroups[group_name];
+
             auto& curr_node = iter->second;
-
-            auto& group_resources = resourceGroups[group_name];
-
-            for (auto member_iter = curr_node.begin(); member_iter != curr_node.end(); ++member_iter) {
+            for (auto member_iter = curr_node.begin(); member_iter != curr_node.end(); ++member_iter)
+            {
 
                 std::string rsrc_name = member_iter->first.as<std::string>();
                 auto& rsrc_node = member_iter->second;
 
-                if (!rsrc_node["Type"]) {
+                if (!rsrc_node["Type"])
+                {
                     throw std::runtime_error("Failed to find type field in resource entry in YAML file.");
                 }
 
                 auto type_iter = descriptor_type_from_str_map.find(rsrc_node["Type"].as<std::string>());
-                if (type_iter == descriptor_type_from_str_map.end()) {
+                if (type_iter == descriptor_type_from_str_map.end())
+                {
                     throw std::runtime_error("Could not match type str to valid VkDescriptorType value!");
                 }
 
@@ -286,6 +329,7 @@ namespace st {
                 rsrc.SetName(rsrc_name.c_str());
                 if (const VkDescriptorType rsrc_type = type_iter->second; rsrc_type & ARRAY_TYPE_FLAG_BITS)
                 {
+                    // We shove these bits in to make it clear elsewhere that something is a descriptor array
                     const VkDescriptorType actual_type = static_cast<VkDescriptorType>(uint32_t(rsrc_type) & ~uint32_t(ARRAY_TYPE_FLAG_BITS));
                     rsrc.SetType(actual_type);
                     rsrc.SetDescriptorArray(true); // defaults false
@@ -306,36 +350,46 @@ namespace st {
                     rsrc.SetType(type_iter->second);
                 }
 
-                if (rsrc_node["ImageSubtype"]) {
+                if (rsrc_node["ImageSubtype"])
+                {
                     auto subtype_str = rsrc_node["ImageSubtype"].as<std::string>();
                     rsrc.SetImageSamplerSubtype(subtype_str.c_str());
                 }
-                else if (rsrc_node["SamplerSubtype"]) {
+                else if (rsrc_node["SamplerSubtype"])
+                {
                     auto subtype_str = rsrc_node["SamplerSubtype"].as<std::string>();
                     rsrc.SetImageSamplerSubtype(subtype_str.c_str());
                 }
 
-                if (rsrc_node["Format"]) {
+                if (rsrc_node["Format"])
+                {
                     rsrc.SetFormat(VkFormatFromString(rsrc_node["Format"].as<std::string>()));
                 }
 
-                if (rsrc_node["Members"]) {
+                if (rsrc_node["Members"])
+                {
                     rsrc.SetMembersStr(rsrc_node["Members"].as<std::string>().c_str());
                 }
 
-                if (rsrc_node["Tags"]) {
+                if (rsrc_node["Tags"])
+                {
                     std::vector<std::string> tag_strs;
-                    for (auto& tag : rsrc_node["Tags"]) {
+                    for (auto& tag : rsrc_node["Tags"])
+                    {
                         tag_strs.emplace_back(tag.as<std::string>());
                     }
+
                     std::vector<const char*> tag_ptrs;
-                    for (auto& tag_str : tag_strs) {
+                    for (auto& tag_str : tag_strs)
+                    {
                         tag_ptrs.emplace_back(tag_str.c_str());
                     }
+
                     rsrc.SetTags(tag_ptrs.size(), tag_ptrs.data());
                 }
 
-                if (rsrc_node["Qualifiers"]) {
+                if (rsrc_node["Qualifiers"])
+                {
                     std::vector<glsl_qualifier> qualifiers = qualifiersFromString(rsrc_node["Qualifiers"].as<std::string>());
                     rsrc.SetQualifiers(qualifiers.size(), qualifiers.data());
                 }

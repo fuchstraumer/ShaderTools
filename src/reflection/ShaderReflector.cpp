@@ -2,9 +2,9 @@
 #include "impl/ShaderReflectorImpl.hpp"
 #include "resources/ResourceUsage.hpp"
 #include "reflection/ReflectionStructs.hpp"
-#include "easyloggingpp/src/easylogging++.h"
 
-namespace st {
+namespace st
+{
 
     ShaderReflector::ShaderReflector(yamlFile* yaml_file) : impl(std::make_unique<ShaderReflectorImpl>(yaml_file)) {}
 
@@ -12,78 +12,99 @@ namespace st {
 
     ShaderReflector::ShaderReflector(ShaderReflector&& other) noexcept : impl(std::move(other.impl)) {}
 
-    ShaderReflector& ShaderReflector::operator=(ShaderReflector&& other) noexcept {
+    ShaderReflector& ShaderReflector::operator=(ShaderReflector&& other) noexcept
+    {
         impl = std::move(other.impl);
         other.impl.reset();
         return *this;
     }
 
-    uint32_t ShaderReflector::GetNumSets() const noexcept {
+    uint32_t ShaderReflector::GetNumSets() const noexcept
+    {
         return static_cast<uint32_t>(impl->getNumSets());
     }
 
-    void ShaderReflector::GetShaderResources(const size_t set_idx, size_t * num_resources, ResourceUsage * resources) {
+    void ShaderReflector::GetShaderResources(const size_t set_idx, size_t* num_resources, ResourceUsage* resources)
+    {
         auto iter = impl->sortedSets.find(static_cast<unsigned int>(set_idx));
-        if (iter != impl->sortedSets.cend()) {
+        if (iter != impl->sortedSets.cend())
+        {
             const auto& set = iter->second;
             *num_resources = set.Members.size();
+
             std::vector<ResourceUsage> resources_copy;
-            for (const auto& member : set.Members) {
+            for (const auto& member : set.Members)
+            {
                 resources_copy.emplace_back(member.second);
             }   
 
-            if (resources != nullptr) {
+            if (resources != nullptr)
+            {
                 std::copy(resources_copy.begin(), resources_copy.end(), resources);
             }
         }
-        else {
+        else
+        {
             *num_resources = 0;
         }
     }
 
-    void ShaderReflector::GetInputAttributes(const VkShaderStageFlags stage, size_t * num_attrs, VertexAttributeInfo * attributes) {
+    void ShaderReflector::GetInputAttributes(const VkShaderStageFlags stage, size_t* num_attrs, VertexAttributeInfo* attributes)
+    {
         auto iter = impl->inputAttributes.find(stage);
-        if (iter == impl->inputAttributes.end()) {
+        if (iter == impl->inputAttributes.end())
+        {
             *num_attrs = 0;
             return;
         }
-        else {
+        else
+        {
             *num_attrs = iter->second.size();
-            if (attributes != nullptr) {
+            if (attributes != nullptr)
+            {
                 std::copy(std::begin(iter->second), std::end(iter->second), attributes);
             }
         }
     }
 
-    void ShaderReflector::GetOutputAttributes(const VkShaderStageFlags stage, size_t * num_attrs, VertexAttributeInfo * attributes) {
+    void ShaderReflector::GetOutputAttributes(const VkShaderStageFlags stage, size_t* num_attrs, VertexAttributeInfo* attributes)
+    {
         auto iter = impl->outputAttributes.find(stage);
-        if (iter == impl->outputAttributes.end()) {
+        if (iter == impl->outputAttributes.end())
+        {
             *num_attrs = 0;
             return;
         }
-        else {
+        else
+        {
             *num_attrs = iter->second.size();
-            if (attributes != nullptr) {
+            if (attributes != nullptr)
+            {
                 std::copy(std::begin(iter->second), std::end(iter->second), attributes);
             }
         }
     }
 
-    PushConstantInfo ShaderReflector::GetStagePushConstantInfo(const VkShaderStageFlags stage) const {
+    PushConstantInfo ShaderReflector::GetStagePushConstantInfo(const VkShaderStageFlags stage) const
+    {
         auto iter = impl->pushConstants.find(stage);
-        if (iter != std::end(impl->pushConstants)) {
+        if (iter != std::end(impl->pushConstants))
+        {
             return iter->second;
         }
-        else {
+        else
+        {
             return PushConstantInfo();
         }
     }
 
-    ShaderReflectorImpl * ShaderReflector::GetImpl() {
+    ShaderReflectorImpl * ShaderReflector::GetImpl()
+    {
         return impl.get();
     }
 
-    void ShaderReflector::ParseBinary(const ShaderStage & shader) {
+    void ShaderReflector::ParseBinary(const ShaderStage & shader)
+    {
         impl->parseBinary(shader);
     }
 }

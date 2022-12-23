@@ -4,12 +4,14 @@
 #include "common/CommonInclude.hpp"
 #include "common/UtilityStructs.hpp"
 
-namespace st {
+namespace st
+{
 
     struct PushConstantInfoImpl;
     struct VertexAttributeInfoImpl;
   
-    struct ST_API PushConstantInfo {
+    struct ST_API PushConstantInfo
+    {
         PushConstantInfo() noexcept;
         ~PushConstantInfo() noexcept;
         PushConstantInfo(const PushConstantInfo& other) noexcept;
@@ -27,7 +29,8 @@ namespace st {
         std::unique_ptr<PushConstantInfoImpl> impl;
     };
 
-    struct ST_API VertexAttributeInfo {
+    struct ST_API VertexAttributeInfo
+    {
         VertexAttributeInfo() noexcept;
         ~VertexAttributeInfo() noexcept;
         VertexAttributeInfo(const VertexAttributeInfo& other) noexcept;

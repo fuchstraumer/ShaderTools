@@ -4,7 +4,8 @@
 #include "common/CommonInclude.hpp"
 #include "common/ShaderStage.hpp"
 
-namespace st {
+namespace st
+{
 
     class Shader;
     class ShaderGroupImpl;
@@ -14,7 +15,8 @@ namespace st {
     struct PushConstantInfo;
     struct yamlFile;
 
-    class ShaderReflector {
+    class ShaderReflector
+    {
         ShaderReflector(const ShaderReflector&) = delete;
         ShaderReflector& operator=(const ShaderReflector&) = delete;
     public:
@@ -26,7 +28,6 @@ namespace st {
 
         void ParseBinary(const ShaderStage& shader);
         uint32_t GetNumSets() const noexcept;
-        void Clear();
         void GetShaderResources(const size_t set_idx, size_t* num_resources, ResourceUsage* resources);
         void GetInputAttributes(const VkShaderStageFlags stage, size_t* num_attrs, VertexAttributeInfo* attributes);
         void GetOutputAttributes(const VkShaderStageFlags stage, size_t* num_attrs, VertexAttributeInfo* attributes);
@@ -35,6 +36,7 @@ namespace st {
         friend class Shader;
         friend class ShaderGroupImpl;
     protected:
+        // required as the shader and shader group have to get down to the impl, in order to finish *using* the reflection data
         ShaderReflectorImpl* GetImpl();
     private:
         std::unique_ptr<ShaderReflectorImpl> impl;
