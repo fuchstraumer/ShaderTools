@@ -4,45 +4,25 @@
 namespace st
 {
 
-    uint64_t GetShaderHash(const char* shader_name, const VkShaderStageFlags stage) noexcept
+    uint32_t GetShaderHash(const char* shader_name) noexcept
     {
-        const uint64_t base_hash = static_cast<uint64_t>(std::hash<std::string>()(std::string(shader_name)));
-        return (base_hash << 8) | (stage);
+       return static_cast<uint32_t>(std::hash<std::string>()(std::string(shader_name)));
     }
 
-    ShaderStage::ShaderStage(const char* shader_name, const VkShaderStageFlags stages) : ID(GetShaderHash(shader_name, stages)) {}
+    ShaderStage::ShaderStage(const char* shader_name, const VkShaderStageFlags stages) : hash(GetShaderHash(shader_name)), stageBits(static_cast<uint32_t>(stages)) {}
 
-    ShaderStage::ShaderStage(uint64_t id_val) noexcept : ID(std::move(id_val)) {}
-
-    ShaderStage::ShaderStage(const ShaderStage& other) noexcept : ID(other.ID) {}
-
-    ShaderStage & ShaderStage::operator=(const ShaderStage& other) noexcept
+    ShaderStage::ShaderStage(uint32_t _hash, uint32_t _stageBits) noexcept : hash(_hash), stageBits(_stageBits)
     {
-        ID = other.ID;
-        return *this;
-    }
-
-    ShaderStage::ShaderStage(ShaderStage && other) noexcept : ID(std::move(other.ID)) {}
-
-    ShaderStage & ShaderStage::operator=(ShaderStage && other) noexcept
-    {
-        ID = std::move(other.ID);
-        return *this;
-    }
-
-    VkShaderStageFlagBits ShaderStage::GetStage() const noexcept
-    {
-        return VkShaderStageFlagBits((uint32_t)ID);
     }
 
     bool ShaderStage::operator==(const ShaderStage & other) const noexcept
     {
-        return ID == other.ID;
+        return (hash == other.hash) && (stageBits == other.stageBits);
     }
 
     bool ShaderStage::operator<(const ShaderStage & other) const noexcept
     {
-        return GetStage() <= other.GetStage();
+        return stageBits <= other.stageBits;
     }
 
 }

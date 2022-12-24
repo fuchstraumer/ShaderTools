@@ -107,7 +107,7 @@ namespace st
         void processBodyStrResourceBlocks(const ShaderStage& handle, std::string & body_str);
         void generate(const ShaderStage& handle, const std::string& path_to_src, const size_t num_extensions, const char* const* extensions);
 
-        ShaderStage Stage{ 0u };
+        ShaderStage Stage{ 0u, 0u };
         std::multiset<shaderFragment> fragments;
         static std::map<fs::path, std::string> fileContents;
         std::map<std::string, std::string> resourceBlocks;

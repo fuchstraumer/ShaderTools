@@ -12,16 +12,19 @@ namespace st
     shaderc::CompileOptions ShaderCompilerImpl::getCompilerOptions() const
     {
         shaderc::CompileOptions options;
+        // Debug info is actually required, as it's this that also becomes much of the reflection info!
+        // it slows down compile a bit, but not as much as optimization does. keep it around.
         options.SetGenerateDebugInfo();
         options.SetOptimizationLevel(shaderc_optimization_level_performance);
+        // todo - figure out what we gotta fix up to make bumping this possible ASAP
         options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_1);
         options.SetSourceLanguage(shaderc_source_language_glsl);
         return options;
     }
 
-    shaderc_shader_kind ShaderCompilerImpl::getShaderKind(const VkShaderStageFlagBits& flags) const
+    shaderc_shader_kind ShaderCompilerImpl::getShaderKind(const uint32_t& flags) const
     {
-        switch (flags)
+        switch (static_cast<VkShaderStageFlagBits>(flags))
         {
         case VK_SHADER_STAGE_VERTEX_BIT:
             return shaderc_glsl_vertex_shader;
@@ -72,7 +75,7 @@ namespace st
 
     void ShaderCompilerImpl::prepareToCompile(const ShaderStage& handle, const std::string& name, const std::string& src)
     {
-        const auto shader_stage = getShaderKind(handle.GetStage());
+        const shaderc_shader_kind shader_stage = getShaderKind(handle.stageBits);
         compile(handle, shader_stage, name, src);
     }
 
@@ -87,7 +90,7 @@ namespace st
             throw std::runtime_error("Failed to open/find given shader file.");
         }
 
-        const auto shader_stage = getShaderKind(handle.GetStage());
+        const auto shader_stage = getShaderKind(handle.stageBits);
 
         std::ifstream input_file(path_to_source);
         if (!input_file.is_open())

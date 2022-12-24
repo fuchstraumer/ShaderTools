@@ -273,7 +273,7 @@ namespace st
                 const uint32_t& binding_idx = iter->second.BindingIdx();
                 if (curr_set.Members.count(binding_idx) != 0)
                 {
-                    curr_set.Members.at(binding_idx).Stages() |= iter->second.UsedBy().GetStage();
+                    curr_set.Members.at(binding_idx).Stages() |= iter->second.UsedBy().stageBits;
                 }
                 else
                 {
@@ -403,7 +403,7 @@ namespace st
         parseSpecializationConstants();
 
         spirv_cross::ShaderResources resources = recompiler->get_shader_resources();
-        const VkShaderStageFlagBits stage = handle.GetStage();
+        const VkShaderStageFlagBits stage = static_cast<VkShaderStageFlagBits>(handle.stageBits);
         if (!resources.push_constant_buffers.empty())
         {
             auto iter = pushConstants.emplace(stage, parsePushConstants(*recompiler, stage));

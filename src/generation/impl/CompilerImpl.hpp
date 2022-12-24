@@ -24,7 +24,7 @@ namespace st
         ShaderCompilerImpl& operator=(ShaderCompilerImpl&& other) noexcept = default;
 
         shaderc::CompileOptions getCompilerOptions() const;
-        shaderc_shader_kind getShaderKind(const VkShaderStageFlagBits & flags) const;
+        shaderc_shader_kind getShaderKind(const uint32_t& flags) const;
         void prepareToCompile(const ShaderStage& handle, const char* path_to_src);
         void prepareToCompile(const ShaderStage& handle, const std::string& name, const std::string& src);
         void compile(const ShaderStage& handle, const shaderc_shader_kind& kind, const std::string& name, const std::string& src_str);

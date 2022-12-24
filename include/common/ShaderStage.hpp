@@ -9,13 +9,13 @@ namespace st
     struct ST_API ShaderStage
     {
         ShaderStage(const char* shader_name, const VkShaderStageFlags stages);
-        explicit ShaderStage(uint64_t id_val) noexcept;
-        ShaderStage(const ShaderStage& other) noexcept;
-        ShaderStage& operator=(const ShaderStage& other) noexcept;
-        ShaderStage(ShaderStage&& other) noexcept;
-        ShaderStage& operator=(ShaderStage&& other) noexcept;
-        uint64_t ID;
-        VkShaderStageFlagBits GetStage() const noexcept;
+        ShaderStage(uint32_t hash, uint32_t stageBits) noexcept;
+        ShaderStage(const ShaderStage& other) noexcept = default;
+        ShaderStage& operator=(const ShaderStage& other) noexcept = default;
+        ShaderStage(ShaderStage&& other) noexcept = default;
+        ShaderStage& operator=(ShaderStage&& other) noexcept = default;
+        uint32_t hash;
+        uint32_t stageBits;
         bool operator==(const ShaderStage& other) const noexcept;
         bool operator<(const ShaderStage& other) const noexcept;
     };
@@ -30,7 +30,7 @@ namespace std
     {
         size_t operator()(const st::ShaderStage& shader) const noexcept
         {
-            return std::hash<uint64_t>()(shader.ID);
+            return std::hash<uint64_t>()((static_cast<uint64_t>(shader.hash) << 32) | shader.stageBits);
         }
     };
 

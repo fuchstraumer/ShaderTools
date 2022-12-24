@@ -15,6 +15,7 @@ namespace st
 {
 
     void ST_API ClearProgramState();
+    void ST_API DumpProgramStateToCache();
 
     struct ShaderFileTracker
     {

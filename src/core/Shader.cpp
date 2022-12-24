@@ -199,7 +199,7 @@ namespace st
         VkShaderStageFlags result = 0;
         for (auto& shader : impl->stHandles)
         {
-            result |= shader.GetStage();
+            result |= shader.stageBits;
         }
         return result;
     }

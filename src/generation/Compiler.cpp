@@ -83,7 +83,7 @@ namespace st
         ShaderStage resultHandle(shader_name, shader_stage);
         const std::string copiedSourceString(src_str, src_str + src_len);
         ShaderCompilerImpl compiler;
-        const auto compilerStage = compiler.getShaderKind(resultHandle.GetStage());
+        const auto compilerStage = compiler.getShaderKind(resultHandle.stageBits);
         compiler.compile(resultHandle, compilerStage, shader_name, copiedSourceString);
         return resultHandle;
     }

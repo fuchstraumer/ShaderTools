@@ -32,14 +32,14 @@ namespace st
     {
         fs::path preamble(std::string(BasePath) + "/builtins/preamble450.glsl");
         addPreamble(preamble);
-        if (Stage.GetStage() == VK_SHADER_STAGE_VERTEX_BIT)
+        if (Stage.stageBits == VK_SHADER_STAGE_VERTEX_BIT)
         {
             fs::path vertex_interface_base(std::string(BasePath) + "/builtins/vertexInterface.glsl");
             const auto& interface_str = addFragment(vertex_interface_base);
             parseInterfaceBlock(interface_str);
             addPerVertex();
         }
-        else if (Stage.GetStage() == VK_SHADER_STAGE_FRAGMENT_BIT)
+        else if (Stage.stageBits == VK_SHADER_STAGE_FRAGMENT_BIT)
         {
             fs::path fragment_interface_base(std::string(BasePath) + "/builtins/fragmentInterface.glsl");
             const auto& interface_str = addFragment(fragment_interface_base);
@@ -117,11 +117,11 @@ namespace st
     void ShaderGeneratorImpl::parseInterfaceBlock(const std::string& str)
     {
         std::smatch match;
-        if (Stage.GetStage() == VK_SHADER_STAGE_VERTEX_BIT)
+        if (Stage.stageBits == VK_SHADER_STAGE_VERTEX_BIT)
         {
             std::regex_search(str, match, vertex_interface);
         }
-        else if (Stage.GetStage() == VK_SHADER_STAGE_FRAGMENT_BIT)
+        else if (Stage.stageBits == VK_SHADER_STAGE_FRAGMENT_BIT)
         {
             std::regex_search(str, match, fragment_interface);
         }
@@ -714,7 +714,7 @@ namespace st
             body_src_str.erase(body_src_str.begin() + match.position(), body_src_str.begin() + match.position() + match.length());
         }
 
-        if (std::regex_search(body_src_str, match, fragment_shader_no_output) && (Stage.GetStage() == VK_SHADER_STAGE_FRAGMENT_BIT))
+        if (std::regex_search(body_src_str, match, fragment_shader_no_output) && (Stage.stageBits == VK_SHADER_STAGE_FRAGMENT_BIT))
         {
             // shader doesn't write to color output, potentially only the backbuffer
             auto iter = std::begin(fragments);

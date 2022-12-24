@@ -7,6 +7,7 @@
 #include "../../util/ShaderFileTracker.hpp"
 #include <array>
 #include <filesystem>
+#include <iostream>
 
 namespace st
 {
@@ -73,10 +74,18 @@ namespace st
         for (const auto& shader : shaders)
         {
             // make sure processing is done
-            if (processorFutures.count(shader))
+            try
             {
-                processorFutures.at(shader).get();
-                processorFutures.erase(shader);
+                if (processorFutures.count(shader))
+                {
+                    processorFutures.at(shader).get();
+                    processorFutures.erase(shader);
+                }
+            }
+            catch (const std::exception& e)
+            {
+                std::cerr << e.what() << "\n";
+                throw e;
             }
         }
         groups.emplace(name, std::make_unique<Shader>(name.c_str(), shaders.size(), shaders.data(), filePack.get()));

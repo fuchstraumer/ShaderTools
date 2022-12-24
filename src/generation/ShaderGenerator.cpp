@@ -67,12 +67,12 @@ namespace st
             throw std::runtime_error("Shader generator could not open file to write completed plaintext shader to");
         }
 
-        return WriteAndAddShaderSource(fname, source_str, impl->Stage.GetStage());
+        return WriteAndAddShaderSource(fname, source_str, impl->Stage.stageBits);
     }
 
     VkShaderStageFlagBits ShaderGenerator::GetStage() const
     {
-        return impl->Stage.GetStage();
+        return static_cast<VkShaderStageFlagBits>(impl->Stage.stageBits);
     }
 
     void ShaderGenerator::SetBasePath(const char* new_base_path)

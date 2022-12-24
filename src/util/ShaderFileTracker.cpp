@@ -53,7 +53,7 @@ namespace st
 
         auto write_output = [&](const ShaderStage& handle, const std::string& contents, const std::string& extension)
         {
-            const std::string output_name = GetShaderName(handle) + GetShaderStageString(handle.GetStage()) + extension;
+            const std::string output_name = GetShaderName(handle) + GetShaderStageString(handle.stageBits) + extension;
             const fs::path output_path = cacheDir / output_name;
             std::ofstream output_stream(output_path);
             if (output_stream.is_open())
@@ -243,6 +243,12 @@ namespace st
     {
         auto& ftracker = ShaderFileTracker::GetFileTracker();
         ftracker.ClearAllContainers();
+    }
+
+    void ST_API DumpProgramStateToCache()
+    {
+        auto& ftrack = ShaderFileTracker::GetFileTracker();
+        ftrack.DumpContentsToCacheDir();
     }
 
 }

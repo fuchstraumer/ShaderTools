@@ -24,7 +24,7 @@ namespace st
         backingResource(backing_resource),
         usedBy(used_by),
         type(std::move(type)),
-        stages(used_by.GetStage())
+        stages(used_by.stageBits)
     {}
 
     ResourceUsage::ResourceUsage(const ResourceUsage& other) noexcept :
