@@ -4,6 +4,7 @@
 #include "../util/ShaderFileTracker.hpp"
 #include <filesystem>
 #include <cassert>
+#include <iterator>
 
 namespace st
 {
@@ -115,9 +116,15 @@ namespace st
         {
             throw e;
         }
-        parseGroups();
-        parseResources();
-        sortResourcesAndSetBindingIndices();
+
+        ShaderToolsErrorCode parseGroupsStatus = parseGroups();
+        ShaderToolsErrorCode parseResourcesStatus = parseResources();
+
+        if (parseGroupsStatus == ShaderToolsErrorCode::Success &&
+            parseResourcesStatus == ShaderToolsErrorCode::Success) 
+        {
+            sortResourcesAndSetBindingIndices();
+        }
     }
 
     yamlFile::~yamlFile() {}
@@ -150,14 +157,14 @@ namespace st
         return nullptr;
     }
 
-    void yamlFile::parseGroups()
+    ShaderToolsErrorCode yamlFile::parseGroups()
     {
         using namespace YAML;
 
         auto& file_node = impl->rootFileNode;
         if (!file_node["shader_groups"])
         {
-            throw std::runtime_error("YAML file had no shader groups specified!");
+            return ShaderToolsErrorCode::ParserHadNoShaderGroups;
         }
 
         auto groups = file_node["shader_groups"];
@@ -184,6 +191,11 @@ namespace st
             {
                 std::vector<ShaderStage> stages_added;
                 auto shaders = iter->second["Shaders"];
+
+                if (std::distance(shaders.begin(), shaders.end()) == 0)
+                {
+                    return ShaderToolsErrorCode::ParserYamlFileHadNoShadersInGroup;
+                }
 
                 if (shaders["Vertex"])
                 {
@@ -235,15 +247,23 @@ namespace st
             // adding them to the completed output. Makes it possible to define shaderpacks as closer to pipeline specs
             if (iter->second["Tags"])
             {
-                assert(iter->second["Tags"].IsSequence());
-                for (const auto& tag : iter->second["Tags"])
+
+                if (!iter->second["Tags"].IsSequence())
                 {
-                    groupTags[group_name].emplace_back(tag.as<std::string>());
+                    return ShaderToolsErrorCode::ParserYamlFileHadInvalidOrEmptyTagsArray;
+                }
+                else
+                {
+                    for (const auto& tag : iter->second["Tags"])
+                    {
+                        groupTags[group_name].emplace_back(tag.as<std::string>());
+                    }
                 }
             }
 
         }
 
+        return ShaderToolsErrorCode::Success;
     }
 
     void yamlFile::sortResourcesAndSetBindingIndices()
@@ -287,13 +307,13 @@ namespace st
 
     }
 
-    void yamlFile::parseResources()
+    ShaderToolsErrorCode yamlFile::parseResources()
     {
         using namespace YAML;
 
         if (!impl->rootFileNode["resource_groups"])
         {
-            throw std::runtime_error("YAML file had no resource groups!");
+            return ShaderToolsErrorCode::ParserHadNoResourceGroups;
         }
 
         auto groups = impl->rootFileNode["resource_groups"];
@@ -312,13 +332,13 @@ namespace st
 
                 if (!rsrc_node["Type"])
                 {
-                    throw std::runtime_error("Failed to find type field in resource entry in YAML file.");
+                    return ShaderToolsErrorCode::ParserMissingResourceTypeSpecifier;
                 }
 
                 auto type_iter = descriptor_type_from_str_map.find(rsrc_node["Type"].as<std::string>());
                 if (type_iter == descriptor_type_from_str_map.end())
                 {
-                    throw std::runtime_error("Could not match type str to valid VkDescriptorType value!");
+                    return ShaderToolsErrorCode::ParserResourceTypeSpecifierNoVulkanEquivalent;
                 }
 
                 ShaderResource rsrc;
@@ -395,6 +415,8 @@ namespace st
 
             }
         }
+
+        return ShaderToolsErrorCode::Success;
     }
 
 }

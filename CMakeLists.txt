@@ -43,8 +43,10 @@ OPTION(SHADERTOOLS_PROFILING "Profile key steps in the execution of ShaderTools,
 SET(ST_COMMON_SRCS
     "${CMAKE_CURRENT_SOURCE_DIR}/include/common/CommonInclude.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/include/common/ShaderStage.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/common/ShaderToolsErrors.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/include/common/UtilityStructs.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/common/ShaderStage.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/common/ShaderToolsErrors.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/common/UtilityStructs.cpp")
 
 SET(ST_CORE_SRCS

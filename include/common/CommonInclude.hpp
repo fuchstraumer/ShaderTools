@@ -1,4 +1,6 @@
 #pragma once
+#ifndef SHADERTOOLS_COMMON_INCLUDE_HPP
+#define SHADERTOOLS_COMMON_INCLUDE_HPP
 
 // Declare DLL interface
 #if defined(__GNUC__)
@@ -22,6 +24,15 @@
 #pragma warning(disable: 4251 )
 #endif
 
-#include <vulkan/vulkan_core.h>
 #include <cstdint>
 #include <memory>
+#include <vulkan/vulkan_core.h>
+
+// forward define our error code enum, so that it can be in headers as return values w/o user includes needed
+namespace st
+{
+    enum class ShaderToolsErrorCode : uint16_t;
+}
+
+#endif //!SHADERTOOLS_COMMON_INCLUDE_HPP
+

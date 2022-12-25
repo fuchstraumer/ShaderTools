@@ -28,8 +28,8 @@ namespace st
         std::string packName;
 
     private:
-        void parseResources();
-        void parseGroups();
+        ShaderToolsErrorCode parseResources();
+        ShaderToolsErrorCode parseGroups();
         void sortResourcesAndSetBindingIndices();
         std::unique_ptr<yamlFileImpl> impl;
     };

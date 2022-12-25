@@ -14,12 +14,14 @@ namespace st
 
     ShaderGenerator::ShaderGenerator(ShaderGenerator&& other) noexcept : impl(std::move(other.impl)) {}
 
-    ShaderGenerator& ShaderGenerator::operator=(ShaderGenerator&& other) noexcept {
+    ShaderGenerator& ShaderGenerator::operator=(ShaderGenerator&& other) noexcept
+    {
         impl = std::move(other.impl);
         return *this;
     }
 
-    void ShaderGenerator::SetResourceFile(yamlFile* rsrc_file) {
+    void ShaderGenerator::SetResourceFile(yamlFile* rsrc_file)
+    {
         impl->resourceFile = rsrc_file;
     }
 
