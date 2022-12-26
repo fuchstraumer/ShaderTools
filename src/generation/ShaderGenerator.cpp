@@ -1,6 +1,7 @@
 #include "generation/ShaderGenerator.hpp"
 #include "impl/ShaderGeneratorImpl.hpp"
 #include "common/UtilityStructs.hpp"
+#include "common/ShaderToolsErrors.hpp"
 #include "../util/FilesystemUtils.hpp"
 #include <iostream>
 

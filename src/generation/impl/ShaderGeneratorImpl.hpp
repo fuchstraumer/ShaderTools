@@ -3,6 +3,7 @@
 #define ST_SHADER_GENERATOR_IMPL_HPP
 #include "common/ShaderStage.hpp"
 #include "resources/ShaderResource.hpp"
+#include "common/ShaderToolsErrors.hpp"
 #include <string>
 #include <fstream>
 #include <filesystem>
@@ -35,6 +36,7 @@ namespace st
         Invalid
     };
 
+    // A distinct block of code in the final shader source
     struct shaderFragment
     {
         shaderFragment(fragment_type type, std::string data) noexcept : Type(type), Data(std::move(data)) {}
@@ -82,30 +84,30 @@ namespace st
         void addPreamble(const fs::path& str);
         void parseInterfaceBlock(const std::string& str);
         void parseConstantBlock(const std::string& str);
-        void parseInclude(const std::string& str, bool local);
+        ShaderToolsErrorCode parseInclude(const std::string& str, bool local);
 
-        std::string getResourceQualifiers(const ShaderResource& rsrc) const;
-        std::string getResourcePrefix(size_t active_set, const std::string & image_format, const ShaderResource& rsrc) const;
+        std::string getResourceQualifiers(const ShaderResource& rsrc, ShaderToolsErrorCode& ec) const;
+        std::string getResourcePrefix(size_t active_set, const std::string& image_format, const ShaderResource& rsrc) const;
         std::string getBufferMembersString(const ShaderResource & resource) const;
         std::string generateBufferAccessorString(const std::string& type_name, const std::string& buffer_name) const;
         std::string getBufferDescriptorString(const size_t& active_set, const ShaderResource& buffer, const std::string& name, const bool isArray, const bool isStorage) const;
-        std::string getStorageTexelBufferString(const size_t & active_set, const ShaderResource & buffer, const std::string & name) const;
-        std::string getUniformTexelBufferString(const size_t & active_set, const ShaderResource & texel_buffer, const std::string & name) const;
-        std::string getImageTypeSuffix(const VkImageCreateInfo & info) const;
-        std::string getStorageImageString(const size_t & active_set, const ShaderResource & storage_image, const std::string & name) const;
-        std::string getSamplerString(const size_t & active_set, const ShaderResource & sampler, const std::string & name) const;
-        std::string getSampledImageString(const size_t & active_set, const ShaderResource & sampled_image, const std::string & name) const;
-        std::string getCombinedImageSamplerString(const size_t & active_set, const ShaderResource & combined_image_sampler, const std::string & name) const;
-        std::string getInputAttachmentString(const size_t & active_set, const ShaderResource & input_attachment, const std::string & name) const;
-        void useResourceBlock(const std::string& block_name);
+        std::string getStorageTexelBufferString(const size_t& active_set, const ShaderResource& buffer, const std::string & name) const;
+        std::string getUniformTexelBufferString(const size_t& active_set, const ShaderResource& texel_buffer, const std::string & name) const;
+        std::string getImageTypeSuffix(const VkImageCreateInfo& info, ShaderToolsErrorCode& ec) const;
+        std::string getStorageImageString(const size_t& active_set, const ShaderResource& storage_image, const std::string& name) const;
+        std::string getSamplerString(const size_t& active_set, const ShaderResource& sampler, const std::string& name) const;
+        std::string getSampledImageString(const size_t& active_set, const ShaderResource& sampled_image, const std::string& name) const;
+        std::string getCombinedImageSamplerString(const size_t& active_set, const ShaderResource& combined_image_sampler, const std::string& name) const;
+        std::string getInputAttachmentString(const size_t& active_set, const ShaderResource& input_attachment, const std::string& name) const;
+        ShaderToolsErrorCode useResourceBlock(const std::string& block_name);
 
-        std::string fetchBodyStr(const ShaderStage & handle, const std::string & path_to_source);
+        std::string fetchBodyStr(const ShaderStage& handle, const std::string& path_to_source, ShaderToolsErrorCode& ec);
         void checkInterfaceOverrides(std::string& body_src_str);
         void addExtension(const std::string& extension_str);
         void processBodyStrIncludes(std::string & body_src_str);
-        void processBodyStrSpecializationConstants(std::string & body_src_str);
-        void processBodyStrResourceBlocks(const ShaderStage& handle, std::string & body_str);
-        void generate(const ShaderStage& handle, const std::string& path_to_src, const size_t num_extensions, const char* const* extensions);
+        void processBodyStrSpecializationConstants(std::string& body_src_str);
+        void processBodyStrResourceBlocks(const ShaderStage& handle, std::string& body_str);
+        ShaderToolsErrorCode generate(const ShaderStage& handle, const std::string& path_to_src, const size_t num_extensions, const char* const* extensions);
 
         ShaderStage Stage{ 0u, 0u };
         std::multiset<shaderFragment> fragments;
@@ -114,6 +116,14 @@ namespace st
         mutable shader_resources_t ShaderResources;
         yamlFile* resourceFile;
         std::vector<fs::path> includes;
+
+        // Like other compiliation pipelines, we could have multiple errors in some cases. In these cases, 
+        // we store the unique error code, any associated unique text, and collect them together for top-level
+        // users to print out and handle (so in the case of multiple issues in source, they can be fixed all at once)
+        struct ShaderGeneratorError
+        {
+
+        };
 
 
         inline static std::string BasePath{ "../fragments/" };

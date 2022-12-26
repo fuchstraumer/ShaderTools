@@ -213,8 +213,9 @@ namespace st
         }
     }
 
-    void ShaderGeneratorImpl::parseInclude(const std::string & str, bool local)
+    ShaderToolsErrorCode ShaderGeneratorImpl::parseInclude(const std::string& str, bool local)
     {
+        ShaderToolsErrorCode result{ ShaderToolsErrorCode::Success };
 
         fs::path include_path;
         if (!local)
@@ -269,8 +270,11 @@ namespace st
 
     }
 
-    std::string ShaderGeneratorImpl::getResourceQualifiers(const ShaderResource& rsrc) const
+    std::string ShaderGeneratorImpl::getResourceQualifiers(const ShaderResource& rsrc, ShaderToolsErrorCode& ec) const
     {
+        ec = ShaderToolsErrorCode::Success;
+
+        // Qualifiers applied across all usages of this resource
         size_t num_qualifiers = 0;
         rsrc.GetQualifiers(&num_qualifiers, nullptr);
         std::vector<glsl_qualifier> qualifiers(num_qualifiers);
@@ -280,9 +284,11 @@ namespace st
         std::string curr_shader_name = f_tracker.GetShaderName(Stage);
         if (curr_shader_name.empty())
         {
-            throw std::runtime_error("Error finding shader name during generation process.");
+            ec = ShaderToolsErrorCode::FilesystemNoFileDataForGivenHandleFound;
+            return std::string{};
         }
 
+        // Now we need to get the qualifiers used for the current stage being generated
         size_t offset = num_qualifiers;
         num_qualifiers = 0;
         rsrc.GetPerUsageQualifiers(curr_shader_name.c_str(), &num_qualifiers, nullptr);
@@ -295,29 +301,26 @@ namespace st
         std::string result;
         for (const auto& qual : qualifiers)
         {
-            if (qual == glsl_qualifier::Coherent)
+            switch (qual)
             {
+            case glsl_qualifier::Coherent:
                 result += " coherent";
-            }
-            else if (qual == glsl_qualifier::ReadOnly)
-            {
+                break;
+            case glsl_qualifier::ReadOnly:
                 result += " readonly";
-            }
-            else if (qual == glsl_qualifier::WriteOnly)
-            {
+                break;
+            case glsl_qualifier::WriteOnly:
                 result += " writeonly";
-            }
-            else if (qual == glsl_qualifier::Volatile)
-            {
+                break;
+            case glsl_qualifier::Volatile:
                 result += " volatile";
-            }
-            else if (qual == glsl_qualifier::Restrict)
-            {
+                break;
+            case glsl_qualifier::Restrict:
                 result += " restrict";
-            }
-            else if (qual == glsl_qualifier::InvalidQualifier)
-            {
-                throw std::runtime_error("ShaderResource had an invalid qualifier value.");
+                break;
+            default:
+                ec = ShaderToolsErrorCode::GeneratorInvalidResourceQualifier;
+                break;
             }
         }
 
@@ -477,7 +480,7 @@ namespace st
         return prefix + std::string("uniform ") + buffer_type + std::string(" ") + name + std::string(";\n");
     }
 
-    std::string ShaderGeneratorImpl::getImageTypeSuffix(const VkImageCreateInfo& info) const
+    std::string ShaderGeneratorImpl::getImageTypeSuffix(const VkImageCreateInfo& info, ShaderToolsErrorCode& ec) const
     {
         std::string base_suffix;
         switch (info.imageType)
@@ -614,13 +617,7 @@ namespace st
         return prefix + std::string("uniform ") + resource_type + std::string(" ") + name + std::string(";\n");
     }
 
-#ifndef NDEBUG
-    constexpr bool SAVE_BLOCKS_TO_FILE = false;
-#else
-    constexpr bool SAVE_BLOCKS_TO_FILE = false;
-#endif
-
-    void ShaderGeneratorImpl::useResourceBlock(const std::string & block_name)
+    ShaderToolsErrorCode ShaderGeneratorImpl::useResourceBlock(const std::string & block_name)
     {
 
         fragments.emplace(fragment_type::ResourceBlock, std::string("// Resource block: ") + block_name + std::string("\n"));
@@ -633,7 +630,8 @@ namespace st
         {
             const std::string resource_name = resource.Name();
             auto& resource_item = resource;
-            switch (resource_item.DescriptorType()) {
+            switch (resource_item.DescriptorType())
+            {
             case VK_DESCRIPTOR_TYPE_SAMPLER:
                 resource_block_string += getSamplerString(active_set, resource_item, resource_name);
                 break;
@@ -668,7 +666,7 @@ namespace st
                 resource_block_string += getInputAttachmentString(active_set, resource_item, resource_name);
                 break;
             default:
-                throw std::domain_error("Unsupported VkDescriptorType encountered when generating resources for resource block in ShaderGenerator");
+                return ShaderToolsErrorCode::GeneratorInvalidDescriptorTypeInResourceBlock;
             }
 
         }
@@ -677,26 +675,41 @@ namespace st
 
         fragments.emplace(shaderFragment{ fragment_type::ResourceBlock, resource_block_string });
         ++ShaderResources.LastSetIdx;
+
+        return ShaderToolsErrorCode::Success;
     }
 
-    std::string ShaderGeneratorImpl::fetchBodyStr(const ShaderStage& handle, const std::string& path_to_source)
+    std::string ShaderGeneratorImpl::fetchBodyStr(const ShaderStage& handle, const std::string& path_to_source, ShaderToolsErrorCode& ec)
     {
-        std::string body_str;
         auto& FileTracker = ShaderFileTracker::GetFileTracker();
-        if (!FileTracker.FindShaderBody(handle, body_str))
+
+        std::string body_str;
+        body_str.reserve(4092u);
+        ec = FileTracker.FindShaderBody(handle, body_str);
+        if (ec != ShaderToolsErrorCode::Success)
         {
-            if (!FileTracker.AddShaderBodyPath(handle, path_to_source))
+            ec = FileTracker.AddShaderBodyPath(handle, path_to_source);
+            if (ec != ShaderToolsErrorCode::Success)
             {
-                throw std::runtime_error("Failed to find or add (then load) a shader body source string");
+                return std::string{};
             }
             else
             {
-                FileTracker.FindShaderBody(handle, body_str);
+                ec = FileTracker.FindShaderBody(handle, body_str);
             }
         }
 
-        assert(!body_str.empty());
-        return body_str;
+        if (body_str.empty())
+        {
+            ec = ShaderToolsErrorCode::GeneratorFoundEmptyBodyString;
+            return std::string{};
+        }
+        else
+        {
+            body_str.shrink_to_fit();
+            return body_str;
+        }
+
     }
 
     void ShaderGeneratorImpl::checkInterfaceOverrides(std::string& body_src_str)
@@ -807,11 +820,15 @@ namespace st
         }
     }
 
-    void ShaderGeneratorImpl::generate(const ShaderStage& handle, const std::string& path_to_source, const size_t num_extensions, const char* const* extensions)
+    ShaderToolsErrorCode ShaderGeneratorImpl::generate(const ShaderStage& handle, const std::string& path_to_source, const size_t num_extensions, const char* const* extensions)
     {
-        std::string body_str{ fetchBodyStr(handle, path_to_source) };
-        // Includes can be any of the following: resource blocks, overrides, specialization_constants.
-        // Get them imported first so any potentially unique elements included are processed properly.
+        ShaderToolsErrorCode ec{ ShaderToolsErrorCode::Success };
+        std::string body_str = fetchBodyStr(handle, path_to_source, ec);
+        if (ec != ShaderToolsErrorCode::Success)
+        {
+            return ec;
+        }
+
         processBodyStrIncludes(body_str);
         checkInterfaceOverrides(body_str);
         if ((num_extensions != 0) && extensions)
@@ -824,6 +841,9 @@ namespace st
         processBodyStrSpecializationConstants(body_str);
         processBodyStrResourceBlocks(handle, body_str);
         fragments.emplace(fragment_type::Main, body_str);
+        // Includes can be any of the following: resource blocks, overrides, specialization_constants.
+        // Get them imported first so any potentially unique elements included are processed properly.
+        
     }
 
 }

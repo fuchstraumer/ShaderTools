@@ -11,8 +11,9 @@ namespace st
     {
         Success = 0,
         InvalidErrorCode = 1,
-        // Initial input data file errors
-        // For now, YAML file parser errors
+        // Nearly all of these are results of input data, so they are part of the
+        // input data error category. Some of these may be fixable by sanitization,
+        // but most of these should be fixed by the end-user inputting data
         ParserErrorsStart = 2,
         ParserFileNotFound,
         ParserHadNoShaderGroups,
@@ -22,12 +23,20 @@ namespace st
         ParserMissingResourceTypeSpecifier,
         ParserResourceTypeSpecifierNoVulkanEquivalent,
         GeneratorErrorsStart = 100,
+        // In the case of multiple errors, we return this to the top level. Asking the generator for the full
+        // errors can give the array of errors for printing or logging elsewhere.
+        GeneratorMultipleErrorsFound,
         GeneratorEmptyIncludePathArray,
         GeneratorInvalidDescriptorTypeInResourceBlock,
         GeneratorShaderBodyStringNotFound,
+        GeneratorUnableToFindPreambleFile,
+        GeneratorFoundEmptyBodyString,
+        GeneratorInvalidResourceQualifier,
+        // Errors here mostly come from issues compiling, or invalid use of otherwise valid shader code.
+        // This is the ShaderToolsInternal error category, the stuff that's most on this library to fix
         CompilerErrorsStart = 200,
         ReflectionErrorsStart = 300,
-        // Errors not in the core pipeline of systems
+        // Errors not in the core pipeline of systems. Error category - Filesystem
         SubsystemErrorsStart = 400,
         FilesystemPathDoesNotExist,
         FilesystemPathExistedFileCouldNotBeOpened,
@@ -42,6 +51,12 @@ namespace st
     ST_API const char* GetErrorCodeText(uint16_t stErrorValue) noexcept;
 
 }
+
+namespace std
+{
+    template<>
+    struct is_error_code_enum<st::ShaderToolsErrorCode> : true_type {};
+} // namespace std
 
 
 #endif //!SHADERTOOLS_ERRORS_HPP
