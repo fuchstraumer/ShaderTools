@@ -3,6 +3,7 @@
 #define ST_SHADER_FILE_TRACKER_HPP
 #include "common/CommonInclude.hpp"
 #include "common/ShaderStage.hpp"
+#include "common/ShaderToolsErrors.hpp"
 #include <unordered_map>
 #include <string>
 #include <vector>
@@ -25,9 +26,9 @@ namespace st
         void ClearAllContainers();
         void DumpContentsToCacheDir();
 
-        bool FindShaderBody(const ShaderStage& handle, std::string& dest_str);
-        bool AddShaderBodyPath(const ShaderStage& handle, const std::string& shader_body_path);
-        bool FindShaderBinary(const ShaderStage& handle, std::vector<uint32_t>& dest_binary_vector);
+        ShaderToolsErrorCode FindShaderBody(const ShaderStage& handle, std::string& dest_str);
+        ShaderToolsErrorCode AddShaderBodyPath(const ShaderStage& handle, const std::string& shader_body_path);
+        ShaderToolsErrorCode FindShaderBinary(const ShaderStage& handle, std::vector<uint32_t>& dest_binary_vector);
         bool FindRecompiledShaderSource(const ShaderStage& handle, std::string& destination_str);
         bool FindAssemblyString(const ShaderStage& handle, std::string& destination_str);
         std::string GetShaderName(const ShaderStage& handle);

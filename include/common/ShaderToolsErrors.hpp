@@ -22,10 +22,17 @@ namespace st
         ParserMissingResourceTypeSpecifier,
         ParserResourceTypeSpecifierNoVulkanEquivalent,
         GeneratorErrorsStart = 100,
+        GeneratorEmptyIncludePathArray,
+        GeneratorInvalidDescriptorTypeInResourceBlock,
+        GeneratorShaderBodyStringNotFound,
         CompilerErrorsStart = 200,
         ReflectionErrorsStart = 300,
         // Errors not in the core pipeline of systems
         SubsystemErrorsStart = 400,
+        FilesystemPathDoesNotExist,
+        FilesystemPathExistedFileCouldNotBeOpened,
+        FilesystemCouldNotEmplaceIntoInternalStorage,
+        FilesystemNoFileDataForGivenHandleFound
     };
 
     // Implemented in ShaderToolsErrors.cpp. Wanted all files to be able to access this,

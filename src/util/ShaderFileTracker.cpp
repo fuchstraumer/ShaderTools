@@ -85,12 +85,12 @@ namespace st
         }
     }
 
-    bool ShaderFileTracker::FindShaderBody(const ShaderStage& handle, std::string& dest_str)
+    ShaderToolsErrorCode ShaderFileTracker::FindShaderBody(const ShaderStage& handle, std::string& dest_str)
     {
         if (ShaderBodies.count(handle) != 0)
         {
             dest_str = ShaderBodies.at(handle);
-            return true;
+            return ShaderToolsErrorCode::Success;
         }
         else if (BodyPaths.count(handle) != 0)
         {
@@ -100,36 +100,39 @@ namespace st
             std::ifstream input_file(BodyPaths.at(handle));
             if (!input_file.is_open())
             {
-                throw std::runtime_error("Failed to open shader source file, path existed in program state but file couldn't be opened.");
+                return ShaderToolsErrorCode::FilesystemPathExistedFileCouldNotBeOpened;
             }
 
             auto iter = ShaderBodies.emplace(handle, std::string{ std::istreambuf_iterator<char>(input_file), std::istreambuf_iterator<char>() });
             if (!iter.second)
             {
-                throw std::runtime_error("Source path was valid, and file was read successfully: failed to embed into program state.");
+                return ShaderToolsErrorCode::FilesystemCouldNotEmplaceIntoInternalStorage;
             }
 
             dest_str = iter.first->second;
-            return true;
+            return ShaderToolsErrorCode::Success;
         }
-        else {
-            return false;
+        else
+        {
+            return ShaderToolsErrorCode::FilesystemNoFileDataForGivenHandleFound;
         }
     }
 
-    bool ShaderFileTracker::AddShaderBodyPath(const ShaderStage& handle, const std::string& shader_body_path) {
+    ShaderToolsErrorCode ShaderFileTracker::AddShaderBodyPath(const ShaderStage& handle, const std::string& shader_body_path)
+    {
         if (BodyPaths.count(handle) != 0)
         {
             // Already had this path registered. Shouldn't really reach this point.
-            return true;
+            return ShaderToolsErrorCode::Success;
         }
-        else {
+        else
+        {
 
             std::lock_guard map_guard(mapMutex);
             fs::path source_body_path(shader_body_path);
             if (!fs::exists(source_body_path))
             {
-                throw std::runtime_error("Failed to open given file: invalid path.");
+               return ShaderToolsErrorCode::FilesystemPathDoesNotExist;
             }
 
             BodyPaths.emplace(handle, fs::canonical(source_body_path));
@@ -138,27 +141,27 @@ namespace st
             std::ifstream input_stream(source_body_path);
             if (!input_stream.is_open())
             {
-                throw std::runtime_error("Failed to open input stream for given shader body path.");
+                return ShaderToolsErrorCode::FilesystemPathExistedFileCouldNotBeOpened;
             }
 
             auto iter = ShaderBodies.emplace(handle, std::string{ std::istreambuf_iterator<char>(input_stream), std::istreambuf_iterator<char>() });
             if (iter.second)
             {
-                return true;
+                return ShaderToolsErrorCode::Success;
             }
             else
             {
-                return false;
+                return ShaderToolsErrorCode::FilesystemCouldNotEmplaceIntoInternalStorage;
             }
         }
     }
 
-    bool ShaderFileTracker::FindShaderBinary(const ShaderStage& handle, std::vector<uint32_t>& dest_binary_vector)
+    ShaderToolsErrorCode ShaderFileTracker::FindShaderBinary(const ShaderStage& handle, std::vector<uint32_t>& dest_binary_vector)
     {
         if (Binaries.count(handle) != 0)
         {
             dest_binary_vector = Binaries.at(handle);
-            return true;
+            return ShaderToolsErrorCode::Success;
         }
         else if (BinaryPaths.count(handle) != 0)
         {
@@ -167,7 +170,7 @@ namespace st
             std::ifstream input_file(BinaryPaths.at(handle), std::ios::binary | std::ios::in | std::ios::ate);
             if (!input_file.is_open())
             {
-                throw std::runtime_error("Shader binary path existed in program state, but we couldn't open the file referenced!");
+                return ShaderToolsErrorCode::FilesystemPathExistedFileCouldNotBeOpened;
             }
 
             size_t code_size = static_cast<size_t>(input_file.tellg());
@@ -182,15 +185,15 @@ namespace st
 
             if (!iter.second)
             {
-                throw std::runtime_error("Path to shader binary valid, file read successfully - failure to emplace in internal state container.");
+                return ShaderToolsErrorCode::FilesystemCouldNotEmplaceIntoInternalStorage;
             }
 
             dest_binary_vector = iter.first->second;
-            return true;
+            return ShaderToolsErrorCode::Success;
         }
         else
         {
-            return false;
+            return ShaderToolsErrorCode::FilesystemNoFileDataForGivenHandleFound;
         }
     }
 
