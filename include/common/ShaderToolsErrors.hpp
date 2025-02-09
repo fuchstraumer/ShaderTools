@@ -25,25 +25,50 @@ namespace st
         ParserYamlFileHadNoShadersInGroup,
         ParserYamlFileHadInvalidOrEmptyTagsArray,
         GeneratorErrorsStart = 100,
-        // In the case of multiple errors, we return this to the top level. Asking the generator for the full
-        // errors can give the array of errors for printing or logging elsewhere.
-        GeneratorMultipleErrorsFound,
         GeneratorEmptyIncludePathArray,
         GeneratorInvalidDescriptorTypeInResourceBlock,
         GeneratorShaderBodyStringNotFound,
         GeneratorUnableToFindPreambleFile,
+        GeneratorUnableToStoreFileContents,
+        GeneratorUnableToAddPreambleToInstanceStorage,
+        GeneratorUnableToFindMatchingElementOfVertexInterfaceBlockNeededForCompletion,
         GeneratorFoundEmptyBodyString,
+        GeneratorUnableToStoreFragmentFileContents,
+        GeneratorFragmentFileNotFound,
         GeneratorInvalidResourceQualifier,
+        GeneratorUnableToAddInterface,
+        GeneratorUnableToParseInterfaceBlock,
+        GeneratorUnableToStoreFullSourceString,
+        GeneratorUnableToFindLibraryInclude,
+        GeneratorUnableToFindLocalInclude,
+        GeneratorInvalidImageType,
+        GeneratorUnableToAddShaderBodyPath,
         // Errors here mostly come from issues compiling, or invalid use of otherwise valid shader code.
+
+
         // This is the ShaderToolsInternal error category, the stuff that's most on this library to fix
         CompilerErrorsStart = 200,
         ReflectionErrorsStart = 300,
+
+
+
+
         // Errors not in the core pipeline of systems. Error category - Filesystem
         SubsystemErrorsStart = 400,
         FilesystemPathDoesNotExist,
         FilesystemPathExistedFileCouldNotBeOpened,
         FilesystemCouldNotEmplaceIntoInternalStorage,
         FilesystemNoFileDataForGivenHandleFound
+    };
+
+    enum class ShaderToolsErrorSource : uint16_t
+    {
+        Parser,
+        Generator,
+        Compiler,
+        Reflection,
+        Filesystem,
+        UserInput
     };
 
     // Implemented in ShaderToolsErrors.cpp. Wanted all files to be able to access this,

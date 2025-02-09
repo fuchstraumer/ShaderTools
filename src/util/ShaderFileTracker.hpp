@@ -15,6 +15,12 @@
 namespace st
 {
 
+    // Major TODO: This is totally not threadsafe. It completely nullifies any attempts to parallelize shader generation and the heavyweight
+    // compilation process. We need to make this threadsafe, and we need to make it so that the file tracker can be used concurrently by
+    // multiple threads. This will still generate some bottlenecks, and requires major changes to the usage of this object, but it's a start.
+    // Should also assess how we can do this better, as there should be some way to track files on disk persistently just... less gross.
+
+    void ST_API InitializeFileTracker(const char* cache_directory);
     void ST_API ClearProgramState();
     void ST_API DumpProgramStateToCache();
 

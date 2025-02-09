@@ -3,6 +3,7 @@
 #define ST_SHADER_PACK_HPP
 #include "common/CommonInclude.hpp"
 #include "common/UtilityStructs.hpp"
+#include "common/stSession.hpp"
 
 namespace st
 {
@@ -18,7 +19,7 @@ namespace st
         ShaderPack& operator=(const ShaderPack&) = delete;
     public:
 
-        ShaderPack(const char* shader_pack_lua_script_path);
+        ShaderPack(const char* shader_pack_yaml_path, Session& session);
         ~ShaderPack();
 
         const Shader* GetShaderGroup(const char* name) const;

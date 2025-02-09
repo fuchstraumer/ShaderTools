@@ -29,30 +29,64 @@ namespace st
 
     std::map<fs::path, std::string> ShaderGeneratorImpl::fileContents = std::map<fs::path, std::string>{};
 
-    ShaderGeneratorImpl::ShaderGeneratorImpl(ShaderStage _stage) : Stage(std::move(_stage))
+    ShaderGeneratorImpl::ShaderGeneratorImpl(ShaderStage _stage, Session& errorSession) : Stage(std::move(_stage)), errorSession(errorSession)
     {
         fs::path preamble(std::string(BasePath) + "/builtins/preamble450.glsl");
         addPreamble(preamble);
         if (Stage.stageBits == VK_SHADER_STAGE_VERTEX_BIT)
         {
             fs::path vertex_interface_base(std::string(BasePath) + "/builtins/vertexInterface.glsl");
-            const auto& interface_str = addFragment(vertex_interface_base);
-            parseInterfaceBlock(interface_str);
+            std::string interface_str;
+            constructionSuccessful = addFragment(vertex_interface_base, interface_str);
+            if (!constructionSuccessful)
+            {
+                errorSession.AddError(this, ShaderToolsErrorSource::Generator, ShaderToolsErrorCode::GeneratorUnableToAddInterface, nullptr);
+                return;
+            }
+
+            constructionSuccessful = parseInterfaceBlock(interface_str);
+            if (!constructionSuccessful)
+            {
+                errorSession.AddError(this, ShaderToolsErrorSource::Generator, ShaderToolsErrorCode::GeneratorUnableToParseInterfaceBlock, nullptr);
+                return;
+            }
+
             addPerVertex();
         }
         else if (Stage.stageBits == VK_SHADER_STAGE_FRAGMENT_BIT)
         {
             fs::path fragment_interface_base(std::string(BasePath) + "/builtins/fragmentInterface.glsl");
-            const auto& interface_str = addFragment(fragment_interface_base);
-            parseInterfaceBlock(interface_str);
+            std::string interface_str;
+            constructionSuccessful = addFragment(fragment_interface_base, interface_str);
+            if (!constructionSuccessful)
+            {
+                errorSession.AddError(this, ShaderToolsErrorSource::Generator, ShaderToolsErrorCode::GeneratorUnableToAddInterface, nullptr);
+                return;
+            }
+
+            constructionSuccessful = parseInterfaceBlock(interface_str);
+            if (!constructionSuccessful)
+            {
+                errorSession.AddError(this, ShaderToolsErrorSource::Generator, ShaderToolsErrorCode::GeneratorUnableToParseInterfaceBlock, nullptr);
+                return;
+            }
         }
 
+        // Compute shaders will fallthrough to here
+        constructionSuccessful = true;
     }
 
     ShaderGeneratorImpl::~ShaderGeneratorImpl() { }
 
-    ShaderGeneratorImpl::ShaderGeneratorImpl(ShaderGeneratorImpl&& other) noexcept : Stage(std::move(other.Stage)), fragments(std::move(other.fragments)),
-        resourceBlocks(std::move(other.resourceBlocks)), ShaderResources(std::move(other.ShaderResources)), includes(std::move(other.includes)) {}
+    ShaderGeneratorImpl::ShaderGeneratorImpl(ShaderGeneratorImpl&& other) noexcept :
+        Stage(std::move(other.Stage)),
+        fragments(std::move(other.fragments)),
+        resourceBlocks(std::move(other.resourceBlocks)),
+        ShaderResources(std::move(other.ShaderResources)),
+        includes(std::move(other.includes)),
+        errorSession(other.errorSession),
+        constructionSuccessful(other.constructionSuccessful)
+    {}
 
     ShaderGeneratorImpl& ShaderGeneratorImpl::operator=(ShaderGeneratorImpl&& other) noexcept
     {
@@ -61,6 +95,8 @@ namespace st
         resourceBlocks = std::move(other.resourceBlocks);
         ShaderResources = std::move(other.ShaderResources);
         includes = std::move(other.includes);
+        errorSession = std::move(other.errorSession);
+        constructionSuccessful = other.constructionSuccessful;
         return *this;
     }
 
@@ -69,22 +105,28 @@ namespace st
         if (fileContents.count(fs::canonical(path)) == 0)
         {
             std::ifstream file_stream(path);
+            const std::string pathString = path.string();
+            
             if (!file_stream.is_open())
             {
-                throw std::runtime_error("Couldn't find shader preamble file. Workding directory is probably set incorrectly.");
+                errorSession.AddError(this, ShaderToolsErrorSource::Generator, ShaderToolsErrorCode::GeneratorUnableToFindPreambleFile, pathString.c_str());
+                return;
             }
+
             std::string preamble{ std::istreambuf_iterator<char>(file_stream), std::istreambuf_iterator<char>() };
 
             auto fc_iter = fileContents.emplace(fs::canonical(path), preamble);
             if (!fc_iter.second)
             {
-                std::cerr << "Failed to emplace loaded source string into fileContents map.";
+                errorSession.AddError(this, ShaderToolsErrorSource::Generator, ShaderToolsErrorCode::GeneratorUnableToStoreFileContents, nullptr);
+                return;
             }
 
             auto frag_iter = fragments.emplace(fragment_type::Preamble, preamble);
             if (frag_iter == fragments.end())
             {
-                throw std::runtime_error("Couldn't add premamble to generator's fragments container! Generation cannot proceed without this component.");
+                errorSession.AddError(this, ShaderToolsErrorSource::Generator, ShaderToolsErrorCode::GeneratorUnableToAddPreambleToInstanceStorage, nullptr);
+                return;
             }
 
         }
@@ -93,29 +135,47 @@ namespace st
             auto frag_iter = fragments.emplace(fragment_type::Preamble, fileContents.at(fs::canonical(path)));
             if (frag_iter == fragments.end())
             {
-                throw std::runtime_error("Failed to add preamble to generator's fragments multimap!");
+                errorSession.AddError(this, ShaderToolsErrorSource::Generator, ShaderToolsErrorCode::GeneratorUnableToAddPreambleToInstanceStorage, nullptr);
+                return;
             }
         }
     }
 
-    const std::string& ShaderGeneratorImpl::addFragment(const fs::path& src_path)
+    bool ShaderGeneratorImpl::addFragment(const fs::path& src_path, std::string& addedFragment)
     {
         fs::path source_file(fs::canonical(src_path));
+        const std::string pathString = source_file.string();
 
         if (!fs::exists(source_file))
         {
-            const std::string exception_str = std::string("Given shader fragment path \"") + source_file.string() + std::string("\" does not exist!");
-            throw std::runtime_error(exception_str);
+            errorSession.AddError(this, ShaderToolsErrorSource::Generator, ShaderToolsErrorCode::GeneratorFragmentFileNotFound, pathString.c_str());
+            return false;
         }
 
         std::ifstream file_stream(source_file);
+        if (!file_stream.is_open())
+        {
+            errorSession.AddError(this, ShaderToolsErrorSource::Generator, ShaderToolsErrorCode::FilesystemPathExistedFileCouldNotBeOpened, pathString.c_str());
+            return false;
+        }
 
         std::string file_content{ std::istreambuf_iterator<char>(file_stream), std::istreambuf_iterator<char>() };
-        fileContents.emplace(source_file, std::move(file_content));
-        return fileContents.at(source_file);
+
+        auto emplacedFileIter = fileContents.emplace(source_file, std::move(file_content));
+        if (!emplacedFileIter.second)
+        {
+            errorSession.AddError(this, ShaderToolsErrorSource::Generator, ShaderToolsErrorCode::GeneratorUnableToStoreFragmentFileContents, nullptr);
+            return false;
+        }
+        else
+        {
+            addedFragment = emplacedFileIter.first->second;
+            return true;
+        }
+
     }
 
-    void ShaderGeneratorImpl::parseInterfaceBlock(const std::string& str)
+    bool ShaderGeneratorImpl::parseInterfaceBlock(const std::string& str)
     {
         std::smatch match;
         if (Stage.stageBits == VK_SHADER_STAGE_VERTEX_BIT)
@@ -129,7 +189,8 @@ namespace st
 
         if (match.size() == 0)
         {
-            throw std::runtime_error("Shader generator could not find matching element of vertex interface block needed for completion");
+            errorSession.AddError(this, ShaderToolsErrorSource::Generator, ShaderToolsErrorCode::GeneratorUnableToFindMatchingElementOfVertexInterfaceBlockNeededForCompletion, nullptr);
+            return false;
         }
 
         std::string local_str{ str.cbegin() + match.length(), str.cend() };
@@ -152,6 +213,8 @@ namespace st
                 break;
             }
         }
+
+        return true;
     }
 
     void ShaderGeneratorImpl::addPerVertex()
@@ -182,7 +245,8 @@ namespace st
             auto iter = ftracker.FullSourceStrings.emplace(Stage, result_stream.str());
             if (!iter.second)
             {
-                throw std::runtime_error("Failed to emplace freshly-generated shader source string");
+                errorSession.AddError(this, ShaderToolsErrorSource::Generator, ShaderToolsErrorCode::GeneratorUnableToStoreFullSourceString, nullptr);
+                return std::string{};
             }
 
             return iter.first->second;
@@ -193,7 +257,6 @@ namespace st
     {
         includes.push_back(fs::path{ include_path });
     }
-
 
     void ShaderGeneratorImpl::parseConstantBlock(const std::string& str)
     {
@@ -216,8 +279,6 @@ namespace st
 
     ShaderToolsErrorCode ShaderGeneratorImpl::parseInclude(const std::string& str, bool local)
     {
-        ShaderToolsErrorCode result{ ShaderToolsErrorCode::Success };
-
         fs::path include_path;
         if (!local)
         {
@@ -226,9 +287,8 @@ namespace st
 
             if (!fs::exists(include_path))
             {
-                std::string exceptionString =
-                    std::string("Couldn't find specified include ") + include_path.string() + std::string(" in library includes.");
-                throw std::runtime_error(exceptionString);
+                errorSession.AddError(this, ShaderToolsErrorSource::Generator, ShaderToolsErrorCode::GeneratorUnableToFindLibraryInclude, include_path.string().c_str());
+                return ShaderToolsErrorCode::GeneratorUnableToFindLibraryInclude;
             }
         }
         else
@@ -246,9 +306,8 @@ namespace st
 
             if (!found)
             {
-                std::string exceptionString =
-                    std::string("Couldn't find specified include ") + include_path.string() + std::string(" in shader-local include paths.");
-                throw std::runtime_error("Failed to find desired include in local include paths.");
+                errorSession.AddError(this, ShaderToolsErrorSource::Generator, ShaderToolsErrorCode::GeneratorUnableToFindLocalInclude, include_path.string().c_str());
+                return ShaderToolsErrorCode::GeneratorUnableToFindLocalInclude;
             }
         }
 
@@ -262,18 +321,30 @@ namespace st
 
         if (!include_file.is_open())
         {
+            errorSession.AddError(this, ShaderToolsErrorSource::Generator, ShaderToolsErrorCode::FilesystemPathExistedFileCouldNotBeOpened, include_path.string().c_str());
             return ShaderToolsErrorCode::FilesystemPathExistedFileCouldNotBeOpened;
         }
 
         std::string file_content{ std::istreambuf_iterator<char>(include_file), std::istreambuf_iterator<char>() };
-        fileContents.emplace(include_path, file_content);
-        fragments.emplace(fragment_type::IncludedFragment, file_content);
+        auto emplaced_file_iter = fileContents.emplace(include_path, std::move(file_content));
+        if (!emplaced_file_iter.second)
+        {
+            errorSession.AddError(this, ShaderToolsErrorSource::Generator, ShaderToolsErrorCode::GeneratorUnableToStoreFileContents, include_path.string().c_str());
+            return ShaderToolsErrorCode::GeneratorUnableToStoreFileContents;
+        }
+
+        auto fragment_iter = fragments.emplace(fragment_type::IncludedFragment, emplaced_file_iter.first->second);
+        if (fragment_iter == fragments.end())
+        {
+            errorSession.AddError(this, ShaderToolsErrorSource::Generator, ShaderToolsErrorCode::GeneratorUnableToStoreFragmentFileContents, include_path.string().c_str());
+            return ShaderToolsErrorCode::GeneratorUnableToStoreFragmentFileContents;
+        }
+
         return ShaderToolsErrorCode::Success;
     }
 
-    std::string ShaderGeneratorImpl::getResourceQualifiers(const ShaderResource& rsrc, ShaderToolsErrorCode& ec) const
+    bool ShaderGeneratorImpl::getResourceQualifiers(const ShaderResource& rsrc, std::string& result) const
     {
-        ec = ShaderToolsErrorCode::Success;
 
         // Qualifiers applied across all usages of this resource
         size_t num_qualifiers = 0;
@@ -285,8 +356,8 @@ namespace st
         std::string curr_shader_name = f_tracker.GetShaderName(Stage);
         if (curr_shader_name.empty())
         {
-            ec = ShaderToolsErrorCode::FilesystemNoFileDataForGivenHandleFound;
-            return std::string{};
+            errorSession.AddError(this, ShaderToolsErrorSource::Generator, ShaderToolsErrorCode::FilesystemNoFileDataForGivenHandleFound, nullptr);
+            return false;
         }
 
         // Now we need to get the qualifiers used for the current stage being generated
@@ -320,18 +391,20 @@ namespace st
                 result += " restrict";
                 break;
             default:
-                ec = ShaderToolsErrorCode::GeneratorInvalidResourceQualifier;
-                break;
+                errorSession.AddError(
+                    this,
+                    ShaderToolsErrorSource::Generator,
+                    ShaderToolsErrorCode::GeneratorInvalidResourceQualifier,
+                    "All resource qualifiers stripped from resource");
+                return false;
             }
         }
 
-        return result;
+        return true;
     }
 
     std::string ShaderGeneratorImpl::getResourcePrefix(size_t active_set, const std::string& format_specifier, const ShaderResource& rsrc) const
     {
-
-        ShaderToolsErrorCode errorCode;
 
         std::string prefix
         {
@@ -349,7 +422,11 @@ namespace st
 
         if (rsrc.HasQualifiers())
         {
-            prefix += getResourceQualifiers(rsrc, errorCode);
+            std::string qualifiers;
+            if (getResourceQualifiers(rsrc, qualifiers))
+            {
+                prefix += qualifiers;
+            }
         }
 
         prefix += " ";
@@ -417,7 +494,8 @@ namespace st
         }
     }
 
-    std::string ShaderGeneratorImpl::getStorageTexelBufferString(const size_t& active_set, const ShaderResource& image, const std::string& name) const {
+    std::string ShaderGeneratorImpl::getStorageTexelBufferString(const size_t& active_set, const ShaderResource& image, const std::string& name) const
+    {
 
         auto get_storage_texel_buffer_subtype = [&](const std::string& image_format)->std::string
         {
@@ -483,7 +561,7 @@ namespace st
         return prefix + std::string("uniform ") + buffer_type + std::string(" ") + name + std::string(";\n");
     }
 
-    std::string ShaderGeneratorImpl::getImageTypeSuffix(const VkImageCreateInfo& info, ShaderToolsErrorCode& ec) const
+    std::string ShaderGeneratorImpl::getImageTypeSuffix(const VkImageCreateInfo& info) const
     {
         std::string base_suffix;
         switch (info.imageType)
@@ -498,7 +576,8 @@ namespace st
             base_suffix = "3D";
             break;
         default:
-            throw std::runtime_error("Invalid/not set ImageType value");
+            errorSession.AddError(this, ShaderToolsErrorSource::Generator, ShaderToolsErrorCode::GeneratorInvalidImageType, nullptr);
+            return std::string{};
         }
 
         if (info.flags & VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT)
@@ -682,18 +761,19 @@ namespace st
         return ShaderToolsErrorCode::Success;
     }
 
-    std::string ShaderGeneratorImpl::fetchBodyStr(const ShaderStage& handle, const std::string& path_to_source, ShaderToolsErrorCode& ec)
+    std::string ShaderGeneratorImpl::fetchBodyStr(const ShaderStage& handle, const std::string& path_to_source)
     {
         auto& FileTracker = ShaderFileTracker::GetFileTracker();
 
         std::string body_str;
         body_str.reserve(4092u);
-        ec = FileTracker.FindShaderBody(handle, body_str);
+        ShaderToolsErrorCode ec = FileTracker.FindShaderBody(handle, body_str);
         if (ec != ShaderToolsErrorCode::Success)
         {
             ec = FileTracker.AddShaderBodyPath(handle, path_to_source);
             if (ec != ShaderToolsErrorCode::Success)
             {
+                errorSession.AddError(this, ShaderToolsErrorSource::Generator, ShaderToolsErrorCode::GeneratorUnableToAddShaderBodyPath, nullptr);
                 return std::string{};
             }
             else
@@ -704,7 +784,7 @@ namespace st
 
         if (body_str.empty())
         {
-            ec = ShaderToolsErrorCode::GeneratorFoundEmptyBodyString;
+            errorSession.AddError(this, ShaderToolsErrorSource::Generator, ShaderToolsErrorCode::GeneratorFoundEmptyBodyString, nullptr);
             return std::string{};
         }
         else
@@ -725,7 +805,7 @@ namespace st
             body_src_str.erase(body_src_str.begin() + match.position(), body_src_str.begin() + match.position() + match.length());
             if (!std::regex_search(body_src_str, match, end_interface_override))
             {
-                throw std::runtime_error("Found opening of an override interface block, but couldn't find closing #pragma.");
+                errorSession.AddError(this, ShaderToolsErrorSource::Generator, ShaderToolsErrorCode::GeneratorUnableToFindEndingOfInterfaceOverride, nullptr);
             }
             body_src_str.erase(body_src_str.begin() + match.position(), body_src_str.begin() + match.position() + match.length());
         }

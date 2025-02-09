@@ -2,6 +2,7 @@
 #ifndef ST_SHADER_GENERATOR_IMPL_HPP
 #define ST_SHADER_GENERATOR_IMPL_HPP
 #include "common/ShaderStage.hpp"
+#include "common/stSession.hpp"
 #include "resources/ShaderResource.hpp"
 #include "common/ShaderToolsErrors.hpp"
 #include <string>
@@ -68,29 +69,29 @@ namespace st
     {
     public:
 
-        explicit ShaderGeneratorImpl(ShaderStage _stage);
+        explicit ShaderGeneratorImpl(ShaderStage _stage, Session& errorSession);  
         ~ShaderGeneratorImpl();
 
         ShaderGeneratorImpl(ShaderGeneratorImpl&& other) noexcept;
         ShaderGeneratorImpl& operator=(ShaderGeneratorImpl&& other) noexcept;
 
-        const std::string& addFragment(const fs::path& path_to_source);
+        bool addFragment(const fs::path& path_to_source, std::string& addedFragment);
         const std::string& getFullSource() const;
         void addPerVertex();
         void addIncludePath(const char* include_path);
         void addPreamble(const fs::path& str);
-        void parseInterfaceBlock(const std::string& str);
+        bool parseInterfaceBlock(const std::string& str);
         void parseConstantBlock(const std::string& str);
         ShaderToolsErrorCode parseInclude(const std::string& str, bool local);
-
-        std::string getResourceQualifiers(const ShaderResource& rsrc, ShaderToolsErrorCode& ec) const;
+        
+        bool getResourceQualifiers(const ShaderResource& rsrc, std::string& result) const;
         std::string getResourcePrefix(size_t active_set, const std::string& image_format, const ShaderResource& rsrc) const;
         std::string getBufferMembersString(const ShaderResource & resource) const;
         std::string generateBufferAccessorString(const std::string& type_name, const std::string& buffer_name) const;
         std::string getBufferDescriptorString(const size_t& active_set, const ShaderResource& buffer, const std::string& name, const bool isArray, const bool isStorage) const;
         std::string getStorageTexelBufferString(const size_t& active_set, const ShaderResource& buffer, const std::string & name) const;
         std::string getUniformTexelBufferString(const size_t& active_set, const ShaderResource& texel_buffer, const std::string & name) const;
-        std::string getImageTypeSuffix(const VkImageCreateInfo& info, ShaderToolsErrorCode& ec) const;
+        std::string getImageTypeSuffix(const VkImageCreateInfo& info) const;
         std::string getStorageImageString(const size_t& active_set, const ShaderResource& storage_image, const std::string& name) const;
         std::string getSamplerString(const size_t& active_set, const ShaderResource& sampler, const std::string& name) const;
         std::string getSampledImageString(const size_t& active_set, const ShaderResource& sampled_image, const std::string& name) const;
@@ -98,7 +99,7 @@ namespace st
         std::string getInputAttachmentString(const size_t& active_set, const ShaderResource& input_attachment, const std::string& name) const;
         ShaderToolsErrorCode useResourceBlock(const std::string& block_name);
 
-        std::string fetchBodyStr(const ShaderStage& handle, const std::string& path_to_source, ShaderToolsErrorCode& ec);
+        std::string fetchBodyStr(const ShaderStage& handle, const std::string& path_to_source);
         void checkInterfaceOverrides(std::string& body_src_str);
         void addExtension(const std::string& extension_str);
         void processBodyStrIncludes(std::string & body_src_str);
@@ -113,16 +114,9 @@ namespace st
         mutable shader_resources_t ShaderResources;
         yamlFile* resourceFile;
         std::vector<fs::path> includes;
-
-        // Like other compiliation pipelines, we could have multiple errors in some cases. In these cases, 
-        // we store the unique error code, any associated unique text, and collect them together for top-level
-        // users to print out and handle (so in the case of multiple issues in source, they can be fixed all at once)
-        struct ShaderGeneratorError
-        {
-            ShaderToolsErrorCode code;
-            std::string message;
-            std::string location;
-        };
+        Session& errorSession;
+        
+        bool constructionSuccessful = false;
 
 
         inline static std::string BasePath{ "../fragments/" };
