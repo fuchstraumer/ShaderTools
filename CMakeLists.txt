@@ -38,6 +38,7 @@ SET(YAML_CPP_BUILD_TOOLS OFF CACHE BOOL "Enable parse tools")
 SET(YAML_CPP_INSTALL OFF CACHE BOOL "Enable generation of install target")
 ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/yaml-cpp")
 
+
 OPTION(SHADERTOOLS_PROFILING "Profile key steps in the execution of ShaderTools, and log timing info to the console" OFF)
 
 SET(ST_COMMON_SRCS
@@ -156,39 +157,39 @@ ENDIF()
 
 # Note that these are IDE-only organization parameters. This changes nothing about the build,
 # just keeps clutter out of the IDE solution view in VS especially (yuck, sorry, but this is CMake's fault...)
-SET_TARGET_PROPERTIES(
-    shaderc shaderc_util spirv-cross-core spirv-cross-cpp spirv-cross-glsl
-    spirv-tools-pkg-config spirv-tools-shared-pkg-config
-    core_tables enum_string_mapping extinst_tables
-    PROPERTIES FOLDER "ShaderTools Dependencies")
+#SET_TARGET_PROPERTIES(
+#    shaderc shaderc_util spirv-cross-core spirv-cross-cpp spirv-cross-glsl
+#    spirv-tools-pkg-config spirv-tools-shared-pkg-config
+#    core_tables enum_string_mapping extinst_tables
+#    PROPERTIES FOLDER "ShaderTools Dependencies")
     
-SET_TARGET_PROPERTIES(HLSL PROPERTIES FOLDER "ShaderTools Dependencies/hlsl")
+# SET_TARGET_PROPERTIES(HLSL PROPERTIES FOLDER "ShaderTools Dependencies/hlsl")
 
-SET_TARGET_PROPERTIES(
-    GenericCodeGen glslang glslang-default-resource-limits MachineIndependent
-    OGLCompiler OSDependent SPIRV SPVRemapper 
-    PROPERTIES FOLDER "ShaderTools Dependencies/glslang")
+# SET_TARGET_PROPERTIES(
+#    GenericCodeGen glslang glslang-default-resource-limits MachineIndependent
+#    OGLCompiler OSDependent SPIRV SPVRemapper 
+#    PROPERTIES FOLDER "ShaderTools Dependencies/glslang")
 
-SET_TARGET_PROPERTIES(
-    spirv-tools-build-version spirv-tools-header-DebugInfo
-    spirv-tools-header-NonSemanticShaderDebugInfo100
-    spirv-tools-header-OpenCLDebugInfo100
-    spv-tools-cldi100 spv-tools-clspvreflection
-    spv-tools-clspvreflection spv-tools-debuginfo
-    spv-tools-shdi100 spv-tools-spv-amd-gs spv-tools-spv-amd-sb
-    spv-tools-spv-amd-sevp spv-tools-spv-amd-stm
-    PROPERTIES FOLDER "ShaderTools Dependencies/SPIRV-Tools/build")
+#SET_TARGET_PROPERTIES(
+#    spirv-tools-build-version spirv-tools-header-DebugInfo
+#    spirv-tools-header-NonSemanticShaderDebugInfo100
+#    spirv-tools-header-OpenCLDebugInfo100
+#    spv-tools-cldi100 spv-tools-clspvreflection
+#    spv-tools-clspvreflection spv-tools-debuginfo
+#    spv-tools-shdi100 spv-tools-spv-amd-gs spv-tools-spv-amd-sb
+#    spv-tools-spv-amd-sevp spv-tools-spv-amd-stm
+#    PROPERTIES FOLDER "ShaderTools Dependencies/SPIRV-Tools/build")
 
-SET_TARGET_PROPERTIES(
-    SPIRV-Tools-link SPIRV-Tools-lint SPIRV-Tools-opt 
-    SPIRV-Tools-reduce SPIRV-Tools-shared SPIRV-Tools-static
-    PROPERTIES FOLDER "ShaderTools Dependencies/SPIRV-Tools/libraries")
+#SET_TARGET_PROPERTIES(
+#    SPIRV-Tools-link SPIRV-Tools-lint SPIRV-Tools-opt 
+#    SPIRV-Tools-reduce SPIRV-Tools-shared SPIRV-Tools-static
+#    PROPERTIES FOLDER "ShaderTools Dependencies/SPIRV-Tools/libraries")
 
-SET_TARGET_PROPERTIES(
-    spirv-tools-vimsyntax PROPERTIES FOLDER "ShaderTools Dependencies/SPIRV-Tools/utilities")
+#SET_TARGET_PROPERTIES(
+#    spirv-tools-vimsyntax PROPERTIES FOLDER "ShaderTools Dependencies/SPIRV-Tools/utilities")
 
-SET_TARGET_PROPERTIES(
-    glslangValidator spirv-remap PROPERTIES FOLDER "ShaderTools Dependencies/tools")
+#SET_TARGET_PROPERTIES(
+#    glslangValidator spirv-remap PROPERTIES FOLDER "ShaderTools Dependencies/tools")
 
 INSTALL(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include/" DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/ShaderTools/")
 INSTALL(TARGETS ShaderTools RUNTIME DESTINATION "bin" LIBRARY DESTINATION "lib" ARCHIVE DESTINATION "lib")

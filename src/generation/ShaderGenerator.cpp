@@ -3,7 +3,7 @@
 #include "common/UtilityStructs.hpp"
 #include "common/ShaderToolsErrors.hpp"
 #include "../util/FilesystemUtils.hpp"
-#include <iostream>
+#include <fstream>
 
 namespace st
 {

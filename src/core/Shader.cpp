@@ -111,7 +111,7 @@ namespace st
             std::cerr << "Could not find requested shader binary in Shader.";
             *binary_size = 0;
         }
-        else if (FileTracker.FindShaderBinary(handle, binary_vec))
+        else if (FileTracker.FindShaderBinary(handle, binary_vec) == ShaderToolsErrorCode::Success)
         {
             *binary_size = binary_vec.size();
             if (dest_binary_ptr != nullptr)

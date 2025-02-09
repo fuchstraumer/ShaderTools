@@ -103,6 +103,13 @@ namespace st
 
     struct VertexAttributeInfoImpl
     {
+        VertexAttributeInfoImpl() noexcept : name{}, type{ spv::Op::OpNop }, location{ 0 }, offset{ 0 }
+        {
+        }
+        VertexAttributeInfoImpl(const VertexAttributeInfoImpl&) noexcept = default;
+        VertexAttributeInfoImpl(VertexAttributeInfoImpl&&) noexcept = default;
+        VertexAttributeInfoImpl& operator=(const VertexAttributeInfoImpl&) noexcept = default;
+        VertexAttributeInfoImpl& operator=(VertexAttributeInfoImpl&&) noexcept = default;
         std::string name;
         spirv_cross::SPIRType type;
         uint32_t location;

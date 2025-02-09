@@ -6,6 +6,7 @@
 #include <regex>
 #include <iostream>
 #include <sstream>
+#include <fstream>
 
 namespace st
 {
@@ -254,20 +255,20 @@ namespace st
         if (fileContents.count(include_path))
         {
             fragments.emplace(fragment_type::IncludedFragment, fileContents.at(include_path));
-            return;
+            return ShaderToolsErrorCode::Success;
         }
 
         std::ifstream include_file(include_path);
 
         if (!include_file.is_open())
         {
-            throw std::runtime_error("Failed to open include file, despite having a valid path");
+            return ShaderToolsErrorCode::FilesystemPathExistedFileCouldNotBeOpened;
         }
 
         std::string file_content{ std::istreambuf_iterator<char>(include_file), std::istreambuf_iterator<char>() };
         fileContents.emplace(include_path, file_content);
         fragments.emplace(fragment_type::IncludedFragment, file_content);
-
+        return ShaderToolsErrorCode::Success;
     }
 
     std::string ShaderGeneratorImpl::getResourceQualifiers(const ShaderResource& rsrc, ShaderToolsErrorCode& ec) const
@@ -330,6 +331,8 @@ namespace st
     std::string ShaderGeneratorImpl::getResourcePrefix(size_t active_set, const std::string& format_specifier, const ShaderResource& rsrc) const
     {
 
+        ShaderToolsErrorCode errorCode;
+
         std::string prefix
         {
             std::string("layout (set = ") +std::to_string(active_set) + std::string(", binding = ") + std::to_string(rsrc.BindingIndex())
@@ -346,7 +349,7 @@ namespace st
 
         if (rsrc.HasQualifiers())
         {
-            prefix += getResourceQualifiers(rsrc);
+            prefix += getResourceQualifiers(rsrc, errorCode);
         }
 
         prefix += " ";

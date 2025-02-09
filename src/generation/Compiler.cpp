@@ -35,7 +35,7 @@ namespace st
 
         auto& FileTracker = ShaderFileTracker::GetFileTracker();
         std::vector<uint32_t> binary_vec;
-        if (FileTracker.FindShaderBinary(shader_handle, binary_vec))
+        if (FileTracker.FindShaderBinary(shader_handle, binary_vec) == ShaderToolsErrorCode::Success)
         {
             *binary_sz = binary_vec.size();
             if (binary_dest_ptr != nullptr)

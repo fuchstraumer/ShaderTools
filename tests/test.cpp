@@ -4,7 +4,6 @@
 #include "core/ShaderPack.hpp"
 #include "../src/util/ShaderFileTracker.hpp"
 #include <array>
-#include <iostream>
 
 int main(int argc, char* argv[])
 {
@@ -19,7 +18,7 @@ int main(int argc, char* argv[])
         std::chrono::duration<double, std::milli> work_time = std::chrono::high_resolution_clock::now() - beforeExec;
         std::cout << "Conventional creation of ShaderPack took: " << work_time.count() << "ms\n";
 
-        //DumpProgramStateToCache();
+        DumpProgramStateToCache();
         ClearProgramState();
 
     }

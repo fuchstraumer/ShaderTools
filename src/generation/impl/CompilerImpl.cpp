@@ -171,7 +171,7 @@ namespace st
 
             std::vector<uint32_t> found_binary;
 
-            if (FileTracker.FindShaderBinary(handle, found_binary))
+            if (FileTracker.FindShaderBinary(handle, found_binary) == ShaderToolsErrorCode::Success)
             {
                 using namespace spirv_cross;
                 CompilerGLSL recompiler(found_binary);

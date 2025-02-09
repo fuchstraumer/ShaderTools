@@ -22,6 +22,8 @@ namespace st
         ParserHadNoResourceGroups,
         ParserMissingResourceTypeSpecifier,
         ParserResourceTypeSpecifierNoVulkanEquivalent,
+        ParserYamlFileHadNoShadersInGroup,
+        ParserYamlFileHadInvalidOrEmptyTagsArray,
         GeneratorErrorsStart = 100,
         // In the case of multiple errors, we return this to the top level. Asking the generator for the full
         // errors can give the array of errors for printing or logging elsewhere.

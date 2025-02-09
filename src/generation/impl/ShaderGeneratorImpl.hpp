@@ -5,13 +5,10 @@
 #include "resources/ShaderResource.hpp"
 #include "common/ShaderToolsErrors.hpp"
 #include <string>
-#include <fstream>
 #include <filesystem>
 #include <vector>
 #include <set>
-#include <unordered_map>
 #include <map>
-#include <vulkan/vulkan.h>
 
 namespace st
 {
@@ -122,7 +119,9 @@ namespace st
         // users to print out and handle (so in the case of multiple issues in source, they can be fixed all at once)
         struct ShaderGeneratorError
         {
-
+            ShaderToolsErrorCode code;
+            std::string message;
+            std::string location;
         };
 
 

@@ -2,6 +2,7 @@
 #include "common/UtilityStructs.hpp"
 #include <set>
 #include <unordered_map>
+#include <string>
 
 namespace st
 {

@@ -274,7 +274,7 @@ namespace st
     spirv_cross::SPIRType SPIR_TypeFromString(const std::string& str)
     {
         using namespace spirv_cross;
-        SPIRType result;
+        SPIRType result(spv::Op::OpNop);
 
         size_t idx = str.find_first_of('_');
 
@@ -290,7 +290,7 @@ namespace st
         }
         else
         {
-            result = SPIRType();
+            result = SPIRType(spv::Op::OpNop);
             result.basetype = SPIR_BaseTypeEnumFromString(str);
             return result;
         }
