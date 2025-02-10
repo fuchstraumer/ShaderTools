@@ -3,7 +3,43 @@
 #define SHADER_TOOLS_UTILITY_STRUCTS_HPP
 #include "CommonInclude.hpp"
 
-namespace st {
+namespace st
+{
+
+    struct ST_API ShaderCompilerOptions
+    {
+        enum class OptimizationLevel : uint8_t
+        {
+            None = 0,
+            Performance = 1,
+            Size = 2,
+            Debug = 3
+        };
+
+        enum class TargetVersion : uint8_t
+        {
+            Vulkan1_0 = 0,
+            Vulkan1_1 = 1,
+            Vulkan1_2 = 2,
+            Vulkan1_3 = 3,
+            Vulkan1_4 = 4,
+            VulkanLatest = 4,
+            OpenGL4_5 = 5,
+            
+        };
+
+        enum class SourceLanguage : uint8_t
+        {
+            GLSL = 0,
+            HLSL = 1,
+            Metal = 2,  
+        };
+
+        OptimizationLevel Optimization = OptimizationLevel::Performance;
+        TargetVersion TargetVersion = TargetVersion::VulkanLatest;
+        SourceLanguage SourceLanguage = SourceLanguage::GLSL;
+        bool GenerateDebugInfo = false;
+    };
 
     struct ST_API dll_retrieved_strings_t
     {

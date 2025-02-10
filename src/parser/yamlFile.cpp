@@ -106,7 +106,7 @@ namespace st
         YAML::Node rootFileNode;
     };
 
-    yamlFile::yamlFile(const char* fname)
+    yamlFile::yamlFile(const char* fname, Session& session)
     {
         try
         {
@@ -117,8 +117,8 @@ namespace st
             throw e;
         }
 
-        ShaderToolsErrorCode parseGroupsStatus = parseGroups();
-        ShaderToolsErrorCode parseResourcesStatus = parseResources();
+        ShaderToolsErrorCode parseGroupsStatus = parseGroups(session);
+        ShaderToolsErrorCode parseResourcesStatus = parseResources(session);
 
         if (parseGroupsStatus == ShaderToolsErrorCode::Success &&
             parseResourcesStatus == ShaderToolsErrorCode::Success) 
@@ -157,13 +157,14 @@ namespace st
         return nullptr;
     }
 
-    ShaderToolsErrorCode yamlFile::parseGroups()
+    ShaderToolsErrorCode yamlFile::parseGroups(Session& session)
     {
         using namespace YAML;
 
         auto& file_node = impl->rootFileNode;
         if (!file_node["shader_groups"])
         {
+            session.AddError(this, ShaderToolsErrorSource::Parser, ShaderToolsErrorCode::ParserHadNoShaderGroups, nullptr);
             return ShaderToolsErrorCode::ParserHadNoShaderGroups;
         }
 
@@ -266,6 +267,18 @@ namespace st
         return ShaderToolsErrorCode::Success;
     }
 
+    ShaderToolsErrorCode yamlFile::parseCompilerOptions(Session& session)
+    {
+        return ShaderToolsErrorCode::Success;
+    }
+
+    ShaderToolsErrorCode yamlFile::parseCompilerOptions(Session& session)
+    {
+        
+        return ShaderToolsErrorCode::Success;
+    }
+
+    // Sorts resources by type, and sets binding indices
     void yamlFile::sortResourcesAndSetBindingIndices()
     {
         for (auto& resource_block : resourceGroups)
@@ -307,13 +320,16 @@ namespace st
 
     }
 
-    ShaderToolsErrorCode yamlFile::parseResources()
+    ShaderToolsErrorCode yamlFile::parseResources(Session& session)
     {
         using namespace YAML;
+        // Store most recent error, so we can return that one. We will store every error that occurs in the session,
+        // so that users can see all errors but we still stop processing after any error occurs.
+        ShaderToolsErrorCode mostRecentError = ShaderToolsErrorCode::Success;
 
         if (!impl->rootFileNode["resource_groups"])
         {
-            return ShaderToolsErrorCode::ParserHadNoResourceGroups;
+            mostRecentError = ShaderToolsErrorCode::ParserHadNoResourceGroups;
         }
 
         auto groups = impl->rootFileNode["resource_groups"];
@@ -332,13 +348,17 @@ namespace st
 
                 if (!rsrc_node["Type"])
                 {
-                    return ShaderToolsErrorCode::ParserMissingResourceTypeSpecifier;
+                    const std::string errorMsg = "Group '" + group_name + "' has resource '" + rsrc_name + "' with no type specifier.";
+                    session.AddError(this, ShaderToolsErrorSource::Parser, ShaderToolsErrorCode::ParserMissingResourceTypeSpecifier, errorMsg.c_str());
+                    mostRecentError = ShaderToolsErrorCode::ParserMissingResourceTypeSpecifier;
                 }
 
                 auto type_iter = descriptor_type_from_str_map.find(rsrc_node["Type"].as<std::string>());
                 if (type_iter == descriptor_type_from_str_map.end())
                 {
-                    return ShaderToolsErrorCode::ParserResourceTypeSpecifierNoVulkanEquivalent;
+                    const std::string errorMsg = "Group '" + group_name + "' has resource '" + rsrc_name + "' with type specifier '" + rsrc_node["Type"].as<std::string>() + "' which has no corresponding Vulkan equivalent.";
+                    session.AddError(this, ShaderToolsErrorSource::Parser, ShaderToolsErrorCode::ParserResourceTypeSpecifierNoVulkanEquivalent, errorMsg.c_str());
+                    mostRecentError = ShaderToolsErrorCode::ParserResourceTypeSpecifierNoVulkanEquivalent;
                 }
 
                 ShaderResource rsrc;
@@ -380,7 +400,14 @@ namespace st
 
                 if (rsrc_node["Format"])
                 {
-                    rsrc.SetFormat(VkFormatFromString(rsrc_node["Format"].as<std::string>()));
+                    VkFormat format = VkFormatFromString(rsrc_node["Format"].as<std::string>());
+                    if (format == VK_FORMAT_UNDEFINED)
+                    {
+                        const std::string errorMsg = "Group '" + group_name + "' has resource '" + rsrc_name + "' with format '" + rsrc_node["Format"].as<std::string>() + "' which has no corresponding Vulkan equivalent.";
+                        session.AddError(this, ShaderToolsErrorSource::Parser, ShaderToolsErrorCode::ParserResourceFormatNoVulkanEquivalent, errorMsg.c_str());
+                        mostRecentError = ShaderToolsErrorCode::ParserResourceFormatNoVulkanEquivalent;
+                    }
+                    rsrc.SetFormat(format);
                 }
 
                 if (rsrc_node["Members"])
@@ -416,7 +443,7 @@ namespace st
             }
         }
 
-        return ShaderToolsErrorCode::Success;
+        return mostRecentError;
     }
 
 }

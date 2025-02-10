@@ -275,6 +275,12 @@ resource_groups :
                 mat4 dbView;
                 mat4 dbProjection;
 
+compiler_options : 
+    GenerateDebugInfo : false
+    Optimization : "Performance"
+    TargetVersion : "VulkanLatest"
+    SourceLanguage : "GLSL"
+
 shader_groups : 
     UpdateLights : 
         Shaders : 
