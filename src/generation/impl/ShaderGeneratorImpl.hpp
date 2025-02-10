@@ -20,6 +20,7 @@ namespace st
 
     enum class fragment_type : uint8_t
     {
+        // Required preamble for generating valid GLSL code
         Preamble = 0,
         Extension = 1,
         glPerVertex = 2,
@@ -30,6 +31,7 @@ namespace st
         PushConstantItem,
         IncludedFragment,
         ResourceBlock,
+        // Main fragment, effectively processed body string
         Main,
         Invalid
     };
@@ -75,16 +77,17 @@ namespace st
         ShaderGeneratorImpl(ShaderGeneratorImpl&& other) noexcept;
         ShaderGeneratorImpl& operator=(ShaderGeneratorImpl&& other) noexcept;
 
-        bool addFragment(const fs::path& path_to_source, std::string& addedFragment);
-        const std::string& getFullSource() const;
+    private:
+
+        ShaderToolsErrorCode addFragment(const fs::path& path_to_source, std::string& addedFragment);
         void addPerVertex();
-        void addIncludePath(const char* include_path);
-        void addPreamble(const fs::path& str);
-        bool parseInterfaceBlock(const std::string& str);
+        ShaderToolsErrorCode addPreamble(const fs::path& str);
+        ShaderToolsErrorCode addStageInterface(uint32_t stageBits, fs::path interfacePath);
+        ShaderToolsErrorCode parseInterfaceBlock(const std::string& str);
         void parseConstantBlock(const std::string& str);
         ShaderToolsErrorCode parseInclude(const std::string& str, bool local);
         
-        bool getResourceQualifiers(const ShaderResource& rsrc, std::string& result) const;
+        ShaderToolsErrorCode getResourceQualifiers(const ShaderResource& rsrc, std::string& result) const;
         std::string getResourcePrefix(size_t active_set, const std::string& image_format, const ShaderResource& rsrc) const;
         std::string getBufferMembersString(const ShaderResource & resource) const;
         std::string generateBufferAccessorString(const std::string& type_name, const std::string& buffer_name) const;
@@ -102,10 +105,18 @@ namespace st
         std::string fetchBodyStr(const ShaderStage& handle, const std::string& path_to_source);
         void checkInterfaceOverrides(std::string& body_src_str);
         void addExtension(const std::string& extension_str);
-        void processBodyStrIncludes(std::string & body_src_str);
-        void processBodyStrSpecializationConstants(std::string& body_src_str);
-        void processBodyStrResourceBlocks(const ShaderStage& handle, std::string& body_str);
+        ShaderToolsErrorCode processBodyStrIncludes(std::string & body_src_str);
+        ShaderToolsErrorCode processBodyStrSpecializationConstants(std::string& body_src_str);
+        ShaderToolsErrorCode processBodyStrResourceBlocks(const ShaderStage& handle, std::string& body_str);
+
+    public:
+        // The primary function called by the public API
         ShaderToolsErrorCode generate(const ShaderStage& handle, const std::string& path_to_src, const size_t num_extensions, const char* const* extensions);
+        const std::string& getFullSource() const;
+        void addIncludePath(const char* include_path);
+
+        // Consumes specified amount of body string, and updates internal line+column counters appropriately
+        void consumeBodyStr(std::string& body_str, size_t num_chars_to_consume);    
 
         ShaderStage Stage{ 0u, 0u };
         std::multiset<shaderFragment> fragments;
@@ -115,6 +126,9 @@ namespace st
         yamlFile* resourceFile;
         std::vector<fs::path> includes;
         Session& errorSession;
+
+        size_t currentLine{0u};
+        size_t currentColumn{0u};
         
         bool constructionSuccessful = false;
 

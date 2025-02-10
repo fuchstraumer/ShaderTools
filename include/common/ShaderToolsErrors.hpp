@@ -43,6 +43,7 @@ namespace st
         GeneratorUnableToFindLocalInclude,
         GeneratorInvalidImageType,
         GeneratorUnableToAddShaderBodyPath,
+        GeneratorUnableToFindEndingOfInterfaceOverride,
         // Errors here mostly come from issues compiling, or invalid use of otherwise valid shader code.
 
 
@@ -56,6 +57,7 @@ namespace st
         // Errors not in the core pipeline of systems. Error category - Filesystem
         SubsystemErrorsStart = 400,
         FilesystemPathDoesNotExist,
+        // Message is the path that was attempted
         FilesystemPathExistedFileCouldNotBeOpened,
         FilesystemCouldNotEmplaceIntoInternalStorage,
         FilesystemNoFileDataForGivenHandleFound
@@ -69,6 +71,14 @@ namespace st
         Reflection,
         Filesystem,
         UserInput
+    };
+
+    // We don't include a file path, because that will be part of the error message we store
+    // in the error structure anyways.
+    struct SourceLocation
+    {
+        size_t line;
+        size_t column;
     };
 
     // Implemented in ShaderToolsErrors.cpp. Wanted all files to be able to access this,
