@@ -10,13 +10,12 @@ namespace st
     {
         enum class OptimizationLevel : uint8_t
         {
-            None = 0,
+            Disabled = 0,
             Performance = 1,
-            Size = 2,
-            Debug = 3
+            Size = 2
         };
 
-        enum class TargetVersion : uint8_t
+        enum class TargetVersionEnum : uint8_t
         {
             Vulkan1_0 = 0,
             Vulkan1_1 = 1,
@@ -25,7 +24,6 @@ namespace st
             Vulkan1_4 = 4,
             VulkanLatest = 4,
             OpenGL4_5 = 5,
-            
         };
 
         enum class SourceLanguage : uint8_t

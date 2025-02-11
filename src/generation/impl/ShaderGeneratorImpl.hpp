@@ -120,6 +120,7 @@ namespace st
 
         ShaderStage Stage{ 0u, 0u };
         std::multiset<shaderFragment> fragments;
+        // TODO: remove this, because we already have the file tracker? This seems soooo unwise.
         static std::map<fs::path, std::string> fileContents;
         std::map<std::string, std::string> resourceBlocks;
         mutable shader_resources_t ShaderResources;

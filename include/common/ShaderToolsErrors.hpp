@@ -24,7 +24,9 @@ namespace st
         ParserResourceTypeSpecifierNoVulkanEquivalent,
         ParserYamlFileHadNoShadersInGroup,
         ParserYamlFileHadInvalidOrEmptyTagsArray,
+        ParserYamlFileHadInvalidOptimizationLevel,
         ParserResourceFormatNoVulkanEquivalent,
+        ParserYamlFileHadInvalidTargetVersion,
 
         GeneratorErrorsStart = 100,
         GeneratorEmptyIncludePathArray,

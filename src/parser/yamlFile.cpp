@@ -2,6 +2,8 @@
 #include "yaml-cpp/yaml.h"
 #include "../util/ResourceFormats.hpp"
 #include "../util/ShaderFileTracker.hpp"
+#include "shaderc/env.h"
+#include "shaderc/shaderc.h"
 #include <filesystem>
 #include <cassert>
 #include <iterator>
@@ -47,6 +49,23 @@ namespace st
         { "writeonly", glsl_qualifier::WriteOnly },
         { "volatile", glsl_qualifier::Volatile },
         { "restrict", glsl_qualifier::Restrict }
+    };
+
+    static const std::unordered_map<std::string, ShaderCompilerOptions::OptimizationLevel> optimization_level_from_str_map =
+    {
+        { "Disabled", ShaderCompilerOptions::OptimizationLevel::Disabled },
+        { "Size", ShaderCompilerOptions::OptimizationLevel::Size },
+        { "Performance", ShaderCompilerOptions::OptimizationLevel::Performance }
+    };
+
+    static const std::unordered_map<std::string, ShaderCompilerOptions::TargetVersionEnum> env_version_from_str_map =
+    {
+        { "Vulkan_1_0", ShaderCompilerOptions::TargetVersionEnum::Vulkan1_0 },
+        { "Vulkan_1_1", ShaderCompilerOptions::TargetVersionEnum::Vulkan1_1 },
+        { "Vulkan_1_2", ShaderCompilerOptions::TargetVersionEnum::Vulkan1_2 },
+        { "Vulkan_1_3", ShaderCompilerOptions::TargetVersionEnum::Vulkan1_3 },
+        { "Vulkan_1_4", ShaderCompilerOptions::TargetVersionEnum::Vulkan1_4 },
+        { "VulkanLatest", ShaderCompilerOptions::TargetVersionEnum::VulkanLatest }
     };
 
     glsl_qualifier singleQualifierFromString(const std::string& single_qualifier)
@@ -269,13 +288,57 @@ namespace st
 
     ShaderToolsErrorCode yamlFile::parseCompilerOptions(Session& session)
     {
-        return ShaderToolsErrorCode::Success;
-    }
+        using namespace YAML;
+        ShaderToolsErrorCode mostRecentError = ShaderToolsErrorCode::Success;
 
-    ShaderToolsErrorCode yamlFile::parseCompilerOptions(Session& session)
-    {
-        
-        return ShaderToolsErrorCode::Success;
+        auto& file_node = impl->rootFileNode;
+        if (!file_node["compiler_options"])
+        {
+            // TODO: This is somewhere we could probably start using warnings
+            compilerOptions = ShaderCompilerOptions();
+        }
+        else
+        {
+            const YAML::Node compiler_options = file_node["compiler_options"];
+
+            if (compiler_options["GenerateDebugInfo"])
+            {
+                compilerOptions.GenerateDebugInfo = compiler_options["GenerateDebugInfo"].as<bool>();
+            }
+
+            if (compiler_options["Optimization"])
+            {
+                const std::string opt_str = compiler_options["Optimization"].as<std::string>();
+                auto opt_iter = optimization_level_from_str_map.find(opt_str);
+                if (opt_iter == optimization_level_from_str_map.end())
+                {
+                    mostRecentError = ShaderToolsErrorCode::ParserYamlFileHadInvalidOptimizationLevel;
+                    session.AddError(this, ShaderToolsErrorSource::Parser, mostRecentError, opt_str.c_str());
+                }
+                else
+                {
+                    compilerOptions.Optimization = opt_iter->second;
+                }
+            }
+
+            if (compiler_options["TargetVersion"])
+            {
+                const std::string target_version_str = compiler_options["TargetVersion"].as<std::string>();
+                auto target_version_iter = env_version_from_str_map.find(target_version_str);
+                if (target_version_iter == env_version_from_str_map.end())
+                {
+                    mostRecentError = ShaderToolsErrorCode::ParserYamlFileHadInvalidTargetVersion;
+                    session.AddError(this, ShaderToolsErrorSource::Parser, mostRecentError, target_version_str.c_str());
+                }
+                else
+                {
+                    compilerOptions.TargetVersion = target_version_iter->second;
+                }
+            }
+
+        }
+
+        return mostRecentError;
     }
 
     // Sorts resources by type, and sets binding indices
