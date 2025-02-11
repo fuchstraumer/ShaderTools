@@ -6,6 +6,7 @@
 - Identify a new binary format for the generated content
 - Fix the horrendous mess of threading bugs that is the file tracker. What was I thinking?
     - This could be made into something that runs per-session like the error session system as well
+    - This is probably the best place we could do a message-passing paradigm to make things thread nicely
 - Source location parsing for errors when generating source text. Include handling would be nice too, but need to figure out how that works with shaderc
     - This would allow us to compile the include sources ahead of time, and parse them for errors. Kinda like a language server!
 - Change shader yaml spec to be "ComputeShader" for compute shaders, use "RenderShaders" + (Stage) as next subgroup for rendering shaders. More succinct, more clear.
