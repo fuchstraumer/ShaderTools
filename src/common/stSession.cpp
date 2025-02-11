@@ -85,7 +85,7 @@ namespace st
         if (errors != nullptr)
         {
             // I LOVE DLLs! We have to copy the reported errors into our local contiguous array before we can copy it back to the user
-            // because the user's array may not be contiguous.
+            // because the storage of the errors is not contiguous in memory.
             std::vector<ReportedError> localErrors;
             for (const auto& [instance, reportedErrors] : impl->errors)
             {

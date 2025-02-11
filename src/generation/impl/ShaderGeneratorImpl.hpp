@@ -104,7 +104,6 @@ namespace st
 
         [[nodiscard]] std::string fetchBodyStr(const ShaderStage& handle, const std::string& path_to_source);
         void checkInterfaceOverrides(std::string& body_src_str);
-        void addExtension(const std::string& extension_str);
         [[nodiscard]] ShaderToolsErrorCode processBodyStrIncludes(std::string & body_src_str);
         [[nodiscard]] ShaderToolsErrorCode processBodyStrSpecializationConstants(std::string& body_src_str);
         [[nodiscard]] ShaderToolsErrorCode processBodyStrResourceBlocks(const ShaderStage& handle, std::string& body_str);
@@ -114,6 +113,7 @@ namespace st
         [[nodiscard]] ShaderToolsErrorCode generate(const ShaderStage& handle, const std::string& path_to_src, const size_t num_extensions, const char* const* extensions);
         [[nodiscard]] const std::string& getFullSource() const;
         void addIncludePath(const char* include_path);
+        void addExtension(const std::string& extension_str);
 
         // Consumes specified amount of body string, and updates internal line+column counters appropriately
         void consumeBodyStr(std::string& body_str, size_t num_chars_to_consume);    

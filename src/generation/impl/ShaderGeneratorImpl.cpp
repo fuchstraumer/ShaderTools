@@ -836,7 +836,7 @@ namespace st
         std::string result = extension_begin + extension_str;
         const std::string extension_close(" : enable \n");
         result += extension_close;
-        fragments.emplace( fragment_type::Extension, result);
+        fragments.emplace(fragment_type::Extension, result);
     }
 
     ShaderToolsErrorCode ShaderGeneratorImpl::processBodyStrSpecializationConstants(std::string& body_src_str)

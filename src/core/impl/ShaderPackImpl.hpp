@@ -4,6 +4,7 @@
 #include "core/Shader.hpp"
 #include "generation/ShaderGenerator.hpp"
 #include "../../parser/yamlFile.hpp"
+#include "common/stSession.hpp"
 #include <filesystem>
 #include <future>
 #include <memory>
@@ -40,6 +41,8 @@ namespace st
         std::mutex guardMutex;
         std::unordered_map<std::string, std::unique_ptr<ResourceGroup>> resourceGroups;
         mutable descriptor_type_counts_t typeCounts;
+        Session& errorSession;
+        
     };
 
 }

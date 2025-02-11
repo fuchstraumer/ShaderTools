@@ -1,11 +1,12 @@
-- Vastly improve the error handling. Figure out how we could potentially sub in stub content
-- As part of the above, disable easyloggingpp. Anytime we'd log an error, store an error in the generated content. Allows users/clients to introspect on errors and decide what to do. We shouldn't do that for them.
-- Return errors, not to top level functions - just internally. Store them in binarized result.
-- Explore what we can do with the new (?) vulkan headers for enum-string mapping, could delete or simplify some code! 
-- Figure out something smarter for how we're saving the common "state" in the shader file tracker. This works for now, but we can do better
-- Identify how to handle some kind of static branching functionality
-- Distill responsibilities down to minimum. Cleanup fragments: too much content saved here. 
-- Build out integration tests
+- Add unit and integration tests
+- Figure out if we can do a debug info compile to get reflection info, and then a stripped compile for the binary that the API will actually use for PSO creation
+    - In this vein, allow us to retry failed compiles with reduced optimizations to see what works
+- Identify how much more info we can pack into the YAML file to allow for the definition of PSOs entirely in data
+    - Will need to identify in these requests what vulkan extensions and features are needed to do this, and save them in the data as well
+- Identify a new binary format for the generated content
+- Fix the horrendous mess of threading bugs that is the file tracker. What was I thinking?
+    - This could be made into something that runs per-session like the error session system as well
+- Source location parsing for errors when generating source text. Include handling would be nice too, but need to figure out how that works with shaderc
+    - This would allow us to compile the include sources ahead of time, and parse them for errors. Kinda like a language server!
 - Change shader yaml spec to be "ComputeShader" for compute shaders, use "RenderShaders" + (Stage) as next subgroup for rendering shaders. More succinct, more clear.
 - Reduce lambda function usage. Untestable, hidden, cluttered.
-- Fix usage of fixed vulkan version, allow for targeting by users
