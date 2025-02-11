@@ -34,7 +34,7 @@ namespace st
         };
 
         OptimizationLevel Optimization = OptimizationLevel::Performance;
-        TargetVersion TargetVersion = TargetVersion::VulkanLatest;
+        TargetVersionEnum TargetVersion = TargetVersionEnum::VulkanLatest;
         SourceLanguage SourceLanguage = SourceLanguage::GLSL;
         bool GenerateDebugInfo = false;
     };
