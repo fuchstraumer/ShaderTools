@@ -172,6 +172,8 @@ namespace st
 
     ShaderToolsErrorCode ShaderCompilerImpl::compile(const ShaderStage& handle, const shaderc_shader_kind& kind, const std::string& name, const std::string& src_str)
     {
+        ShaderToolsErrorCode error = ShaderToolsErrorCode::Success;
+
         auto& FileTracker = ShaderFileTracker::GetFileTracker();
         shaderc::Compiler compiler;
         shaderc::CompileOptions options = getCompilerOptions();
@@ -186,31 +188,32 @@ namespace st
             options.SetOptimizationLevel(shaderc_optimization_level_zero);
         }
 
-        // Wholly unneeded and is going to artifically inflate our compile times. ifdef'd out in non-debug builds because of that
-#ifndef NDEBUG
-        shaderc::AssemblyCompilationResult assembly_result = compiler.CompileGlslToSpvAssembly(src_str, kind, name.c_str(), options);
-        if (assembly_result.GetCompilationStatus() == shaderc_compilation_status_success)
+        if (k_EnableSpvAssembly)
         {
-            auto assemblyIter = FileTracker.AssemblyStrings.emplace(handle, std::string{ assembly_result.begin(), assembly_result.end() });
-            if (!assemblyIter.second)
+            shaderc::AssemblyCompilationResult assembly_result = compiler.CompileGlslToSpvAssembly(src_str, kind, name.c_str(), options);
+            if (assembly_result.GetCompilationStatus() == shaderc_compilation_status_success)
             {
-                std::cerr << "Failed to emplace non-critical assembly string into state storage.";
+                auto assemblyIter = FileTracker.AssemblyStrings.emplace(handle, std::string{ assembly_result.begin(), assembly_result.end() });
+                if (!assemblyIter.second)
+                {
+                    std::cerr << "Failed to emplace non-critical assembly string into state storage.";
+                }
             }
         }
-#endif
 
         shaderc::SpvCompilationResult compiliation_result = compiler.CompileGlslToSpv(src_str, kind, name.c_str(), options);
 
         if (compiliation_result.GetCompilationStatus() != shaderc_compilation_status_success)
         {
+            error = ShaderToolsErrorCode::CompilerShaderCompilationFailed;
             const std::string err_msg = compiliation_result.GetErrorMessage();
-            std::cerr << "Shader compiliation to assembly failed: " << err_msg.c_str() << "\n";
+            errorSession.AddError(this, ShaderToolsErrorSource::Compiler, error, err_msg.c_str());
+
 #ifndef NDEBUG
             std::cerr << "Dumping shader source to file...";
             dump_bad_source_to_file(name, src_str, err_msg, dump_reason::failed_compile);
 #endif
-            const std::string except_msg = std::string("Failed to compile shader to assembly: ") + err_msg + std::string("\n");
-            throw std::runtime_error(except_msg.c_str());
+
         }
 
         if (FileTracker.Binaries.count(handle) != 0)
@@ -222,9 +225,11 @@ namespace st
         auto binary_iter = FileTracker.Binaries.emplace(handle, std::vector<uint32_t>{compiliation_result.begin(), compiliation_result.end()});
         if (!binary_iter.second)
         {
-            throw std::runtime_error("Emplacement of compiled shader SPIR-V binary failed.");
+            error = ShaderToolsErrorCode::CompilerShaderCompilationFailed;
+            errorSession.AddError(this, ShaderToolsErrorSource::Compiler, error, "Emplacement of compiled shader SPIR-V binary failed.");
         }
 
+        return error;
     }
 
     void ShaderCompilerImpl::recompileBinaryToGLSL(const ShaderStage& handle, size_t* str_size, char* dest_str)
@@ -258,6 +263,7 @@ namespace st
                 }
                 catch (const spirv_cross::CompilerError& e)
                 {
+                    
                     std::cerr << "Failed to fully parse/recompile SPIR-V binary back to GLSL text. Outputting partial source thus far.";
                     std::cerr << "spirv_cross::CompilerError.what(): " << e.what() << "\n";
                     recompiled_source = recompiler.get_partial_source();

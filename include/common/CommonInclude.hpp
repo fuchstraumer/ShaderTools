@@ -19,6 +19,12 @@
 #define ST_API
 #endif
 
+#ifdef SHADERTOOLS_ENABLE_SPV_ASSEMBLY
+constexpr static bool k_EnableSpvAssembly = true;
+#else
+constexpr static bool k_EnableSpvAssembly = false;
+#endif
+
 #ifdef _MSC_VER
 // Disable warning about dll interface for impl members.
 #pragma warning(disable: 4251 )

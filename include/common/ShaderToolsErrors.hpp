@@ -53,6 +53,9 @@ namespace st
 
         // This is the ShaderToolsInternal error category, the stuff that's most on this library to fix
         CompilerErrorsStart = 200,
+        CompilerShaderKindNotSupported,
+        CompilerShaderCompilationFailed,
+        
         ReflectionErrorsStart = 300,
 
 
