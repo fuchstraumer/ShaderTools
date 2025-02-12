@@ -5,6 +5,7 @@
 #include "../../generation/impl/ShaderStageProcessor.hpp"
 #include "../../reflection/impl/ShaderReflectorImpl.hpp"
 #include "../../util/ShaderFileTracker.hpp"
+#include "common/stSession.hpp"
 #include <array>
 #include <filesystem>
 #include <iostream>
@@ -13,7 +14,10 @@ namespace st
 {
     namespace fs = std::filesystem;
 
-    ShaderPackImpl::ShaderPackImpl(const char* shader_pack_file_path) : filePack(std::make_unique<yamlFile>(shader_pack_file_path)), workingDir(shader_pack_file_path)
+    ShaderPackImpl::ShaderPackImpl(const char* shader_pack_file_path, Session& error_session) :
+        filePack(std::make_unique<yamlFile>(shader_pack_file_path, error_session)),
+        workingDir(shader_pack_file_path),
+        errorSession(error_session)
     {
         workingDir = fs::canonical(workingDir);
         packPath = workingDir.string();
@@ -29,7 +33,7 @@ namespace st
 
     void ShaderPackImpl::createPackScript(const char* fname)
     {
-        filePack = std::make_unique<yamlFile>(fname);
+        filePack = std::make_unique<yamlFile>(fname, errorSession);
     }
 
     void ShaderPackImpl::processShaderStages()
@@ -88,6 +92,13 @@ namespace st
                 throw e;
             }
         }
+
+        // Merge all error sessions together
+        for (auto& processor : processors)
+        {
+            Session::MergeSessions(errorSession, std::move(processor.second->ErrorSession));
+        }
+
         groups.emplace(name, std::make_unique<Shader>(name.c_str(), shaders.size(), shaders.data(), filePack.get()));
     }
 

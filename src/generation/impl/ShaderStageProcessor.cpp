@@ -2,6 +2,7 @@
 #include "../../generation/impl/ShaderGeneratorImpl.hpp"
 #include "../../generation/impl/CompilerImpl.hpp"
 #include "../../util/ShaderFileTracker.hpp"
+#include "../../parser/yamlFile.hpp"
 #include <filesystem>
 
 namespace st
@@ -9,8 +10,8 @@ namespace st
 
     namespace fs = std::filesystem;
 
-    ShaderStageProcessor::ShaderStageProcessor(ShaderStage _stage, yamlFile* rfile) : stage(std::move(_stage)), rsrcFile(rfile),
-        generator(std::make_unique<ShaderGeneratorImpl>(_stage)), compiler(std::make_unique<ShaderCompilerImpl>())
+    ShaderStageProcessor::ShaderStageProcessor(ShaderStage _stage, yamlFile* rfile) : stage(std::move(_stage)), rsrcFile(rfile), ErrorSession{},
+        generator(std::make_unique<ShaderGeneratorImpl>(_stage, ErrorSession)), compiler(std::make_unique<ShaderCompilerImpl>(rfile->compilerOptions, ErrorSession))
     {
         generator->resourceFile = rsrcFile;
     }

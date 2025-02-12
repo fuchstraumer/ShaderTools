@@ -32,12 +32,17 @@ namespace st
     ShaderGeneratorImpl::ShaderGeneratorImpl(ShaderStage _stage, Session& errorSession) : Stage(std::move(_stage)), errorSession(errorSession)
     {
         fs::path preamble(std::string(BasePath) + "/builtins/preamble450.glsl");
-        addPreamble(preamble);
+        ShaderToolsErrorCode errorCode = addPreamble(preamble);
+        if (errorCode != ShaderToolsErrorCode::Success)
+        {
+            constructionSuccessful = false;
+            return;
+        }
 
         if (Stage.stageBits == VK_SHADER_STAGE_VERTEX_BIT)
         {
             fs::path vertex_interface_base(std::string(BasePath) + "/builtins/vertexInterface.glsl");
-            ShaderToolsErrorCode errorCode = addStageInterface(Stage.stageBits, vertex_interface_base);
+            errorCode = addStageInterface(Stage.stageBits, vertex_interface_base);
             if (errorCode != ShaderToolsErrorCode::Success)
             {
                 constructionSuccessful = false;
@@ -48,7 +53,7 @@ namespace st
         else if (Stage.stageBits == VK_SHADER_STAGE_FRAGMENT_BIT)
         {
             fs::path fragment_interface_base(std::string(BasePath) + "/builtins/fragmentInterface.glsl");
-            ShaderToolsErrorCode errorCode = addStageInterface(Stage.stageBits, fragment_interface_base);
+            errorCode = addStageInterface(Stage.stageBits, fragment_interface_base);
             if (errorCode != ShaderToolsErrorCode::Success)
             {
                 constructionSuccessful = false;
@@ -69,7 +74,8 @@ namespace st
         ShaderResources(std::move(other.ShaderResources)),
         includes(std::move(other.includes)),
         errorSession(other.errorSession),
-        constructionSuccessful(other.constructionSuccessful)
+        constructionSuccessful(other.constructionSuccessful),
+        resourceFile(other.resourceFile)
     {}
 
     ShaderGeneratorImpl& ShaderGeneratorImpl::operator=(ShaderGeneratorImpl&& other) noexcept
@@ -81,6 +87,7 @@ namespace st
         includes = std::move(other.includes);
         errorSession = std::move(other.errorSession);
         constructionSuccessful = other.constructionSuccessful;
+        resourceFile = other.resourceFile;
         return *this;
     }
 
@@ -123,6 +130,8 @@ namespace st
                 return ShaderToolsErrorCode::GeneratorUnableToAddPreambleToInstanceStorage;
             }
         }
+
+        return ShaderToolsErrorCode::Success;
     }
 
     ShaderToolsErrorCode ShaderGeneratorImpl::addStageInterface(uint32_t stageBits, fs::path interfacePath)
@@ -230,6 +239,8 @@ namespace st
 
     const std::string& ShaderGeneratorImpl::getFullSource() const
     {
+        static const std::string emptyStringResult{};
+
         auto& ftracker = ShaderFileTracker::GetFileTracker();
         if (ftracker.FullSourceStrings.count(Stage) != 0)
         {
@@ -248,7 +259,7 @@ namespace st
             if (!iter.second)
             {
                 errorSession.AddError(this, ShaderToolsErrorSource::Generator, ShaderToolsErrorCode::GeneratorUnableToStoreFullSourceString, nullptr);
-                return std::string{};
+                return emptyStringResult;
             }
 
             return iter.first->second;
@@ -372,7 +383,6 @@ namespace st
             rsrc.GetPerUsageQualifiers(curr_shader_name.c_str(), &num_qualifiers, qualifiers.data() + offset);
         }
 
-        std::string result;
         for (const auto& qual : qualifiers)
         {
             switch (qual)
@@ -751,6 +761,10 @@ namespace st
                 resource_block_string += getInputAttachmentString(active_set, resource_item, resource_name);
                 break;
             default:
+                {
+                    const std::string errorMessage = "Invalid descriptor type in resource block " + block_name + " for resource " + resource_name;
+                    errorSession.AddError(this, ShaderToolsErrorSource::Generator, ShaderToolsErrorCode::GeneratorInvalidDescriptorTypeInResourceBlock, errorMessage.c_str());
+                }
                 return ShaderToolsErrorCode::GeneratorInvalidDescriptorTypeInResourceBlock;
             }
 
@@ -889,15 +903,16 @@ namespace st
 
     ShaderToolsErrorCode ShaderGeneratorImpl::processBodyStrResourceBlocks(const ShaderStage& handle, std::string& body_str)
     {
-
         auto& FileTracker = ShaderFileTracker::GetFileTracker();
         bool block_found = true;
+        ShaderToolsErrorCode errorCode = ShaderToolsErrorCode::Success;
+
         while (block_found)
         {
             std::smatch match;
             if (std::regex_search(body_str, match, use_set_resources))
             {
-                useResourceBlock(match[1].str());
+                errorCode = useResourceBlock(match[1].str());
                 FileTracker.ShaderUsedResourceBlocks.emplace(handle, match[1].str());
                 body_str.erase(body_str.begin() + match.position(), body_str.begin() + match.position() + match.length());
             }
@@ -919,7 +934,12 @@ namespace st
             return ec;
         }
 
-        processBodyStrIncludes(body_str);
+        ec = processBodyStrIncludes(body_str);
+        if (ec != ShaderToolsErrorCode::Success)
+        {
+            return ec;
+        }
+
         checkInterfaceOverrides(body_str);
         if ((num_extensions != 0) && extensions)
         {
@@ -928,10 +948,22 @@ namespace st
                 addExtension(extensions[i]);
             }
         }
-        processBodyStrSpecializationConstants(body_str);
-        processBodyStrResourceBlocks(handle, body_str);
+
+        ec = processBodyStrSpecializationConstants(body_str);
+        if (ec != ShaderToolsErrorCode::Success)
+        {
+            return ec;
+        }
+
+        ec = processBodyStrResourceBlocks(handle, body_str);
+        if (ec != ShaderToolsErrorCode::Success)
+        {
+            return ec;
+        }
+
         fragments.emplace(fragment_type::Main, body_str);
         
+        return ec;
     }
 
 }

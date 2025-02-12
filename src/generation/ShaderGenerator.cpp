@@ -9,7 +9,7 @@ namespace st
 {
     namespace fs = std::filesystem;
 
-    ShaderGenerator::ShaderGenerator(ShaderStage stage) : impl(std::make_unique<ShaderGeneratorImpl>(std::move(stage))) {}
+    ShaderGenerator::ShaderGenerator(ShaderStage stage, Session& error_session) : impl(std::make_unique<ShaderGeneratorImpl>(std::move(stage), error_session)) {}
 
     ShaderGenerator::~ShaderGenerator() {}
 
@@ -26,7 +26,7 @@ namespace st
         impl->resourceFile = rsrc_file;
     }
 
-    void ShaderGenerator::Generate(const ShaderStage& handle, const char* path, const size_t num_extensions, const char* const* extensions, const size_t num_includes, const char* const* paths)
+    ShaderToolsErrorCode ShaderGenerator::Generate(const ShaderStage& handle, const char* path_to_src, const size_t num_extensions, const char* const* extensions, const size_t num_includes, const char* const* paths)
     {
         if (num_includes != 0 && paths == nullptr)
         {
@@ -38,7 +38,7 @@ namespace st
             impl->addIncludePath(paths[i]);
         }
 
-        impl->generate(handle, path, num_extensions, extensions);
+        return impl->generate(handle, path_to_src, num_extensions, extensions);
     }
 
     void ShaderGenerator::AddIncludePath(const char* path_to_include)

@@ -8,7 +8,9 @@
 namespace st
 {
 
-    ShaderCompiler::ShaderCompiler() : impl(std::make_unique<ShaderCompilerImpl>()) {}
+    static const ShaderCompilerOptions defaultOptions = ShaderCompilerOptions();
+
+    ShaderCompiler::ShaderCompiler(Session& error_session) : impl(std::make_unique<ShaderCompilerImpl>(defaultOptions, error_session)) {}
 
     ShaderCompiler::~ShaderCompiler() {}
 
@@ -78,17 +80,18 @@ namespace st
         }
     }
 
-    ShaderStage ST_API CompileStandaloneShader(const char* shader_name, const VkShaderStageFlags shader_stage, const char* src_str, const size_t src_len)
+    ShaderToolsErrorCode ST_API CompileStandaloneShader(ShaderStage& resultHandle, const char* shader_name, const VkShaderStageFlags shader_stage, const char* src_str, const size_t src_len)
     {
-        ShaderStage resultHandle(shader_name, shader_stage);
+        resultHandle = ShaderStage(shader_name, shader_stage);
         const std::string copiedSourceString(src_str, src_str + src_len);
-        ShaderCompilerImpl compiler;
-        const auto compilerStage = compiler.getShaderKind(resultHandle.stageBits);
-        compiler.compile(resultHandle, compilerStage, shader_name, copiedSourceString);
-        return resultHandle;
+        ShaderCompilerOptions options;
+        Session errorSession;
+        ShaderCompilerImpl compiler(options, errorSession);
+        ShaderToolsErrorCode error = compiler.prepareToCompile(resultHandle, shader_name, copiedSourceString);
+        return error;
     }
 
-    void ST_API RetrieveCompiledStandaloneShader(const ShaderStage shader_handle, size_t* binary_sz, uint32_t* binary_dest)
+	ShaderToolsErrorCode ST_API RetrieveCompiledStandaloneShader(const ShaderStage shader_handle, size_t* binary_sz, uint32_t* binary_dest)
     {
         auto& fileTracker = ShaderFileTracker::GetFileTracker();
         auto binary_iter = fileTracker.Binaries.find(shader_handle);
@@ -100,7 +103,11 @@ namespace st
             {
                 std::copy(binaryVec.begin(), binaryVec.end(), binary_dest);
             }
+
+            return ShaderToolsErrorCode::Success;
         }
+
+        return ShaderToolsErrorCode::FilesystemNoFileDataForGivenHandleFound;
     }
 
 }

@@ -27,7 +27,7 @@ namespace st
 
     namespace fs = std::filesystem;
 
-    ShaderCompilerImpl::ShaderCompilerImpl(const ShaderCompilerOptions* options, Session& error_session) : compilerOptions(options), errorSession(error_session)
+    ShaderCompilerImpl::ShaderCompilerImpl(const ShaderCompilerOptions& options, Session& error_session) : compilerOptions(options), errorSession(error_session)
     {}
 
     shaderc::CompileOptions ShaderCompilerImpl::getCompilerOptions() const
@@ -39,8 +39,8 @@ namespace st
             options.SetGenerateDebugInfo();
         }
 
-        options.SetOptimizationLevel(opt_level_map.at(compilerOptions->Optimization));
-        options.SetTargetEnvironment(shaderc_target_env_vulkan, target_version_map.at(compilerOptions->TargetVersion));
+        options.SetOptimizationLevel(opt_level_map.at(compilerOptions.Optimization));
+        options.SetTargetEnvironment(shaderc_target_env_vulkan, target_version_map.at(compilerOptions.TargetVersion));
         options.SetSourceLanguage(shaderc_source_language_glsl);
         return options;
     }
@@ -128,13 +128,20 @@ namespace st
     ShaderToolsErrorCode ShaderCompilerImpl::prepareToCompile(const ShaderStage& handle, const std::string& name, const std::string& src)
     {
         shaderc_shader_kind shaderStage;
-        const ShaderToolsErrorCode err = getShaderKind(handle.stageBits, shaderStage);
-        if (err != ShaderToolsErrorCode::Success)
+        ShaderToolsErrorCode error = getShaderKind(handle.stageBits, shaderStage);
+        if (error != ShaderToolsErrorCode::Success)
         {
-            errorSession.AddError(this, ShaderToolsErrorSource::Compiler, err, nullptr);
-            return err;
+            errorSession.AddError(this, ShaderToolsErrorSource::Compiler, error, nullptr);
+            return error;
         }
-        compile(handle, shaderStage, name, src);
+
+        error = compile(handle, shaderStage, name, src);
+        if (error != ShaderToolsErrorCode::Success)
+        {
+            errorSession.AddError(this, ShaderToolsErrorSource::Compiler, error, nullptr);
+        }
+
+        return error;
     }
 
     ShaderToolsErrorCode ShaderCompilerImpl::prepareToCompile(const ShaderStage& handle, const char* path_to_source_str)
@@ -156,17 +163,22 @@ namespace st
         }
 
         shaderc_shader_kind shaderStage;
-        const ShaderToolsErrorCode err = getShaderKind(handle.stageBits, shaderStage);
-        if (err != ShaderToolsErrorCode::Success)
+        ShaderToolsErrorCode error = getShaderKind(handle.stageBits, shaderStage);
+        if (error != ShaderToolsErrorCode::Success)
         {
-            errorSession.AddError(this, ShaderToolsErrorSource::Compiler, err, nullptr);
-            return err;
+            errorSession.AddError(this, ShaderToolsErrorSource::Compiler, error, nullptr);
+            return error;
         }
 
         const std::string source_code((std::istreambuf_iterator<char>(input_file)), (std::istreambuf_iterator<char>()));
         const std::string file_name = path_to_source.filename().replace_extension().string();
-        compile(handle, shaderStage, file_name, source_code);
+        error = compile(handle, shaderStage, file_name, source_code);
+        if (error != ShaderToolsErrorCode::Success)
+        {
+            errorSession.AddError(this, ShaderToolsErrorSource::Compiler, error, nullptr);
+        }
 
+        return error;
     }
 
 
@@ -196,6 +208,7 @@ namespace st
                 auto assemblyIter = FileTracker.AssemblyStrings.emplace(handle, std::string{ assembly_result.begin(), assembly_result.end() });
                 if (!assemblyIter.second)
                 {
+                    // TODO: Another spot that could be a warning.
                     std::cerr << "Failed to emplace non-critical assembly string into state storage.";
                 }
             }

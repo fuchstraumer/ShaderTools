@@ -45,10 +45,12 @@ SET(ST_COMMON_SRCS
     "${CMAKE_CURRENT_SOURCE_DIR}/include/common/CommonInclude.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/include/common/ShaderStage.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/include/common/ShaderToolsErrors.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/common/stSession.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/include/common/UtilityStructs.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/common/ShaderStage.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/common/ShaderToolsErrors.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/common/UtilityStructs.cpp")
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/common/UtilityStructs.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/common/stSession.cpp")
 
 SET(ST_CORE_SRCS
     "${CMAKE_CURRENT_SOURCE_DIR}/include/core/Shader.hpp"

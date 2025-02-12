@@ -1,4 +1,4 @@
-#include "stSession.hpp"
+#include "common/stSession.hpp"
 #include <unordered_map>
 #include <vector>
 #include <mutex>
@@ -10,7 +10,7 @@ namespace st
 
     struct SessionImpl
     {
-        SessionImpl();
+        SessionImpl() noexcept {}
 
         ~SessionImpl()
         {
