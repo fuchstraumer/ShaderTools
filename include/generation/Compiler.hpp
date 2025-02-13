@@ -21,8 +21,8 @@ namespace st
         ShaderCompiler(ShaderCompiler&& other) noexcept;
         ShaderCompiler& operator=(ShaderCompiler&& other) noexcept;
 
-        void Compile(const ShaderStage& handle, const char* shader_name, const char* src_str, const size_t src_len);
-        void Compile(const ShaderStage& handle, const char* path_to_source);
+        ShaderToolsErrorCode Compile(const ShaderStage& handle, const char* shader_name, const char* src_str, const size_t src_len);
+        ShaderToolsErrorCode Compile(const ShaderStage& handle, const char* path_to_source);
 
         void GetBinary(const ShaderStage& shader_handle, size_t* binary_sz, uint32_t* binary_dest_ptr) const;
         void GetAssembly(const ShaderStage& shader_handle, size_t* assembly_size, char* dest_assembly_str) const;

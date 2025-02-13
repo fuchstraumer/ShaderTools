@@ -44,7 +44,12 @@ namespace st
         return impl->reflector->GetImpl();
     }
 
-    Shader::Shader(const char* group_name, const size_t num_stages, const ShaderStage* stages, yamlFile* resource_file) : impl(std::make_unique<ShaderGroupImpl>(group_name, resource_file))
+    Shader::Shader(
+        const char* group_name,
+        const size_t num_stages,
+        const ShaderStage* stages,
+        yamlFile* resource_file,
+        Session& error_session) : impl(std::make_unique<ShaderGroupImpl>(group_name, resource_file, error_session))
     {
         for (size_t i = 0; i < num_stages; ++i)
         {
@@ -57,7 +62,7 @@ namespace st
 
     Shader::Shader(Shader && other) noexcept : impl(std::move(other.impl)) {}
 
-    Shader & Shader::operator=(Shader && other) noexcept
+	Shader& Shader::operator=(Shader&& other) noexcept
     {
         impl = std::move(other.impl);
         return *this;

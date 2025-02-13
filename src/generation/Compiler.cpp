@@ -22,14 +22,14 @@ namespace st
         return *this;
     }
 
-    void ShaderCompiler::Compile(const ShaderStage& handle, const char* shader_name, const char* src_str, const size_t src_len)
+    ShaderToolsErrorCode ShaderCompiler::Compile(const ShaderStage& handle, const char* shader_name, const char* src_str, const size_t src_len)
     {
-        impl->prepareToCompile(handle, shader_name, std::string{ src_str, src_str + src_len });
+        return impl->prepareToCompile(handle, shader_name, std::string{ src_str, src_str + src_len });
     }
 
-    void ShaderCompiler::Compile(const ShaderStage& handle, const char* path_to_source_str)
+    ShaderToolsErrorCode ShaderCompiler::Compile(const ShaderStage& handle, const char* path_to_source_str)
     {
-        impl->prepareToCompile(handle, path_to_source_str);
+        return impl->prepareToCompile(handle, path_to_source_str);
     }
 
     void ShaderCompiler::GetBinary(const ShaderStage& shader_handle, size_t* binary_sz, uint32_t* binary_dest_ptr) const

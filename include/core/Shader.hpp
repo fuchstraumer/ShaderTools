@@ -14,6 +14,7 @@ namespace st
     class ShaderReflectorImpl;
     class ResourceUsage;
     struct yamlFile;
+    struct Session;
 
     /*  Designed to be used to group shaders into the groups that they are used in
         when bound to a pipeline, to simplify a few key things.

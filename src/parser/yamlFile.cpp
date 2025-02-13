@@ -146,7 +146,32 @@ namespace st
         }
     }
 
-    yamlFile::~yamlFile() {}
+
+	yamlFile::yamlFile(yamlFile&& other) noexcept :
+        stages{ std::move(other.stages) },
+        shaderGroups{ std::move(other.shaderGroups) },
+        groupTags{ std::move(other.groupTags) },
+        stageExtensions{ std::move(other.stageExtensions) },
+        resourceGroups{ std::move(other.resourceGroups) },
+        compilerOptions{ std::move(other.compilerOptions) },
+        packName{ std::move(other.packName) }
+	{
+	}
+
+
+	yamlFile& yamlFile::operator=(yamlFile&& other) noexcept
+	{
+        stages = std::move(other.stages);
+        shaderGroups = std::move(other.shaderGroups);
+        groupTags = std::move(other.groupTags);
+        stageExtensions = std::move(other.stageExtensions);
+        resourceGroups = std::move(other.resourceGroups);
+        compilerOptions = std::move(other.compilerOptions);
+        packName = std::move(other.packName);
+        return *this;
+	}
+
+	yamlFile::~yamlFile() {}
 
     // Used during reflection stage to make sure mappings of client resources to compiled binary resources match
     ShaderResource* yamlFile::FindResource(const std::string& name)

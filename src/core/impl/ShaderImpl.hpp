@@ -38,7 +38,6 @@ namespace st
         yamlFile* rsrcFile{ nullptr };
         std::vector<std::string> tags;
         std::unordered_map<std::string, size_t> resourceGroupBindingIndices;
-        Session& errorSession;
         std::filesystem::path resourceScriptPath;
     };
 

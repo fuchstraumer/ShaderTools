@@ -232,6 +232,7 @@ namespace st
             iter->second.setIdx = set_idx;
         }
 
+        return ShaderToolsErrorCode::Success;
     }
 
     PushConstantInfo parsePushConstants(const spirv_cross::Compiler& cmplr, const VkShaderStageFlags& stage)

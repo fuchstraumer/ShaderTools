@@ -68,7 +68,12 @@ namespace st
         return *this;
     }
 
-    bool Session::HasErrors() const
+	void Session::AddError(const void* instance, const ShaderToolsErrorSource source, const ShaderToolsErrorCode code, const char* message)
+	{
+        impl->AddError(instance, source, code, message);
+	}
+
+	bool Session::HasErrors() const
     {
         return impl->errors.size() > 0;
     }
