@@ -70,8 +70,9 @@ namespace st
         uint32_t UniformBuffersDynamic{ 0u };
         uint32_t StorageBuffersDynamic{ 0u };
         uint32_t InputAttachments{ 0u };
-        uint32_t InlineUniformBlockEXT{ 0u };
-        uint32_t AccelerationStructureNVX{ 0u };
+        uint32_t InlineUniformBlocks{ 0u };
+        uint32_t AccelerationStructureKHR{ 0u };
+        uint32_t AccelerationStructureNV{ 0u };
     };
 
     struct ST_API SpecializationConstant

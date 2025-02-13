@@ -11,3 +11,4 @@
     - This would allow us to compile the include sources ahead of time, and parse them for errors. Kinda like a language server!
 - Change shader yaml spec to be "ComputeShader" for compute shaders, use "RenderShaders" + (Stage) as next subgroup for rendering shaders. More succinct, more clear.
 - Reduce lambda function usage. Untestable, hidden, cluttered.
+- Preprocess includes for errors and warnings, if possible, so that the line numbers in the errors and warnings match the original source code

@@ -24,7 +24,12 @@ namespace st
         Shader& operator=(const Shader&) = delete;
     public:
 
-        Shader(const char* group_name, const size_t num_stages, const ShaderStage* stages, yamlFile* resource_file_path);
+        Shader(
+            const char* group_name,
+            const size_t num_stages,
+            const ShaderStage* stages,
+            yamlFile* resource_file_path,
+            Session& error_session);
         ~Shader();
         Shader(Shader&& other) noexcept;
         Shader& operator=(Shader&& other) noexcept;

@@ -137,6 +137,11 @@ namespace st
         case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
             resources = resources_all.subpass_inputs;
             break;
+        case VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR:
+            [[fallthrough]];
+        case VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_NV:
+            resources = resources_all.acceleration_structures;
+            break;
         default:
             const std::string errorMessage = "Passed invalid resource type during binding generation: " + std::to_string(type_being_parsed);
             errorSession.AddError(
@@ -438,15 +443,23 @@ namespace st
         auto& sft = ShaderFileTracker::GetFileTracker();
         auto iter = sft.RecompiledSourcesFromBinaries.emplace(handle, recompiled_source);
 
+        // Maybe this list shouldn't be a baked in list? Could always parse the VK XML for what we need.
         constexpr static VkDescriptorType supportedDescriptorTypes[]
         {
-            VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-            VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-            VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT,
-            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
             VK_DESCRIPTOR_TYPE_SAMPLER,
             VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-            VK_DESCRIPTOR_TYPE_STORAGE_IMAGE
+            VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+            VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+            VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,
+            VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER,
+            VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+            VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
+            VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC,
+            VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT,
+            VK_DESCRIPTOR_TYPE_INLINE_UNIFORM_BLOCK,
+            VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR,
+            VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_NV
         };
 
         for (size_t i = 0; i < std::size(supportedDescriptorTypes); ++i)

@@ -61,7 +61,14 @@ namespace st
         ReflectionInvalidSpecializationConstantType,
         ReflectionRecompilerError,
 
-        SubsystemErrorsStart = 400,
+        ResourceErrorsStart = 400,
+        ResourceInvalidDescriptorType,
+        ResourceNotFound,
+
+        ShaderPackErrorsStart = 500,
+        ShaderPackInvalidDescriptorType,
+
+        SubsystemErrorsStart = 600,
         FilesystemPathDoesNotExist,
         // Message is the path that was attempted
         FilesystemPathExistedFileCouldNotBeOpened,
@@ -76,7 +83,9 @@ namespace st
         Compiler,
         Reflection,
         Filesystem,
-        UserInput
+        UserInput,
+        ResourceGroup,
+        ShaderPack
     };
 
     // We don't include a file path, because that will be part of the error message we store

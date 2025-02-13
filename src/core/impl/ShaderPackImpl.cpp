@@ -2,11 +2,11 @@
 #include "ShaderImpl.hpp"
 #include "resources/ShaderResource.hpp"
 #include "resources/ResourceGroup.hpp"
+#include "common/stSession.hpp"
 #include "../../generation/impl/ShaderStageProcessor.hpp"
 #include "../../reflection/impl/ShaderReflectorImpl.hpp"
 #include "../../util/ShaderFileTracker.hpp"
-#include "common/stSession.hpp"
-#include <array>
+#include "../../common/UtilityStructsInternal.hpp"
 #include <filesystem>
 #include <iostream>
 
@@ -48,10 +48,24 @@ namespace st
             fs::path body_path = fs::canonical(workingDir / fs::path(stage.first));
             if (!fs::exists(body_path))
             {
-                throw std::runtime_error("Path for shader stage to be generated does not exist!");
+                // Can't launch for this shader because we have an invalid body path, but let's launch for the others so we can get as many errors as possible
+                errorSession.AddError(
+                    this,
+                    ShaderToolsErrorSource::Filesystem,
+                    ShaderToolsErrorCode::FilesystemPathDoesNotExist,
+                    stage.first.c_str());
             }
-            ftracker.BodyPaths.emplace(stage.second, body_path);
-            processorFutures.emplace(stage.second, std::async(std::launch::async, &ShaderStageProcessor::Process, processors.at(stage.second).get(), body_path.string(), filePack->stageExtensions[stage.second], base_includes));
+            else
+            {
+                ftracker.BodyPaths.emplace(stage.second, body_path);
+                processorFutures.emplace(stage.second,
+                    std::async(std::launch::async,
+                               &ShaderStageProcessor::Process,
+                               processors.at(stage.second).get(),
+                               body_path.string(),
+                               filePack->stageExtensions[stage.second],
+                               base_includes));
+            }
         }
     }
 
@@ -109,40 +123,14 @@ namespace st
         {
             for (const auto& resource : resource_set.second)
             {
-                switch (resource.DescriptorType())
+                ShaderToolsErrorCode error = CountDescriptorType(resource.DescriptorType(), typeCounts);
+                if (error != ShaderToolsErrorCode::Success)
                 {
-                case VK_DESCRIPTOR_TYPE_SAMPLER:
-                    typeCounts.Samplers++;
-                    break;
-                case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
-                    typeCounts.CombinedImageSamplers++;
-                    break;
-                case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
-                    typeCounts.SampledImages++;
-                    break;
-                case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
-                    typeCounts.SampledImages++;
-                    break;
-                case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
-                    typeCounts.UniformTexelBuffers++;
-                    break;
-                case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
-                    typeCounts.StorageTexelBuffers++;
-                    break;
-                case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
-                    typeCounts.UniformBuffers++;
-                    break;
-                case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
-                    typeCounts.StorageBuffers++;
-                    break;
-                case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
-                    typeCounts.UniformBuffersDynamic++;
-                    break;
-                case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
-                    typeCounts.StorageBuffersDynamic++;
-                    break;
-                default:
-                    throw std::runtime_error("Invalid VkDescriptor type value when counting up descriptors of each type");
+                    errorSession.AddError(
+                        this,
+                        ShaderToolsErrorSource::ShaderPack,
+                        error,
+                        nullptr);
                 }
             }
         }
