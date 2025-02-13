@@ -3,6 +3,7 @@
 #define SHADER_TOOLS_BINDING_GENERATOR_HPP
 #include "common/CommonInclude.hpp"
 #include "common/ShaderStage.hpp"
+#include "common/ShaderToolsErrors.hpp"
 
 namespace st
 {
@@ -14,6 +15,7 @@ namespace st
     struct VertexAttributeInfo;
     struct PushConstantInfo;
     struct yamlFile;
+    struct Session;
 
     class ShaderReflector
     {
@@ -21,12 +23,12 @@ namespace st
         ShaderReflector& operator=(const ShaderReflector&) = delete;
     public:
 
-        ShaderReflector(yamlFile* yaml_file);
+        ShaderReflector(yamlFile* yaml_file, Session& error_session);
         ~ShaderReflector();
         ShaderReflector(ShaderReflector&& other) noexcept;
         ShaderReflector& operator=(ShaderReflector&& other) noexcept;
 
-        void ParseBinary(const ShaderStage& shader);
+        ShaderToolsErrorCode ParseBinary(const ShaderStage& shader);
         uint32_t GetNumSets() const noexcept;
         void GetShaderResources(const size_t set_idx, size_t* num_resources, ResourceUsage* resources);
         void GetInputAttributes(const VkShaderStageFlags stage, size_t* num_attrs, VertexAttributeInfo* attributes);

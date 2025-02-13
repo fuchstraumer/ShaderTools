@@ -48,20 +48,19 @@ namespace st
         GeneratorInvalidImageType,
         GeneratorUnableToAddShaderBodyPath,
         GeneratorUnableToFindEndingOfInterfaceOverride,
-        // Errors here mostly come from issues compiling, or invalid use of otherwise valid shader code.
 
-
-        // This is the ShaderToolsInternal error category, the stuff that's most on this library to fix
         CompilerErrorsStart = 200,
         CompilerShaderKindNotSupported,
         CompilerShaderCompilationFailed,
         
         ReflectionErrorsStart = 300,
+        ReflectionInvalidDescriptorType,
+        ReflectionInvalidResource,
+        ReflectionInvalidBindingIndex,
+        ReflectionShaderBinaryNotFound, 
+        ReflectionInvalidSpecializationConstantType,
+        ReflectionRecompilerError,
 
-
-
-
-        // Errors not in the core pipeline of systems. Error category - Filesystem
         SubsystemErrorsStart = 400,
         FilesystemPathDoesNotExist,
         // Message is the path that was attempted

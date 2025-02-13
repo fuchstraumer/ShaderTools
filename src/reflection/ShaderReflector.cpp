@@ -6,7 +6,7 @@
 namespace st
 {
 
-    ShaderReflector::ShaderReflector(yamlFile* yaml_file) : impl(std::make_unique<ShaderReflectorImpl>(yaml_file)) {}
+    ShaderReflector::ShaderReflector(yamlFile* yaml_file, Session& error_session) : impl(std::make_unique<ShaderReflectorImpl>(yaml_file, error_session)) {}
 
     ShaderReflector::~ShaderReflector() {}
 
@@ -103,8 +103,8 @@ namespace st
         return impl.get();
     }
 
-    void ShaderReflector::ParseBinary(const ShaderStage & shader)
+    ShaderToolsErrorCode ShaderReflector::ParseBinary(const ShaderStage & shader)
     {
-        impl->parseBinary(shader);
+        return impl->parseBinary(shader);
     }
 }

@@ -17,6 +17,7 @@ namespace st
     struct ShaderStage;
     class ResourceUsage;
     struct yamlFile;
+    struct Session;
 
     struct DescriptorSetInfo
     {
@@ -30,16 +31,16 @@ namespace st
         ShaderReflectorImpl& operator=(const ShaderReflectorImpl&) = delete;
     public:
 
-        ShaderReflectorImpl(yamlFile* yaml_file);
+        ShaderReflectorImpl(yamlFile* yaml_file, Session& error_session);
         ~ShaderReflectorImpl() = default;
         ShaderReflectorImpl(ShaderReflectorImpl&& other) noexcept;
         ShaderReflectorImpl& operator=(ShaderReflectorImpl&& other) noexcept;
 
         void collateSets();
-        void parseSpecializationConstants();
-        void parseResourceType(const ShaderStage& shader_handle, const VkDescriptorType& type_being_parsed);
-        void parseBinary(const ShaderStage& shader_handle);
-        void parseImpl(const ShaderStage& shader_handle, const std::vector<uint32_t>& binary_data);
+        ShaderToolsErrorCode parseSpecializationConstants();
+        ShaderToolsErrorCode parseResourceType(const ShaderStage& shader_handle, const VkDescriptorType& type_being_parsed);
+        ShaderToolsErrorCode parseBinary(const ShaderStage& shader_handle);
+        ShaderToolsErrorCode parseImpl(const ShaderStage& shader_handle, const std::vector<uint32_t>& binary_data);
 
         std::unordered_multimap<VkShaderStageFlags, DescriptorSetInfo> descriptorSets;
         std::map<uint32_t, SpecializationConstant> specializationConstants;
@@ -51,7 +52,10 @@ namespace st
         std::unordered_map<std::string, uint32_t> resourceGroupSetIndices;
         std::unordered_set<std::string> usedResourceGroupNames;
         std::unique_ptr<spirv_cross::CompilerGLSL> recompiler{ nullptr };
+        
         yamlFile* rsrcFile;
+        Session& errorSession;
+
         size_t getNumSets() const noexcept;
 
     };
