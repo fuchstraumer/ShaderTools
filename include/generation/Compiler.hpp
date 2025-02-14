@@ -25,8 +25,8 @@ namespace st
         ShaderToolsErrorCode Compile(const ShaderStage& handle, const char* path_to_source);
 
         void GetBinary(const ShaderStage& shader_handle, size_t* binary_sz, uint32_t* binary_dest_ptr) const;
-        void GetAssembly(const ShaderStage& shader_handle, size_t* assembly_size, char* dest_assembly_str) const;
-        void RecompileBinaryToGLSL(const ShaderStage& shader_handle, size_t* recompiled_size, char* dest_glsl_str) const;
+        [[nodiscard]] ShaderToolsErrorCode GetAssembly(const ShaderStage& shader_handle, size_t* assembly_size, char* dest_assembly_str) const;
+        [[nodiscard]] ShaderToolsErrorCode RecompileBinaryToGLSL(const ShaderStage& shader_handle, size_t* recompiled_size, char* dest_glsl_str) const;
         void SaveBinaryToFile(const ShaderStage& handle, const char* fname);
 
     private:

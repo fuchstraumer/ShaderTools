@@ -32,8 +32,8 @@ namespace st
         [[nodiscard]] ShaderToolsErrorCode prepareToCompile(const ShaderStage& handle, const char* path_to_src);
         [[nodiscard]] ShaderToolsErrorCode prepareToCompile(const ShaderStage& handle, const std::string& name, const std::string& src);
         [[nodiscard]] ShaderToolsErrorCode compile(const ShaderStage& handle, const shaderc_shader_kind& kind, const std::string& name, const std::string& src_str);
-        void recompileBinaryToGLSL(const ShaderStage& handle, size_t* str_size, char* dest_str);
-        void getBinaryAssemblyString(const ShaderStage & handle, size_t * str_size, char * dest_str);
+        [[nodiscard]] ShaderToolsErrorCode recompileBinaryToGLSL(const ShaderStage& handle, size_t* str_size, char* dest_str);
+        [[nodiscard]] ShaderToolsErrorCode getBinaryAssemblyString(const ShaderStage& handle, size_t* str_size, char* dest_str);
 
 		friend ShaderToolsErrorCode ST_API CompileStandaloneShader(
 			ShaderStage& resultHandle,

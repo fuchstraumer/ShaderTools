@@ -73,7 +73,11 @@ namespace st
         // Message is the path that was attempted
         FilesystemPathExistedFileCouldNotBeOpened,
         FilesystemCouldNotEmplaceIntoInternalStorage,
-        FilesystemNoFileDataForGivenHandleFound
+        FilesystemNoFileDataForGivenHandleFound,
+
+        FileTrackerErrorsStart = 700,
+        FileTrackerInvalidRequest,
+        
     };
 
     enum class ShaderToolsErrorSource : uint16_t

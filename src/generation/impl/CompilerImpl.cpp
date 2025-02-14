@@ -186,16 +186,27 @@ namespace st
     {
         ShaderToolsErrorCode error = ShaderToolsErrorCode::Success;
 
-        auto& FileTracker = ShaderFileTracker::GetFileTracker();
         shaderc::Compiler compiler;
         shaderc::CompileOptions options = getCompilerOptions();
 
         // We allow for optimization to be disabled for shaders in case they break or need debugging
         // Should probably make this part of a try-catch with compiling shaders, where we try a second pass and notify the user if their shader fails optimized compile
         // Of note, this is due to a bunch of shaders that only failed compile when optimized, but compiled fine otherwise.
-        auto disableOptsIter = FileTracker.StageOptimizationDisabled.find(handle);
-        bool configDisableOptimization = disableOptsIter != std::end(FileTracker.StageOptimizationDisabled) ? disableOptsIter->second : false;
-        if (configDisableOptimization)
+        bool optimizationDisabled = false;
+        {
+            FileTrackerReadRequest readReqeust{ FileTrackerReadRequest::Type::FindOptimizationStatus, handle };
+            ReadRequestResult readResult = MakeFileTrackerReadRequest(readReqeust);
+            if (readResult.has_value())
+            {
+                optimizationDisabled = std::get<bool>(*readResult);
+            }
+            else
+            {
+                errorSession.AddError(this, ShaderToolsErrorSource::Compiler, readResult.error(), nullptr);
+            }
+        }
+
+        if (optimizationDisabled)
         {
             options.SetOptimizationLevel(shaderc_optimization_level_zero);
         }
@@ -205,11 +216,13 @@ namespace st
             shaderc::AssemblyCompilationResult assembly_result = compiler.CompileGlslToSpvAssembly(src_str, kind, name.c_str(), options);
             if (assembly_result.GetCompilationStatus() == shaderc_compilation_status_success)
             {
-                auto assemblyIter = FileTracker.AssemblyStrings.emplace(handle, std::string{ assembly_result.begin(), assembly_result.end() });
-                if (!assemblyIter.second)
+                std::string assemblyResult{ assembly_result.begin(), assembly_result.end() };
+                FileTrackerWriteRequest writeRequest{ FileTrackerWriteRequest::Type::AddShaderAssembly, handle, assemblyResult };
+                ShaderToolsErrorCode addAssemblyError = MakeFileTrackerWriteRequest(writeRequest);
+
+                if (addAssemblyError != ShaderToolsErrorCode::Success)
                 {
-                    // TODO: Another spot that could be a warning.
-                    std::cerr << "Failed to emplace non-critical assembly string into state storage.";
+                    errorSession.AddError(this, ShaderToolsErrorSource::Compiler, addAssemblyError, "Warning: failed to emplace assembly string into storage");
                 }
             }
         }
@@ -228,110 +241,57 @@ namespace st
 #endif
 
         }
-
-        if (FileTracker.Binaries.count(handle) != 0)
+        else
         {
-            // erase as we're gonna replace with an updated binary
-            FileTracker.Binaries.erase(handle);
-        }
-
-        auto binary_iter = FileTracker.Binaries.emplace(handle, std::vector<uint32_t>{compiliation_result.begin(), compiliation_result.end()});
-        if (!binary_iter.second)
-        {
-            error = ShaderToolsErrorCode::CompilerShaderCompilationFailed;
-            errorSession.AddError(this, ShaderToolsErrorSource::Compiler, error, "Emplacement of compiled shader SPIR-V binary failed.");
+            FileTrackerWriteRequest writeRequest{ FileTrackerWriteRequest::Type::AddShaderBinary, handle, std::vector<uint32_t>{ compiliation_result.begin(), compiliation_result.end() } };
+            ShaderToolsErrorCode writeResult = MakeFileTrackerWriteRequest(writeRequest);
+            if (writeResult != ShaderToolsErrorCode::Success)
+            {
+                errorSession.AddError(this, ShaderToolsErrorSource::Compiler, writeResult, name.c_str());
+            }
         }
 
         return error;
     }
 
-    void ShaderCompilerImpl::recompileBinaryToGLSL(const ShaderStage& handle, size_t* str_size, char* dest_str)
+    ShaderToolsErrorCode ShaderCompilerImpl::recompileBinaryToGLSL(const ShaderStage& handle, size_t* str_size, char* dest_str)
     {
-
-        auto& FileTracker = ShaderFileTracker::GetFileTracker();
-
-        std::string recompiled_src_str;
-        if (!FileTracker.FindRecompiledShaderSource(handle, recompiled_src_str))
+        FileTrackerReadRequest readRequest{ FileTrackerReadRequest::Type::FindRecompiledShaderSource, handle };
+        ReadRequestResult requestResult = MakeFileTrackerReadRequest(readRequest);
+        if (requestResult.has_value())
         {
-
-            std::vector<uint32_t> found_binary;
-
-            if (FileTracker.FindShaderBinary(handle, found_binary) == ShaderToolsErrorCode::Success)
+            const std::string& recompiledSrcStrRef = std::get<std::string>(*requestResult);
+            *str_size = recompiledSrcStrRef.size();
+            if (dest_str != nullptr)
             {
-                using namespace spirv_cross;
-                CompilerGLSL recompiler(found_binary);
-
-                spirv_cross::CompilerGLSL::Options options;
-                options.vulkan_semantics = true;
-                // as commented elsewhere, we do this ourselves or will otherwise leave it be
-                options.enable_storage_image_qualifier_deduction = false;
-
-                recompiler.set_common_options(options);
-
-                std::string recompiled_source;
-
-                try
-                {
-                    recompiled_source = recompiler.compile();
-                }
-                catch (const spirv_cross::CompilerError& e)
-                {
-                    
-                    std::cerr << "Failed to fully parse/recompile SPIR-V binary back to GLSL text. Outputting partial source thus far.";
-                    std::cerr << "spirv_cross::CompilerError.what(): " << e.what() << "\n";
-                    recompiled_source = recompiler.get_partial_source();
-                    dump_bad_source_to_file(FileTracker.GetShaderName(handle), recompiled_source, "", dump_reason::failed_recompile);
-                    throw e;
-                }
-
-                auto iter = FileTracker.RecompiledSourcesFromBinaries.emplace(handle, recompiled_source);
-                if (!iter.second)
-                {
-                    std::cerr << "Failed to emplace recompiled shader source into program's filetracker system!";
-                }
-
-                *str_size = recompiled_source.size();
-                if (dest_str != nullptr)
-                {
-                    std::copy(recompiled_source.cbegin(), recompiled_source.cend(), dest_str);
-                }
-
-            }
-            else
-            {
-                std::cerr << "Failed to find or recompile shader's binary to GLSL code.";
-                *str_size = 0;
-                return;
+                // use a move this time since I want to tell the compiler to, hopefully, move this result too
+                std::string finalSrcString = std::move(std::get<std::string>(*requestResult));
+                std::copy(finalSrcString.begin(), finalSrcString.end(), dest_str);
             }
         }
         else
         {
-            *str_size = recompiled_src_str.size();
-            if (dest_str != nullptr)
-            {
-                std::copy(recompiled_src_str.cbegin(), recompiled_src_str.cend(), dest_str);
-            }
+            return requestResult.error();
         }
     }
 
-    void ShaderCompilerImpl::getBinaryAssemblyString(const ShaderStage& handle, size_t* str_size, char* dest_str)
+    ShaderToolsErrorCode ShaderCompilerImpl::getBinaryAssemblyString(const ShaderStage& handle, size_t* str_size, char* dest_str)
     {
-
-        auto& FileTracker = ShaderFileTracker::GetFileTracker();
-        std::string recompiled_src_str;
-        if (!FileTracker.FindAssemblyString(handle, recompiled_src_str))
+        FileTrackerReadRequest readRequest{ FileTrackerReadRequest::Type::FindAssemblyString, handle };
+        ReadRequestResult requestResult = MakeFileTrackerReadRequest(readRequest);
+        if (requestResult.has_value())
         {
-            std::cerr << "Could not find requested shader's assembly source!";
-            *str_size = 0;
-            return;
+            const std::string& assemblyStrRef = std::get<std::string>(*requestResult);
+            *str_size = assemblyStrRef.size();
+            if (dest_str != nullptr)
+            {
+                std::string assemblyStr = std::move(std::get<std::string>(*requestResult));
+                std::copy(assemblyStr.begin(), assemblyStr.end(), dest_str);
+            }
         }
         else
         {
-            *str_size = recompiled_src_str.size();
-            if (dest_str != nullptr)
-            {
-                std::copy(recompiled_src_str.cbegin(), recompiled_src_str.cend(), dest_str);
-            }
+            return requestResult.error();
         }
     }
 
