@@ -30,15 +30,15 @@ namespace st
 
         void addShaderStage(const ShaderStage& handle);
 
-        std::string groupName;
-        size_t idx;
+		std::unique_ptr<ShaderReflector> reflector{ nullptr };
+		yamlFile* rsrcFile{ nullptr };
+		size_t idx;
+		std::string groupName;
+		std::filesystem::path resourceScriptPath;
         std::unordered_set<st::ShaderStage> stHandles{};
         std::unordered_map<st::ShaderStage, bool> optimizationEnabled;
-        std::unique_ptr<ShaderReflector> reflector{ nullptr };
-        yamlFile* rsrcFile{ nullptr };
         std::vector<std::string> tags;
         std::unordered_map<std::string, size_t> resourceGroupBindingIndices;
-        std::filesystem::path resourceScriptPath;
     };
 
 }
