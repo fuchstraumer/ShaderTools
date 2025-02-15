@@ -125,7 +125,7 @@ namespace st
         }
     }
 
-    ShaderToolsErrorCode ShaderCompilerImpl::prepareToCompile(const ShaderStage& handle, const std::string& name, const std::string& src)
+    ShaderToolsErrorCode ShaderCompilerImpl::prepareToCompile(const ShaderStage& handle, std::string name, std::string src)
     {
         shaderc_shader_kind shaderStage;
         ShaderToolsErrorCode error = getShaderKind(handle.stageBits, shaderStage);
@@ -135,7 +135,7 @@ namespace st
             return error;
         }
 
-        error = compile(handle, shaderStage, name, src);
+        error = compile(handle, shaderStage, std::move(name), std::move(src));
         if (error != ShaderToolsErrorCode::Success)
         {
             errorSession.AddError(this, ShaderToolsErrorSource::Compiler, error, nullptr);
@@ -182,7 +182,7 @@ namespace st
     }
 
 
-    ShaderToolsErrorCode ShaderCompilerImpl::compile(const ShaderStage& handle, const shaderc_shader_kind& kind, const std::string& name, const std::string& src_str)
+    ShaderToolsErrorCode ShaderCompilerImpl::compile(const ShaderStage& handle, const shaderc_shader_kind& kind, std::string name, std::string src_str)
     {
         ShaderToolsErrorCode error = ShaderToolsErrorCode::Success;
 

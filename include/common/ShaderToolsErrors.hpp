@@ -48,6 +48,7 @@ namespace st
         GeneratorInvalidImageType,
         GeneratorUnableToAddShaderBodyPath,
         GeneratorUnableToFindEndingOfInterfaceOverride,
+        GeneratorNoBodyStringInFileTrackerStorage,
 
         CompilerErrorsStart = 200,
         CompilerShaderKindNotSupported,
@@ -77,7 +78,15 @@ namespace st
 
         FileTrackerErrorsStart = 700,
         FileTrackerInvalidRequest,
-        
+        FileTrackerReadRequestFailed,
+        FileTrackerBatchReadRequestFailed,
+        FileTrackerWriteRequestFailed,
+        FileTrackerBatchWriteRequestFailed,
+        FileTrackerEraseRequestFailed,
+        FileTrackerBatchEraseRequestFailed,
+
+        ShaderStageProcessorErrorsStart = 800,
+        ShaderStageProcessorGivenBodyPathStringDidNotExist,
     };
 
     enum class ShaderToolsErrorSource : uint16_t
@@ -89,7 +98,8 @@ namespace st
         Filesystem,
         UserInput,
         ResourceGroup,
-        ShaderPack
+        ShaderPack,
+        ShaderStageProcessor
     };
 
     // We don't include a file path, because that will be part of the error message we store
@@ -99,12 +109,6 @@ namespace st
         size_t line;
         size_t column;
     };
-
-    // Implemented in ShaderToolsErrors.cpp. Wanted all files to be able to access this,
-    // without extra includes
-    ST_API const std::error_category& ErrorCategory() noexcept;
-    ST_API std::error_code MakeErrorCode(uint16_t stErrorValue) noexcept;
-    ST_API const char* GetErrorCodeText(uint16_t stErrorValue) noexcept;
 
 }
 

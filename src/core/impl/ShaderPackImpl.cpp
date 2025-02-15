@@ -62,6 +62,7 @@ namespace st
                     std::async(std::launch::async,
                                &ShaderStageProcessor::Process,
                                processors.at(stage.second).get(),
+                               stage.first,
                                body_path.string(),
                                filePack->stageExtensions[stage.second],
                                base_includes));

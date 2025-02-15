@@ -14,18 +14,13 @@ namespace st
     // TODO: LRU cache for read requests, since we have to do dual-requests to first fill out the size of the result followed by actually copying the result.
     // This way we can avoid locking or blocking core storage on the second request, ideally
 
-    void ST_API InitializeFileTracker(const char* cache_directory);
-    void ST_API ClearProgramState();
-    void ST_API DumpProgramStateToCache();
-
     using RequestPayload = std::variant<
         std::string,
         std::vector<uint32_t>,
         bool,
         std::filesystem::path,
         std::filesystem::file_time_type,
-        std::vector<std::string>,
-        void*>;
+        std::vector<std::string>>;
 
     using ReadRequestResult = std::expected<RequestPayload, ShaderToolsErrorCode>;
 
@@ -92,7 +87,7 @@ namespace st
     };
 
     ReadRequestResult MakeFileTrackerReadRequest(const ReadRequest& request);
-    std::vector<ReadRequestResult> MakeFileTrackerBatchReadRequest(const ReadRequest& request);
+    std::vector<ReadRequestResult> MakeFileTrackerBatchReadRequest(const size_t numRequests, const ReadRequest* requests);
     ShaderToolsErrorCode MakeFileTrackerWriteRequest(const WriteRequest& request);
     ShaderToolsErrorCode MakeFileTrackerBatchWriteRequest(const size_t numRequests, const WriteRequest* requests);
     ShaderToolsErrorCode MakeFileTrackerEraseRequest(const EraseRequest& request);

@@ -21,9 +21,20 @@ namespace st
         ShaderStageProcessor(ShaderStage stage, yamlFile* yfile);
         ~ShaderStageProcessor();
 
-        void Process(std::string body_path, const std::vector<std::string>& extensions, const std::vector<std::string>& includes);
-        const std::string& Generate(const std::string& body_path, const std::vector<std::string>& extensions, const std::vector<std::string>& includes);
-        const std::vector<uint32_t>& Compile();
+        void Process(
+            std::string shader_name,
+            std::string body_path,
+            std::vector<std::string> extensions,
+            std::vector<std::string> includes);
+
+        [[nodiscard]] std::string Generate(
+            const std::string& body_path,
+            const std::vector<std::string>& extensions,
+            const std::vector<std::string>& includes);
+
+        [[nodiscard]] std::vector<uint32_t> Compile(
+            std::string shader_name,
+            std::string full_source_string);
 
         // Each processor has it's own session, so it can collect results on the thread it
         // executes on and the pack launching these will merge them later

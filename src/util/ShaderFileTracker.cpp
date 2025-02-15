@@ -315,14 +315,6 @@ namespace st
 
     } // namespace detail
 
-    void ST_API ClearProgramState()
-    {
-    }
-
-    void ST_API DumpProgramStateToCache()
-    {
-    }
-
 	ReadRequestResult MakeFileTrackerReadRequest(const ReadRequest& request)
 	{
 

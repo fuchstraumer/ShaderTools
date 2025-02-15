@@ -30,8 +30,8 @@ namespace st
         [[nodiscard]] shaderc::CompileOptions getCompilerOptions() const;
         [[nodiscard]] ShaderToolsErrorCode getShaderKind(const uint32_t& flags, shaderc_shader_kind& result) const;
         [[nodiscard]] ShaderToolsErrorCode prepareToCompile(const ShaderStage& handle, const char* path_to_src);
-        [[nodiscard]] ShaderToolsErrorCode prepareToCompile(const ShaderStage& handle, const std::string& name, const std::string& src);
-        [[nodiscard]] ShaderToolsErrorCode compile(const ShaderStage& handle, const shaderc_shader_kind& kind, const std::string& name, const std::string& src_str);
+        [[nodiscard]] ShaderToolsErrorCode prepareToCompile(const ShaderStage& handle, std::string name, std::string src);
+        [[nodiscard]] ShaderToolsErrorCode compile(const ShaderStage& handle, const shaderc_shader_kind& kind, std::string name, std::string src_str);
         [[nodiscard]] ShaderToolsErrorCode recompileBinaryToGLSL(const ShaderStage& handle, size_t* str_size, char* dest_str);
         [[nodiscard]] ShaderToolsErrorCode getBinaryAssemblyString(const ShaderStage& handle, size_t* str_size, char* dest_str);
 
