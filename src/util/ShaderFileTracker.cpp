@@ -6,10 +6,8 @@
 #include <unordered_map>
 #include <string>
 #include <vector>
-#include <filesystem>
-#include <unordered_set>
 #include <memory>
-#include <mutex>
+#include <shared_mutex>
 
 
 namespace fs = std::filesystem;
@@ -19,6 +17,44 @@ namespace st
 
     namespace detail
     {
+
+        struct RwLockGuard
+        {
+            enum class Mode : uint8_t
+            {
+                Read,
+                Write
+            };
+
+            RwLockGuard(Mode _mode, std::shared_mutex& _mutex) noexcept :
+                mode{ _mode }, mutex{ _mutex }
+            {
+                if (mode == Mode::Read)
+                {
+                    mutex.lock_shared();
+                }
+                else if (mode == Mode::Write)
+                {
+                    mutex.lock();
+                }
+            }
+
+            ~RwLockGuard() noexcept
+            {
+                if (mode == Mode::Read)
+                {
+                    mutex.unlock_shared();
+                }
+                else if (mode == Mode::Write)
+                {
+                    mutex.unlock();
+                }
+            }
+
+        private:
+            Mode mode{ Mode::Read };
+            std::shared_mutex& mutex;
+        };
 
         struct ShaderFileTracker
         {
@@ -287,12 +323,12 @@ namespace st
     {
     }
 
-	ReadRequestResult MakeFileTrackerReadRequest(const FileTrackerReadRequest& request)
+	ReadRequestResult MakeFileTrackerReadRequest(const ReadRequest& request)
 	{
 
 	}
 
-	ShaderToolsErrorCode MakeFileTrackerWriteRequest(const FileTrackerWriteRequest& request)
+	ShaderToolsErrorCode MakeFileTrackerWriteRequest(const WriteRequest& request)
 	{
 
 	}

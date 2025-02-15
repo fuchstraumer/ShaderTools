@@ -194,7 +194,7 @@ namespace st
         // Of note, this is due to a bunch of shaders that only failed compile when optimized, but compiled fine otherwise.
         bool optimizationDisabled = false;
         {
-            FileTrackerReadRequest readReqeust{ FileTrackerReadRequest::Type::FindOptimizationStatus, handle };
+            ReadRequest readReqeust{ ReadRequest::Type::FindOptimizationStatus, handle };
             ReadRequestResult readResult = MakeFileTrackerReadRequest(readReqeust);
             if (readResult.has_value())
             {
@@ -217,7 +217,7 @@ namespace st
             if (assembly_result.GetCompilationStatus() == shaderc_compilation_status_success)
             {
                 std::string assemblyResult{ assembly_result.begin(), assembly_result.end() };
-                FileTrackerWriteRequest writeRequest{ FileTrackerWriteRequest::Type::AddShaderAssembly, handle, assemblyResult };
+                WriteRequest writeRequest{ WriteRequest::Type::AddShaderAssembly, handle, assemblyResult };
                 ShaderToolsErrorCode addAssemblyError = MakeFileTrackerWriteRequest(writeRequest);
 
                 if (addAssemblyError != ShaderToolsErrorCode::Success)
@@ -243,7 +243,7 @@ namespace st
         }
         else
         {
-            FileTrackerWriteRequest writeRequest{ FileTrackerWriteRequest::Type::AddShaderBinary, handle, std::vector<uint32_t>{ compiliation_result.begin(), compiliation_result.end() } };
+            WriteRequest writeRequest{ WriteRequest::Type::AddShaderBinary, handle, std::vector<uint32_t>{ compiliation_result.begin(), compiliation_result.end() } };
             ShaderToolsErrorCode writeResult = MakeFileTrackerWriteRequest(writeRequest);
             if (writeResult != ShaderToolsErrorCode::Success)
             {
@@ -256,7 +256,7 @@ namespace st
 
     ShaderToolsErrorCode ShaderCompilerImpl::recompileBinaryToGLSL(const ShaderStage& handle, size_t* str_size, char* dest_str)
     {
-        FileTrackerReadRequest readRequest{ FileTrackerReadRequest::Type::FindRecompiledShaderSource, handle };
+        ReadRequest readRequest{ ReadRequest::Type::FindRecompiledShaderSource, handle };
         ReadRequestResult requestResult = MakeFileTrackerReadRequest(readRequest);
         if (requestResult.has_value())
         {
@@ -277,7 +277,7 @@ namespace st
 
     ShaderToolsErrorCode ShaderCompilerImpl::getBinaryAssemblyString(const ShaderStage& handle, size_t* str_size, char* dest_str)
     {
-        FileTrackerReadRequest readRequest{ FileTrackerReadRequest::Type::FindAssemblyString, handle };
+        ReadRequest readRequest{ ReadRequest::Type::FindAssemblyString, handle };
         ReadRequestResult requestResult = MakeFileTrackerReadRequest(readRequest);
         if (requestResult.has_value())
         {

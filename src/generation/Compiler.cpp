@@ -34,7 +34,7 @@ namespace st
 
 	void ShaderCompiler::GetBinary(const ShaderStage& shader_handle, size_t* binary_sz, uint32_t* binary_dest_ptr) const
 	{
-		FileTrackerReadRequest readRequest{ FileTrackerReadRequest::Type::FindShaderBinary, shader_handle };
+		ReadRequest readRequest{ ReadRequest::Type::FindShaderBinary, shader_handle };
 		ReadRequestResult readResult = MakeFileTrackerReadRequest(readRequest);
 		if (readResult.has_value())
 		{
@@ -75,7 +75,7 @@ namespace st
 
 	ShaderToolsErrorCode ST_API RetrieveCompiledStandaloneShader(const ShaderStage shader_handle, size_t* binary_sz, uint32_t* binary_dest)
 	{
-		FileTrackerReadRequest readRequest{ FileTrackerReadRequest::Type::FindShaderBinary, shader_handle };
+		ReadRequest readRequest{ ReadRequest::Type::FindShaderBinary, shader_handle };
 		ReadRequestResult readResult = MakeFileTrackerReadRequest(readRequest);
 		if (readResult.has_value())
 		{

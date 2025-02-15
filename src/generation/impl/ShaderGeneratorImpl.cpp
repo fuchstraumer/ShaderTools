@@ -241,28 +241,29 @@ namespace st
     {
         static const std::string emptyStringResult{};
 
-        auto& ftracker = ShaderFileTracker::GetFileTracker();
-        if (ftracker.FullSourceStrings.count(Stage) != 0)
+        ReadRequest readRequest{ ReadRequest::Type::FindFullSourceString, Stage };
+        ReadRequestResult readResult = MakeFileTrackerReadRequest(readRequest);
+        if (readResult.has_value())
         {
-            return ftracker.FullSourceStrings.at(Stage);
+            return std::get<std::string>(*readResult);
         }
         else
         {
-            // generate final result
-            std::stringstream result_stream;
+            std::stringstream sourceStringStream;
             for (auto& fragment : fragments)
             {
-                result_stream << fragment.Data;
+                sourceStringStream << fragment.Data;
             }
 
-            auto iter = ftracker.FullSourceStrings.emplace(Stage, result_stream.str());
-            if (!iter.second)
+            std::string sourceString{ sourceStringStream.str() };
+            WriteRequest writeRequest{ WriteRequest::Type::AddFullSourceString, Stage,  sourceString};
+            ShaderToolsErrorCode writeResult = MakeFileTrackerWriteRequest(writeRequest);
+            if (writeResult != ShaderToolsErrorCode::Success)
             {
-                errorSession.AddError(this, ShaderToolsErrorSource::Generator, ShaderToolsErrorCode::GeneratorUnableToStoreFullSourceString, nullptr);
-                return emptyStringResult;
+                errorSession.AddError(this, ShaderToolsErrorSource::Filesystem, ShaderToolsErrorCode::FileTrackerWriteRequestFailed, "Failed to emplace generated full source string");
             }
 
-            return iter.first->second;
+            return sourceString;
         }
     }
 
@@ -365,12 +366,19 @@ namespace st
         std::vector<glsl_qualifier> qualifiers(num_qualifiers);
         rsrc.GetQualifiers(&num_qualifiers, qualifiers.data());
 
-        auto& f_tracker = ShaderFileTracker::GetFileTracker();
-        std::string curr_shader_name = f_tracker.GetShaderName(Stage);
-        if (curr_shader_name.empty())
+        std::string curr_shader_name;
+
+        ReadRequest readRequest{ ReadRequest::Type::FindShaderName, Stage };
+        ReadRequestResult readResult = MakeFileTrackerReadRequest(readRequest);
+
+        if (!readResult.has_value())
         {
             errorSession.AddError(this, ShaderToolsErrorSource::Generator, ShaderToolsErrorCode::FilesystemNoFileDataForGivenHandleFound, nullptr);
             return ShaderToolsErrorCode::FilesystemNoFileDataForGivenHandleFound;
+        }
+        else
+        {
+            curr_shader_name = std::get<std::string>(*readResult);
         }
 
         // Now we need to get the qualifiers used for the current stage being generated
@@ -780,21 +788,35 @@ namespace st
 
     std::string ShaderGeneratorImpl::fetchBodyStr(const ShaderStage& handle, const std::string& path_to_source)
     {
-        auto& FileTracker = ShaderFileTracker::GetFileTracker();
+        ReadRequest readRequest{ ReadRequest::Type::FindShaderBody, handle };
+        ReadRequestResult readResult = MakeFileTrackerReadRequest(readRequest);
 
         std::string body_str;
-        ShaderToolsErrorCode ec = FileTracker.FindShaderBody(handle, body_str);
-        if (ec != ShaderToolsErrorCode::Success)
+
+        if (!readResult.has_value())
         {
-            ec = FileTracker.AddShaderBodyPath(handle, path_to_source);
-            if (ec != ShaderToolsErrorCode::Success)
+            errorSession.AddError(this, ShaderToolsErrorSource::Generator, ShaderToolsErrorCode::GeneratorNoBodyStringInFileTrackerStorage, nullptr);
+
+            WriteRequest writeRequest{ WriteRequest::Type::AddShaderBodyPath, handle, fs::path(path_to_source) };
+            ShaderToolsErrorCode errorCode = MakeFileTrackerWriteRequest(writeRequest);
+
+            if (errorCode != ShaderToolsErrorCode::Success)
             {
                 errorSession.AddError(this, ShaderToolsErrorSource::Generator, ShaderToolsErrorCode::GeneratorUnableToAddShaderBodyPath, nullptr);
                 return std::string{};
             }
             else
             {
-                ec = FileTracker.FindShaderBody(handle, body_str);
+                readResult = MakeFileTrackerReadRequest(readRequest);
+                if (readResult.has_value())
+                {
+                    body_str = std::get<std::string>(*readResult);
+                }
+                else
+                {
+                    errorSession.AddError(this, ShaderToolsErrorSource::Generator, readResult.error(), "fetchBodyStr failed following second attempt after adding/updating shader body path");
+                    return std::string{};
+                }
             }
         }
 
@@ -903,17 +925,20 @@ namespace st
 
     ShaderToolsErrorCode ShaderGeneratorImpl::processBodyStrResourceBlocks(const ShaderStage& handle, std::string& body_str)
     {
-        auto& FileTracker = ShaderFileTracker::GetFileTracker();
-        bool block_found = true;
-        ShaderToolsErrorCode errorCode = ShaderToolsErrorCode::Success;
+		bool block_found = true;
+
+        std::vector<std::string> foundResourceBlocks;
 
         while (block_found)
         {
             std::smatch match;
             if (std::regex_search(body_str, match, use_set_resources))
             {
-                errorCode = useResourceBlock(match[1].str());
-                FileTracker.ShaderUsedResourceBlocks.emplace(handle, match[1].str());
+                ShaderToolsErrorCode rsrcErrorCode = useResourceBlock(match[1].str());
+                if (rsrcErrorCode == ShaderToolsErrorCode::Success)
+                {
+                    foundResourceBlocks.emplace_back(match[1].str());
+                }
                 body_str.erase(body_str.begin() + match.position(), body_str.begin() + match.position() + match.length());
             }
             else
@@ -922,7 +947,10 @@ namespace st
             }
         }
 
-        return ShaderToolsErrorCode::Success;
+        WriteRequest writeRequest{ WriteRequest::Type::AddUsedResourceBlocks, handle, std::move(foundResourceBlocks) };
+        ShaderToolsErrorCode errorCode = MakeFileTrackerWriteRequest(writeRequest);
+
+        return errorCode;
     }
 
     ShaderToolsErrorCode ShaderGeneratorImpl::generate(const ShaderStage& handle, const std::string& path_to_source, const size_t num_extensions, const char* const* extensions)

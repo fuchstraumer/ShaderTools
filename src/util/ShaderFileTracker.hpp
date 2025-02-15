@@ -7,6 +7,7 @@
 #include <variant>
 #include <expected>
 #include <filesystem>
+#include <vector>
 
 namespace st
 {
@@ -22,11 +23,13 @@ namespace st
         std::vector<uint32_t>,
         bool,
         std::filesystem::path,
-        std::filesystem::file_time_type>;
+        std::filesystem::file_time_type,
+        std::vector<std::string>,
+        void*>;
 
     using ReadRequestResult = std::expected<RequestPayload, ShaderToolsErrorCode>;
 
-    struct FileTrackerReadRequest
+    struct ReadRequest
     {
         // uint64_t so I can eventually use this with 128bit CMPEXCHG MWSR magic
         enum class Type : uint64_t
@@ -38,13 +41,15 @@ namespace st
 			FindAssemblyString,
 			FindLastModificationTime,
 			FindFullSourceString,
-            FindOptimizationStatus
+            FindOptimizationStatus,
+            FindShaderName,
+            HasFullSourceString
         };
         Type RequestType{ Type::Invalid };
         ShaderStage ShaderHandle;
     };
 
-    struct FileTrackerWriteRequest
+    struct WriteRequest
     {
         enum class Type : uint8_t
         {
@@ -54,14 +59,44 @@ namespace st
 			AddShaderBinary,
 			UpdateModificationTime,
 			AddShaderBodyPath,
+            AddFullSourceString,
+            AddUsedResourceBlocks
         };
         Type RequestType{ Type::Invalid };
         ShaderStage ShaderHandle;
         RequestPayload Payload;
     };
 
-    ReadRequestResult MakeFileTrackerReadRequest(const FileTrackerReadRequest& request);
-    ShaderToolsErrorCode MakeFileTrackerWriteRequest(const FileTrackerWriteRequest& request);
+    struct EraseRequest
+    {
+        enum class Type : uint32_t
+        {
+            Invalid = 0,
+            Optional, // Does not return error on failure
+            Required
+        };
+
+        enum class Target : uint32_t
+        {
+            Invalid = 0,
+            AllDataForHandle,
+            ShaderBody,
+            FullSourceString,
+            RecompiledSource,
+            BinarySource
+        };
+        
+        Type RequestType{ Type::Invalid };
+        Target RequestTarget{ Target::Invalid };
+        ShaderStage ShaderHandle;
+    };
+
+    ReadRequestResult MakeFileTrackerReadRequest(const ReadRequest& request);
+    std::vector<ReadRequestResult> MakeFileTrackerBatchReadRequest(const ReadRequest& request);
+    ShaderToolsErrorCode MakeFileTrackerWriteRequest(const WriteRequest& request);
+    ShaderToolsErrorCode MakeFileTrackerBatchWriteRequest(const size_t numRequests, const WriteRequest* requests);
+    ShaderToolsErrorCode MakeFileTrackerEraseRequest(const EraseRequest& request);
+    ShaderToolsErrorCode MakeFileTrackerBatchEraseRequest(const size_t numRequests, const EraseRequest* requests);
 
 }
 
