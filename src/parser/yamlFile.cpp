@@ -5,8 +5,9 @@
 #include "shaderc/env.h"
 #include "shaderc/shaderc.h"
 #include <filesystem>
-#include <cassert>
 #include <iterator>
+#include <array>
+#include <utility>
 
 namespace st
 {
@@ -18,6 +19,23 @@ namespace st
     {
         return static_cast<VkDescriptorType>(type | ARRAY_TYPE_FLAG_BITS);
     }
+    
+
+    static constexpr std::array<std::pair<const char*, VkShaderStageFlags>, 12> valid_shader_stages
+    {
+        std::pair{ "Vertex", VK_SHADER_STAGE_VERTEX_BIT },
+        std::pair{ "Geometry", VK_SHADER_STAGE_GEOMETRY_BIT },
+        std::pair{ "Fragment", VK_SHADER_STAGE_FRAGMENT_BIT },
+        std::pair{ "Compute", VK_SHADER_STAGE_COMPUTE_BIT },
+        std::pair{ "RayGen", VK_SHADER_STAGE_RAYGEN_BIT_KHR },
+        std::pair{ "AnyHit", VK_SHADER_STAGE_ANY_HIT_BIT_KHR },
+        std::pair{ "ClosestHit", VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR },
+        std::pair{ "Miss", VK_SHADER_STAGE_MISS_BIT_KHR },
+        std::pair{ "Intersection", VK_SHADER_STAGE_INTERSECTION_BIT_KHR },
+        std::pair{ "Callable", VK_SHADER_STAGE_CALLABLE_BIT_KHR },
+        std::pair{ "Task", VK_SHADER_STAGE_TASK_BIT_EXT },
+        std::pair{ "Mesh", VK_SHADER_STAGE_MESH_BIT_EXT }  
+    };
 
     static const std::unordered_map<std::string, VkDescriptorType> descriptor_type_from_str_map =
     {
@@ -201,6 +219,34 @@ namespace st
         return nullptr;
     }
 
+    ShaderStage yamlFile::addShaderStage(const std::string& group_name, std::string shader_name, VkShaderStageFlags stage_flags)
+    {
+		if (stages.count(shader_name) == 0)
+		{
+			auto iter = stages.emplace(shader_name, ShaderStage{ shader_name.c_str(), stage_flags });
+			shaderGroups[group_name].emplace(iter.first->second);
+			return iter.first->second;
+		}
+		else
+		{
+			shaderGroups[group_name].emplace(stages.at(shader_name));
+			return stages.at(shader_name);
+		}
+    }
+
+    std::vector<ShaderStage> yamlFile::addShaderStages(const std::string& group_name, const YAML::Node& shaders)
+    {
+        std::vector<ShaderStage> stages_added;
+        for (const auto& [stage_name, stage_flags] : valid_shader_stages)
+        {
+            if (shaders[stage_name])
+            {
+				stages_added.emplace_back(addShaderStage(group_name, shaders[stage_name].as<std::string>(), stage_flags));
+            }
+        }
+        return stages_added;
+    }
+
     ShaderToolsErrorCode yamlFile::parseGroups(Session& session)
     {
         using namespace YAML;
@@ -213,28 +259,13 @@ namespace st
         }
 
         auto groups = file_node["shader_groups"];
+        std::vector<ShaderStage> opt_disabled_stages;
 
         for (auto iter = groups.begin(); iter != groups.end(); ++iter)
         {
             std::string group_name = iter->first.as<std::string>();
 
-            auto add_stage = [this, &group_name](std::string shader_name, VkShaderStageFlags stage)->ShaderStage
             {
-                if (stages.count(shader_name) == 0)
-                {
-                    auto iter = stages.emplace(shader_name, ShaderStage{ shader_name.c_str(), stage });
-                    shaderGroups[group_name].emplace(iter.first->second);
-                    return iter.first->second;
-                }
-                else
-                {
-                    shaderGroups[group_name].emplace(stages.at(shader_name));
-                    return stages.at(shader_name);
-                }
-            };
-
-            {
-                std::vector<ShaderStage> stages_added;
                 auto shaders = iter->second["Shaders"];
 
                 if (std::distance(shaders.begin(), shaders.end()) == 0)
@@ -242,34 +273,16 @@ namespace st
                     return ShaderToolsErrorCode::ParserYamlFileHadNoShadersInGroup;
                 }
 
-                if (shaders["Vertex"])
-                {
-                    stages_added.emplace_back(add_stage(shaders["Vertex"].as<std::string>(), VK_SHADER_STAGE_VERTEX_BIT));
-                }
 
-                if (shaders["Geometry"])
-                {
-                    stages_added.emplace_back(add_stage(shaders["Geometry"].as<std::string>(), VK_SHADER_STAGE_GEOMETRY_BIT));
-                }
-
-                if (shaders["Fragment"])
-                {
-                    stages_added.emplace_back(add_stage(shaders["Fragment"].as<std::string>(), VK_SHADER_STAGE_FRAGMENT_BIT));
-                }
-
-                if (shaders["Compute"])
-                {
-                    stages_added.emplace_back(add_stage(shaders["Compute"].as<std::string>(), VK_SHADER_STAGE_COMPUTE_BIT));
-                }
+                std::vector<ShaderStage> stages_added = addShaderStages(group_name, shaders);
 
                 // Defined inline with list of shaders. Disables optimization for all shaders in this group (so, compute/render shaders)
                 if (shaders["OptimizationDisabled"])
                 {
-                    auto& sft = ShaderFileTracker::GetFileTracker();
                     const bool disabled_value = shaders["OptimizationDisabled"].as<bool>();
-                    for (const auto& stage : stages_added)
+                    if (disabled_value)
                     {
-                        sft.StageOptimizationDisabled.emplace(stage, disabled_value);
+                        opt_disabled_stages.insert(opt_disabled_stages.end(), stages_added.begin(), stages_added.end());
                     }
                 }
 
@@ -304,6 +317,24 @@ namespace st
                         groupTags[group_name].emplace_back(tag.as<std::string>());
                     }
                 }
+            }
+
+        }
+
+        if (!opt_disabled_stages.empty())
+        {
+            
+            std::vector<WriteRequest> write_requests;
+            std::transform(opt_disabled_stages.begin(), opt_disabled_stages.end(), std::back_inserter(write_requests), 
+            [](const ShaderStage& stage)
+            {
+                return WriteRequest{ WriteRequest::Type::SetStageOptimizationDisabled, stage, true };
+            });
+
+            ShaderToolsErrorCode status = MakeFileTrackerBatchWriteRequest(write_requests.size(), write_requests.data());
+            if (status != ShaderToolsErrorCode::Success)
+            {
+                return status;
             }
 
         }

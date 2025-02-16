@@ -35,13 +35,11 @@ namespace st
         Shader(Shader&& other) noexcept;
         Shader& operator=(Shader&& other) noexcept;
 
-        ShaderStage AddShaderStage(const char* shader_name,const VkShaderStageFlagBits& flags);
-
         void GetInputAttributes(const VkShaderStageFlags stage, size_t* num_attrs, VertexAttributeInfo* attributes) const;
         void GetOutputAttributes(const VkShaderStageFlags stage, size_t* num_attrs, VertexAttributeInfo* attributes) const;
         PushConstantInfo GetPushConstantInfo(const VkShaderStageFlags stage) const;
         void GetShaderStages(size_t* num_stages, ShaderStage* stages) const;
-        void GetShaderBinary(const ShaderStage& handle, size_t* binary_size, uint32_t* dest_binary_ptr) const;
+        ShaderToolsErrorCode GetShaderBinary(const ShaderStage& handle, size_t* binary_size, uint32_t* dest_binary_ptr) const;
         void GetSetLayoutBindings(const size_t& set_idx, size_t* num_bindings, VkDescriptorSetLayoutBinding* bindings) const;
         void GetSpecializationConstants(size_t* num_constants, SpecializationConstant* constants) const;
         void GetResourceUsages(const size_t& set_idx, size_t* num_resources, ResourceUsage* resources) const;

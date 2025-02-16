@@ -86,7 +86,7 @@ namespace st
         dll_retrieved_strings_t results;
         results.SetNumStrings(impl->usedByShaders.size());
         size_t i = 0;
-        for (auto& entry : impl->usedByShaders)
+        for (const auto& entry : impl->usedByShaders)
         {
             results.Strings[i] = strdup(entry.c_str());
             ++i;
@@ -99,7 +99,7 @@ namespace st
         dll_retrieved_strings_t results;
         results.SetNumStrings(impl->tags.size());
         size_t i = 0;
-        for (auto& entry : impl->tags)
+        for (const auto& entry : impl->tags)
         {
             results.Strings[i] = strdup(entry.c_str());
             ++i;
@@ -117,13 +117,22 @@ namespace st
         return impl->name.c_str();
     }
 
-    uint32_t ResourceGroup::DescriptorSetIdxInStage(const ShaderStage & handle) const
+    uint32_t ResourceGroup::DescriptorSetIdxInStage(const ShaderStage& handle) const
     {
         if (impl->stageSetIndices.empty())
         {
-            // grab the map from the file tracker
-            auto& f_tracker = ShaderFileTracker::GetFileTracker();
-            impl->stageSetIndices = f_tracker.ResourceGroupSetIndexMaps.at(impl->name);
+            ReadRequest readReq{ ReadRequest::Type::FindResourceGroupSetIndexMap, handle };
+            ReadRequestResult readResult = MakeFileTrackerReadRequest(readReq);
+            if (readResult.has_value())
+            {
+                impl->stageSetIndices = std::get<decltype(impl->stageSetIndices)>(*readResult);
+            }
+            else
+            {
+                impl->errorSession.AddError(this, ShaderToolsErrorSource::ResourceGroup, readResult.error(), "ResourceGroup couldn't get SetIndexMap from FileTracker");
+                // oh shit how do we log an error
+                return std::numeric_limits<uint32_t>::max();
+            }
         }
 
         auto iter = impl->stageSetIndices.find(handle);

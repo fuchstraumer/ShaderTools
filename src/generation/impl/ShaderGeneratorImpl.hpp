@@ -71,8 +71,8 @@ namespace st
     {
     public:
 
-        explicit ShaderGeneratorImpl(ShaderStage _stage, Session& errorSession);  
-        ~ShaderGeneratorImpl();
+        explicit ShaderGeneratorImpl(ShaderStage _stage, Session& errorSession) noexcept;  
+        ~ShaderGeneratorImpl() noexcept;
 
         ShaderGeneratorImpl(ShaderGeneratorImpl&& other) noexcept;
         ShaderGeneratorImpl& operator=(ShaderGeneratorImpl&& other) noexcept;
@@ -111,7 +111,7 @@ namespace st
     public:
         // The primary function called by the public API
         [[nodiscard]] ShaderToolsErrorCode generate(const ShaderStage& handle, const std::string& path_to_src, const size_t num_extensions, const char* const* extensions);
-        [[nodiscard]] const std::string& getFullSource() const;
+        [[nodiscard]] std::string getFullSource() const;
         void addIncludePath(const char* include_path);
         void addExtension(const std::string& extension_str);
 

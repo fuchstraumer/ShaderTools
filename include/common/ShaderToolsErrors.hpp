@@ -69,6 +69,9 @@ namespace st
         ShaderPackErrorsStart = 500,
         ShaderPackInvalidDescriptorType,
 
+        ShaderErrorsStart = 550,
+        ShaderDoesNotContainGivenHandle,
+
         SubsystemErrorsStart = 600,
         FilesystemPathDoesNotExist,
         // Message is the path that was attempted

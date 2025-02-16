@@ -317,12 +317,42 @@ namespace st
 
 	ReadRequestResult MakeFileTrackerReadRequest(const ReadRequest& request)
 	{
+        return std::unexpected{ ShaderToolsErrorCode::InvalidErrorCode };
+	}
 
+	ReadRequestResult MakeFileTrackerReadRequest(ReadRequest request)
+	{
+        return std::unexpected{ ShaderToolsErrorCode::InvalidErrorCode };
+	}
+
+	std::vector<ReadRequestResult> MakeFileTrackerBatchReadRequest(const size_t numRequests, const ReadRequest* requests)
+	{
+        return std::vector<ReadRequestResult>{ std::unexpected{ ShaderToolsErrorCode::InvalidErrorCode } };
 	}
 
 	ShaderToolsErrorCode MakeFileTrackerWriteRequest(const WriteRequest& request)
 	{
+        return ShaderToolsErrorCode::Success;
+	}
 
+	ShaderToolsErrorCode MakeFileTrackerWriteRequest(WriteRequest request)
+	{
+		return ShaderToolsErrorCode::Success;
+	}
+
+	ShaderToolsErrorCode MakeFileTrackerBatchWriteRequest(const size_t numRequests, const WriteRequest* requests)
+	{
+		return ShaderToolsErrorCode::Success;
+	}
+
+	ShaderToolsErrorCode MakeFileTrackerEraseRequest(EraseRequest request)
+	{
+        return ShaderToolsErrorCode::Success;
+	}
+
+	ShaderToolsErrorCode MakeFileTrackerBatchEraseRequest(const size_t numRequests, const EraseRequest* requests)
+	{
+        return ShaderToolsErrorCode::Success;
 	}
 
 }

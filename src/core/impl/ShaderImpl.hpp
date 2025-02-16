@@ -28,9 +28,9 @@ namespace st
         ShaderGroupImpl(ShaderGroupImpl&& other) noexcept;
         ShaderGroupImpl& operator=(ShaderGroupImpl&& other) noexcept;
 
-        void addShaderStage(const ShaderStage& handle);
+        void addShaderStage(const ShaderStage& handle, const char* shader_name);
 
-		std::unique_ptr<ShaderReflector> reflector{ nullptr };
+		std::unique_ptr<ShaderReflector> reflector;
 		yamlFile* rsrcFile{ nullptr };
 		size_t idx;
 		std::string groupName;

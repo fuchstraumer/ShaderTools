@@ -45,8 +45,8 @@ namespace st
         ShaderStage stage{ 0u, 0u };
         yamlFile* rsrcFile{ nullptr };
         std::string bodyPath;
-        std::unique_ptr<ShaderGeneratorImpl> generator{ nullptr };
-        std::unique_ptr<ShaderCompilerImpl> compiler{ nullptr };
+        std::unique_ptr<ShaderGeneratorImpl> generator;
+        std::unique_ptr<ShaderCompilerImpl> compiler;
 
     };
 

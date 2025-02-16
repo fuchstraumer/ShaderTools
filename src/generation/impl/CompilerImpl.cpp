@@ -27,10 +27,14 @@ namespace st
 
     namespace fs = std::filesystem;
 
-    ShaderCompilerImpl::ShaderCompilerImpl(const ShaderCompilerOptions& options, Session& error_session) : compilerOptions(options), errorSession(error_session)
+    ShaderCompilerImpl::ShaderCompilerImpl(const ShaderCompilerOptions& options, Session& error_session) noexcept : compilerOptions(options), errorSession(error_session)
     {}
 
-    shaderc::CompileOptions ShaderCompilerImpl::getCompilerOptions() const
+
+	ShaderCompilerImpl::~ShaderCompilerImpl() noexcept
+	{}
+
+	shaderc::CompileOptions ShaderCompilerImpl::getCompilerOptions() const
     {
         shaderc::CompileOptions options;
         // We can't use this until we figure out how to get the debug info even if we don't actually use debug-info-build shaders for PSO creation
@@ -184,7 +188,6 @@ namespace st
 
     ShaderToolsErrorCode ShaderCompilerImpl::compile(const ShaderStage& handle, const shaderc_shader_kind& kind, std::string name, std::string src_str)
     {
-        ShaderToolsErrorCode error = ShaderToolsErrorCode::Success;
 
         shaderc::Compiler compiler;
         shaderc::CompileOptions options = getCompilerOptions();
@@ -192,21 +195,21 @@ namespace st
         // We allow for optimization to be disabled for shaders in case they break or need debugging
         // Should probably make this part of a try-catch with compiling shaders, where we try a second pass and notify the user if their shader fails optimized compile
         // Of note, this is due to a bunch of shaders that only failed compile when optimized, but compiled fine otherwise.
-        bool optimizationDisabled = false;
+        bool optimization_disabled = false;
         {
-            ReadRequest readReqeust{ ReadRequest::Type::FindOptimizationStatus, handle };
-            ReadRequestResult readResult = MakeFileTrackerReadRequest(readReqeust);
-            if (readResult.has_value())
+            ReadRequest read_request{ ReadRequest::Type::FindOptimizationStatus, handle };
+            ReadRequestResult read_result = MakeFileTrackerReadRequest(read_request);
+            if (read_result.has_value())
             {
-                optimizationDisabled = std::get<bool>(*readResult);
+                optimization_disabled = std::get<bool>(*read_result);
             }
             else
             {
-                errorSession.AddError(this, ShaderToolsErrorSource::Compiler, readResult.error(), nullptr);
+                errorSession.AddError(this, ShaderToolsErrorSource::Compiler, read_result.error(), nullptr);
             }
         }
 
-        if (optimizationDisabled)
+        if (optimization_disabled)
         {
             options.SetOptimizationLevel(shaderc_optimization_level_zero);
         }
@@ -231,67 +234,74 @@ namespace st
 
         if (compiliation_result.GetCompilationStatus() != shaderc_compilation_status_success)
         {
-            error = ShaderToolsErrorCode::CompilerShaderCompilationFailed;
             const std::string err_msg = compiliation_result.GetErrorMessage();
-            errorSession.AddError(this, ShaderToolsErrorSource::Compiler, error, err_msg.c_str());
+            errorSession.AddError(this, ShaderToolsErrorSource::Compiler, ShaderToolsErrorCode::CompilerShaderCompilationFailed, err_msg.c_str());
 
 #ifndef NDEBUG
             std::cerr << "Dumping shader source to file...";
             dump_bad_source_to_file(name, src_str, err_msg, dump_reason::failed_compile);
 #endif
-
+            return ShaderToolsErrorCode::CompilerShaderCompilationFailed;
         }
         else
         {
-            WriteRequest writeRequest{ WriteRequest::Type::AddShaderBinary, handle, std::vector<uint32_t>{ compiliation_result.begin(), compiliation_result.end() } };
-            ShaderToolsErrorCode writeResult = MakeFileTrackerWriteRequest(writeRequest);
-            if (writeResult != ShaderToolsErrorCode::Success)
+            WriteRequest write_request{ WriteRequest::Type::AddShaderBinary, handle, std::vector<uint32_t>{ compiliation_result.begin(), compiliation_result.end() } };
+            ShaderToolsErrorCode write_result = MakeFileTrackerWriteRequest(write_request);
+            if (write_result != ShaderToolsErrorCode::Success)
             {
-                errorSession.AddError(this, ShaderToolsErrorSource::Compiler, writeResult, name.c_str());
+                errorSession.AddError(this, ShaderToolsErrorSource::Compiler, write_result, name.c_str());
             }
+
+            return write_result;
         }
 
-        return error;
+        return ShaderToolsErrorCode::InvalidErrorCode;
     }
 
     ShaderToolsErrorCode ShaderCompilerImpl::recompileBinaryToGLSL(const ShaderStage& handle, size_t* str_size, char* dest_str)
     {
-        ReadRequest readRequest{ ReadRequest::Type::FindRecompiledShaderSource, handle };
-        ReadRequestResult requestResult = MakeFileTrackerReadRequest(readRequest);
-        if (requestResult.has_value())
+        ReadRequest read_request{ ReadRequest::Type::FindRecompiledShaderSource, handle };
+        ReadRequestResult request_result = MakeFileTrackerReadRequest(read_request);
+        if (request_result.has_value())
         {
-            const std::string& recompiledSrcStrRef = std::get<std::string>(*requestResult);
+
+            const std::string& recompiledSrcStrRef = std::get<std::string>(*request_result);
             *str_size = recompiledSrcStrRef.size();
             if (dest_str != nullptr)
             {
                 // use a move this time since I want to tell the compiler to, hopefully, move this result too
-                std::string finalSrcString = std::move(std::get<std::string>(*requestResult));
+                std::string finalSrcString = std::move(std::get<std::string>(*request_result));
                 std::copy(finalSrcString.begin(), finalSrcString.end(), dest_str);
             }
+
+            return ShaderToolsErrorCode::Success;
         }
         else
         {
-            return requestResult.error();
+            return request_result.error();
         }
     }
 
     ShaderToolsErrorCode ShaderCompilerImpl::getBinaryAssemblyString(const ShaderStage& handle, size_t* str_size, char* dest_str)
     {
-        ReadRequest readRequest{ ReadRequest::Type::FindAssemblyString, handle };
-        ReadRequestResult requestResult = MakeFileTrackerReadRequest(readRequest);
-        if (requestResult.has_value())
+        ReadRequest read_request{ ReadRequest::Type::FindAssemblyString, handle };
+        ReadRequestResult request_result = MakeFileTrackerReadRequest(read_request);
+        if (request_result.has_value())
         {
-            const std::string& assemblyStrRef = std::get<std::string>(*requestResult);
+
+            const std::string& assemblyStrRef = std::get<std::string>(*request_result);
             *str_size = assemblyStrRef.size();
             if (dest_str != nullptr)
             {
-                std::string assemblyStr = std::move(std::get<std::string>(*requestResult));
+                std::string assemblyStr = std::move(std::get<std::string>(*request_result));
                 std::copy(assemblyStr.begin(), assemblyStr.end(), dest_str);
             }
+
+            return ShaderToolsErrorCode::Success;
         }
         else
         {
-            return requestResult.error();
+            return request_result.error();
         }
     }
 

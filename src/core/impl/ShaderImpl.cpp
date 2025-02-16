@@ -45,10 +45,10 @@ namespace st
         return *this;
     }
 
-    void ShaderGroupImpl::addShaderStage(const ShaderStage& handle)
+    void ShaderGroupImpl::addShaderStage(const ShaderStage& handle, const char* shader_name)
     {
         stHandles.emplace(handle);
-        reflector->ParseBinary(handle);
+        reflector->ParseBinary(handle, shader_name);
     }
 
 }

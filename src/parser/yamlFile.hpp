@@ -11,6 +11,10 @@
 #include <vector>
 #include <string>
 
+namespace YAML
+{
+    class Node;
+}
 
 namespace st
 {
@@ -38,7 +42,9 @@ namespace st
         ShaderCompilerOptions compilerOptions;
         std::string packName;
 
-    private:
+	private:
+		ShaderStage addShaderStage(const std::string& group_name, std::string shader_name, VkShaderStageFlags stage_flags);
+        std::vector<ShaderStage> addShaderStages(const std::string& group_name, const YAML::Node& shaders);
         ShaderToolsErrorCode parseResources(Session& session);
         ShaderToolsErrorCode parseGroups(Session& session);
         ShaderToolsErrorCode parseCompilerOptions(Session& session);

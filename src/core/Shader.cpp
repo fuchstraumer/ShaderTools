@@ -53,7 +53,7 @@ namespace st
     {
         for (size_t i = 0; i < num_stages; ++i)
         {
-            impl->addShaderStage(stages[i]);
+            //impl->addShaderStage(stages[i], TODO);
         }
 
     }
@@ -66,18 +66,6 @@ namespace st
     {
         impl = std::move(other.impl);
         return *this;
-    }
-
-    ShaderStage Shader::AddShaderStage(const char* shader_name, const VkShaderStageFlagBits& flags)
-    {
-        ShaderStage handle(shader_name, flags);
-        auto iter = impl->stHandles.emplace(handle);
-        if (!iter.second)
-        {
-            throw std::runtime_error("Could not add shader to Shader, failed to emplace into handles set: might already exist!");
-        }
-        impl->addShaderStage(handle);
-        return handle;
     }
 
     void Shader::GetInputAttributes(const VkShaderStageFlags stage, size_t* num_attrs, VertexAttributeInfo* attributes) const
@@ -106,27 +94,38 @@ namespace st
         }
     }
 
-    void Shader::GetShaderBinary(const ShaderStage& handle, size_t* binary_size, uint32_t* dest_binary_ptr) const
+    ShaderToolsErrorCode Shader::GetShaderBinary(const ShaderStage& handle, size_t* binary_size, uint32_t* dest_binary_ptr) const
     {
-        auto& FileTracker = ShaderFileTracker::GetFileTracker();
-        auto iter = impl->stHandles.find(handle);
-        std::vector<uint32_t> binary_vec;
-        if (iter == impl->stHandles.cend())
+        if (!impl->stHandles.contains(handle))
         {
-            std::cerr << "Could not find requested shader binary in Shader.";
             *binary_size = 0;
+            return ShaderToolsErrorCode::ShaderDoesNotContainGivenHandle;
         }
-        else if (FileTracker.FindShaderBinary(handle, binary_vec) == ShaderToolsErrorCode::Success)
+        else
         {
-            *binary_size = binary_vec.size();
-            if (dest_binary_ptr != nullptr)
+
+            ReadRequest binaryReadReq{ ReadRequest::Type::FindShaderBinary, handle };
+            ReadRequestResult readResult = MakeFileTrackerReadRequest(binaryReadReq);
+
+            if (readResult.has_value())
             {
-                std::copy(binary_vec.begin(), binary_vec.end(), dest_binary_ptr);
+                const std::vector<uint32_t>& binary_vec_ref = std::get<std::vector<uint32_t>>(*readResult);
+                *binary_size = binary_vec_ref.size();
+                if (dest_binary_ptr != nullptr)
+                {
+                    std::vector<uint32_t> binary_vec_copy = std::get<std::vector<uint32_t>>(*readResult);
+                    std::copy(binary_vec_copy.begin(), binary_vec_copy.end(), dest_binary_ptr);
+                }
+
+                return ShaderToolsErrorCode::Success;
             }
+            else
+            {
+                return readResult.error();
+            }
+
         }
-        else {
-            *binary_size = 0;
-        }
+
     }
 
     void Shader::GetSetLayoutBindings(const size_t& set_idx, size_t* num_bindings, VkDescriptorSetLayoutBinding* bindings) const

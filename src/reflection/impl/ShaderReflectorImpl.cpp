@@ -4,6 +4,8 @@
 #include "resources/ShaderResource.hpp"
 #include "resources/ResourceUsage.hpp"
 #include "spirv_cross_containers.hpp"
+#include "spirv-cross/spirv_cross.hpp"
+#include "spirv-cross/spirv_glsl.hpp"
 #include <array>
 #include <iostream>
 #include <fstream>
@@ -16,7 +18,7 @@ namespace st
             (type == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER) || (type == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC);
     }
 
-    ShaderReflectorImpl::ShaderReflectorImpl(yamlFile* yaml_file, Session& error_session) : rsrcFile(yaml_file), errorSession(error_session) {}
+    ShaderReflectorImpl::ShaderReflectorImpl(yamlFile* yaml_file, Session& error_session) noexcept : rsrcFile(yaml_file), errorSession(error_session) {}
 
     ShaderReflectorImpl::ShaderReflectorImpl(ShaderReflectorImpl&& other) noexcept :
         descriptorSets(std::move(other.descriptorSets)),
@@ -25,7 +27,12 @@ namespace st
         rsrcFile{ other.rsrcFile },
         errorSession{ other.errorSession } {}
 
-    ShaderReflectorImpl& ShaderReflectorImpl::operator=(ShaderReflectorImpl&& other) noexcept
+
+	ShaderReflectorImpl::~ShaderReflectorImpl()
+	{
+	}
+
+	ShaderReflectorImpl& ShaderReflectorImpl::operator=(ShaderReflectorImpl&& other) noexcept
     {
         descriptorSets = std::move(other.descriptorSets);
         sortedSets = std::move(other.sortedSets);
@@ -71,46 +78,8 @@ namespace st
         return parseVertAttrs(cmplr, rsrcs.stage_outputs);
     }
 
-    ShaderToolsErrorCode ShaderReflectorImpl::parseResourceType(const ShaderStage& shader_handle, const VkDescriptorType& type_being_parsed)
+    ShaderToolsErrorCode ShaderReflectorImpl::parseResourceType(const std::string& shader_name, const ShaderStage& shader_handle, const VkDescriptorType& type_being_parsed)
     {
-        auto& f_tracker = ShaderFileTracker::GetFileTracker();
-
-        auto get_actual_name = [](const std::string& rsrc_name)->std::string
-        {
-            size_t first_idx = rsrc_name.find_first_of('_');
-            std::string results;
-            if (first_idx != std::string::npos)
-            {
-                results = std::string{ rsrc_name.cbegin() + first_idx + 1, rsrc_name.cend() };
-            }
-            else
-            {
-                results = rsrc_name;
-            }
-
-            size_t second_idx = results.find_last_of('_');
-            if (second_idx != std::string::npos)
-            {
-                results.erase(results.begin() + second_idx, results.end());
-            }
-
-            return results;
-        };
-
-        auto extract_buffer_members = [](const spirv_cross::Resource& rsrc, const spirv_cross::Compiler& cmplr)->std::vector<ShaderResourceSubObject>
-        {
-            std::vector<ShaderResourceSubObject> results;
-            auto ranges = cmplr.get_active_buffer_ranges(rsrc.id);
-            for (auto& range : ranges)
-            {
-                ShaderResourceSubObject member;
-                member.Name = strdup(cmplr.get_member_name(rsrc.base_type_id, range.index).c_str());
-                member.Size = static_cast<uint32_t>(range.range);
-                member.Offset = static_cast<uint32_t>(range.offset);
-                results.emplace_back(member);
-            }
-            return results;
-        };
 
         const auto resources_all = recompiler->get_shader_resources();
         spirv_cross::SmallVector<spirv_cross::Resource> resources;
@@ -152,11 +121,9 @@ namespace st
             return ShaderToolsErrorCode::ReflectionInvalidDescriptorType;
         };
 
-        const std::string shader_name = f_tracker.GetShaderName(shader_handle);
-
         for (const auto& rsrc : resources)
         {
-            const std::string rsrc_name = get_actual_name(recompiler->get_name(rsrc.id));
+            const std::string rsrc_name = GetActualResourceName(recompiler->get_name(rsrc.id));
             const ShaderResource* parent_resource = rsrcFile->FindResource(rsrc_name);
             const std::string parent_group_name = parent_resource->ParentGroupName();
 
@@ -235,7 +202,22 @@ namespace st
         return ShaderToolsErrorCode::Success;
     }
 
-    PushConstantInfo parsePushConstants(const spirv_cross::Compiler& cmplr, const VkShaderStageFlags& stage)
+    std::vector<ShaderResourceSubObject> ShaderReflectorImpl::ExtractBufferMembers(const spirv_cross::Compiler& cmplr, const spirv_cross::Resource& rsrc)
+	{
+		std::vector<ShaderResourceSubObject> results;
+		auto ranges = cmplr.get_active_buffer_ranges(rsrc.id);
+		for (auto& range : ranges)
+		{
+			ShaderResourceSubObject member;
+			member.Name = strdup(cmplr.get_member_name(rsrc.base_type_id, range.index).c_str());
+			member.Size = static_cast<uint32_t>(range.range);
+			member.Offset = static_cast<uint32_t>(range.offset);
+			results.emplace_back(member);
+		}
+		return results;
+	}
+
+	PushConstantInfo parsePushConstants(const spirv_cross::Compiler& cmplr, const VkShaderStageFlags& stage)
     {
         const auto push_constants = cmplr.get_shader_resources();
         const auto& pconstant = push_constants.push_constant_buffers.front();
@@ -272,23 +254,22 @@ namespace st
         return std::move(result);
     }
 
-    ShaderToolsErrorCode ShaderReflectorImpl::parseBinary(const ShaderStage& shader_handle)
+    ShaderToolsErrorCode ShaderReflectorImpl::parseBinary(const ShaderStage& shader_handle, std::string shader_name)
     {
-        auto& FileTracker = ShaderFileTracker::GetFileTracker();
-
-        std::vector<uint32_t> binary_vec;
-        if (FileTracker.FindShaderBinary(shader_handle, binary_vec) != ShaderToolsErrorCode::Success)
+        ReadRequest findBinaryRequest{ ReadRequest::Type::FindShaderBinary, shader_handle };
+        ReadRequestResult findBinaryResult = MakeFileTrackerReadRequest(findBinaryRequest);
+        if (!findBinaryResult.has_value())
         {
-            const std::string errorMessage = "Attempted to parse and generate bindings for binary that cannot be found";
-            errorSession.AddError(
-                this,
-                ShaderToolsErrorSource::Reflection,
-                ShaderToolsErrorCode::ReflectionShaderBinaryNotFound,
-                errorMessage.c_str());
-            return ShaderToolsErrorCode::ReflectionShaderBinaryNotFound;
+			const std::string errorMessage = "Attempted to parse and generate bindings for binary that cannot be found";
+			errorSession.AddError(
+				this,
+				ShaderToolsErrorSource::Reflection,
+				findBinaryResult.error(),
+				errorMessage.c_str());
+			return ShaderToolsErrorCode::ReflectionShaderBinaryNotFound;
         }
-
-        return parseImpl(shader_handle, binary_vec);
+        std::vector<uint32_t> binary_vec = std::get<std::vector<uint32_t>>(*findBinaryResult);
+        return parseImpl(shader_handle, shader_name, std::move(binary_vec));
     }
 
     void ShaderReflectorImpl::collateSets()
@@ -403,11 +384,11 @@ namespace st
         return ShaderToolsErrorCode::Success;
     }
 
-    ShaderToolsErrorCode ShaderReflectorImpl::parseImpl(const ShaderStage& handle, const std::vector<uint32_t>& binary_data)
+    ShaderToolsErrorCode ShaderReflectorImpl::parseImpl(const ShaderStage& shader_handle, const std::string& shader_name, std::vector<uint32_t> binary_data)
     {
         using namespace spirv_cross;
 
-        recompiler = std::make_unique<CompilerGLSL>(binary_data);
+        recompiler = std::make_unique<CompilerGLSL>(std::move(binary_data));
         CompilerGLSL::Options options;
         options.vulkan_semantics = true;
         // we set this ourselves in most locations!
@@ -431,18 +412,25 @@ namespace st
 
             recompiled_source = recompiler->get_partial_source();
 
-            auto& sft = ShaderFileTracker::GetFileTracker();
-            const std::string output_name = sft.GetShaderName(handle) + std::string{ "_failed_recompile.glsl" };
+            const std::string output_name = shader_name + std::string{ "_failed_recompile.glsl" };
             std::ofstream output_stream(output_name);
             output_stream << recompiled_source;
             output_stream.flush();
             output_stream.close();
+            // free this object because we're totally toasted now
+            recompiler.reset();
 
             return ShaderToolsErrorCode::ReflectionRecompilerError;
         }
 
-        auto& sft = ShaderFileTracker::GetFileTracker();
-        auto iter = sft.RecompiledSourcesFromBinaries.emplace(handle, recompiled_source);
+        WriteRequest recompiledSourceRequest{ WriteRequest::Type::SetRecompiledSourceString, shader_handle, std::move(recompiled_source) };
+        ShaderToolsErrorCode writeError = MakeFileTrackerWriteRequest(recompiledSourceRequest);
+        if (writeError != ShaderToolsErrorCode::Success)
+        {
+            std::string errorMessage = "Unable to store recompiled source string for shader \"" + shader_name + "\"";
+            errorSession.AddError(this, ShaderToolsErrorSource::Reflection, writeError, errorMessage.c_str());
+            return writeError;
+        }
 
         // Maybe this list shouldn't be a baked in list? Could always parse the VK XML for what we need.
         constexpr static VkDescriptorType supportedDescriptorTypes[]
@@ -465,7 +453,7 @@ namespace st
 
         for (size_t i = 0; i < std::size(supportedDescriptorTypes); ++i)
         {
-            ShaderToolsErrorCode resourceParseError = parseResourceType(handle, supportedDescriptorTypes[i]);
+            ShaderToolsErrorCode resourceParseError = parseResourceType(shader_name, shader_handle, supportedDescriptorTypes[i]);
             if (resourceParseError != ShaderToolsErrorCode::Success)
             {
                 return resourceParseError;
@@ -480,7 +468,7 @@ namespace st
         }
 
         spirv_cross::ShaderResources resources = recompiler->get_shader_resources();
-        const VkShaderStageFlagBits stage = static_cast<VkShaderStageFlagBits>(handle.stageBits);
+        const VkShaderStageFlagBits stage = static_cast<VkShaderStageFlagBits>(shader_handle.stageBits);
         if (!resources.push_constant_buffers.empty())
         {
             auto iter = pushConstants.emplace(stage, parsePushConstants(*recompiler, stage));
@@ -521,5 +509,27 @@ namespace st
     {
         return sortedSets.size();
     }
+
+	std::string ShaderReflectorImpl::GetActualResourceName(const std::string& rsrc_name)
+	{
+		size_t first_idx = rsrc_name.find_first_of('_');
+		std::string results;
+		if (first_idx != std::string::npos)
+		{
+			results = std::string{ rsrc_name.cbegin() + first_idx + 1, rsrc_name.cend() };
+		}
+		else
+		{
+			results = rsrc_name;
+		}
+
+		size_t second_idx = results.find_last_of('_');
+		if (second_idx != std::string::npos)
+		{
+			results.erase(results.begin() + second_idx, results.end());
+		}
+
+		return results;
+	}
 
 }

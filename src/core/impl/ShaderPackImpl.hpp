@@ -26,7 +26,7 @@ namespace st
 
         void createPackScript(const char * fname);
 
-        void processShaderStages();
+        ShaderToolsErrorCode processShaderStages();
         void createShaders();
         void createResourceGroups();
         void createSingleGroup(const std::string& name, const std::vector<ShaderStage> shaders);

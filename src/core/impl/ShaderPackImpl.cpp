@@ -36,38 +36,55 @@ namespace st
         filePack = std::make_unique<yamlFile>(fname, errorSession);
     }
 
-    void ShaderPackImpl::processShaderStages()
+    ShaderToolsErrorCode ShaderPackImpl::processShaderStages()
     {
-        auto& ftracker = ShaderFileTracker::GetFileTracker();
         const std::string working_dir_str = workingDir.string();
         const std::vector<std::string> base_includes{ working_dir_str };
 
-        for (auto& stage : filePack->stages)
+        std::vector<WriteRequest> write_requests;
+        // Handle body paths first
+        for (const auto& stage : filePack->stages)
         {
-            processors.emplace(stage.second, std::make_unique<ShaderStageProcessor>(stage.second, filePack.get()));
             fs::path body_path = fs::canonical(workingDir / fs::path(stage.first));
-            if (!fs::exists(body_path))
+
+            if (fs::exists(body_path))
             {
-                // Can't launch for this shader because we have an invalid body path, but let's launch for the others so we can get as many errors as possible
-                errorSession.AddError(
-                    this,
-                    ShaderToolsErrorSource::Filesystem,
-                    ShaderToolsErrorCode::FilesystemPathDoesNotExist,
-                    stage.first.c_str());
+                write_requests.emplace_back(WriteRequest::Type::AddShaderBodyPath, stage.second, std::move(body_path));
             }
             else
             {
-                ftracker.BodyPaths.emplace(stage.second, body_path);
-                processorFutures.emplace(stage.second,
-                    std::async(std::launch::async,
-                               &ShaderStageProcessor::Process,
-                               processors.at(stage.second).get(),
-                               stage.first,
-                               body_path.string(),
-                               filePack->stageExtensions[stage.second],
-                               base_includes));
+                std::string errorStr = "Shader pack found shader with name " + stage.first + " had invalid path " + body_path.string();
+				errorSession.AddError(
+					this,
+					ShaderToolsErrorSource::ShaderPack,
+					ShaderToolsErrorCode::FilesystemPathDoesNotExist,
+					errorStr.c_str());
+                return ShaderToolsErrorCode::FilesystemPathDoesNotExist;
             }
         }
+
+        ShaderToolsErrorCode batchWriteError = MakeFileTrackerBatchWriteRequest(write_requests.size(), write_requests.data());
+        if (batchWriteError != ShaderToolsErrorCode::Success)
+        {
+            errorSession.AddError(this, ShaderToolsErrorSource::ShaderPack, batchWriteError, "ShaderPack failed to write body paths to file tracker, exiting");
+            return batchWriteError;
+        }
+
+        for (const auto& stage : filePack->stages)
+		{
+			fs::path body_path = fs::canonical(workingDir / fs::path(stage.first));
+            processors.emplace(stage.second, std::make_unique<ShaderStageProcessor>(stage.second, filePack.get()));
+            processorFutures.emplace(stage.second, 
+				std::async(std::launch::async,
+					&ShaderStageProcessor::Process,
+					processors.at(stage.second).get(),
+					stage.first,
+					body_path.string(),
+					filePack->stageExtensions[stage.second],
+					base_includes));
+        }
+
+        return ShaderToolsErrorCode::Success;
     }
 
     void ShaderPackImpl::createShaders()
@@ -84,7 +101,7 @@ namespace st
     {
         for (const auto& entry : filePack->resourceGroups)
         {
-            resourceGroups.emplace(entry.first, std::make_unique<ResourceGroup>(filePack.get(), entry.first.c_str()));
+            resourceGroups.emplace(entry.first, std::make_unique<ResourceGroup>(filePack.get(), entry.first.c_str(), errorSession));
         }
     }
 
@@ -114,7 +131,7 @@ namespace st
             Session::MergeSessions(errorSession, std::move(processor.second->ErrorSession));
         }
 
-        groups.emplace(name, std::make_unique<Shader>(name.c_str(), shaders.size(), shaders.data(), filePack.get()));
+        groups.emplace(name, std::make_unique<Shader>(name.c_str(), shaders.size(), shaders.data(), filePack.get(), errorSession));
     }
 
     void ShaderPackImpl::setDescriptorTypeCounts() const

@@ -103,8 +103,8 @@ namespace st
         return impl.get();
     }
 
-    ShaderToolsErrorCode ShaderReflector::ParseBinary(const ShaderStage & shader)
+    st::ShaderToolsErrorCode ShaderReflector::ParseBinary(const ShaderStage& shader, std::string shader_name)
     {
-        return impl->parseBinary(shader);
+        return impl->parseBinary(shader, shader_name);
     }
 }

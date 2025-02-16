@@ -29,7 +29,7 @@ namespace st
 
     std::map<fs::path, std::string> ShaderGeneratorImpl::fileContents = std::map<fs::path, std::string>{};
 
-    ShaderGeneratorImpl::ShaderGeneratorImpl(ShaderStage _stage, Session& errorSession) : Stage(std::move(_stage)), errorSession(errorSession)
+    ShaderGeneratorImpl::ShaderGeneratorImpl(ShaderStage _stage, Session& errorSession) noexcept : Stage(std::move(_stage)), errorSession(errorSession)
     {
         fs::path preamble(std::string(BasePath) + "/builtins/preamble450.glsl");
         ShaderToolsErrorCode errorCode = addPreamble(preamble);
@@ -65,7 +65,7 @@ namespace st
         constructionSuccessful = true;
     }
 
-    ShaderGeneratorImpl::~ShaderGeneratorImpl() { }
+    ShaderGeneratorImpl::~ShaderGeneratorImpl() noexcept {}
 
     ShaderGeneratorImpl::ShaderGeneratorImpl(ShaderGeneratorImpl&& other) noexcept :
         Stage(std::move(other.Stage)),
@@ -237,7 +237,7 @@ namespace st
         fragments.emplace(fragment_type::glPerVertex, per_vertex);
     }
 
-    const std::string& ShaderGeneratorImpl::getFullSource() const
+    std::string ShaderGeneratorImpl::getFullSource() const
     {
         static const std::string emptyStringResult{};
 

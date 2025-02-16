@@ -22,8 +22,8 @@ namespace st
         ShaderCompilerImpl& operator=(const ShaderCompilerImpl&) = delete;
     public:
 
-        ShaderCompilerImpl(const ShaderCompilerOptions& options, Session& error_session);
-        ~ShaderCompilerImpl() = default;
+        ShaderCompilerImpl(const ShaderCompilerOptions& options, Session& error_session) noexcept;
+        ~ShaderCompilerImpl() noexcept;
         ShaderCompilerImpl(ShaderCompilerImpl&& other) noexcept = default;
         ShaderCompilerImpl& operator=(ShaderCompilerImpl&& other) noexcept = default;
 

@@ -28,7 +28,7 @@ namespace st
         ShaderReflector(ShaderReflector&& other) noexcept;
         ShaderReflector& operator=(ShaderReflector&& other) noexcept;
 
-        ShaderToolsErrorCode ParseBinary(const ShaderStage& shader);
+        ShaderToolsErrorCode ParseBinary(const ShaderStage& shader, std::string shader_name);
         uint32_t GetNumSets() const noexcept;
         void GetShaderResources(const size_t set_idx, size_t* num_resources, ResourceUsage* resources);
         void GetInputAttributes(const VkShaderStageFlags stage, size_t* num_attrs, VertexAttributeInfo* attributes);

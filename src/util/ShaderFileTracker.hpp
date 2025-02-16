@@ -8,6 +8,7 @@
 #include <expected>
 #include <filesystem>
 #include <vector>
+#include <unordered_map>
 
 namespace st
 {
@@ -20,7 +21,8 @@ namespace st
         bool,
         std::filesystem::path,
         std::filesystem::file_time_type,
-        std::vector<std::string>>;
+        std::vector<std::string>,
+        std::unordered_map<ShaderStage, uint32_t>>;
 
     using ReadRequestResult = std::expected<RequestPayload, ShaderToolsErrorCode>;
 
@@ -38,7 +40,8 @@ namespace st
 			FindFullSourceString,
             FindOptimizationStatus,
             FindShaderName,
-            HasFullSourceString
+            HasFullSourceString,
+            FindResourceGroupSetIndexMap
         };
         Type RequestType{ Type::Invalid };
         ShaderStage ShaderHandle;
@@ -55,7 +58,9 @@ namespace st
 			UpdateModificationTime,
 			AddShaderBodyPath,
             AddFullSourceString,
-            AddUsedResourceBlocks
+            AddUsedResourceBlocks,
+            SetRecompiledSourceString,
+            SetStageOptimizationDisabled
         };
         Type RequestType{ Type::Invalid };
         ShaderStage ShaderHandle;
@@ -86,11 +91,11 @@ namespace st
         ShaderStage ShaderHandle;
     };
 
-    ReadRequestResult MakeFileTrackerReadRequest(const ReadRequest& request);
+    ReadRequestResult MakeFileTrackerReadRequest(ReadRequest request);
     std::vector<ReadRequestResult> MakeFileTrackerBatchReadRequest(const size_t numRequests, const ReadRequest* requests);
-    ShaderToolsErrorCode MakeFileTrackerWriteRequest(const WriteRequest& request);
+    ShaderToolsErrorCode MakeFileTrackerWriteRequest(WriteRequest request);
     ShaderToolsErrorCode MakeFileTrackerBatchWriteRequest(const size_t numRequests, const WriteRequest* requests);
-    ShaderToolsErrorCode MakeFileTrackerEraseRequest(const EraseRequest& request);
+    ShaderToolsErrorCode MakeFileTrackerEraseRequest(EraseRequest request);
     ShaderToolsErrorCode MakeFileTrackerBatchEraseRequest(const size_t numRequests, const EraseRequest* requests);
 
 }

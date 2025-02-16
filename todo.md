@@ -12,3 +12,4 @@
 - Change shader yaml spec to be "ComputeShader" for compute shaders, use "RenderShaders" + (Stage) as next subgroup for rendering shaders. More succinct, more clear.
 - Reduce lambda function usage. Untestable, hidden, cluttered.
 - Preprocess includes for errors and warnings, if possible, so that the line numbers in the errors and warnings match the original source code
+- Review usage of strdup to see if we couldn't use string_view, or some way to keep the strings alive in our storage so we can just use pointers
