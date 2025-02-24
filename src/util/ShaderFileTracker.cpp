@@ -91,13 +91,13 @@ namespace st
 	constexpr ReadRequest::RequestKey::RequestKey(std::string_view key_string) noexcept : KeyString{ key_string }
 	{}
 
-	constexpr ReadRequest::ReadRequest(Type type, ShaderStage handle) noexcept : RequestType{ type }, Key{ handle }
+	ReadRequest::ReadRequest(Type type, ShaderStage handle) noexcept : RequestType{ type }, Key{ handle }
 	{}
 
-	constexpr ReadRequest::ReadRequest(Type type, std::string_view key_string) noexcept : RequestType{ type }, Key{ key_string }
+	ReadRequest::ReadRequest(Type type, std::string_view key_string) noexcept : RequestType{ type }, Key{ key_string }
 	{}
 
-    template<typename KeyType, typename ResultType>
+	template<typename KeyType, typename ResultType>
     ReadRequestResult FindRequestedPayload(const KeyType key, detail::MapAndMutex<KeyType, ResultType>& map_and_mutex)
     {
         static_assert(std::is_default_constructible_v<ResultType>);

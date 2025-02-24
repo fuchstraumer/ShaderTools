@@ -46,14 +46,14 @@ namespace st
         Type RequestType{ Type::Invalid };
         union RequestKey
         {
-            constexpr RequestKey(ShaderStage handle) noexcept;
-            constexpr RequestKey(std::string_view key_string) noexcept;
+            constexpr explicit RequestKey(ShaderStage handle) noexcept;
+            constexpr explicit RequestKey(std::string_view key_string) noexcept;
 			ShaderStage ShaderHandle;
             std::string_view KeyString;
         } Key;
 
-        constexpr ReadRequest(Type type, ShaderStage handle) noexcept;
-        constexpr ReadRequest(Type type, std::string_view key_string) noexcept;
+        ReadRequest(Type type, ShaderStage handle) noexcept;
+        ReadRequest(Type type, std::string_view key_string) noexcept;
     };
 
     struct WriteRequest
