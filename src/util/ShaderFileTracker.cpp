@@ -85,10 +85,16 @@ namespace st
 
     } // namespace detail
 
-	constexpr ReadRequest::RequestKey::RequestKey(ShaderStage handle) noexcept : ShaderHandle{ handle }
+	RequestKey::RequestKey(ShaderStage handle) noexcept : ShaderHandle{ handle }
 	{}
 
-	constexpr ReadRequest::RequestKey::RequestKey(std::string_view key_string) noexcept : KeyString{ key_string }
+	RequestKey::RequestKey(std::string_view key_string) noexcept : KeyString{ key_string }
+	{}
+
+    WriteRequest::WriteRequest(Type type, ShaderStage handle, RequestPayload payload) noexcept : RequestType{ type }, Key{ handle }, Payload{ payload }
+	{}
+
+    WriteRequest::WriteRequest(Type type, std::string_view key_string, RequestPayload payload) noexcept : RequestType{ type }, Key{ key_string }, Payload{ payload }
 	{}
 
 	ReadRequest::ReadRequest(Type type, ShaderStage handle) noexcept : RequestType{ type }, Key{ handle }
@@ -146,6 +152,23 @@ namespace st
 		auto& map = curr.map;
         return map.count(handle) != 0;
     }
+	
+    template<typename KeyType, typename PayloadType>
+	ShaderToolsErrorCode DoWriteRequest(KeyType key, PayloadType payload, detail::MapAndMutex<KeyType, PayloadType>& map_and_mutex)
+	{
+		using namespace detail;
+		RwLockGuard lock_guard(RwLockGuard::Mode::Write, map_and_mutex.mutex);
+		auto& map = map_and_mutex.map;
+		auto result = map.try_emplace(key, payload);
+		if (!result.second)
+		{
+			return ShaderToolsErrorCode::FileTrackerWriteCouldNotAddPayloadToStorage;
+		}
+		else
+		{
+			return ShaderToolsErrorCode::Success;
+		}
+	}
 
 	ReadRequestResult MakeFileTrackerReadRequest(ReadRequest request)
 	{
@@ -178,32 +201,61 @@ namespace st
         }
 	}
 
-	std::vector<ReadRequestResult> MakeFileTrackerBatchReadRequest(const size_t numRequests, const ReadRequest* requests)
+	std::vector<ReadRequestResult> MakeFileTrackerBatchReadRequest(std::vector<ReadRequest> readRequests)
 	{
-        std::vector<ReadRequestResult> results(numRequests, std::unexpected{ ShaderToolsErrorCode::InvalidErrorCode });
+        std::vector<ReadRequestResult> results(readRequests.size(), std::unexpected{ ShaderToolsErrorCode::InvalidErrorCode });
 
         // We'll get fancier later, for now I want to get to testing
-        for (size_t i = 0; i < numRequests; ++i)
+        for (size_t i = 0; i < readRequests.size(); ++i)
         {
-            results[i] = MakeFileTrackerReadRequest(requests[i]);
+            results[i] = MakeFileTrackerReadRequest(std::move(readRequests[i]));
         }
 
         return results;
 	}
 
-	ShaderToolsErrorCode MakeFileTrackerWriteRequest(const WriteRequest& request)
-	{
-        return ShaderToolsErrorCode::Success;
-	}
-
 	ShaderToolsErrorCode MakeFileTrackerWriteRequest(WriteRequest request)
 	{
-		return ShaderToolsErrorCode::Success;
+        switch (request.RequestType)
+        {
+        case WriteRequest::Type::Invalid:
+            return ShaderToolsErrorCode::FileTrackerInvalidRequest;
+        case WriteRequest::Type::AddShaderBody:
+            return DoWriteRequest(request.Key.ShaderHandle, std::move(std::get<std::string>(request.Payload)), detail::ShaderBodies);
+        case WriteRequest::Type::AddShaderAssembly:
+			return DoWriteRequest(request.Key.ShaderHandle, std::move(std::get<std::string>(request.Payload)), detail::AssemblyStrings);
+        case WriteRequest::Type::AddShaderBinary:
+			return DoWriteRequest(request.Key.ShaderHandle, std::move(std::get<std::vector<uint32_t>>(request.Payload)), detail::Binaries);
+        case WriteRequest::Type::UpdateModificationTime:
+            return DoWriteRequest(request.Key.ShaderHandle, std::move(std::get<std::filesystem::file_time_type>(request.Payload)), detail::StageLastModificationTimes);
+        case WriteRequest::Type::AddShaderBodyPath:
+            return DoWriteRequest(request.Key.ShaderHandle, std::move(std::get<std::filesystem::path>(request.Payload)), detail::BodyPaths);
+        case WriteRequest::Type::AddFullSourceString:
+            return DoWriteRequest(request.Key.ShaderHandle, std::move(std::get<std::string>(request.Payload)), detail::FullSourceStrings);
+		case WriteRequest::Type::AddUsedResourceBlocks:
+			return ShaderToolsErrorCode::FileTrackerInvalidRequest;
+            //return DoWriteRequest(request.Key.ShaderHandle, std::move(std::get<detail::decltype(ShaderUsedResourceBlocks)::map::value_type>(request.Payload)), detail::ShaderUsedResourceBlocks);
+        case WriteRequest::Type::SetRecompiledSourceString:
+            return ShaderToolsErrorCode::FileTrackerInvalidRequest;
+        case WriteRequest::Type::SetStageOptimizationDisabled:
+            return DoWriteRequest(request.Key.ShaderHandle, std::get<bool>(request.Payload), detail::StageOptimizationDisabled);
+        default:
+            return ShaderToolsErrorCode::FileTrackerInvalidRequest;
+        };
+
 	}
 
-	ShaderToolsErrorCode MakeFileTrackerBatchWriteRequest(const size_t numRequests, const WriteRequest* requests)
+	ShaderToolsErrorCode MakeFileTrackerBatchWriteRequest(std::vector<WriteRequest> writeRequests)
 	{
-		return ShaderToolsErrorCode::Success;
+
+        ShaderToolsErrorCode result = ShaderToolsErrorCode::Success;
+
+        for (size_t i = 0; i < writeRequests.size(); ++i)
+        {
+            result = MakeFileTrackerWriteRequest(std::move(writeRequests[i]));
+        }
+
+		return result;
 	}
 
 	ShaderToolsErrorCode MakeFileTrackerEraseRequest(EraseRequest request)
@@ -211,7 +263,7 @@ namespace st
         return ShaderToolsErrorCode::Success;
 	}
 
-	ShaderToolsErrorCode MakeFileTrackerBatchEraseRequest(const size_t numRequests, const EraseRequest* requests)
+	ShaderToolsErrorCode MakeFileTrackerBatchEraseRequest(std::vector<WriteRequest> writeRequests)
 	{
         return ShaderToolsErrorCode::Success;
 	}

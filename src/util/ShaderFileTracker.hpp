@@ -26,6 +26,18 @@ namespace st
 
     using ReadRequestResult = std::expected<RequestPayload, ShaderToolsErrorCode>;
 
+    union RequestKey
+    {
+		explicit RequestKey(ShaderStage handle) noexcept;
+		explicit RequestKey(std::string_view key_string) noexcept;
+        RequestKey(const RequestKey&) noexcept = default;
+        RequestKey(RequestKey&&) noexcept = default;
+        RequestKey& operator=(const RequestKey&) noexcept = default;
+        RequestKey& operator=(RequestKey&&) noexcept = default;
+		ShaderStage ShaderHandle;
+		std::string_view KeyString;
+    };
+
     struct ReadRequest
     {
         // uint64_t so I can eventually use this with 128bit CMPEXCHG MWSR magic
@@ -44,16 +56,15 @@ namespace st
             FindResourceGroupSetIndexMap
         };
         Type RequestType{ Type::Invalid };
-        union RequestKey
-        {
-            explicit RequestKey(ShaderStage handle) noexcept;
-            explicit RequestKey(std::string_view key_string) noexcept;
-			ShaderStage ShaderHandle;
-            std::string_view KeyString;
-        } Key;
+        RequestKey Key;
 
         ReadRequest(Type type, ShaderStage handle) noexcept;
         ReadRequest(Type type, std::string_view key_string) noexcept;
+
+        ReadRequest(const ReadRequest&) noexcept = default;
+        ReadRequest(ReadRequest&&) noexcept = default;
+        ReadRequest& operator=(const ReadRequest&) noexcept = default;
+        ReadRequest& operator=(ReadRequest&&) noexcept = default;
     };
 
     struct WriteRequest
@@ -72,8 +83,17 @@ namespace st
             SetStageOptimizationDisabled
         };
         Type RequestType{ Type::Invalid };
-        ShaderStage ShaderHandle;
+        RequestKey Key;
         RequestPayload Payload;
+
+        WriteRequest(Type type, ShaderStage handle, RequestPayload payload) noexcept;
+        WriteRequest(Type type, std::string_view key_string, RequestPayload payload) noexcept;
+
+        WriteRequest(const WriteRequest&) noexcept = default;
+        WriteRequest& operator=(const WriteRequest&) noexcept = default;
+
+        WriteRequest(WriteRequest&& other) noexcept = default;
+        WriteRequest& operator=(WriteRequest&& other) noexcept = default;
     };
 
     struct EraseRequest
@@ -101,11 +121,11 @@ namespace st
     };
 
     ReadRequestResult MakeFileTrackerReadRequest(ReadRequest request);
-    std::vector<ReadRequestResult> MakeFileTrackerBatchReadRequest(const size_t numRequests, const ReadRequest* requests);
+    std::vector<ReadRequestResult> MakeFileTrackerBatchReadRequest(std::vector<ReadRequest> readRequests);
     ShaderToolsErrorCode MakeFileTrackerWriteRequest(WriteRequest request);
-    ShaderToolsErrorCode MakeFileTrackerBatchWriteRequest(const size_t numRequests, const WriteRequest* requests);
+    ShaderToolsErrorCode MakeFileTrackerBatchWriteRequest(std::vector<WriteRequest> writeRequests);
     ShaderToolsErrorCode MakeFileTrackerEraseRequest(EraseRequest request);
-    ShaderToolsErrorCode MakeFileTrackerBatchEraseRequest(const size_t numRequests, const EraseRequest* requests);
+    ShaderToolsErrorCode MakeFileTrackerBatchEraseRequest(std::vector<EraseRequest> eraseRequests);
 
 }
 

@@ -87,6 +87,7 @@ namespace st
         FileTrackerBatchWriteRequestFailed,
         FileTrackerEraseRequestFailed,
         FileTrackerBatchEraseRequestFailed,
+        FileTrackerWriteCouldNotAddPayloadToStorage,
 
         ShaderStageProcessorErrorsStart = 800,
         ShaderStageProcessorGivenBodyPathStringDidNotExist,
@@ -113,6 +114,9 @@ namespace st
         size_t column;
     };
 
+
+    ST_API const char* ErrorCodeToText(ShaderToolsErrorCode code) noexcept;
+    ST_API const char* ErrorSourceToTest(ShaderToolsErrorSource source) noexcept;
 }
 
 namespace std

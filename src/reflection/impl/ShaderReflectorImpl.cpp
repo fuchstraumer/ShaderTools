@@ -424,7 +424,7 @@ namespace st
         }
 
         WriteRequest recompiledSourceRequest{ WriteRequest::Type::SetRecompiledSourceString, shader_handle, std::move(recompiled_source) };
-        ShaderToolsErrorCode writeError = MakeFileTrackerWriteRequest(recompiledSourceRequest);
+        ShaderToolsErrorCode writeError = MakeFileTrackerWriteRequest(std::move(recompiledSourceRequest));
         if (writeError != ShaderToolsErrorCode::Success)
         {
             std::string errorMessage = "Unable to store recompiled source string for shader \"" + shader_name + "\"";

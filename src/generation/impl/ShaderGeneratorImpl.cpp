@@ -257,7 +257,7 @@ namespace st
 
             std::string sourceString{ sourceStringStream.str() };
             WriteRequest writeRequest{ WriteRequest::Type::AddFullSourceString, Stage,  sourceString};
-            ShaderToolsErrorCode writeResult = MakeFileTrackerWriteRequest(writeRequest);
+            ShaderToolsErrorCode writeResult = MakeFileTrackerWriteRequest(std::move(writeRequest));
             if (writeResult != ShaderToolsErrorCode::Success)
             {
                 errorSession.AddError(this, ShaderToolsErrorSource::Filesystem, ShaderToolsErrorCode::FileTrackerWriteRequestFailed, "Failed to emplace generated full source string");
@@ -798,7 +798,7 @@ namespace st
             errorSession.AddError(this, ShaderToolsErrorSource::Generator, ShaderToolsErrorCode::GeneratorNoBodyStringInFileTrackerStorage, nullptr);
 
             WriteRequest writeRequest{ WriteRequest::Type::AddShaderBodyPath, handle, fs::path(path_to_source) };
-            ShaderToolsErrorCode errorCode = MakeFileTrackerWriteRequest(writeRequest);
+            ShaderToolsErrorCode errorCode = MakeFileTrackerWriteRequest(std::move(writeRequest));
 
             if (errorCode != ShaderToolsErrorCode::Success)
             {
@@ -948,7 +948,7 @@ namespace st
         }
 
         WriteRequest writeRequest{ WriteRequest::Type::AddUsedResourceBlocks, handle, std::move(foundResourceBlocks) };
-        ShaderToolsErrorCode errorCode = MakeFileTrackerWriteRequest(writeRequest);
+        ShaderToolsErrorCode errorCode = MakeFileTrackerWriteRequest(std::move(writeRequest));
 
         return errorCode;
     }

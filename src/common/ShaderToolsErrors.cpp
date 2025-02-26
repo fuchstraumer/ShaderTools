@@ -42,4 +42,14 @@ namespace st
 
     } // namespace detail
     
+    const char* ErrorCodeToText(ShaderToolsErrorCode code) noexcept
+    {
+        return "null_string";
+    }
+
+	const char* ErrorSourceToTest(ShaderToolsErrorSource source) noexcept
+	{
+        return "null_string";
+	}
+
 }

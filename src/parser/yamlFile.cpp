@@ -331,7 +331,7 @@ namespace st
                 return WriteRequest{ WriteRequest::Type::SetStageOptimizationDisabled, stage, true };
             });
 
-            ShaderToolsErrorCode status = MakeFileTrackerBatchWriteRequest(write_requests.size(), write_requests.data());
+            ShaderToolsErrorCode status = MakeFileTrackerBatchWriteRequest(std::move(write_requests));
             if (status != ShaderToolsErrorCode::Success)
             {
                 return status;

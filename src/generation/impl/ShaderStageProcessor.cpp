@@ -37,7 +37,7 @@ namespace st
         static const std::string emptyStringResult{};
 
         WriteRequest addBodyPathRequest{ WriteRequest::Type::AddShaderBodyPath, stage, body_path_str };
-        ShaderToolsErrorCode writeResult = MakeFileTrackerWriteRequest(addBodyPathRequest);
+        ShaderToolsErrorCode writeResult = MakeFileTrackerWriteRequest(std::move(addBodyPathRequest));
         if (writeResult != ShaderToolsErrorCode::Success)
         {
             ErrorSession.AddError(this, ShaderToolsErrorSource::ShaderStageProcessor, writeResult, "ShaderStageProcessor couldn't add path to body string, generation failed");
@@ -90,26 +90,26 @@ namespace st
 
             if (curr_write_time > stored_write_time)
             {
-                WriteRequest writeRequests[2]
+                std::vector<WriteRequest> writeRequests
                 {
                     WriteRequest{ WriteRequest::Type::AddShaderBodyPath, stage, actual_path },
                     WriteRequest{ WriteRequest::Type::UpdateModificationTime, stage, curr_write_time }
                 };
 
-                ShaderToolsErrorCode writeError = MakeFileTrackerBatchWriteRequest(std::size(writeRequests), writeRequests);
+                ShaderToolsErrorCode writeError = MakeFileTrackerBatchWriteRequest(std::move(writeRequests));
                 if (writeError != ShaderToolsErrorCode::Success)
                 {
                     ErrorSession.AddError(this, ShaderToolsErrorSource::ShaderStageProcessor, writeError, "Failed to update shader body path and last modification time, following source changes since last generation");
                 }
 
-                EraseRequest eraseRequests[3]
+                std::vector<EraseRequest> eraseRequests
                 {
                     EraseRequest{ EraseRequest::Type::Required, EraseRequest::Target::ShaderBody, stage },
                     EraseRequest{ EraseRequest::Type::Required, EraseRequest::Target::FullSourceString, stage },
                     EraseRequest{ EraseRequest::Type::Optional, EraseRequest::Target::BinarySource, stage }
                 };
 
-                ShaderToolsErrorCode eraseError = MakeFileTrackerBatchEraseRequest(std::size(eraseRequests), eraseRequests);
+                ShaderToolsErrorCode eraseError = MakeFileTrackerBatchEraseRequest(std::move(eraseRequests));
                 if (eraseError != ShaderToolsErrorCode::Success)
                 {
                     ErrorSession.AddError(this, ShaderToolsErrorSource::ShaderStageProcessor, eraseError, "Failed to erase existing generated source, unable to propagate source changes since last generation");

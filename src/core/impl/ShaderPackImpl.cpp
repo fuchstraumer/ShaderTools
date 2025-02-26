@@ -63,7 +63,7 @@ namespace st
             }
         }
 
-        ShaderToolsErrorCode batchWriteError = MakeFileTrackerBatchWriteRequest(write_requests.size(), write_requests.data());
+        ShaderToolsErrorCode batchWriteError = MakeFileTrackerBatchWriteRequest(std::move(write_requests));
         if (batchWriteError != ShaderToolsErrorCode::Success)
         {
             errorSession.AddError(this, ShaderToolsErrorSource::ShaderPack, batchWriteError, "ShaderPack failed to write body paths to file tracker, exiting");

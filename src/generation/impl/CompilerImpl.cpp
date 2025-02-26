@@ -221,7 +221,7 @@ namespace st
             {
                 std::string assemblyResult{ assembly_result.begin(), assembly_result.end() };
                 WriteRequest writeRequest{ WriteRequest::Type::AddShaderAssembly, handle, assemblyResult };
-                ShaderToolsErrorCode addAssemblyError = MakeFileTrackerWriteRequest(writeRequest);
+                ShaderToolsErrorCode addAssemblyError = MakeFileTrackerWriteRequest(std::move(writeRequest));
 
                 if (addAssemblyError != ShaderToolsErrorCode::Success)
                 {
@@ -246,7 +246,7 @@ namespace st
         else
         {
             WriteRequest write_request{ WriteRequest::Type::AddShaderBinary, handle, std::vector<uint32_t>{ compiliation_result.begin(), compiliation_result.end() } };
-            ShaderToolsErrorCode write_result = MakeFileTrackerWriteRequest(write_request);
+            ShaderToolsErrorCode write_result = MakeFileTrackerWriteRequest(std::move(write_request));
             if (write_result != ShaderToolsErrorCode::Success)
             {
                 errorSession.AddError(this, ShaderToolsErrorSource::Compiler, write_result, name.c_str());
