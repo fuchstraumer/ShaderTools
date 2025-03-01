@@ -2,11 +2,12 @@
 #include "impl/ShaderReflectorImpl.hpp"
 #include "resources/ResourceUsage.hpp"
 #include "reflection/ReflectionStructs.hpp"
+#include "common/stSession.hpp"
 
 namespace st
 {
 
-    ShaderReflector::ShaderReflector(yamlFile* yaml_file, Session& error_session) : impl(std::make_unique<ShaderReflectorImpl>(yaml_file, error_session)) {}
+    ShaderReflector::ShaderReflector(yamlFile* yaml_file, Session& error_session) : impl(std::make_unique<ShaderReflectorImpl>(yaml_file, error_session.GetImpl())) {}
 
     ShaderReflector::~ShaderReflector() {}
 
@@ -103,8 +104,8 @@ namespace st
         return impl.get();
     }
 
-    st::ShaderToolsErrorCode ShaderReflector::ParseBinary(const ShaderStage& shader, std::string shader_name)
+    st::ShaderToolsErrorCode ShaderReflector::ParseBinary(const ShaderStage& shader)
     {
-        return impl->parseBinary(shader, shader_name);
+        return impl->parseBinary(shader);
     }
 }

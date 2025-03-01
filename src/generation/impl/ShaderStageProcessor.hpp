@@ -21,6 +21,9 @@ namespace st
         ShaderStageProcessor(ShaderStage stage, yamlFile* yfile);
         ~ShaderStageProcessor();
 
+        ShaderStageProcessor(const ShaderStageProcessor&) = delete;
+        ShaderStageProcessor& operator=(const ShaderStageProcessor&) = delete;
+
         void Process(
             std::string shader_name,
             std::string body_path,

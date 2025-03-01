@@ -1,4 +1,5 @@
 #include "ShaderReflectorImpl.hpp"
+#include "../../common/impl/SessionImpl.hpp"
 #include "../../util/ShaderFileTracker.hpp"
 #include "../../parser/yamlFile.hpp"
 #include "resources/ShaderResource.hpp"
@@ -18,7 +19,7 @@ namespace st
             (type == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER) || (type == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC);
     }
 
-    ShaderReflectorImpl::ShaderReflectorImpl(yamlFile* yaml_file, Session& error_session) noexcept : rsrcFile(yaml_file), errorSession(error_session) {}
+    ShaderReflectorImpl::ShaderReflectorImpl(yamlFile* yaml_file, SessionImpl* error_session) noexcept : rsrcFile(yaml_file), errorSession(error_session) {}
 
     ShaderReflectorImpl::ShaderReflectorImpl(ShaderReflectorImpl&& other) noexcept :
         descriptorSets(std::move(other.descriptorSets)),
@@ -78,30 +79,30 @@ namespace st
         return parseVertAttrs(cmplr, rsrcs.stage_outputs);
     }
 
-    ShaderToolsErrorCode ShaderReflectorImpl::parseResourceType(const std::string& shader_name, const ShaderStage& shader_handle, const VkDescriptorType& type_being_parsed)
+    ShaderToolsErrorCode ShaderReflectorImpl::parseResourceType(const ShaderStage& shader_handle, const VkDescriptorType& type_being_parsed)
     {
 
         const auto resources_all = recompiler->get_shader_resources();
         spirv_cross::SmallVector<spirv_cross::Resource> resources;
         switch (type_being_parsed)
-        {
+		{
+		case VK_DESCRIPTOR_TYPE_SAMPLER:
+			resources = resources_all.separate_samplers;
+			break;
+		case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+			resources = resources_all.sampled_images;
+			break;
+		case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
+			resources = resources_all.separate_images;
+			break;
+		case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+			resources = resources_all.storage_images;
+			break;
+		case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+			resources = resources_all.storage_buffers;
+			break;
         case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
             resources = resources_all.uniform_buffers;
-            break;
-        case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
-            resources = resources_all.storage_buffers;
-            break;
-        case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
-            resources = resources_all.storage_images;
-            break;
-        case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
-            resources = resources_all.sampled_images;
-            break;
-        case VK_DESCRIPTOR_TYPE_SAMPLER:
-            resources = resources_all.separate_samplers;
-            break;
-        case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
-            resources = resources_all.separate_images;
             break;
         case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
             resources = resources_all.subpass_inputs;
@@ -113,7 +114,7 @@ namespace st
             break;
         default:
             const std::string errorMessage = "Passed invalid resource type during binding generation: " + std::to_string(type_being_parsed);
-            errorSession.AddError(
+            errorSession->AddError(
                 this,
                 ShaderToolsErrorSource::Reflection,
                 ShaderToolsErrorCode::ReflectionInvalidDescriptorType,
@@ -132,11 +133,11 @@ namespace st
                 usedResourceGroupNames.emplace(parent_group_name);
             }
 
-            glsl_qualifier curr_qualifier = parent_resource->GetReadWriteQualifierForShader(shader_name.c_str());
+            glsl_qualifier curr_qualifier = parent_resource->GetReadWriteQualifierForShader(shader_handle);
             if (parent_resource == nullptr)
             {
                 const std::string errorMessage = "Couldn't find parent resource for resource usage object: " + rsrc_name + " in group " + parent_group_name;
-                errorSession.AddError(
+                errorSession->AddError(
                     this,
                     ShaderToolsErrorSource::Reflection,
                     ShaderToolsErrorCode::ReflectionInvalidResource,
@@ -152,7 +153,7 @@ namespace st
                     ") and binding of the actual resource (" + std::to_string(parent_resource->BindingIndex()) +
                     ") did not match!";
                     
-                errorSession.AddError(
+                errorSession->AddError(
                     this,
                     ShaderToolsErrorSource::Reflection,
                     ShaderToolsErrorCode::ReflectionInvalidBindingIndex,
@@ -254,22 +255,22 @@ namespace st
         return std::move(result);
     }
 
-    ShaderToolsErrorCode ShaderReflectorImpl::parseBinary(const ShaderStage& shader_handle, std::string shader_name)
+    ShaderToolsErrorCode ShaderReflectorImpl::parseBinary(const ShaderStage& shader_handle)
     {
-        ReadRequest findBinaryRequest{ ReadRequest::Type::FindShaderBinary, shader_handle };
-        ReadRequestResult findBinaryResult = MakeFileTrackerReadRequest(findBinaryRequest);
-        if (!findBinaryResult.has_value())
+        ReadRequest find_binary_request{ ReadRequest::Type::FindShaderBinary, shader_handle };
+        ReadRequestResult find_binary_result = MakeFileTrackerReadRequest(find_binary_request);
+        if (!find_binary_result.has_value())
         {
 			const std::string errorMessage = "Attempted to parse and generate bindings for binary that cannot be found";
-			errorSession.AddError(
+			errorSession->AddError(
 				this,
 				ShaderToolsErrorSource::Reflection,
-				findBinaryResult.error(),
+				find_binary_result.error(),
 				errorMessage.c_str());
 			return ShaderToolsErrorCode::ReflectionShaderBinaryNotFound;
         }
-        std::vector<uint32_t> binary_vec = std::get<std::vector<uint32_t>>(*findBinaryResult);
-        return parseImpl(shader_handle, shader_name, std::move(binary_vec));
+        std::vector<uint32_t> binary_vec = std::get<std::vector<uint32_t>>(*find_binary_result);
+        return parseImpl(shader_handle, std::move(binary_vec));
     }
 
     void ShaderReflectorImpl::collateSets()
@@ -323,11 +324,10 @@ namespace st
 
                 const SPIRConstant & spc_value = recompiler->get_constant(spc.id);
                 const SPIRType& spc_type = recompiler->get_type(spc_value.constant_type);
-
                 if (spc_type.columns > 1 || spc_type.vecsize > 1)
                 {
                     const std::string errorMessage = "Attempted to use a vector or matrix specialization constant, which is not possible";
-                    errorSession.AddError(
+                    errorSession->AddError(
                         this,
                         ShaderToolsErrorSource::Reflection,
                         ShaderToolsErrorCode::ReflectionInvalidSpecializationConstantType,
@@ -369,7 +369,7 @@ namespace st
                     const std::string errorMessage =
                     "Encountered unsupported specialization constant type (" + std::to_string(spc_type.basetype) +
                     ") during parsing of specialization constants. Update enum.";
-                    errorSession.AddError(
+                    errorSession->AddError(
                         this,
                         ShaderToolsErrorSource::Reflection,
                         ShaderToolsErrorCode::ReflectionInvalidSpecializationConstantType,
@@ -384,7 +384,7 @@ namespace st
         return ShaderToolsErrorCode::Success;
     }
 
-    ShaderToolsErrorCode ShaderReflectorImpl::parseImpl(const ShaderStage& shader_handle, const std::string& shader_name, std::vector<uint32_t> binary_data)
+    ShaderToolsErrorCode ShaderReflectorImpl::parseImpl(const ShaderStage& shader_handle, std::vector<uint32_t> binary_data)
     {
         using namespace spirv_cross;
 
@@ -404,7 +404,7 @@ namespace st
         {
             std::string errorMessage = "Failed to recompile SPIR-V binary back to GLSL text. Compiler error: ";
             errorMessage += e.what();
-            errorSession.AddError(
+            errorSession->AddError(
                 this,
                 ShaderToolsErrorSource::Reflection,
                 ShaderToolsErrorCode::ReflectionRecompilerError,
@@ -412,23 +412,38 @@ namespace st
 
             recompiled_source = recompiler->get_partial_source();
 
-            const std::string output_name = shader_name + std::string{ "_failed_recompile.glsl" };
-            std::ofstream output_stream(output_name);
-            output_stream << recompiled_source;
-            output_stream.flush();
-            output_stream.close();
-            // free this object because we're totally toasted now
-            recompiler.reset();
+			ReadRequest find_name_request{ ReadRequest::Type::FindShaderName, shader_handle };
+			ReadRequestResult find_name_result = MakeFileTrackerReadRequest(find_name_request);
+			if (!find_name_result.has_value())
+			{
+				errorSession->AddError(
+					this,
+					ShaderToolsErrorSource::Reflection,
+					find_name_result.error(),
+					"Failed to find shader name in storage, can't dump recompiled source file");
+                throw e;
+			}
+            else
+            {
+				std::string shader_name = std::get<std::string>(*find_name_result);
+                const std::string output_name = shader_name + std::string{ "_failed_recompile.glsl" };
+                std::ofstream output_stream(output_name);
+                output_stream << recompiled_source;
+                output_stream.flush();
+                output_stream.close();
+                // free this object because we're totally toasted now
+                recompiler.reset();
+            }
 
-            return ShaderToolsErrorCode::ReflectionRecompilerError;
+            throw e;
         }
 
         WriteRequest recompiledSourceRequest{ WriteRequest::Type::SetRecompiledSourceString, shader_handle, std::move(recompiled_source) };
         ShaderToolsErrorCode writeError = MakeFileTrackerWriteRequest(std::move(recompiledSourceRequest));
         if (writeError != ShaderToolsErrorCode::Success)
         {
-            std::string errorMessage = "Unable to store recompiled source string for shader \"" + shader_name + "\"";
-            errorSession.AddError(this, ShaderToolsErrorSource::Reflection, writeError, errorMessage.c_str());
+            std::string errorMessage = "Unable to store recompiled source string for shader.";
+            errorSession->AddError(this, ShaderToolsErrorSource::Reflection, writeError, errorMessage.c_str());
             return writeError;
         }
 
@@ -439,21 +454,16 @@ namespace st
             VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
             VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
             VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-            VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER,
-            VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER,
             VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
             VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-            VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
-            VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC,
             VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT,
-            VK_DESCRIPTOR_TYPE_INLINE_UNIFORM_BLOCK,
             VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR,
             VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_NV
         };
 
         for (size_t i = 0; i < std::size(supportedDescriptorTypes); ++i)
         {
-            ShaderToolsErrorCode resourceParseError = parseResourceType(shader_name, shader_handle, supportedDescriptorTypes[i]);
+            ShaderToolsErrorCode resourceParseError = parseResourceType(shader_handle, supportedDescriptorTypes[i]);
             if (resourceParseError != ShaderToolsErrorCode::Success)
             {
                 return resourceParseError;

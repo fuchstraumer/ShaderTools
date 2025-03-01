@@ -6,7 +6,7 @@
 namespace st
 {
 
-    ShaderPack::ShaderPack(const char* fpath, Session& session) : impl(std::make_unique<ShaderPackImpl>(fpath, session)) {}
+    ShaderPack::ShaderPack(const char* fpath, Session& session) : impl(std::make_unique<ShaderPackImpl>(fpath, session.GetImpl())) {}
 
     ShaderPack::~ShaderPack() {}
 

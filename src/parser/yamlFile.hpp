@@ -3,7 +3,6 @@
 #define ST_PARSER_YAML_FILE_HPP
 #include "resources/ShaderResource.hpp"
 #include "common/ShaderStage.hpp"
-#include "common/stSession.hpp"
 #include "common/UtilityStructs.hpp"
 #include <memory>
 #include <unordered_map>
@@ -20,11 +19,12 @@ namespace st
 {
 
     struct yamlFileImpl;
+    struct SessionImpl;
 
     struct yamlFile
     {
 
-        yamlFile(const char* fname, Session& session);
+        yamlFile(const char* fname, SessionImpl* session);
         ~yamlFile();
 
         yamlFile(const yamlFile&) = delete;
@@ -45,9 +45,9 @@ namespace st
 	private:
 		ShaderStage addShaderStage(const std::string& group_name, std::string shader_name, VkShaderStageFlags stage_flags);
         std::vector<ShaderStage> addShaderStages(const std::string& group_name, const YAML::Node& shaders);
-        ShaderToolsErrorCode parseResources(Session& session);
-        ShaderToolsErrorCode parseGroups(Session& session);
-        ShaderToolsErrorCode parseCompilerOptions(Session& session);
+        ShaderToolsErrorCode parseResources(SessionImpl* session);
+        ShaderToolsErrorCode parseGroups(SessionImpl* session);
+        ShaderToolsErrorCode parseCompilerOptions(SessionImpl* session);
         void sortResourcesAndSetBindingIndices();
         std::unique_ptr<yamlFileImpl> impl;
     };

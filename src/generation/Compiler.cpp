@@ -1,16 +1,17 @@
 #include "generation/Compiler.hpp"
 #include "impl/CompilerImpl.hpp"
+#include "common/stSession.hpp"
+#include "../common/impl/SessionImpl.hpp"
+
 #include "../util/FilesystemUtils.hpp"
 #include "../util/ShaderFileTracker.hpp"
-#include <fstream>
-#include <iostream>
 
 namespace st
 {
 
 	static const ShaderCompilerOptions defaultOptions = ShaderCompilerOptions();
 
-	ShaderCompiler::ShaderCompiler(Session& error_session) : impl(std::make_unique<ShaderCompilerImpl>(defaultOptions, error_session)) {}
+	ShaderCompiler::ShaderCompiler(Session& error_session) : impl(std::make_unique<ShaderCompilerImpl>(defaultOptions, error_session.GetImpl())) {}
 
 	ShaderCompiler::~ShaderCompiler() {}
 
@@ -47,7 +48,7 @@ namespace st
 		}
 		else
 		{
-			impl->errorSession.AddError(this, ShaderToolsErrorSource::Compiler, readResult.error(), "Compiler API request to retrieve binary failed.");
+			impl->errorSession->AddError(this, ShaderToolsErrorSource::Compiler, readResult.error(), "Compiler API request to retrieve binary failed.");
 			*binary_sz = 0;
 		}
 	}
@@ -68,7 +69,7 @@ namespace st
 		const std::string copiedSourceString(src_str, src_str + src_len);
 		ShaderCompilerOptions options;
 		Session errorSession;
-		ShaderCompilerImpl compiler(options, errorSession);
+		ShaderCompilerImpl compiler(options, errorSession.GetImpl());
 		ShaderToolsErrorCode error = compiler.prepareToCompile(resultHandle, shader_name, copiedSourceString);
 		return error;
 	}

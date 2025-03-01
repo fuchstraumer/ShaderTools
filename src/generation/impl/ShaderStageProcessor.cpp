@@ -1,4 +1,5 @@
 #include "ShaderStageProcessor.hpp"
+#include "../../common/impl/SessionImpl.hpp"
 #include "../../generation/impl/ShaderGeneratorImpl.hpp"
 #include "../../generation/impl/CompilerImpl.hpp"
 #include "../../util/ShaderFileTracker.hpp"
@@ -10,8 +11,13 @@ namespace st
 
     namespace fs = std::filesystem;
 
-    ShaderStageProcessor::ShaderStageProcessor(ShaderStage _stage, yamlFile* rfile) : stage(std::move(_stage)), rsrcFile(rfile), ErrorSession{},
-        generator(std::make_unique<ShaderGeneratorImpl>(_stage, ErrorSession)), compiler(std::make_unique<ShaderCompilerImpl>(rfile->compilerOptions, ErrorSession))
+    ShaderStageProcessor::ShaderStageProcessor(ShaderStage _stage, yamlFile* rfile) :
+        ErrorSession{},
+        stage(std::move(_stage)),
+        rsrcFile(rfile),
+        bodyPath{},
+        generator(std::make_unique<ShaderGeneratorImpl>(_stage, ErrorSession.GetImpl())),
+        compiler(std::make_unique<ShaderCompilerImpl>(rfile->compilerOptions, ErrorSession.GetImpl()))
     {
         generator->resourceFile = rsrcFile;
     }
@@ -36,11 +42,11 @@ namespace st
     {
         static const std::string emptyStringResult{};
 
-        WriteRequest addBodyPathRequest{ WriteRequest::Type::AddShaderBodyPath, stage, body_path_str };
+        WriteRequest addBodyPathRequest{ WriteRequest::Type::AddShaderBodyPath, stage, std::filesystem::path(body_path_str) };
         ShaderToolsErrorCode writeResult = MakeFileTrackerWriteRequest(std::move(addBodyPathRequest));
-        if (writeResult != ShaderToolsErrorCode::Success)
+        if (!WasWriteRequestSuccessful(writeResult))
         {
-            ErrorSession.AddError(this, ShaderToolsErrorSource::ShaderStageProcessor, writeResult, "ShaderStageProcessor couldn't add path to body string, generation failed");
+            ErrorSession.GetImpl()->AddError(this, ShaderToolsErrorSource::ShaderStageProcessor, writeResult, "ShaderStageProcessor couldn't add path to body string, generation failed");
             return emptyStringResult;
         }
 
@@ -58,7 +64,7 @@ namespace st
         [[unlikely]]
         if (!generationDecision.has_value())
         {
-            ErrorSession.AddError(this, ShaderToolsErrorSource::ShaderStageProcessor, generationDecision.error(), "ShaderStageProcessor couldn't query if full source string existed already, aborting");
+            ErrorSession.GetImpl()->AddError(this, ShaderToolsErrorSource::ShaderStageProcessor, generationDecision.error(), "ShaderStageProcessor couldn't query if full source string existed already, aborting");
             return emptyStringResult;
         }
         else if (std::get<bool>(*generationDecision))
@@ -68,7 +74,7 @@ namespace st
 
             if (!fs::exists(actual_path))
             {
-                ErrorSession.AddError(this, ShaderToolsErrorSource::ShaderStageProcessor, ShaderToolsErrorCode::ShaderStageProcessorGivenBodyPathStringDidNotExist, body_path_str.c_str());
+                ErrorSession.GetImpl()->AddError(this, ShaderToolsErrorSource::ShaderStageProcessor, ShaderToolsErrorCode::ShaderStageProcessorGivenBodyPathStringDidNotExist, body_path_str.c_str());
                 return emptyStringResult;
             }
 
@@ -81,7 +87,7 @@ namespace st
             {
                 const std::string actualPathStr = actual_path.string();
                 const std::string errorMessage = "Shader stage processor could not retrieve last write time of body path: " + actualPathStr;
-                ErrorSession.AddError(this, ShaderToolsErrorSource::ShaderStageProcessor, readResult.error(), errorMessage.c_str());
+                ErrorSession.GetImpl()->AddError(this, ShaderToolsErrorSource::ShaderStageProcessor, readResult.error(), errorMessage.c_str());
                 return emptyStringResult;
             }
 
@@ -97,9 +103,9 @@ namespace st
                 };
 
                 ShaderToolsErrorCode writeError = MakeFileTrackerBatchWriteRequest(std::move(writeRequests));
-                if (writeError != ShaderToolsErrorCode::Success)
+                if (!WasWriteRequestSuccessful(writeError))
                 {
-                    ErrorSession.AddError(this, ShaderToolsErrorSource::ShaderStageProcessor, writeError, "Failed to update shader body path and last modification time, following source changes since last generation");
+                    ErrorSession.GetImpl()->AddError(this, ShaderToolsErrorSource::ShaderStageProcessor, writeError, "Failed to update shader body path and last modification time, following source changes since last generation");
                 }
 
                 std::vector<EraseRequest> eraseRequests
@@ -112,7 +118,7 @@ namespace st
                 ShaderToolsErrorCode eraseError = MakeFileTrackerBatchEraseRequest(std::move(eraseRequests));
                 if (eraseError != ShaderToolsErrorCode::Success)
                 {
-                    ErrorSession.AddError(this, ShaderToolsErrorSource::ShaderStageProcessor, eraseError, "Failed to erase existing generated source, unable to propagate source changes since last generation");
+                    ErrorSession.GetImpl()->AddError(this, ShaderToolsErrorSource::ShaderStageProcessor, eraseError, "Failed to erase existing generated source, unable to propagate source changes since last generation");
                 }
 
                 if ((writeError != ShaderToolsErrorCode::Success) || (eraseError != ShaderToolsErrorCode::Success))
@@ -134,7 +140,7 @@ namespace st
                     // I have no idea how we would even get here
                     std::string actualPathStr = actual_path.string();
                     const std::string errorString = "Couldn't retrieve existing full source string for shader at following path, despite it existing in storage: " + actualPathStr;
-                    ErrorSession.AddError(this, ShaderToolsErrorSource::ShaderStageProcessor, fullSourceResult.error(), errorString.c_str());
+                    ErrorSession.GetImpl()->AddError(this, ShaderToolsErrorSource::ShaderStageProcessor, fullSourceResult.error(), errorString.c_str());
                     return emptyStringResult;
                 }
             }
@@ -144,7 +150,7 @@ namespace st
             ShaderToolsErrorCode generationError = generator->generate(stage, body_path_str, 0u, nullptr);
             if (generationError != ShaderToolsErrorCode::Success)
             {
-                ErrorSession.AddError(this, ShaderToolsErrorSource::ShaderStageProcessor, generationError, nullptr);
+                ErrorSession.GetImpl()->AddError(this, ShaderToolsErrorSource::ShaderStageProcessor, generationError, nullptr);
                 return emptyStringResult;
             }
             else
@@ -178,7 +184,7 @@ namespace st
 				}
 				else
 				{
-					ErrorSession.AddError(
+					ErrorSession.GetImpl()->AddError(
 						this,
 						ShaderToolsErrorSource::ShaderStageProcessor,
 						binaryReadResult.error(),
@@ -188,7 +194,7 @@ namespace st
 			}
 			else
 			{
-				ErrorSession.AddError(
+				ErrorSession.GetImpl()->AddError(
 					this,
 					ShaderToolsErrorSource::ShaderStageProcessor,
 					compileError,

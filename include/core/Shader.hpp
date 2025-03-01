@@ -15,6 +15,7 @@ namespace st
     class ResourceUsage;
     struct yamlFile;
     struct Session;
+    struct SessionImpl;
 
     /*  Designed to be used to group shaders into the groups that they are used in
         when bound to a pipeline, to simplify a few key things.
@@ -30,7 +31,7 @@ namespace st
             const size_t num_stages,
             const ShaderStage* stages,
             yamlFile* resource_file_path,
-            Session& error_session);
+            SessionImpl* error_session_impl);
         ~Shader();
         Shader(Shader&& other) noexcept;
         Shader& operator=(Shader&& other) noexcept;
@@ -60,7 +61,7 @@ namespace st
         friend class ShaderPackImpl;
         ShaderReflectorImpl* GetShaderReflectorImpl();
         const ShaderReflectorImpl* GetShaderReflectorImpl() const;
-        Shader(const char * group_name, const size_t num_extensions, const char * const * extensions, const size_t num_includes, const char * const * paths);
+        Shader(const char * group_name, const size_t num_extensions, const char* const* extensions, const size_t num_includes, const char* const* paths);
     private:
         std::unique_ptr<ShaderGroupImpl> impl;
     };

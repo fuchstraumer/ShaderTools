@@ -30,7 +30,7 @@ namespace st
         std::vector<ShaderResourceSubObject> members;
         std::vector<std::string> tags;
         std::set<glsl_qualifier> qualifiers;
-        std::unordered_map<std::string, std::set<glsl_qualifier>> perUsageQualifiers;
+        std::unordered_map<ShaderStage, std::set<glsl_qualifier>> perUsageQualifiers;
         bool needsMipMaps{ false };
         bool isDescriptorArray{ false };
         uint32_t arraySize{ 0u };
@@ -137,9 +137,9 @@ namespace st
         }
     }
 
-    void ShaderResource::GetPerUsageQualifiers(const char* shader_name, size_t* num_qualifiers, glsl_qualifier* qualifiers) const noexcept
+    void ShaderResource::GetPerUsageQualifiers(ShaderStage stage, size_t* num_qualifiers, glsl_qualifier* qualifiers) const noexcept
     {
-        if (auto iter = impl->perUsageQualifiers.find(shader_name); iter != std::end(impl->perUsageQualifiers))
+        if (auto iter = impl->perUsageQualifiers.find(stage); iter != std::end(impl->perUsageQualifiers))
         {
             *num_qualifiers = iter->second.size();
             if (qualifiers != nullptr)
@@ -154,7 +154,7 @@ namespace st
         }
     }
 
-    glsl_qualifier ShaderResource::GetReadWriteQualifierForShader(const char* shader_name) const noexcept
+    glsl_qualifier ShaderResource::GetReadWriteQualifierForShader(ShaderStage stage) const noexcept
     {
         // First just check general qualifiers for R/W options
         for (const auto& qual : impl->qualifiers)
@@ -165,14 +165,16 @@ namespace st
             }
         }
 
-        auto& stage_qualifiers = impl->perUsageQualifiers[std::string(shader_name)];
-        for (const auto& qual : stage_qualifiers)
-        {
-            if (qual == glsl_qualifier::ReadOnly || qual == glsl_qualifier::WriteOnly)
-            {
-                return qual;
-            }
-        }
+		if (auto iter = impl->perUsageQualifiers.find(stage); iter != std::end(impl->perUsageQualifiers))
+		{
+			for (const auto& qual : iter->second)
+			{
+				if (qual == glsl_qualifier::ReadOnly || qual == glsl_qualifier::WriteOnly)
+				{
+					return qual;
+				}
+			}
+		}
 
         return glsl_qualifier::InvalidQualifier;
     }
@@ -250,14 +252,14 @@ namespace st
         }
     }
 
-    void ShaderResource::AddPerUsageQualifier(const char* shader_name, glsl_qualifier qualifier)
+    void ShaderResource::AddPerUsageQualifier(ShaderStage stage, glsl_qualifier qualifier)
     {
-        impl->perUsageQualifiers[std::string(shader_name)].emplace(qualifier);
+        impl->perUsageQualifiers[stage].emplace(qualifier);
     }
 
-    void ShaderResource::AddPerUsageQualifiers(const char* shader_name, const size_t num_qualifiers, const glsl_qualifier* qualifiers)
+    void ShaderResource::AddPerUsageQualifiers(ShaderStage stage, const size_t num_qualifiers, const glsl_qualifier* qualifiers)
     {
-        auto& qualifier_set = impl->perUsageQualifiers[std::string(shader_name)];
+        auto& qualifier_set = impl->perUsageQualifiers[stage];
         for (size_t i = 0; i < num_qualifiers; ++i)
         {
             qualifier_set.emplace(qualifiers[i]);

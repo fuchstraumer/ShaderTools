@@ -127,6 +127,8 @@ namespace st
     ShaderToolsErrorCode MakeFileTrackerEraseRequest(EraseRequest request);
     ShaderToolsErrorCode MakeFileTrackerBatchEraseRequest(std::vector<EraseRequest> eraseRequests);
 
+    constexpr bool WasWriteRequestSuccessful(ShaderToolsErrorCode code) noexcept;
+
 }
 
 #endif // !ST_SHADER_FILE_TRACKER_HPP

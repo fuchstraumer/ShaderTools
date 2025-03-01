@@ -78,6 +78,7 @@ namespace st
         FilesystemPathExistedFileCouldNotBeOpened,
         FilesystemCouldNotEmplaceIntoInternalStorage,
         FilesystemNoFileDataForGivenHandleFound,
+        FilesystemFailedToReadValidFileStream,
 
         FileTrackerErrorsStart = 700,
         FileTrackerInvalidRequest,
@@ -88,6 +89,7 @@ namespace st
         FileTrackerEraseRequestFailed,
         FileTrackerBatchEraseRequestFailed,
         FileTrackerWriteCouldNotAddPayloadToStorage,
+        FileTrackerPayloadAlreadyStored,
 
         ShaderStageProcessorErrorsStart = 800,
         ShaderStageProcessorGivenBodyPathStringDidNotExist,
@@ -112,11 +114,15 @@ namespace st
     {
         size_t line;
         size_t column;
+        const char* filename;
+        const char* function_name;
     };
 
 
     ST_API const char* ErrorCodeToText(ShaderToolsErrorCode code) noexcept;
-    ST_API const char* ErrorSourceToTest(ShaderToolsErrorSource source) noexcept;
+    ST_API const char* ErrorSourceToText(ShaderToolsErrorSource source) noexcept;
+
+    ST_API ShaderToolsErrorCode ClearAllInternalStorage();
 }
 
 namespace std

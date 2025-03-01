@@ -21,7 +21,7 @@ namespace st
         ShaderPackImpl(const ShaderPackImpl&) = delete;
         ShaderPackImpl& operator=(const ShaderPackImpl&) = delete;
 
-        ShaderPackImpl(const char* shader_pack_file_path, Session& errorSession);
+        ShaderPackImpl(const char* shader_pack_file_path, SessionImpl* errorSession);
         ~ShaderPackImpl();
 
         void createPackScript(const char * fname);
@@ -41,7 +41,7 @@ namespace st
         std::mutex guardMutex;
         std::unordered_map<std::string, std::unique_ptr<ResourceGroup>> resourceGroups;
         mutable descriptor_type_counts_t typeCounts;
-        Session& errorSession;
+        SessionImpl* errorSession;
         
     };
 

@@ -3,12 +3,8 @@
 #define ST_SHADER_COMPILER_IMPL_HPP
 #include "common/ShaderStage.hpp"
 #include "common/UtilityStructs.hpp"
-#include "common/stSession.hpp"
 
 #include <string>
-#include <vector>
-#include <iostream>
-#include <unordered_map>
 
 #include <vulkan/vulkan_core.h>
 #include "shaderc/shaderc.hpp"
@@ -16,13 +12,15 @@
 namespace st
 {
 
+    struct SessionImpl;
+
     class ShaderCompilerImpl
     {
         ShaderCompilerImpl(const ShaderCompilerImpl&) = delete;
         ShaderCompilerImpl& operator=(const ShaderCompilerImpl&) = delete;
     public:
 
-        ShaderCompilerImpl(const ShaderCompilerOptions& options, Session& error_session) noexcept;
+        ShaderCompilerImpl(const ShaderCompilerOptions& options, SessionImpl* error_session) noexcept;
         ~ShaderCompilerImpl() noexcept;
         ShaderCompilerImpl(ShaderCompilerImpl&& other) noexcept = default;
         ShaderCompilerImpl& operator=(ShaderCompilerImpl&& other) noexcept = default;
@@ -47,7 +45,7 @@ namespace st
 			uint32_t* binary_dest);
 
         const ShaderCompilerOptions& compilerOptions;
-        Session& errorSession;
+        SessionImpl* errorSession;
     };
 
 }

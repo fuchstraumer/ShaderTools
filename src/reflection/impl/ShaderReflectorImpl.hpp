@@ -20,6 +20,7 @@ namespace spirv_cross
 
 namespace st
 {
+    struct SessionImpl;
     struct ShaderStage;
     class ResourceUsage;
     struct yamlFile;
@@ -37,20 +38,20 @@ namespace st
         ShaderReflectorImpl& operator=(const ShaderReflectorImpl&) = delete;
     public:
 
-        ShaderReflectorImpl(yamlFile* yaml_file, Session& error_session) noexcept;
+        ShaderReflectorImpl(yamlFile* yaml_file, SessionImpl* error_session) noexcept;
         ~ShaderReflectorImpl();
         ShaderReflectorImpl(ShaderReflectorImpl&& other) noexcept;
         ShaderReflectorImpl& operator=(ShaderReflectorImpl&& other) noexcept;
 
         void collateSets();
         ShaderToolsErrorCode parseSpecializationConstants();
-        ShaderToolsErrorCode parseResourceType(const std::string& shader_name, const ShaderStage& shader_handle, const VkDescriptorType& type_being_parsed);
+        ShaderToolsErrorCode parseResourceType(const ShaderStage& shader_handle, const VkDescriptorType& type_being_parsed);
 
         std::vector<ShaderResourceSubObject> ExtractBufferMembers(const spirv_cross::Compiler& cmplr, const spirv_cross::Resource& rsrc);
         std::string GetActualResourceName(const std::string& rsrc_name);
 
-        ShaderToolsErrorCode parseBinary(const ShaderStage& shader_handle, std::string shader_name);
-        ShaderToolsErrorCode parseImpl(const ShaderStage& shader_handle, const std::string& shader_name, std::vector<uint32_t> binary_data);
+        ShaderToolsErrorCode parseBinary(const ShaderStage& shader_handle);
+        ShaderToolsErrorCode parseImpl(const ShaderStage& shader_handle, std::vector<uint32_t> binary_data);
 
         std::unordered_multimap<VkShaderStageFlags, DescriptorSetInfo> descriptorSets;
         std::map<uint32_t, SpecializationConstant> specializationConstants;
@@ -64,7 +65,7 @@ namespace st
         std::unique_ptr<spirv_cross::CompilerGLSL> recompiler;
         
         yamlFile* rsrcFile;
-        Session& errorSession;
+        SessionImpl* errorSession;
 
         size_t getNumSets() const noexcept;
 

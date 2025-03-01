@@ -2,19 +2,20 @@
 #include "ShaderImpl.hpp"
 #include "resources/ShaderResource.hpp"
 #include "resources/ResourceGroup.hpp"
-#include "common/stSession.hpp"
+#include "../../common/impl/SessionImpl.hpp"
 #include "../../generation/impl/ShaderStageProcessor.hpp"
 #include "../../reflection/impl/ShaderReflectorImpl.hpp"
 #include "../../util/ShaderFileTracker.hpp"
 #include "../../common/UtilityStructsInternal.hpp"
 #include <filesystem>
 #include <iostream>
+#include <format>
 
 namespace st
 {
     namespace fs = std::filesystem;
 
-    ShaderPackImpl::ShaderPackImpl(const char* shader_pack_file_path, Session& error_session) :
+    ShaderPackImpl::ShaderPackImpl(const char* shader_pack_file_path, SessionImpl* error_session) :
         filePack(std::make_unique<yamlFile>(shader_pack_file_path, error_session)),
         workingDir(shader_pack_file_path),
         errorSession(error_session)
@@ -54,7 +55,7 @@ namespace st
             else
             {
                 std::string errorStr = "Shader pack found shader with name " + stage.first + " had invalid path " + body_path.string();
-				errorSession.AddError(
+				errorSession->AddError(
 					this,
 					ShaderToolsErrorSource::ShaderPack,
 					ShaderToolsErrorCode::FilesystemPathDoesNotExist,
@@ -64,9 +65,9 @@ namespace st
         }
 
         ShaderToolsErrorCode batchWriteError = MakeFileTrackerBatchWriteRequest(std::move(write_requests));
-        if (batchWriteError != ShaderToolsErrorCode::Success)
+        if (!WasWriteRequestSuccessful(batchWriteError))
         {
-            errorSession.AddError(this, ShaderToolsErrorSource::ShaderPack, batchWriteError, "ShaderPack failed to write body paths to file tracker, exiting");
+            errorSession->AddError(this, ShaderToolsErrorSource::ShaderPack, batchWriteError, "ShaderPack failed to write body paths to file tracker, exiting");
             return batchWriteError;
         }
 
@@ -142,14 +143,11 @@ namespace st
             for (const auto& resource : resource_set.second)
             {
                 ShaderToolsErrorCode error = CountDescriptorType(resource.DescriptorType(), typeCounts);
-                if (error != ShaderToolsErrorCode::Success)
-                {
-                    errorSession.AddError(
-                        this,
-                        ShaderToolsErrorSource::ShaderPack,
-                        error,
-                        nullptr);
-                }
+				if (error != ShaderToolsErrorCode::Success)
+				{
+					std::string errorStr = std::format("Shader pack failed to count descriptor type for resource {}", resource.Name());
+					errorSession->AddError(this, ShaderToolsErrorSource::ShaderPack, error, errorStr.c_str());
+				}
             }
         }
     }

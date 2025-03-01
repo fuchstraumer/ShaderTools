@@ -9,7 +9,7 @@ namespace st
 {
     namespace fs = std::filesystem;
 
-    ShaderGenerator::ShaderGenerator(ShaderStage stage, Session& error_session) : impl(std::make_unique<ShaderGeneratorImpl>(std::move(stage), error_session)) {}
+    ShaderGenerator::ShaderGenerator(ShaderStage stage, Session& error_session) : impl(std::make_unique<ShaderGeneratorImpl>(std::move(stage), error_session.GetImpl())) {}
 
     ShaderGenerator::~ShaderGenerator() {}
 

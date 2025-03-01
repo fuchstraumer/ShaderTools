@@ -164,6 +164,8 @@ namespace st
                 return "FileTrackerBatchEraseRequestFailed";
             case ShaderToolsErrorCode::FileTrackerWriteCouldNotAddPayloadToStorage:
                 return "FileTrackerWriteCouldNotAddPayloadToStorage";
+            case ShaderToolsErrorCode::FileTrackerPayloadAlreadyStored:
+                return "FileTrackerPayloadAlreadyStored";
             case ShaderToolsErrorCode::ShaderStageProcessorErrorsStart:
                 return "ShaderStageProcessorErrorsStart";
             case ShaderToolsErrorCode::ShaderStageProcessorGivenBodyPathStringDidNotExist:
@@ -173,7 +175,7 @@ namespace st
         }
     }
 
-	const char* ErrorSourceToTest(ShaderToolsErrorSource source) noexcept
+	const char* ErrorSourceToText(ShaderToolsErrorSource source) noexcept
 	{   
         switch (source)
         {

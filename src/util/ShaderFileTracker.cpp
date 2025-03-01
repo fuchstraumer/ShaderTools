@@ -159,16 +159,128 @@ namespace st
 		using namespace detail;
 		RwLockGuard lock_guard(RwLockGuard::Mode::Write, map_and_mutex.mutex);
 		auto& map = map_and_mutex.map;
-		auto result = map.try_emplace(key, payload);
+		auto result = map.try_emplace(key, std::move(payload));
 		if (!result.second)
 		{
-			return ShaderToolsErrorCode::FileTrackerWriteCouldNotAddPayloadToStorage;
+            auto iter = result.first;
+            // payload already exists
+            if (iter->first == key)
+            {
+                return ShaderToolsErrorCode::FileTrackerPayloadAlreadyStored;
+            }
+            else
+            {
+                return ShaderToolsErrorCode::FileTrackerWriteCouldNotAddPayloadToStorage;
+            }
 		}
 		else
 		{
 			return ShaderToolsErrorCode::Success;
 		}
 	}
+
+    ShaderToolsErrorCode DoWriteRequest(ShaderStage key, std::vector<std::string> payload, detail::MapAndMutex<ShaderStage, std::unordered_multimap<ShaderStage, std::string>>& map_and_mutex)
+    {
+        using namespace detail;
+        RwLockGuard lock_guard(RwLockGuard::Mode::Write, map_and_mutex.mutex);
+        auto& map_of_maps = map_and_mutex.map;
+        auto iter_to_contained_map = map_of_maps.find(key);
+        if (iter_to_contained_map == map_of_maps.end())
+        {
+			auto& curr_map = map_of_maps[key];
+            for (auto&& resource_block : payload)
+            {
+                auto result = curr_map.emplace(key, std::move(resource_block));
+                if (result == curr_map.end())
+                {
+                    return ShaderToolsErrorCode::FileTrackerWriteCouldNotAddPayloadToStorage;
+                }
+            }
+			return ShaderToolsErrorCode::Success;
+        }
+        else
+        {
+            auto& curr_map = iter_to_contained_map->second;
+            for (auto&& resource_block : payload)
+            {
+                auto result = curr_map.emplace(key, std::move(resource_block));
+                if (result == curr_map.end())
+                {
+                    return ShaderToolsErrorCode::FileTrackerWriteCouldNotAddPayloadToStorage;
+                }
+            }
+            return ShaderToolsErrorCode::Success;
+        }
+    }
+
+    template<>
+    ShaderToolsErrorCode DoWriteRequest<ShaderStage, std::filesystem::path>(ShaderStage key, std::filesystem::path payload, detail::MapAndMutex<ShaderStage, std::filesystem::path>& map_and_mutex)
+    {
+		using namespace detail;
+		RwLockGuard lock_guard(RwLockGuard::Mode::Write, map_and_mutex.mutex);
+		auto& path_map = map_and_mutex.map;
+		auto result = path_map.try_emplace(key, std::move(payload));
+        if (!result.second)
+		{
+			auto iter = result.first;
+			// payload already exists
+			if (iter->first == key)
+			{
+				return ShaderToolsErrorCode::FileTrackerPayloadAlreadyStored;
+			}
+			else
+			{
+				return ShaderToolsErrorCode::FileTrackerWriteCouldNotAddPayloadToStorage;
+			}
+		}
+        else
+        {
+            namespace fs = std::filesystem;
+
+            std::filesystem::path path_to_body_file = fs::canonical((result.first)->second);
+            if (!fs::exists(path_to_body_file))
+            {
+                return ShaderToolsErrorCode::FilesystemPathDoesNotExist;
+            }
+
+            std::ifstream body_file_stream(path_to_body_file);
+            if (!body_file_stream.is_open())
+            {
+                return ShaderToolsErrorCode::FilesystemPathExistedFileCouldNotBeOpened;
+            }
+
+            std::string body_string{ std::istreambuf_iterator<char>(body_file_stream), std::istreambuf_iterator<char>() };
+            RwLockGuard body_string_lock_guard(RwLockGuard::Mode::Write, detail::ShaderBodies.mutex);
+            auto& body_map = detail::ShaderBodies.map;
+            auto body_emplace_result = body_map.try_emplace(key, std::move(body_string));
+			if (!body_emplace_result.second)
+			{
+				auto iter = body_emplace_result.first;
+				// payload already exists
+				if (iter->first == key)
+				{
+					return ShaderToolsErrorCode::FileTrackerPayloadAlreadyStored;
+				}
+				else
+				{
+					return ShaderToolsErrorCode::FileTrackerWriteCouldNotAddPayloadToStorage;
+				}
+			}
+            else
+            {
+                return ShaderToolsErrorCode::Success;
+            }
+		}
+    }
+
+    template<typename KeyType, typename PayloadType>
+    ShaderToolsErrorCode ClearMap(detail::MapAndMutex<KeyType, PayloadType>& map_and_mutex)
+    {
+        using namespace detail;
+        RwLockGuard lock_guard(RwLockGuard::Mode::Write, map_and_mutex.mutex);
+        map_and_mutex.map.clear();
+        return ShaderToolsErrorCode::Success;
+    }
 
 	ReadRequestResult MakeFileTrackerReadRequest(ReadRequest request)
 	{
@@ -233,10 +345,9 @@ namespace st
         case WriteRequest::Type::AddFullSourceString:
             return DoWriteRequest(request.Key.ShaderHandle, std::move(std::get<std::string>(request.Payload)), detail::FullSourceStrings);
 		case WriteRequest::Type::AddUsedResourceBlocks:
-			return ShaderToolsErrorCode::FileTrackerInvalidRequest;
-            //return DoWriteRequest(request.Key.ShaderHandle, std::move(std::get<detail::decltype(ShaderUsedResourceBlocks)::map::value_type>(request.Payload)), detail::ShaderUsedResourceBlocks);
+            return DoWriteRequest(request.Key.ShaderHandle, std::move(std::get<std::vector<std::string>>(request.Payload)), detail::ShaderUsedResourceBlocks);
         case WriteRequest::Type::SetRecompiledSourceString:
-            return ShaderToolsErrorCode::FileTrackerInvalidRequest;
+            return DoWriteRequest(request.Key.ShaderHandle, std::move(std::get<std::string>(request.Payload)), detail::RecompiledSourcesFromBinaries);
         case WriteRequest::Type::SetStageOptimizationDisabled:
             return DoWriteRequest(request.Key.ShaderHandle, std::get<bool>(request.Payload), detail::StageOptimizationDisabled);
         default:
@@ -247,15 +358,16 @@ namespace st
 
 	ShaderToolsErrorCode MakeFileTrackerBatchWriteRequest(std::vector<WriteRequest> writeRequests)
 	{
-
-        ShaderToolsErrorCode result = ShaderToolsErrorCode::Success;
+        std::vector<ShaderToolsErrorCode> error_codes(writeRequests.size(), ShaderToolsErrorCode::Success);
 
         for (size_t i = 0; i < writeRequests.size(); ++i)
         {
-            result = MakeFileTrackerWriteRequest(std::move(writeRequests[i]));
+            error_codes[i] = MakeFileTrackerWriteRequest(std::move(writeRequests[i]));
         }
 
-		return result;
+        bool allSuccessful = std::any_of(error_codes.cbegin(), error_codes.cend(), &WasWriteRequestSuccessful);
+
+		return allSuccessful ? ShaderToolsErrorCode::Success : ShaderToolsErrorCode::FileTrackerBatchWriteRequestFailed;
 	}
 
 	ShaderToolsErrorCode MakeFileTrackerEraseRequest(EraseRequest request)
@@ -263,9 +375,31 @@ namespace st
         return ShaderToolsErrorCode::Success;
 	}
 
-	ShaderToolsErrorCode MakeFileTrackerBatchEraseRequest(std::vector<WriteRequest> writeRequests)
+	ShaderToolsErrorCode MakeFileTrackerBatchEraseRequest(std::vector<EraseRequest> writeRequests)
 	{
         return ShaderToolsErrorCode::Success;
+	}
+
+	constexpr bool WasWriteRequestSuccessful(ShaderToolsErrorCode code) noexcept
+	{
+        return (code == ShaderToolsErrorCode::Success) || (code == ShaderToolsErrorCode::FileTrackerPayloadAlreadyStored);
+	}
+
+	ShaderToolsErrorCode ClearAllInternalStorage()
+	{
+        ShaderToolsErrorCode result = ClearMap(detail::ShaderBodies);
+		result = ClearMap(detail::Binaries);
+        result = ClearMap(detail::RecompiledSourcesFromBinaries);
+        result = ClearMap(detail::AssemblyStrings);
+        result = ClearMap(detail::StageLastModificationTimes);
+        result = ClearMap(detail::FullSourceStrings);
+        result = ClearMap(detail::StageOptimizationDisabled);
+        result = ClearMap(detail::ShaderUsedResourceBlocks);
+        result = ClearMap(detail::ResourceGroupSetIndexMaps);
+        result = ClearMap(detail::BodyPaths);
+        result = ClearMap(detail::BinaryPaths);
+        result = ClearMap(detail::AssemblyStrings);
+        return result;
 	}
 
 }

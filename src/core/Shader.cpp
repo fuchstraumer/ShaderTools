@@ -2,6 +2,7 @@
 #include "impl/ShaderImpl.hpp"
 #include "resources/ShaderResource.hpp"
 #include "resources/ResourceUsage.hpp"
+#include "../common/impl/SessionImpl.hpp"
 #include "../util/ShaderFileTracker.hpp"
 #include "reflection/ShaderReflector.hpp"
 #include "../reflection/impl/ShaderReflectorImpl.hpp"
@@ -49,11 +50,11 @@ namespace st
         const size_t num_stages,
         const ShaderStage* stages,
         yamlFile* resource_file,
-        Session& error_session) : impl(std::make_unique<ShaderGroupImpl>(group_name, resource_file, error_session))
+        SessionImpl* error_session_impl) : impl(std::make_unique<ShaderGroupImpl>(group_name, resource_file, error_session_impl->parent))
     {
         for (size_t i = 0; i < num_stages; ++i)
         {
-            //impl->addShaderStage(stages[i], TODO);
+            impl->addShaderStage(stages[i]);
         }
 
     }

@@ -38,7 +38,6 @@ SET(YAML_CPP_BUILD_TOOLS OFF CACHE BOOL "Enable parse tools")
 SET(YAML_CPP_INSTALL OFF CACHE BOOL "Enable generation of install target")
 ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/yaml-cpp")
 
-
 OPTION(SHADERTOOLS_PROFILING "Profile key steps in the execution of ShaderTools, and log timing info to the console" OFF)
 
 SET(ST_COMMON_SRCS
@@ -47,6 +46,8 @@ SET(ST_COMMON_SRCS
     "${CMAKE_CURRENT_SOURCE_DIR}/include/common/ShaderToolsErrors.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/include/common/stSession.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/include/common/UtilityStructs.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/common/impl/SessionImpl.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/common/impl/SessionImpl.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/common/UtilityStructsInternal.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/common/ShaderStage.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/common/ShaderToolsErrors.cpp"

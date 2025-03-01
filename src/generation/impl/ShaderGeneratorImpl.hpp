@@ -71,7 +71,7 @@ namespace st
     {
     public:
 
-        explicit ShaderGeneratorImpl(ShaderStage _stage, Session& errorSession) noexcept;  
+        explicit ShaderGeneratorImpl(ShaderStage _stage, SessionImpl* errorSession) noexcept;  
         ~ShaderGeneratorImpl() noexcept;
 
         ShaderGeneratorImpl(ShaderGeneratorImpl&& other) noexcept;
@@ -113,20 +113,15 @@ namespace st
         [[nodiscard]] ShaderToolsErrorCode generate(const ShaderStage& handle, const std::string& path_to_src, const size_t num_extensions, const char* const* extensions);
         [[nodiscard]] std::string getFullSource() const;
         void addIncludePath(const char* include_path);
-        void addExtension(const std::string& extension_str);
-
-        // Consumes specified amount of body string, and updates internal line+column counters appropriately
-        void consumeBodyStr(std::string& body_str, size_t num_chars_to_consume);    
+        void addExtension(const std::string& extension_str);  
 
         ShaderStage Stage{ 0u, 0u };
         std::multiset<shaderFragment> fragments;
-        // TODO: remove this, because we already have the file tracker? This seems soooo unwise.
-        static std::map<fs::path, std::string> fileContents;
         std::map<std::string, std::string> resourceBlocks;
         mutable shader_resources_t ShaderResources;
         yamlFile* resourceFile;
         std::vector<fs::path> includes;
-        Session& errorSession;
+        SessionImpl* errorSession;
 
         size_t currentLine{0u};
         size_t currentColumn{0u};

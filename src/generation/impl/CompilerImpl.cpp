@@ -1,6 +1,9 @@
 #include "CompilerImpl.hpp"
 #include "spirv_glsl.hpp"
 #include "../../util/ShaderFileTracker.hpp"
+#include "../../common/impl/SessionImpl.hpp"
+
+#include <iostream>
 #include <filesystem>
 #include <fstream>
 #include <unordered_map>
@@ -27,7 +30,7 @@ namespace st
 
     namespace fs = std::filesystem;
 
-    ShaderCompilerImpl::ShaderCompilerImpl(const ShaderCompilerOptions& options, Session& error_session) noexcept : compilerOptions(options), errorSession(error_session)
+    ShaderCompilerImpl::ShaderCompilerImpl(const ShaderCompilerOptions& options, SessionImpl* error_session) noexcept : compilerOptions(options), errorSession(error_session)
     {}
 
 
@@ -135,14 +138,14 @@ namespace st
         ShaderToolsErrorCode error = getShaderKind(handle.stageBits, shaderStage);
         if (error != ShaderToolsErrorCode::Success)
         {
-            errorSession.AddError(this, ShaderToolsErrorSource::Compiler, error, nullptr);
+            errorSession->AddError(this, ShaderToolsErrorSource::Compiler, error, nullptr);
             return error;
         }
 
         error = compile(handle, shaderStage, std::move(name), std::move(src));
         if (error != ShaderToolsErrorCode::Success)
         {
-            errorSession.AddError(this, ShaderToolsErrorSource::Compiler, error, nullptr);
+            errorSession->AddError(this, ShaderToolsErrorSource::Compiler, error, nullptr);
         }
 
         return error;
@@ -155,14 +158,14 @@ namespace st
         // First check to verify the path given exists.
         if (!fs::exists(path_to_source))
         {
-            errorSession.AddError(this, ShaderToolsErrorSource::Compiler, ShaderToolsErrorCode::FilesystemPathDoesNotExist, path_to_source_str);
+            errorSession->AddError(this, ShaderToolsErrorSource::Compiler, ShaderToolsErrorCode::FilesystemPathDoesNotExist, path_to_source_str);
             return ShaderToolsErrorCode::FilesystemPathDoesNotExist;
         }
 
         std::ifstream input_file(path_to_source);
         if (!input_file.is_open())
         {
-            errorSession.AddError(this, ShaderToolsErrorSource::Compiler, ShaderToolsErrorCode::FilesystemPathExistedFileCouldNotBeOpened, path_to_source_str);
+            errorSession->AddError(this, ShaderToolsErrorSource::Compiler, ShaderToolsErrorCode::FilesystemPathExistedFileCouldNotBeOpened, path_to_source_str);
             return ShaderToolsErrorCode::FilesystemPathExistedFileCouldNotBeOpened;
         }
 
@@ -170,7 +173,7 @@ namespace st
         ShaderToolsErrorCode error = getShaderKind(handle.stageBits, shaderStage);
         if (error != ShaderToolsErrorCode::Success)
         {
-            errorSession.AddError(this, ShaderToolsErrorSource::Compiler, error, nullptr);
+            errorSession->AddError(this, ShaderToolsErrorSource::Compiler, error, nullptr);
             return error;
         }
 
@@ -179,7 +182,7 @@ namespace st
         error = compile(handle, shaderStage, file_name, source_code);
         if (error != ShaderToolsErrorCode::Success)
         {
-            errorSession.AddError(this, ShaderToolsErrorSource::Compiler, error, nullptr);
+            errorSession->AddError(this, ShaderToolsErrorSource::Compiler, error, nullptr);
         }
 
         return error;
@@ -205,7 +208,7 @@ namespace st
             }
             else
             {
-                errorSession.AddError(this, ShaderToolsErrorSource::Compiler, read_result.error(), nullptr);
+                //errorSession->AddError(this, ShaderToolsErrorSource::Compiler, read_result.error(), "WARNING: Couldn't find optimization status for given shader");
             }
         }
 
@@ -225,7 +228,7 @@ namespace st
 
                 if (addAssemblyError != ShaderToolsErrorCode::Success)
                 {
-                    errorSession.AddError(this, ShaderToolsErrorSource::Compiler, addAssemblyError, "Warning: failed to emplace assembly string into storage");
+                    errorSession->AddError(this, ShaderToolsErrorSource::Compiler, addAssemblyError, "Warning: failed to emplace assembly string into storage");
                 }
             }
         }
@@ -235,10 +238,10 @@ namespace st
         if (compiliation_result.GetCompilationStatus() != shaderc_compilation_status_success)
         {
             const std::string err_msg = compiliation_result.GetErrorMessage();
-            errorSession.AddError(this, ShaderToolsErrorSource::Compiler, ShaderToolsErrorCode::CompilerShaderCompilationFailed, err_msg.c_str());
+            errorSession->AddError(this, ShaderToolsErrorSource::Compiler, ShaderToolsErrorCode::CompilerShaderCompilationFailed, err_msg.c_str());
 
 #ifndef NDEBUG
-            std::cerr << "Dumping shader source to file...";
+            std::cerr << "Dumping source for " << name << "to file....\n";
             dump_bad_source_to_file(name, src_str, err_msg, dump_reason::failed_compile);
 #endif
             return ShaderToolsErrorCode::CompilerShaderCompilationFailed;
@@ -249,7 +252,7 @@ namespace st
             ShaderToolsErrorCode write_result = MakeFileTrackerWriteRequest(std::move(write_request));
             if (write_result != ShaderToolsErrorCode::Success)
             {
-                errorSession.AddError(this, ShaderToolsErrorSource::Compiler, write_result, name.c_str());
+                errorSession->AddError(this, ShaderToolsErrorSource::Compiler, write_result, name.c_str());
             }
 
             return write_result;

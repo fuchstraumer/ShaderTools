@@ -2,7 +2,9 @@
 #include "../parser/yamlFile.hpp"
 #include "../util/ShaderFileTracker.hpp"
 #include "../common/UtilityStructsInternal.hpp"
+#include "../common/impl/SessionImpl.hpp"
 #include "common/ShaderStage.hpp"
+
 #include <unordered_map>
 #include <string>
 #include <set>
@@ -14,7 +16,7 @@ namespace st
     class ResourceGroupImpl
     {
     public:
-        ResourceGroupImpl(yamlFile* resource_file, const char* group_name, Session& error_session);
+        ResourceGroupImpl(yamlFile* resource_file, const char* group_name, SessionImpl* error_session);
         ~ResourceGroupImpl() = default;
 
         bool hasResource(const char* str) const;
@@ -25,10 +27,10 @@ namespace st
         std::unordered_map<ShaderStage, uint32_t> stageSetIndices;
         std::vector<std::string> tags;
         std::set<std::string> usedByShaders;
-        Session& errorSession;
+        SessionImpl* errorSession;
     };
 
-    ResourceGroupImpl::ResourceGroupImpl(yamlFile* resource_file, const char* group_name, Session& error_session) :
+    ResourceGroupImpl::ResourceGroupImpl(yamlFile* resource_file, const char* group_name, SessionImpl* error_session) :
         errorSession(error_session),
         name(group_name),
         resources(resource_file->resourceGroups.at(group_name))
@@ -43,7 +45,7 @@ namespace st
             ShaderToolsErrorCode error = CountDescriptorType(rsrc.DescriptorType(), descriptorCounts);
             if (error != ShaderToolsErrorCode::Success)
             {
-                errorSession.AddError(this, ShaderToolsErrorSource::ResourceGroup, error, nullptr);
+                errorSession->AddError(this, ShaderToolsErrorSource::ResourceGroup, error, nullptr);
             }
         }
 
@@ -61,7 +63,7 @@ namespace st
         return false;
     }
 
-    ResourceGroup::ResourceGroup(yamlFile* resource_file, const char* group_name, Session& error_session) :
+    ResourceGroup::ResourceGroup(yamlFile* resource_file, const char* group_name, SessionImpl* error_session) :
         impl(std::make_unique<ResourceGroupImpl>(resource_file, group_name, error_session))
     {}
 
@@ -129,7 +131,7 @@ namespace st
             }
             else
             {
-                impl->errorSession.AddError(this, ShaderToolsErrorSource::ResourceGroup, readResult.error(), "ResourceGroup couldn't get SetIndexMap from FileTracker");
+                impl->errorSession->AddError(this, ShaderToolsErrorSource::ResourceGroup, readResult.error(), "ResourceGroup couldn't get SetIndexMap from FileTracker");
                 // oh shit how do we log an error
                 return std::numeric_limits<uint32_t>::max();
             }
@@ -157,7 +159,7 @@ namespace st
         }
         else
         {
-            impl->errorSession.AddError(this, ShaderToolsErrorSource::ResourceGroup, ShaderToolsErrorCode::ResourceNotFound, name);
+            impl->errorSession->AddError(this, ShaderToolsErrorSource::ResourceGroup, ShaderToolsErrorCode::ResourceNotFound, name);
             return nullptr;
         }
     }
@@ -173,7 +175,7 @@ namespace st
         }
         else
         {
-            impl->errorSession.AddError(this, ShaderToolsErrorSource::ResourceGroup, ShaderToolsErrorCode::ResourceNotFound, name);
+            impl->errorSession->AddError(this, ShaderToolsErrorSource::ResourceGroup, ShaderToolsErrorCode::ResourceNotFound, name);
             return nullptr;
         }
     }
