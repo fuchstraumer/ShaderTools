@@ -71,7 +71,7 @@ namespace st
         };
 
 		MapAndMutex<ShaderStage, std::string> ShaderBodies;
-		MapAndMutex<ShaderStage, std::vector<uint32_t>> Binaries;
+		MapAndMutex<ShaderStage, ShaderBinaryData> Binaries;
 		MapAndMutex<ShaderStage, std::string> RecompiledSourcesFromBinaries;
 		MapAndMutex<ShaderStage, std::string> AssemblyStrings;
 		MapAndMutex<ShaderStage, std::filesystem::file_time_type> StageLastModificationTimes;
@@ -118,6 +118,30 @@ namespace st
         else
         {
             return std::unexpected(ShaderToolsErrorCode::FileTrackerReadRequestFailed);
+        }
+    }
+
+    ReadRequestResult FindShaderBinary(const ShaderStage handle, bool isOptimizedBinaryRequest)
+    {
+        using namespace detail;
+        RwLockGuard lock_guard(RwLockGuard::Mode::Read, Binaries.mutex);
+        auto& map = Binaries.map;
+        auto iter = map.find(handle);
+        if (iter != map.end())
+        {
+            if (isOptimizedBinaryRequest && iter->second.optimizedSpirv)
+            {
+				return iter->second.optimizedSpirv.value();
+			}
+			else
+			{
+                // default return reflection spir-v
+				return iter->second.spirvForReflection;
+			}
+        }
+        else
+        {
+			return std::unexpected(ShaderToolsErrorCode::FileTrackerReadRequestFailed);
         }
     }
 
@@ -291,7 +315,7 @@ namespace st
             case ReadRequest::Type::FindShaderBody:
                 return FindRequestedPayload(request.Key.ShaderHandle, detail::ShaderBodies);
             case ReadRequest::Type::FindShaderBinary:
-                return FindRequestedPayload(request.Key.ShaderHandle, detail::Binaries);
+                return FindShaderBinary(request.Key.ShaderHandle, true);
             case ReadRequest::Type::FindRecompiledShaderSource:
                 return FindRequestedPayload(request.Key.ShaderHandle, detail::RecompiledSourcesFromBinaries);
             case ReadRequest::Type::FindAssemblyString:
@@ -308,6 +332,8 @@ namespace st
                 return HasFullSourceString(request.Key.ShaderHandle);
             case ReadRequest::Type::FindResourceGroupSetIndexMap:
                 return FindRequestedPayload(std::string{ request.Key.KeyString }, detail::ResourceGroupSetIndexMaps);
+			case ReadRequest::Type::FindShaderBinaryForReflection:
+				return FindShaderBinary(request.Key.ShaderHandle, false);
             default:
                 return std::unexpected{ ShaderToolsErrorCode::FileTrackerInvalidRequest };
         }
@@ -337,7 +363,7 @@ namespace st
         case WriteRequest::Type::AddShaderAssembly:
 			return DoWriteRequest(request.Key.ShaderHandle, std::move(std::get<std::string>(request.Payload)), detail::AssemblyStrings);
         case WriteRequest::Type::AddShaderBinary:
-			return DoWriteRequest(request.Key.ShaderHandle, std::move(std::get<std::vector<uint32_t>>(request.Payload)), detail::Binaries);
+			return DoWriteRequest(request.Key.ShaderHandle, std::move(std::get<ShaderBinaryData>(request.Payload)), detail::Binaries);
         case WriteRequest::Type::UpdateModificationTime:
             return DoWriteRequest(request.Key.ShaderHandle, std::move(std::get<std::filesystem::file_time_type>(request.Payload)), detail::StageLastModificationTimes);
         case WriteRequest::Type::AddShaderBodyPath:

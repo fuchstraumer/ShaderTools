@@ -257,7 +257,7 @@ namespace st
 
     ShaderToolsErrorCode ShaderReflectorImpl::parseBinary(const ShaderStage& shader_handle)
     {
-        ReadRequest find_binary_request{ ReadRequest::Type::FindShaderBinary, shader_handle };
+        ReadRequest find_binary_request{ ReadRequest::Type::FindShaderBinaryForReflection, shader_handle };
         ReadRequestResult find_binary_result = MakeFileTrackerReadRequest(find_binary_request);
         if (!find_binary_result.has_value())
         {
@@ -442,8 +442,18 @@ namespace st
         ShaderToolsErrorCode writeError = MakeFileTrackerWriteRequest(std::move(recompiledSourceRequest));
         if (writeError != ShaderToolsErrorCode::Success)
         {
-            std::string errorMessage = "Unable to store recompiled source string for shader.";
-            errorSession->AddError(this, ShaderToolsErrorSource::Reflection, writeError, errorMessage.c_str());
+			ReadRequest find_name_request{ ReadRequest::Type::FindShaderName, shader_handle };
+			ReadRequestResult find_name_result = MakeFileTrackerReadRequest(find_name_request);
+            std::string errorString;
+            if (find_name_result.has_value())
+            {
+                errorString = std::format("Failed to store recompiled source string for shader: {} ", std::get<std::string>(*find_name_result));
+            }
+            else
+            {
+                errorString = "Failed to store recompiled source string for a shader";
+            }
+            errorSession->AddError(this, ShaderToolsErrorSource::Reflection, writeError, errorString.c_str());
             return writeError;
         }
 

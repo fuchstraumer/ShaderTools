@@ -2,6 +2,7 @@
 #include "spirv_glsl.hpp"
 #include "../../util/ShaderFileTracker.hpp"
 #include "../../common/impl/SessionImpl.hpp"
+#include "../../common/UtilityStructsInternal.hpp"
 
 #include <iostream>
 #include <filesystem>
@@ -109,12 +110,26 @@ namespace st
     {
         failed_compile = 0,
         failed_recompile = 1,
+        failed_optimized_compile = 2,
     };
 
     void dump_bad_source_to_file(const std::string& name, const std::string& src, const std::string& err_text, dump_reason reason)
     {
 
-        std::string suffix = (reason == dump_reason::failed_compile) ? std::string{ "_failed_compile.glsl" } : std::string{ "_failed_recompile.glsl" };
+        std::string suffix;
+        switch (reason)
+        {
+        case dump_reason::failed_compile:
+            suffix = "_failed_compile.glsl";
+            break;
+        case dump_reason::failed_recompile:
+            suffix = "_failed_recompile.glsl";
+            break;
+        case dump_reason::failed_optimized_compile:
+            suffix = "_failed_optimized_compile.glsl";
+            break;
+        };
+
         const std::string output_name = name + suffix;
 
         std::ofstream output_stream(output_name);
@@ -122,7 +137,7 @@ namespace st
         output_stream.flush();
         output_stream.close();
 
-        if (reason == dump_reason::failed_compile)
+        if (reason == dump_reason::failed_compile || reason == dump_reason::failed_optimized_compile)
         {
             const std::string err_msg_output = name + std::string{ "_compiliation_errors.txt" };
             output_stream.open(err_msg_output);
@@ -212,53 +227,58 @@ namespace st
             }
         }
 
-        if (optimization_disabled)
-        {
-            options.SetOptimizationLevel(shaderc_optimization_level_zero);
-        }
+        // Perform dual compilation, where we compile first with zero optimization + all the debug info we need to run the reflection step
+        // Then we compile again with selected optimization from the config, and that's what we'll give the user as needed.
+        ShaderBinaryData binaryData;
 
-        if (k_EnableSpvAssembly)
+        // Do optimized compilation first since it's most likely to fail, but also isn't blocking if it does fail
         {
-            shaderc::AssemblyCompilationResult assembly_result = compiler.CompileGlslToSpvAssembly(src_str, kind, name.c_str(), options);
-            if (assembly_result.GetCompilationStatus() == shaderc_compilation_status_success)
+            options.SetOptimizationLevel(shaderc_optimization_level_performance);
+            shaderc::SpvCompilationResult optimizedResult = compiler.CompileGlslToSpv(src_str, kind, name.c_str(), options);
+            if (optimizedResult.GetCompilationStatus() != shaderc_compilation_status_success)
             {
-                std::string assemblyResult{ assembly_result.begin(), assembly_result.end() };
-                WriteRequest writeRequest{ WriteRequest::Type::AddShaderAssembly, handle, assemblyResult };
-                ShaderToolsErrorCode addAssemblyError = MakeFileTrackerWriteRequest(std::move(writeRequest));
-
-                if (addAssemblyError != ShaderToolsErrorCode::Success)
-                {
-                    errorSession->AddError(this, ShaderToolsErrorSource::Compiler, addAssemblyError, "Warning: failed to emplace assembly string into storage");
-                }
+                const std::string err_msg = "Optimized binary compiliation failed, debug unoptimized binary is all that will be available! \n" + optimizedResult.GetErrorMessage();
+                errorSession->AddError(this, ShaderToolsErrorSource::Compiler, ShaderToolsErrorCode::CompilerShaderCompilationFailed, err_msg.c_str());
+#ifndef NDEBUG
+                std::cerr << "Dumping source for " << name << "to file....\n";
+                dump_bad_source_to_file(name, src_str, err_msg, dump_reason::failed_optimized_compile);
+#endif
+            }
+            else
+            {
+                binaryData.optimizedSpirv = std::vector<uint32_t>{ optimizedResult.begin(), optimizedResult.end() };
             }
         }
 
-        shaderc::SpvCompilationResult compiliation_result = compiler.CompileGlslToSpv(src_str, kind, name.c_str(), options);
-
-        if (compiliation_result.GetCompilationStatus() != shaderc_compilation_status_success)
         {
-            const std::string err_msg = compiliation_result.GetErrorMessage();
-            errorSession->AddError(this, ShaderToolsErrorSource::Compiler, ShaderToolsErrorCode::CompilerShaderCompilationFailed, err_msg.c_str());
-
+            // Now compile with zero optimization and debug info
+            options.SetOptimizationLevel(shaderc_optimization_level_zero);
+            options.SetGenerateDebugInfo();
+            shaderc::SpvCompilationResult debugResult = compiler.CompileGlslToSpv(src_str, kind, name.c_str(), options);
+            if (debugResult.GetCompilationStatus() != shaderc_compilation_status_success)
+            {
+                const std::string err_msg = debugResult.GetErrorMessage();
+                errorSession->AddError(this, ShaderToolsErrorSource::Compiler, ShaderToolsErrorCode::CompilerShaderCompilationFailed, err_msg.c_str());          
 #ifndef NDEBUG
             std::cerr << "Dumping source for " << name << "to file....\n";
             dump_bad_source_to_file(name, src_str, err_msg, dump_reason::failed_compile);
 #endif
-            return ShaderToolsErrorCode::CompilerShaderCompilationFailed;
-        }
-        else
-        {
-            WriteRequest write_request{ WriteRequest::Type::AddShaderBinary, handle, std::vector<uint32_t>{ compiliation_result.begin(), compiliation_result.end() } };
-            ShaderToolsErrorCode write_result = MakeFileTrackerWriteRequest(std::move(write_request));
-            if (write_result != ShaderToolsErrorCode::Success)
-            {
-                errorSession->AddError(this, ShaderToolsErrorSource::Compiler, write_result, name.c_str());
+                return ShaderToolsErrorCode::CompilerShaderCompilationFailed;
             }
-
-            return write_result;
+            else
+            {
+                binaryData.spirvForReflection = std::vector<uint32_t>{ debugResult.begin(), debugResult.end() };
+            }   
         }
 
-        return ShaderToolsErrorCode::InvalidErrorCode;
+        WriteRequest write_request{ WriteRequest::Type::AddShaderBinary, handle, binaryData };
+        ShaderToolsErrorCode write_result = MakeFileTrackerWriteRequest(std::move(write_request));  
+        if (write_result != ShaderToolsErrorCode::Success)
+        {
+            errorSession->AddError(this, ShaderToolsErrorSource::Compiler, write_result, name.c_str());
+        }
+
+        return write_result;
     }
 
     ShaderToolsErrorCode ShaderCompilerImpl::recompileBinaryToGLSL(const ShaderStage& handle, size_t* str_size, char* dest_str)

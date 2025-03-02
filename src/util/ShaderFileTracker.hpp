@@ -4,6 +4,7 @@
 #include "common/CommonInclude.hpp"
 #include "common/ShaderStage.hpp"
 #include "common/ShaderToolsErrors.hpp"
+#include "../common/UtilityStructsInternal.hpp"
 #include <variant>
 #include <expected>
 #include <filesystem>
@@ -22,7 +23,8 @@ namespace st
         std::filesystem::path,
         std::filesystem::file_time_type,
         std::vector<std::string>,
-        std::unordered_map<ShaderStage, uint32_t>>;
+        std::unordered_map<ShaderStage, uint32_t>,
+        ShaderBinaryData>;
 
     using ReadRequestResult = std::expected<RequestPayload, ShaderToolsErrorCode>;
 
@@ -45,7 +47,7 @@ namespace st
         {
             Invalid = 0,
 			FindShaderBody,
-			FindShaderBinary,
+			FindShaderBinary, // returns optimized binaries, in particular to users
 			FindRecompiledShaderSource,
 			FindAssemblyString,
 			FindLastModificationTime,
@@ -53,7 +55,8 @@ namespace st
             FindOptimizationStatus,
             FindShaderName,
             HasFullSourceString,
-            FindResourceGroupSetIndexMap
+            FindResourceGroupSetIndexMap,
+            FindShaderBinaryForReflection // returns unoptimized binary
         };
         Type RequestType{ Type::Invalid };
         RequestKey Key;
