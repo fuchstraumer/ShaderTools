@@ -3,6 +3,5 @@
 - Identify how much more info we can pack into the YAML file to allow for the definition of PSOs entirely in data
     - Will need to identify in these requests what vulkan extensions and features are needed to do this, and save them in the data as well
 - Identify a new binary format for the generated content
-- Source location parsing for errors when generating source text. Include handling would be nice too, but need to figure out how that works with shaderc
-    - This would allow us to compile the include sources ahead of time, and parse them for errors. Kinda like a language server!
-- Preprocess includes for errors and warnings, if possible, so that the line numbers in the errors and warnings match the original source code
+- Generator now needs to extract type information and a name from the specialization constants it parses, so that we can correlate that with what reflection finds
+    - Reflection system no longer gives type info, but does give name and binding index. This will allow us to reduce it down to only use SPCs, at least.

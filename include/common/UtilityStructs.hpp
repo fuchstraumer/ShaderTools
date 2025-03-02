@@ -66,6 +66,16 @@ namespace st
             int64_t value_i64;
             uint64_t value_ui64;
         };
+        char* Name{ nullptr };
+
+        SpecializationConstant() = default;
+        ~SpecializationConstant();
+        SpecializationConstant(const SpecializationConstant& other) noexcept;
+        SpecializationConstant(SpecializationConstant&& other) noexcept;
+        SpecializationConstant& operator=(const SpecializationConstant& other) noexcept;
+        SpecializationConstant& operator=(SpecializationConstant&& other) noexcept;
+
+        void SetName(const char* name);
     };
 
     struct ST_API ShaderResourceSubObject
@@ -76,6 +86,8 @@ namespace st
         ShaderResourceSubObject& operator=(const ShaderResourceSubObject& other) noexcept;
         ShaderResourceSubObject& operator=(ShaderResourceSubObject&& other) noexcept;
         ~ShaderResourceSubObject();
+        void SetName(const char* name);
+        void SetType(const char* type);
         char* Name{ nullptr };
         char* Type{ nullptr };
         uint32_t Size{ 0u };

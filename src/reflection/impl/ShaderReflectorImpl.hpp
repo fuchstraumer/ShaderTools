@@ -12,13 +12,6 @@
 #include <vulkan/vulkan_core.h>
 #include "spirv_reflect.h"
 
-namespace spirv_cross
-{
-    class Compiler;
-    class CompilerGLSL;
-    struct Resource;
-}
-
 namespace st
 {
     struct SessionImpl;
@@ -47,14 +40,10 @@ namespace st
         ShaderReflectorImpl& operator=(ShaderReflectorImpl&& other) noexcept;
 
         void collateSets();
-        ShaderToolsErrorCode parseSpecializationConstants();
-        ShaderToolsErrorCode parseResourceType(const ShaderStage& shader_handle, const VkDescriptorType& type_being_parsed);
 
-        std::vector<ShaderResourceSubObject> ExtractBufferMembers(const spirv_cross::Compiler& cmplr, const spirv_cross::Resource& rsrc);
         std::string GetActualResourceName(const std::string& rsrc_name);
 
         ShaderToolsErrorCode parseBinary(const ShaderStage& shader_handle);
-        ShaderToolsErrorCode parseImpl(const ShaderStage& shader_handle, std::vector<uint32_t> binary_data);
 
         std::unordered_multimap<VkShaderStageFlags, DescriptorSetInfo> descriptorSets;
         std::map<uint32_t, SpecializationConstant> specializationConstants;
@@ -72,8 +61,19 @@ namespace st
 
         size_t getNumSets() const noexcept;
 
-        std::vector<VertexAttributeInfo> parseInputAttributes();
-        std::vector<VertexAttributeInfo> parseOutputAttributes();
+    private:
+
+        enum class InterfaceVariableType
+        {
+            Input,
+            Output
+        };
+
+        std::vector<VertexAttributeInfo> parseInterfaceVariables(InterfaceVariableType type);
+        ShaderToolsErrorCode parseImpl(const ShaderStage& shader_handle, std::vector<uint32_t> binary_data);
+        ShaderToolsErrorCode parseDescriptorBindings(const ShaderStage& shader_handle);
+        ShaderToolsErrorCode parsePushConstants(const ShaderStage stage);
+        ShaderToolsErrorCode parseSpecializationConstants();
 
     };
 

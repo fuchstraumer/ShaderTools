@@ -61,7 +61,13 @@ namespace st
         ReflectionShaderBinaryNotFound, 
         ReflectionInvalidSpecializationConstantType,
         ReflectionRecompilerError,
-        ReflectionSpvReflectError,
+        ReflectionCouldNotStoreResource,
+        ReflectionMultiplePushConstants,
+        ReflectionFailedToParseInputAttributes,
+        ReflectionFailedToParseOutputAttributes,
+
+        SpvReflectErrorsStart = 350,
+
 
         ResourceErrorsStart = 400,
         ResourceInvalidDescriptorType,

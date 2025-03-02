@@ -71,7 +71,7 @@ namespace st
             errorSession->AddError(this, ShaderToolsErrorSource::IncludeHandler, ShaderToolsErrorCode::FilesystemPathExistedFileCouldNotBeOpened, error_message.c_str());
         }
 
-        std::string include_content((std::istreambuf_iterator<char>(include_file)), std::istreambuf_iterator<char>());
+        std::string include_content{ (std::istreambuf_iterator<char>(include_file)), std::istreambuf_iterator<char>() };
 
         // We have to allocate this because shaderc owns it and we also have to use raw pointers :( this makes the fox sad
         shaderc_include_result* result = new shaderc_include_result();

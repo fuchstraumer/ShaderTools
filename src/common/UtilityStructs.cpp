@@ -54,9 +54,16 @@ namespace st
         return Strings[idx];
     }
 
+    char* CopyString(const char* string_to_copy)
+    {
+        char* new_string = new char[std::strlen(string_to_copy) + 1];
+        std::strcpy(new_string, string_to_copy);
+        return new_string;
+    }
+
     ShaderResourceSubObject::ShaderResourceSubObject(const ShaderResourceSubObject& other) noexcept :
-        Type(strdup(other.Type)),
-        Name(strdup(other.Name)),
+        Type(CopyString(other.Type)),
+        Name(CopyString(other.Name)),
         NumElements(other.NumElements),
         isComplex(other.isComplex),
         Offset(other.Offset),
@@ -79,8 +86,8 @@ namespace st
 
     ShaderResourceSubObject& ShaderResourceSubObject::operator=(const ShaderResourceSubObject& other) noexcept
     {
-        Type = strdup(other.Type);
-        Name = strdup(other.Name);
+        SetType(other.Type);
+        SetName(other.Name);
         Offset = other.Offset;
         Size = other.Size;
         NumElements = other.NumElements;
@@ -105,13 +112,114 @@ namespace st
     {
         if (Type != nullptr)
         {
-            free(Type);
+            delete[] Type;
         }
 
         if (Name != nullptr)
         {
-            free(Name);
+            delete[] Name;
         }
+    }
+
+    void ShaderResourceSubObject::SetName(const char* name)
+    {
+        if (Name != nullptr)
+        {
+            delete[] Name;
+        }
+        Name = CopyString(name);
+    }
+
+    void ShaderResourceSubObject::SetType(const char* type)
+    {
+        if (Type != nullptr)
+        {
+            delete[] Type;
+        }
+        Type = CopyString(type);
+    }
+
+    void SetSpecializationConstantValue(SpecializationConstant& constant, const SpecializationConstant& other)
+    {
+        switch (constant.Type)
+        {
+        case SpecializationConstant::constant_type::b32:
+            constant.value_b32 = other.value_b32;
+            break;
+        case SpecializationConstant::constant_type::f32:
+            constant.value_f32 = other.value_f32;
+            break;
+        case SpecializationConstant::constant_type::f64:
+            constant.value_f64 = other.value_f64;
+            break;
+        case SpecializationConstant::constant_type::i32:
+            constant.value_i32 = other.value_i32;
+            break;
+        case SpecializationConstant::constant_type::i64:
+            constant.value_i64 = other.value_i64;
+            break;
+        case SpecializationConstant::constant_type::ui32:
+            constant.value_ui32 = other.value_ui32;
+            break;
+        case SpecializationConstant::constant_type::ui64:
+            constant.value_ui64 = other.value_ui64;
+            break;
+        case SpecializationConstant::constant_type::invalid:
+            break;
+        }
+    }
+
+    SpecializationConstant::~SpecializationConstant()
+    {
+        if (Name != nullptr)
+        {
+            delete[] Name;
+        }
+    }
+
+    SpecializationConstant::SpecializationConstant(const SpecializationConstant& other) noexcept :
+        Type(other.Type),
+        ConstantID(other.ConstantID),
+        Name(CopyString(other.Name))
+    {
+        SetSpecializationConstantValue(*this, other);
+    }
+
+    SpecializationConstant::SpecializationConstant(SpecializationConstant&& other) noexcept :
+        Type(std::move(other.Type)),
+        ConstantID(std::move(other.ConstantID)),
+        Name(std::move(other.Name))
+    {
+        SetSpecializationConstantValue(*this, other);
+        other.Name = nullptr;
+    }
+
+    SpecializationConstant& SpecializationConstant::operator=(const SpecializationConstant& other) noexcept
+    {
+        SetName(other.Name);
+        Type = other.Type;
+        ConstantID = other.ConstantID;
+        SetSpecializationConstantValue(*this, other);
+        return *this;
+    }
+
+    SpecializationConstant& SpecializationConstant::operator=(SpecializationConstant&& other) noexcept
+    {
+        Name = std::move(other.Name);
+        Type = std::move(other.Type);
+        ConstantID = std::move(other.ConstantID);
+        SetSpecializationConstantValue(*this, other);
+        other.Name = nullptr;
+        return *this;
+    }
+
+    void SpecializationConstant::SetName(const char* name)
+    {
+        if (Name != nullptr)
+        {
+            delete[] Name;
+        }
+        Name = CopyString(name);
     }
 
 }
