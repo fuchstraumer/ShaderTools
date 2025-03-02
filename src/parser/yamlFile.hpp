@@ -4,6 +4,7 @@
 #include "resources/ShaderResource.hpp"
 #include "common/ShaderStage.hpp"
 #include "common/UtilityStructs.hpp"
+#include "../common/UtilityStructsInternal.hpp"
 #include <memory>
 #include <unordered_map>
 #include <set>
@@ -43,6 +44,7 @@ namespace st
         std::vector<std::filesystem::path> includePaths;
         ShaderCompilerOptions compilerOptions;
         std::string packName;
+        std::filesystem::path filePath;
 
     private:
         ShaderStage addShaderStage(const std::string& group_name, std::string shader_name, VkShaderStageFlags stage_flags);

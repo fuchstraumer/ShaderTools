@@ -75,13 +75,13 @@ namespace st
 
         // We have to allocate this because shaderc owns it and we also have to use raw pointers :( this makes the fox sad
         shaderc_include_result* result = new shaderc_include_result();
-        char* content_ptr = new char[include_content.size()];
+        char* content_ptr = new char[include_content.size() + 1];
         std::strcpy(content_ptr, include_content.c_str());
         result->content = content_ptr;
         result->content_length = include_content.size();
 
         const std::string source_name_str = found_include_path.string();
-        char* source_name_ptr = new char[source_name_str.size()];
+        char* source_name_ptr = new char[source_name_str.size() + 1];
         std::strcpy(source_name_ptr, source_name_str.c_str());
         result->source_name = source_name_ptr;
         result->source_name_length = source_name_str.size();

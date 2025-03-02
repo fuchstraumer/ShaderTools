@@ -23,13 +23,13 @@ namespace st
         // Required preamble for generating valid GLSL code
         Preamble = 0,
         Extension = 1,
-        glPerVertex = 2,
-        InterfaceBlock = 3,
+        IncludePath,
+        glPerVertex,
+        InterfaceBlock,
         InputAttribute,
         OutputAttribute,
         SpecConstant,
         PushConstantItem,
-        IncludedFragment,
         ResourceBlock,
         // Main fragment, effectively processed body string
         Main,
@@ -85,6 +85,7 @@ namespace st
         [[nodiscard]] ShaderToolsErrorCode addStageInterface(uint32_t stageBits, fs::path interfacePath);
         [[nodiscard]] ShaderToolsErrorCode parseInterfaceBlock(const std::string& str);
         void parseConstantBlock(const std::string& str);
+        [[nodiscard]] ShaderToolsErrorCode processBodyStrIncludePaths(std::string& body_src_str);
         [[nodiscard]] ShaderToolsErrorCode parseInclude(const std::string& str, bool local);
 
         [[nodiscard]] ShaderToolsErrorCode getResourceQualifiers(const ShaderResource& rsrc, std::string& result) const;

@@ -280,6 +280,12 @@ compiler_options :
     Optimization : "Performance"
     TargetVersion : "VulkanLatest"
     SourceLanguage : "GLSL"
+    # Working directory is always default added during parse.
+    # These are relative to that working directory, unless specified otherwise.
+    IncludePaths : [
+        "compute",
+        "debug"
+    ]
 
 shader_groups : 
     UpdateLights : 

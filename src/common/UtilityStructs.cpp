@@ -10,7 +10,7 @@ namespace st
         FreeMemory();
     }
 
-    dll_retrieved_strings_t::dll_retrieved_strings_t(dll_retrieved_strings_t&& other) noexcept : NumStrings(std::move(other.NumStrings)), Strings(std::move(other.Strings))
+    dll_retrieved_strings_t::dll_retrieved_strings_t(dll_retrieved_strings_t&& other) noexcept : NumStrings(other.NumStrings), Strings(other.Strings)
     {
         other.NumStrings = 0;
         other.Strings = nullptr;
@@ -25,7 +25,7 @@ namespace st
 
         // Clean up existing resources
         FreeMemory();
-        
+
         NumStrings = std::move(other.NumStrings);
         other.NumStrings = 0;
         Strings = std::move(other.Strings);
@@ -85,12 +85,12 @@ namespace st
     }
 
     ShaderResourceSubObject::ShaderResourceSubObject(ShaderResourceSubObject&& other) noexcept :
-        Type(std::move(other.Type)),
-        Name(std::move(other.Name)),
-        NumElements(std::move(other.NumElements)),
-        isComplex(std::move(other.isComplex)),
-        Offset(std::move(other.Offset)),
-        Size(std::move(other.Size))
+        Type(other.Type),
+        Name(other.Name),
+        NumElements(other.NumElements),
+        isComplex(other.isComplex),
+        Offset(other.Offset),
+        Size(other.Size)
     {
         other.Type = nullptr;
         other.Name = nullptr;
@@ -218,9 +218,9 @@ namespace st
     }
 
     SpecializationConstant::SpecializationConstant(SpecializationConstant&& other) noexcept :
-        Type(std::move(other.Type)),
-        ConstantID(std::move(other.ConstantID)),
-        Name(std::move(other.Name))
+        Type(other.Type),
+        ConstantID(other.ConstantID),
+        Name(other.Name)
     {
         SetSpecializationConstantValue(*this, other);
         other.Name = nullptr;

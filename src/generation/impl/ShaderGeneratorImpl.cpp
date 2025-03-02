@@ -24,8 +24,8 @@ namespace st
     static const std::regex inline_resources_begin("#pragma BEGIN_INLINE_RESOURCES");
     static const std::regex inline_resources_end("#pragma END_INLINE_RESOURCES");
     static const std::regex use_set_resources("#pragma\\s+USE_RESOURCES\\s+(\\S+)\n");
-    static const std::regex include_library("#include <(\\S+)>");
-    static const std::regex include_local("#include \"(\\S+)\"");
+    static const std::regex include_library("#include <(\\S+)>\n");
+    static const std::regex include_local("#include \"(\\S+)\"\n");
     static const std::regex specialization_constant("SPC\\s+(const.*$)");
 
     ShaderGeneratorImpl::ShaderGeneratorImpl(ShaderStage _stage, SessionImpl* errorSession) noexcept : Stage(std::move(_stage)), errorSession(errorSession)
@@ -237,7 +237,7 @@ namespace st
         }
     }
 
-    void ShaderGeneratorImpl::addIncludePath(const char * include_path)
+    void ShaderGeneratorImpl::addIncludePath(const char* include_path)
     {
         includes.push_back(fs::path{ include_path });
     }
@@ -261,56 +261,28 @@ namespace st
         }
     }
 
-    ShaderToolsErrorCode ShaderGeneratorImpl::parseInclude(const std::string& str, bool local)
+    // Unlike how we previously just pasted the whole include in, here all we do now is extract the path to the include and make sure
+    // it's put as early in the generated file as possible (so it works!)
+    ShaderToolsErrorCode ShaderGeneratorImpl::processBodyStrIncludePaths(std::string& body_src_str)
     {
-        fs::path include_path;
-        if (!local)
+        bool include_found = true;
+        while (include_found)
         {
-            // Include from our "library"
-            include_path = fs::path(std::string(LibPath + str));
-            std::source_location error_location = std::source_location::current();
-            if (!fs::exists(include_path))
+            std::smatch match;
+            if (std::regex_search(body_src_str, match, include_local))
             {
-                errorSession->AddError(this, ShaderToolsErrorSource::Generator, ShaderToolsErrorCode::GeneratorUnableToFindLibraryInclude, include_path.string().c_str(), error_location);
-                return ShaderToolsErrorCode::GeneratorUnableToFindLibraryInclude;
+                fragments.emplace(fragment_type::IncludePath, match[0].str());
+                body_src_str.erase(body_src_str.begin() + match.position(), body_src_str.begin() + match.position() + match.length());
             }
-        }
-        else
-        {
-            bool found = false;
-            for (auto& path : includes)
+            else if (std::regex_search(body_src_str, match, include_library))
             {
-                include_path = path / fs::path(str);
-                if (fs::exists(include_path))
-                {
-                    found = true;
-                    break;
-                }
+                fragments.emplace(fragment_type::IncludePath, match[0].str());
+                body_src_str.erase(body_src_str.begin() + match.position(), body_src_str.begin() + match.position() + match.length());
             }
-
-            std::source_location error_location = std::source_location::current();
-            if (!found)
+            else
             {
-                errorSession->AddError(this, ShaderToolsErrorSource::Generator, ShaderToolsErrorCode::GeneratorUnableToFindLocalInclude, include_path.string().c_str());
-                return ShaderToolsErrorCode::GeneratorUnableToFindLocalInclude;
+                include_found = false;
             }
-        }
-
-        std::ifstream include_file(include_path);
-
-        if (!include_file.is_open())
-        {
-            errorSession->AddError(this, ShaderToolsErrorSource::Generator, ShaderToolsErrorCode::FilesystemPathExistedFileCouldNotBeOpened, include_path.string().c_str());
-            return ShaderToolsErrorCode::FilesystemPathExistedFileCouldNotBeOpened;
-        }
-
-        std::string file_content{ std::istreambuf_iterator<char>(include_file), std::istreambuf_iterator<char>() };
-
-        auto fragment_iter = fragments.emplace(fragment_type::IncludedFragment, file_content);
-        if (fragment_iter == fragments.end())
-        {
-            errorSession->AddError(this, ShaderToolsErrorSource::Generator, ShaderToolsErrorCode::GeneratorUnableToStoreFragmentFileContents, include_path.string().c_str());
-            return ShaderToolsErrorCode::GeneratorUnableToStoreFragmentFileContents;
         }
 
         return ShaderToolsErrorCode::Success;
@@ -890,6 +862,12 @@ namespace st
             {
                 addExtension(extensions[i]);
             }
+        }
+
+        ec = processBodyStrIncludePaths(body_str);
+        if (ec != ShaderToolsErrorCode::Success)
+        {
+            return ec;
         }
 
         ec = processBodyStrSpecializationConstants(body_str);

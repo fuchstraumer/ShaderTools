@@ -155,6 +155,9 @@ namespace st
             throw e;
         }
 
+        filePath = std::filesystem::canonical(fname);
+        filePath = filePath.parent_path();
+
         ShaderToolsErrorCode parseOptionsStatus = parseCompilerOptions(session);
         ShaderToolsErrorCode parseGroupsStatus = parseGroups(session);
         ShaderToolsErrorCode parseResourcesStatus = parseResources(session);
@@ -405,6 +408,26 @@ namespace st
                 else
                 {
                     compilerOptions.TargetVersion = target_version_iter->second;
+                }
+            }
+
+            if (compiler_options["IncludePaths"])
+            {
+                namespace fs = std::filesystem;
+                // We will add the working dir, but also the parent path of this file itself
+                fs::path working_dir = fs::current_path();
+                compilerOptions.IncludePaths.reserve(compiler_options["IncludePaths"].size() + 2);
+                compilerOptions.IncludePaths.emplace_back(working_dir);
+                compilerOptions.IncludePaths.emplace_back(filePath);
+                for (const auto& include_path : compiler_options["IncludePaths"])
+                {
+                    fs::path include_path_fs = include_path.as<std::string>();
+                    if (include_path_fs.is_relative())
+                    {
+                        include_path_fs = filePath / include_path_fs;
+                    }
+
+                    compilerOptions.IncludePaths.emplace_back(include_path_fs);
                 }
             }
 
