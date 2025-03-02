@@ -5,7 +5,6 @@ PROJECT(ShaderTools)
 # Much better than cluttering up an entire IDE just with our dependencies lol
 SET_PROPERTY(GLOBAL PROPERTY USE_FOLDERS ON)
 
-#ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/spirv-headers" EXCLUDE_FROM_ALL)
 SET(SPIRV-Headers_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/spirv-headers")
 SET(SKIP_SPIRV_TOOLS_INSTALL ON CACHE BOOL "Skip installation")
 SET(SPIRV_SKIP_EXECUTABLES ON CACHE BOOL "Skip building the executable and tests along with the library")
@@ -159,42 +158,6 @@ IF(MSVC)
         "_CRT_NONSTDC_NO_DEPRECATE"
         "NOMINMAX")
 ENDIF()
-
-# Note that these are IDE-only organization parameters. This changes nothing about the build,
-# just keeps clutter out of the IDE solution view in VS especially (yuck, sorry, but this is CMake's fault...)
-#SET_TARGET_PROPERTIES(
-#    shaderc shaderc_util spirv-cross-core spirv-cross-cpp spirv-cross-glsl
-#    spirv-tools-pkg-config spirv-tools-shared-pkg-config
-#    core_tables enum_string_mapping extinst_tables
-#    PROPERTIES FOLDER "ShaderTools Dependencies")
-    
-# SET_TARGET_PROPERTIES(HLSL PROPERTIES FOLDER "ShaderTools Dependencies/hlsl")
-
-# SET_TARGET_PROPERTIES(
-#    GenericCodeGen glslang glslang-default-resource-limits MachineIndependent
-#    OGLCompiler OSDependent SPIRV SPVRemapper 
-#    PROPERTIES FOLDER "ShaderTools Dependencies/glslang")
-
-#SET_TARGET_PROPERTIES(
-#    spirv-tools-build-version spirv-tools-header-DebugInfo
-#    spirv-tools-header-NonSemanticShaderDebugInfo100
-#    spirv-tools-header-OpenCLDebugInfo100
-#    spv-tools-cldi100 spv-tools-clspvreflection
-#    spv-tools-clspvreflection spv-tools-debuginfo
-#    spv-tools-shdi100 spv-tools-spv-amd-gs spv-tools-spv-amd-sb
-#    spv-tools-spv-amd-sevp spv-tools-spv-amd-stm
-#    PROPERTIES FOLDER "ShaderTools Dependencies/SPIRV-Tools/build")
-
-#SET_TARGET_PROPERTIES(
-#    SPIRV-Tools-link SPIRV-Tools-lint SPIRV-Tools-opt 
-#    SPIRV-Tools-reduce SPIRV-Tools-shared SPIRV-Tools-static
-#    PROPERTIES FOLDER "ShaderTools Dependencies/SPIRV-Tools/libraries")
-
-#SET_TARGET_PROPERTIES(
-#    spirv-tools-vimsyntax PROPERTIES FOLDER "ShaderTools Dependencies/SPIRV-Tools/utilities")
-
-#SET_TARGET_PROPERTIES(
-#    glslangValidator spirv-remap PROPERTIES FOLDER "ShaderTools Dependencies/tools")
 
 INSTALL(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include/" DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/ShaderTools/")
 INSTALL(TARGETS ShaderTools RUNTIME DESTINATION "bin" LIBRARY DESTINATION "lib" ARCHIVE DESTINATION "lib")

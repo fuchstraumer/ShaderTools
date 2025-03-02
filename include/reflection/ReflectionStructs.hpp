@@ -36,7 +36,7 @@ namespace st
         VertexAttributeInfo(const VertexAttributeInfo& other) noexcept;
         VertexAttributeInfo& operator=(const VertexAttributeInfo& other) noexcept;
         void SetName(const char* name);
-        void SetFormatFromSpvReflectFlags(uint32_t spv_reflect_type_flags, uint32_t spv_reflect_format_flags);
+        void SetFormatFromSpvReflectFlags(uint32_t spv_reflect_format_flags);
         void SetLocation(uint32_t loc) noexcept;
         void SetOffset(uint32_t _offset) noexcept;
         const char* Name() const noexcept;

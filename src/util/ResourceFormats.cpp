@@ -140,6 +140,67 @@ namespace st
         }
     }
 
+
+    const char* spvReflect_TypeToString(const SpvReflectTypeFlags type)
+    {
+        if (type & SPV_REFLECT_TYPE_FLAG_VOID)
+        {
+            return "void";
+        }
+        else if (type & SPV_REFLECT_TYPE_FLAG_BOOL)
+        {
+            return "bool";
+        }
+        else if (type & SPV_REFLECT_TYPE_FLAG_INT)
+        {
+            return "int";
+        }
+        else if (type & SPV_REFLECT_TYPE_FLAG_FLOAT)
+        {
+            return "float";
+        }
+        else if (type & SPV_REFLECT_TYPE_FLAG_VECTOR)
+        {
+            return "vector";
+        }
+        else if (type & SPV_REFLECT_TYPE_FLAG_MATRIX)
+        {
+            return "matrix";
+        }
+        else if (type & SPV_REFLECT_TYPE_FLAG_EXTERNAL_IMAGE)
+        {
+            return "image";
+        }
+        else if (type & SPV_REFLECT_TYPE_FLAG_EXTERNAL_SAMPLER)
+        {
+            return "sampler";
+        }
+        else if (type & SPV_REFLECT_TYPE_FLAG_EXTERNAL_SAMPLED_IMAGE)
+        {
+            return "sampled_image";
+        }
+        else if (type & SPV_REFLECT_TYPE_FLAG_EXTERNAL_BLOCK)
+        {
+            return "block";
+        }
+        else if (type & SPV_REFLECT_TYPE_FLAG_EXTERNAL_ACCELERATION_STRUCTURE)
+        {
+            return "acceleration_structure";
+        }
+        else if (type & SPV_REFLECT_TYPE_FLAG_STRUCT)
+        {
+            return "struct";
+        }
+        else if (type & SPV_REFLECT_TYPE_FLAG_ARRAY)
+        {
+            return "array";
+        }
+        else
+        {
+            return "unknown";
+        }
+    }
+
     VkFormat VkFormatFromSpvReflectFormat(const SpvReflectFormat type)
     {
         return VK_FORMAT_UNDEFINED;
@@ -370,3 +431,4 @@ namespace st
         }
     }
 }
+

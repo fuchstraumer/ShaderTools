@@ -5,3 +5,5 @@
 - Identify a new binary format for the generated content
 - Generator now needs to extract type information and a name from the specialization constants it parses, so that we can correlate that with what reflection finds
     - Reflection system no longer gives type info, but does give name and binding index. This will allow us to reduce it down to only use SPCs, at least.
+- Structure support for interface inputs and outputs: Will help with possible eventual HLSL support, and will let us clean things up a bit.
+    - Potentially look at making it so we auto-generate locations even in cases of interface overrides if we use this

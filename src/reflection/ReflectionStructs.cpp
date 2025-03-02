@@ -86,21 +86,6 @@ namespace st
         }
     }
 
-    constexpr VkFormat GetFormatFromTypeAndFormat(SpvReflectTypeFlags type, SpvReflectFormat format) noexcept
-    {
-        switch (type)
-        {
-        case SPV_REFLECT_TYPE_FLAG_FLOAT:
-            [[fallthrough]];
-        case SPV_REFLECT_TYPE_FLAG_INT:
-            [[fallthrough]];
-        case SPV_REFLECT_TYPE_FLAG_VECTOR:
-            return GetVkFormatFromSpvReflectFormat(format);
-        default:
-            return VK_FORMAT_UNDEFINED;
-        }
-    }
-
     struct PushConstantInfoImpl
     {
         VkShaderStageFlags stages{ VK_SHADER_STAGE_FLAG_BITS_MAX_ENUM };
@@ -230,9 +215,9 @@ namespace st
         impl->name = _name;
     }
 
-    void VertexAttributeInfo::SetFormatFromSpvReflectFlags(uint32_t spv_reflect_type_flags, uint32_t spv_reflect_format_flags)
+    void VertexAttributeInfo::SetFormatFromSpvReflectFlags(uint32_t spv_reflect_format_flags)
     {
-        impl->format = GetFormatFromTypeAndFormat(spv_reflect_type_flags, static_cast<SpvReflectFormat>(spv_reflect_format_flags));
+        impl->format = GetVkFormatFromSpvReflectFormat(static_cast<SpvReflectFormat>(spv_reflect_format_flags));
     }
 
     void VertexAttributeInfo::SetLocation(uint32_t loc) noexcept

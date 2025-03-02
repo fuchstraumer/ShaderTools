@@ -4,9 +4,11 @@
 #include "../../parser/yamlFile.hpp"
 #include "resources/ShaderResource.hpp"
 #include "resources/ResourceUsage.hpp"
+#include "../../util/ResourceFormats.hpp"
 #include <array>
 #include <iostream>
 #include <fstream>
+#include <algorithm>
 
 namespace st
 {
@@ -171,6 +173,23 @@ namespace st
         return access_modifier::ReadWrite;
     }
 
+    constexpr bool StageRequiresVertexInputs(const VkShaderStageFlags stage_flags)
+    {
+        return (stage_flags & VK_SHADER_STAGE_VERTEX_BIT) ||
+               (stage_flags & VK_SHADER_STAGE_GEOMETRY_BIT) ||
+               (stage_flags & VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT) ||
+               (stage_flags & VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT) ||
+               (stage_flags & VK_SHADER_STAGE_FRAGMENT_BIT);
+    }
+
+    constexpr bool StageRequiresVertexOutputs(const VkShaderStageFlags stage_flags)
+    {
+        return (stage_flags & VK_SHADER_STAGE_VERTEX_BIT) ||
+               (stage_flags & VK_SHADER_STAGE_GEOMETRY_BIT) ||
+               (stage_flags & VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT) ||
+               (stage_flags & VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT);
+    }
+
     ShaderResourceSubObject CreateSubobject(const SpvReflectBlockVariable& block_variable)
     {
         ShaderResourceSubObject result;
@@ -180,6 +199,10 @@ namespace st
         if (block_variable.type_description && block_variable.type_description->type_name)
         {
             result.SetType(block_variable.type_description->type_name);
+        }
+        else
+        {
+            result.SetType(spvReflect_TypeToString(block_variable.type_description->type_flags));
         }
         result.isComplex = block_variable.type_description && block_variable.type_description->type_flags & SPV_REFLECT_TYPE_FLAG_STRUCT;
         return result;
@@ -266,16 +289,56 @@ namespace st
         }
 
         std::vector<SpvReflectInterfaceVariable*> interface_variables(count);
-        result = spvReflectEnumerateInputVariables(spvReflectModule.get(), &count, interface_variables.data());
+        switch (type)
+        {
+        case InterfaceVariableType::Input:
+            result = spvReflectEnumerateInputVariables(spvReflectModule.get(), &count, interface_variables.data());
+            break;
+        case InterfaceVariableType::Output:
+            result = spvReflectEnumerateOutputVariables(spvReflectModule.get(), &count, interface_variables.data());
+            break;
+        }
+
+        if (result != SPV_REFLECT_RESULT_SUCCESS)
+        {
+            errorSession->AddError(this, ShaderToolsErrorSource::Reflection, ShaderToolsErrorCode::SpvReflectErrorsStart, "Failed to get actual interface variables from SpvReflect.");
+            return {};
+        }
 
         std::vector<VertexAttributeInfo> attributes(interface_variables.size());
         uint32_t running_offset = 0;
         for (const auto& interface_variable : interface_variables)
         {
             VertexAttributeInfo attr_info;
-            if (interface_variable->name == nullptr)
+            if (interface_variable->name && std::string(interface_variable->name).empty())
             {
-                // Log this because we need the names for this to work.
+                // Check to see if the type information holds the name, and see if it's just our gl_PerVertex declaration
+                // If that's the case, we have to tear this out of the results as that's not actually something we care about
+                // (also, these are placed at the front of interface_variables but location indices for others start at 0 after this member)
+                if (interface_variable->type_description && interface_variable->type_description->type_name)
+                {
+                    std::string type_name = interface_variable->type_description->type_name;
+                    if (type_name == std::string("gl_PerVertex"))
+                    {
+                        attributes.resize(attributes.size() - 1);
+                        continue;
+                    }
+                }
+                else
+                {
+                    const std::string error_message("Found an empty name string for an interface variable, and it wasn't an expected built in value!");
+                    errorSession->AddError(this, ShaderToolsErrorSource::Reflection, ShaderToolsErrorCode::SpvReflectErrorsStart, error_message.c_str());
+                    return {};
+                }
+            }
+            else if (interface_variable->built_in != -1)
+            {
+                attributes.resize(attributes.size() - 1);
+                continue;
+            }
+            else if (!interface_variable->name)
+            {
+                // If we still don't have a name, than that's definitely a genuine error.
                 std::string error_message = std::format("Input variable at location {} has no name", interface_variable->location);
                 errorSession->AddError(
                     this,
@@ -288,12 +351,14 @@ namespace st
             attr_info.SetName(interface_variable->name);
             attr_info.SetLocation(interface_variable->location);
             attr_info.SetOffset(running_offset);
-            attr_info.SetFormatFromSpvReflectFlags(interface_variable->format, interface_variable->type_description->type_flags);
+            attr_info.SetFormatFromSpvReflectFlags(interface_variable->format);
 
             running_offset += GetFormatSize(interface_variable->format);
             attributes[interface_variable->location] = attr_info;
 
         }
+
+        return attributes;
     }
 
     ShaderToolsErrorCode ShaderReflectorImpl::parseDescriptorBindings(const ShaderStage& shader_handle)
@@ -409,6 +474,7 @@ namespace st
 
         }
 
+        return ShaderToolsErrorCode::Success;
     }
 
     ShaderToolsErrorCode ShaderReflectorImpl::parsePushConstants(const ShaderStage stage)
@@ -525,6 +591,8 @@ namespace st
             spc_result.SetName(spc->name);
             specializationConstants.emplace(spc->constant_id, spc_result);
         }
+
+        return ShaderToolsErrorCode::Success;
     }
 
     ShaderToolsErrorCode ShaderReflectorImpl::parseBinary(const ShaderStage& shader_handle)
@@ -581,7 +649,7 @@ namespace st
     {
         VkShaderStageFlags stage = static_cast<VkShaderStageFlags>(shader_handle.stageBits);
 
-        SpvReflectShaderModule* module_ptr = nullptr;
+        SpvReflectShaderModule* module_ptr = new SpvReflectShaderModule();
         SpvReflectResult result = spvReflectCreateShaderModule(binary_data.size() * sizeof(uint32_t), binary_data.data(), module_ptr);
         if (result != SPV_REFLECT_RESULT_SUCCESS)
         {
@@ -615,19 +683,23 @@ namespace st
             return specializationConstantsParseError;
         }
 
-        std::vector<VertexAttributeInfo> input_attributes = parseInterfaceVariables(InterfaceVariableType::Input);
-        if (input_attributes.empty())
+
+        if (stage != VK_SHADER_STAGE_COMPUTE_BIT)
         {
-            return ShaderToolsErrorCode::ReflectionFailedToParseInputAttributes;
+            std::vector<VertexAttributeInfo> input_attributes = parseInterfaceVariables(InterfaceVariableType::Input);
+            if (input_attributes.empty() && StageRequiresVertexInputs(stage))
+            {
+                return ShaderToolsErrorCode::ReflectionFailedToParseInputAttributes;
+            }
+            inputAttributes.emplace(stage, std::move(input_attributes));
+
+            std::vector<VertexAttributeInfo> output_attributes = parseInterfaceVariables(InterfaceVariableType::Output);
+            if (output_attributes.empty() && StageRequiresVertexOutputs(stage))
+            {
+                return ShaderToolsErrorCode::ReflectionFailedToParseOutputAttributes;
+            }
+            outputAttributes.emplace(stage, std::move(output_attributes));
         }
-        inputAttributes.emplace(stage, std::move(input_attributes));
-        
-        std::vector<VertexAttributeInfo> output_attributes = parseInterfaceVariables(InterfaceVariableType::Output);
-        if (output_attributes.empty())
-        {
-            return ShaderToolsErrorCode::ReflectionFailedToParseOutputAttributes;
-        }
-        outputAttributes.emplace(stage, std::move(output_attributes));
 
         collateSets();
 
