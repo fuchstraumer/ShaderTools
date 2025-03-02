@@ -36,14 +36,13 @@ namespace st
         VertexAttributeInfo(const VertexAttributeInfo& other) noexcept;
         VertexAttributeInfo& operator=(const VertexAttributeInfo& other) noexcept;
         void SetName(const char* name);
-        void SetType(const void* spir_type_ptr);
-        void SetTypeFromText(const char* type_str);
+        void SetType(uint32_t spv_reflect_type_bits);
         void SetLocation(uint32_t loc) noexcept;
         void SetOffset(uint32_t _offset) noexcept;
         const char* Name() const noexcept;
         const char* TypeAsText() const noexcept;
-        const uint32_t& Location() const noexcept;
-        const uint32_t& Offset() const noexcept;
+        uint32_t Location() const noexcept;
+        uint32_t Offset() const noexcept;
         // Returns VK_FORMAT_UNDEFINED if matching of type to a Vulkan format doesn't work.
         VkFormat GetAsFormat() const noexcept;
         explicit operator VkVertexInputAttributeDescription() const noexcept;

@@ -4,36 +4,156 @@
 #include "../../parser/yamlFile.hpp"
 #include "resources/ShaderResource.hpp"
 #include "resources/ResourceUsage.hpp"
-#include "spirv_cross_containers.hpp"
-#include "spirv-cross/spirv_cross.hpp"
-#include "spirv-cross/spirv_glsl.hpp"
 #include <array>
 #include <iostream>
 #include <fstream>
 
 namespace st
 {
+    constexpr VkDescriptorType ConvertSpvReflectDescriptorType(SpvReflectDescriptorType type) noexcept
+    {
+        switch (type)
+        {
+            case SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLER:
+                return VK_DESCRIPTOR_TYPE_SAMPLER;
+            case SPV_REFLECT_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+                return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            case SPV_REFLECT_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
+                return VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE;
+            case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+                return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+            case SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
+                return VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER;
+            case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
+                return VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER;
+            case SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
+                return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+                return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            case SPV_REFLECT_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
+                return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+            case SPV_REFLECT_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
+                return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
+            case SPV_REFLECT_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
+                return VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT;
+            case SPV_REFLECT_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR:
+                return VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
+            default:
+                return VK_DESCRIPTOR_TYPE_MAX_ENUM;
+        };
+    }
+
+    constexpr uint32_t GetFormatSize(SpvReflectFormat format) noexcept
+    {
+        switch (format)
+        {
+            case SPV_REFLECT_FORMAT_R16_UINT:
+                [[fallthrough]];
+            case SPV_REFLECT_FORMAT_R16_SINT:
+                [[fallthrough]];
+            case SPV_REFLECT_FORMAT_R16_SFLOAT:
+                return 2;
+            case SPV_REFLECT_FORMAT_R16G16_UINT:
+                [[fallthrough]];
+            case SPV_REFLECT_FORMAT_R16G16_SINT:
+                [[fallthrough]];
+            case SPV_REFLECT_FORMAT_R16G16_SFLOAT:
+                return 4;
+            case SPV_REFLECT_FORMAT_R16G16B16_UINT:
+                [[fallthrough]];
+            case SPV_REFLECT_FORMAT_R16G16B16_SINT:
+                [[fallthrough]];
+            case SPV_REFLECT_FORMAT_R16G16B16_SFLOAT:
+                return 6;
+            case SPV_REFLECT_FORMAT_R16G16B16A16_UINT:
+                [[fallthrough]];
+            case SPV_REFLECT_FORMAT_R16G16B16A16_SINT:
+                [[fallthrough]];
+            case SPV_REFLECT_FORMAT_R16G16B16A16_SFLOAT:
+                return 8;
+            case SPV_REFLECT_FORMAT_R32_UINT:
+                [[fallthrough]];
+            case SPV_REFLECT_FORMAT_R32_SINT:
+                [[fallthrough]];
+            case SPV_REFLECT_FORMAT_R32_SFLOAT:
+                return 4;
+            case SPV_REFLECT_FORMAT_R32G32_UINT:
+                [[fallthrough]];
+            case SPV_REFLECT_FORMAT_R32G32_SINT:
+                [[fallthrough]];
+            case SPV_REFLECT_FORMAT_R32G32_SFLOAT:
+                return 8;
+            case SPV_REFLECT_FORMAT_R32G32B32_UINT:
+                [[fallthrough]];
+            case SPV_REFLECT_FORMAT_R32G32B32_SINT:
+                [[fallthrough]];
+            case SPV_REFLECT_FORMAT_R32G32B32_SFLOAT:
+                return 12;
+            case SPV_REFLECT_FORMAT_R32G32B32A32_UINT:
+                [[fallthrough]];
+            case SPV_REFLECT_FORMAT_R32G32B32A32_SINT:
+                [[fallthrough]];
+            case SPV_REFLECT_FORMAT_R32G32B32A32_SFLOAT:
+                return 16;
+            case SPV_REFLECT_FORMAT_R64_UINT:
+                [[fallthrough]];
+            case SPV_REFLECT_FORMAT_R64_SINT:
+                [[fallthrough]];
+            case SPV_REFLECT_FORMAT_R64_SFLOAT:
+                return 8;
+            case SPV_REFLECT_FORMAT_R64G64_UINT:
+                [[fallthrough]];
+            case SPV_REFLECT_FORMAT_R64G64_SINT:
+                [[fallthrough]];
+            case SPV_REFLECT_FORMAT_R64G64_SFLOAT:
+                return 16;
+            case SPV_REFLECT_FORMAT_R64G64B64_UINT:
+                [[fallthrough]];
+            case SPV_REFLECT_FORMAT_R64G64B64_SINT:
+                [[fallthrough]];
+            case SPV_REFLECT_FORMAT_R64G64B64_SFLOAT:
+                return 24;
+            case SPV_REFLECT_FORMAT_R64G64B64A64_UINT:
+                [[fallthrough]];
+            case SPV_REFLECT_FORMAT_R64G64B64A64_SINT:
+                [[fallthrough]];
+            case SPV_REFLECT_FORMAT_R64G64B64A64_SFLOAT:
+                return 32;
+            default:
+                return 4;
+        };
+    }
+
     constexpr bool IsBufferType(const VkDescriptorType& type) noexcept
     {
         return (type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER) || (type == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC) ||
             (type == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER) || (type == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC);
     }
 
-    ShaderReflectorImpl::ShaderReflectorImpl(yamlFile* yaml_file, SessionImpl* error_session) noexcept : rsrcFile(yaml_file), errorSession(error_session) {}
+    ShaderReflectorImpl::ShaderReflectorImpl(yamlFile* yaml_file, SessionImpl* error_session) noexcept :
+        rsrcFile(yaml_file),
+        errorSession(error_session),
+        spvReflectModule{ nullptr, &DestroySpvReflectShaderModule }
+    {
+    }
 
     ShaderReflectorImpl::ShaderReflectorImpl(ShaderReflectorImpl&& other) noexcept :
         descriptorSets(std::move(other.descriptorSets)),
         sortedSets(std::move(other.sortedSets)),
         pushConstants(std::move(other.pushConstants)),
         rsrcFile{ other.rsrcFile },
-        errorSession{ other.errorSession } {}
+        errorSession{ other.errorSession },
+        spvReflectModule{ std::move(other.spvReflectModule) }
+    {
+        spvReflectModule = nullptr;
+    }
 
 
-	ShaderReflectorImpl::~ShaderReflectorImpl()
-	{
-	}
+    ShaderReflectorImpl::~ShaderReflectorImpl()
+    {
+    }
 
-	ShaderReflectorImpl& ShaderReflectorImpl::operator=(ShaderReflectorImpl&& other) noexcept
+    ShaderReflectorImpl& ShaderReflectorImpl::operator=(ShaderReflectorImpl&& other) noexcept
     {
         descriptorSets = std::move(other.descriptorSets);
         sortedSets = std::move(other.sortedSets);
@@ -43,40 +163,56 @@ namespace st
         return *this;
     }
 
-    std::vector<VertexAttributeInfo> parseVertAttrs(const spirv_cross::Compiler& cmplr, const spirv_cross::SmallVector<spirv_cross::Resource>& rsrcs)
+    std::vector<VertexAttributeInfo> ShaderReflectorImpl::parseInputAttributes()
     {
-        std::vector<VertexAttributeInfo> attributes;
-        uint32_t idx = 0;
-        uint32_t running_offset = 0;
-
-        for (const auto& attr : rsrcs)
+        uint32_t count = 0;
+        SpvReflectResult result = spvReflectEnumerateInputVariables(spvReflectModule.get(), &count, nullptr);
+        if (result != SPV_REFLECT_RESULT_SUCCESS)
         {
-            VertexAttributeInfo attr_info;
-            attr_info.SetName(cmplr.get_name(attr.id).c_str());
-            attr_info.SetLocation(cmplr.get_decoration(attr.id, spv::DecorationLocation));
-            attr_info.SetOffset(running_offset);
-            const spirv_cross::SPIRType attr_type = cmplr.get_type(attr.type_id);
-            attr_info.SetType(&attr_type);
-            running_offset += attr_type.vecsize * attr_type.width;
-            attributes.emplace_back(std::move(attr_info));
-            ++idx;
+            errorSession->AddError(
+                this,
+                ShaderToolsErrorSource::Reflection,
+                ShaderToolsErrorCode::ReflectionSpvReflectError,
+                "Failed to get count of input interface variables");
+            return {};
         }
 
-        return attributes;
+        std::vector<SpvReflectInterfaceVariable*> input_variables(count);
+        result = spvReflectEnumerateInputVariables(spvReflectModule.get(), &count, input_variables.data());
+        if (result != SPV_REFLECT_RESULT_SUCCESS)
+        {
+            errorSession->AddError(
+                this,
+                ShaderToolsErrorSource::Reflection,
+                ShaderToolsErrorCode::ReflectionSpvReflectError,
+                "Failed to enumerate input interface variables");
+            return {};
+        }
+
+        std::vector<VertexAttributeInfo> attributes(input_variables.size());
+        uint32_t running_offset = 0;
+        for (const auto& input_variable : input_variables)
+        {
+            VertexAttributeInfo attr_info;
+            if (input_variable->name == nullptr)
+            {
+                // Log this because we need the names for this to work.
+            }
+
+            attr_info.SetName(input_variable->name);
+            attr_info.SetLocation(input_variable->location);
+            attr_info.SetOffset(running_offset);
+
+            running_offset += GetFormatSize(input_variable->format);
+            attributes[input_variable->location] = attr_info;
+
+        }
+
     }
 
-    std::vector<VertexAttributeInfo> parseInputAttributes(const spirv_cross::Compiler& cmplr)
+    std::vector<VertexAttributeInfo> ShaderReflectorImpl::parseOutputAttributes()
     {
-        using namespace spirv_cross;
-        const auto rsrcs = cmplr.get_shader_resources();
-        return parseVertAttrs(cmplr, rsrcs.stage_inputs);
-    }
 
-    std::vector<VertexAttributeInfo> parseOutputAttributes(const spirv_cross::Compiler& cmplr)
-    {
-        using namespace spirv_cross;
-        const auto rsrcs = cmplr.get_shader_resources();
-        return parseVertAttrs(cmplr, rsrcs.stage_outputs);
     }
 
     ShaderToolsErrorCode ShaderReflectorImpl::parseResourceType(const ShaderStage& shader_handle, const VkDescriptorType& type_being_parsed)
@@ -85,22 +221,22 @@ namespace st
         const auto resources_all = recompiler->get_shader_resources();
         spirv_cross::SmallVector<spirv_cross::Resource> resources;
         switch (type_being_parsed)
-		{
-		case VK_DESCRIPTOR_TYPE_SAMPLER:
-			resources = resources_all.separate_samplers;
-			break;
-		case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
-			resources = resources_all.sampled_images;
-			break;
-		case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
-			resources = resources_all.separate_images;
-			break;
-		case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
-			resources = resources_all.storage_images;
-			break;
-		case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
-			resources = resources_all.storage_buffers;
-			break;
+        {
+        case VK_DESCRIPTOR_TYPE_SAMPLER:
+            resources = resources_all.separate_samplers;
+            break;
+        case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
+            resources = resources_all.sampled_images;
+            break;
+        case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
+            resources = resources_all.separate_images;
+            break;
+        case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
+            resources = resources_all.storage_images;
+            break;
+        case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
+            resources = resources_all.storage_buffers;
+            break;
         case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
             resources = resources_all.uniform_buffers;
             break;
@@ -152,7 +288,7 @@ namespace st
                     "Binding index of generated shader code (" + std::to_string(binding_idx) +
                     ") and binding of the actual resource (" + std::to_string(parent_resource->BindingIndex()) +
                     ") did not match!";
-                    
+
                 errorSession->AddError(
                     this,
                     ShaderToolsErrorSource::Reflection,
@@ -204,21 +340,21 @@ namespace st
     }
 
     std::vector<ShaderResourceSubObject> ShaderReflectorImpl::ExtractBufferMembers(const spirv_cross::Compiler& cmplr, const spirv_cross::Resource& rsrc)
-	{
-		std::vector<ShaderResourceSubObject> results;
-		auto ranges = cmplr.get_active_buffer_ranges(rsrc.id);
-		for (auto& range : ranges)
-		{
-			ShaderResourceSubObject member;
-			member.Name = strdup(cmplr.get_member_name(rsrc.base_type_id, range.index).c_str());
-			member.Size = static_cast<uint32_t>(range.range);
-			member.Offset = static_cast<uint32_t>(range.offset);
-			results.emplace_back(member);
-		}
-		return results;
-	}
+    {
+        std::vector<ShaderResourceSubObject> results;
+        auto ranges = cmplr.get_active_buffer_ranges(rsrc.id);
+        for (auto& range : ranges)
+        {
+            ShaderResourceSubObject member;
+            member.Name = strdup(cmplr.get_member_name(rsrc.base_type_id, range.index).c_str());
+            member.Size = static_cast<uint32_t>(range.range);
+            member.Offset = static_cast<uint32_t>(range.offset);
+            results.emplace_back(member);
+        }
+        return results;
+    }
 
-	PushConstantInfo parsePushConstants(const spirv_cross::Compiler& cmplr, const VkShaderStageFlags& stage)
+    PushConstantInfo parsePushConstants(const spirv_cross::Compiler& cmplr, const VkShaderStageFlags& stage)
     {
         const auto push_constants = cmplr.get_shader_resources();
         const auto& pconstant = push_constants.push_constant_buffers.front();
@@ -261,13 +397,13 @@ namespace st
         ReadRequestResult find_binary_result = MakeFileTrackerReadRequest(find_binary_request);
         if (!find_binary_result.has_value())
         {
-			const std::string errorMessage = "Attempted to parse and generate bindings for binary that cannot be found";
-			errorSession->AddError(
-				this,
-				ShaderToolsErrorSource::Reflection,
-				find_binary_result.error(),
-				errorMessage.c_str());
-			return ShaderToolsErrorCode::ReflectionShaderBinaryNotFound;
+            const std::string errorMessage = "Attempted to parse and generate bindings for binary that cannot be found";
+            errorSession->AddError(
+                this,
+                ShaderToolsErrorSource::Reflection,
+                find_binary_result.error(),
+                errorMessage.c_str());
+            return ShaderToolsErrorCode::ReflectionShaderBinaryNotFound;
         }
         std::vector<uint32_t> binary_vec = std::get<std::vector<uint32_t>>(*find_binary_result);
         return parseImpl(shader_handle, std::move(binary_vec));
@@ -386,76 +522,21 @@ namespace st
 
     ShaderToolsErrorCode ShaderReflectorImpl::parseImpl(const ShaderStage& shader_handle, std::vector<uint32_t> binary_data)
     {
-        using namespace spirv_cross;
-
-        recompiler = std::make_unique<CompilerGLSL>(std::move(binary_data));
-        CompilerGLSL::Options options;
-        options.vulkan_semantics = true;
-        // we set this ourselves in most locations!
-        options.enable_storage_image_qualifier_deduction = false;
-        recompiler->set_common_options(options);
-        std::string recompiled_source;
-
-        try
+        SpvReflectShaderModule* module = nullptr;
+        SpvReflectResult result = spvReflectCreateShaderModule(binary_data.size() * sizeof(uint32_t), binary_data.data(), &module);
+        if (result != SPV_REFLECT_RESULT_SUCCESS)
         {
-            recompiled_source = recompiler->compile();
-        }
-        catch (const spirv_cross::CompilerError& e)
-        {
-            std::string errorMessage = "Failed to recompile SPIR-V binary back to GLSL text. Compiler error: ";
-            errorMessage += e.what();
+            const std::string errorMessage = "Failed to create SpvReflectShaderModule from binary data";
             errorSession->AddError(
                 this,
                 ShaderToolsErrorSource::Reflection,
-                ShaderToolsErrorCode::ReflectionRecompilerError,
+                ShaderToolsErrorCode::ReflectionSpvReflectError,
                 errorMessage.c_str());
-
-            recompiled_source = recompiler->get_partial_source();
-
-			ReadRequest find_name_request{ ReadRequest::Type::FindShaderName, shader_handle };
-			ReadRequestResult find_name_result = MakeFileTrackerReadRequest(find_name_request);
-			if (!find_name_result.has_value())
-			{
-				errorSession->AddError(
-					this,
-					ShaderToolsErrorSource::Reflection,
-					find_name_result.error(),
-					"Failed to find shader name in storage, can't dump recompiled source file");
-                throw e;
-			}
-            else
-            {
-				std::string shader_name = std::get<std::string>(*find_name_result);
-                const std::string output_name = shader_name + std::string{ "_failed_recompile.glsl" };
-                std::ofstream output_stream(output_name);
-                output_stream << recompiled_source;
-                output_stream.flush();
-                output_stream.close();
-                // free this object because we're totally toasted now
-                recompiler.reset();
-            }
-
-            throw e;
+            return ShaderToolsErrorCode::ReflectionSpvReflectError;
         }
 
-        WriteRequest recompiledSourceRequest{ WriteRequest::Type::SetRecompiledSourceString, shader_handle, std::move(recompiled_source) };
-        ShaderToolsErrorCode writeError = MakeFileTrackerWriteRequest(std::move(recompiledSourceRequest));
-        if (writeError != ShaderToolsErrorCode::Success)
-        {
-			ReadRequest find_name_request{ ReadRequest::Type::FindShaderName, shader_handle };
-			ReadRequestResult find_name_result = MakeFileTrackerReadRequest(find_name_request);
-            std::string errorString;
-            if (find_name_result.has_value())
-            {
-                errorString = std::format("Failed to store recompiled source string for shader: {} ", std::get<std::string>(*find_name_result));
-            }
-            else
-            {
-                errorString = "Failed to store recompiled source string for a shader";
-            }
-            errorSession->AddError(this, ShaderToolsErrorSource::Reflection, writeError, errorString.c_str());
-            return writeError;
-        }
+        // should be nullptr up to this point, only contains deleter
+        spvReflectModule.reset(module);
 
         // Maybe this list shouldn't be a baked in list? Could always parse the VK XML for what we need.
         constexpr static VkDescriptorType supportedDescriptorTypes[]
@@ -530,26 +611,34 @@ namespace st
         return sortedSets.size();
     }
 
-	std::string ShaderReflectorImpl::GetActualResourceName(const std::string& rsrc_name)
-	{
-		size_t first_idx = rsrc_name.find_first_of('_');
-		std::string results;
-		if (first_idx != std::string::npos)
-		{
-			results = std::string{ rsrc_name.cbegin() + first_idx + 1, rsrc_name.cend() };
-		}
-		else
-		{
-			results = rsrc_name;
-		}
+    std::string ShaderReflectorImpl::GetActualResourceName(const std::string& rsrc_name)
+    {
+        size_t first_idx = rsrc_name.find_first_of('_');
+        std::string results;
+        if (first_idx != std::string::npos)
+        {
+            results = std::string{ rsrc_name.cbegin() + first_idx + 1, rsrc_name.cend() };
+        }
+        else
+        {
+            results = rsrc_name;
+        }
 
-		size_t second_idx = results.find_last_of('_');
-		if (second_idx != std::string::npos)
-		{
-			results.erase(results.begin() + second_idx, results.end());
-		}
+        size_t second_idx = results.find_last_of('_');
+        if (second_idx != std::string::npos)
+        {
+            results.erase(results.begin() + second_idx, results.end());
+        }
 
-		return results;
-	}
+        return results;
+    }
+
+    void DestroySpvReflectShaderModule(SpvReflectShaderModule* module)
+    {
+        if (module != nullptr)
+        {
+            spvReflectDestroyShaderModule(module);
+        }
+    }
 
 }

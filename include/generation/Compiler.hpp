@@ -38,7 +38,7 @@ namespace st
         const char* shader_name,
         const VkShaderStageFlags shader_stage,
         const char* src_str, const size_t src_len);
-        
+
     ShaderToolsErrorCode ST_API RetrieveCompiledStandaloneShader(
         const ShaderStage shader_handle,
         size_t* binary_sz,

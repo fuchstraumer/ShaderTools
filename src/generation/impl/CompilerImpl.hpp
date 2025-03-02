@@ -34,16 +34,16 @@ namespace st
         [[nodiscard]] ShaderToolsErrorCode recompileBinaryToGLSL(const ShaderStage& handle, size_t* str_size, char* dest_str);
         [[nodiscard]] ShaderToolsErrorCode getBinaryAssemblyString(const ShaderStage& handle, size_t* str_size, char* dest_str);
 
-		friend ShaderToolsErrorCode ST_API CompileStandaloneShader(
-			ShaderStage& resultHandle,
-			const char* shader_name,
-			const VkShaderStageFlagBits shader_stage,
-			const char* src_str, const size_t src_len);
+        friend ShaderToolsErrorCode ST_API CompileStandaloneShader(
+            ShaderStage& resultHandle,
+            const char* shader_name,
+            const VkShaderStageFlagBits shader_stage,
+            const char* src_str, const size_t src_len);
 
-		friend ShaderToolsErrorCode ST_API RetrieveCompiledStandaloneShader(
-			const ShaderStage shader_handle,
-			size_t* binary_sz,
-			uint32_t* binary_dest);
+        friend ShaderToolsErrorCode ST_API RetrieveCompiledStandaloneShader(
+            const ShaderStage shader_handle,
+            size_t* binary_sz,
+            uint32_t* binary_dest);
 
         const ShaderCompilerOptions& compilerOptions;
         SessionImpl* errorSession;

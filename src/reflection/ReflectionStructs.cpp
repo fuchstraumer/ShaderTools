@@ -1,6 +1,6 @@
 #include "reflection/ReflectionStructs.hpp"
 #include "../util/ResourceFormats.hpp"
-#include "spirv-cross/spirv_cross.hpp"
+#include <spirv_reflect.h>
 
 namespace st
 {
@@ -103,7 +103,7 @@ namespace st
 
     struct VertexAttributeInfoImpl
     {
-        VertexAttributeInfoImpl() noexcept : name{}, type{ spv::Op::OpNop }, location{ 0 }, offset{ 0 }
+        VertexAttributeInfoImpl() noexcept : name{}, type{ 0 }, format{ SPV_REFLECT_FORMAT_UNDEFINED }, location { 0 }, offset{ 0 }
         {
         }
         VertexAttributeInfoImpl(const VertexAttributeInfoImpl&) noexcept = default;
@@ -111,7 +111,8 @@ namespace st
         VertexAttributeInfoImpl& operator=(const VertexAttributeInfoImpl&) noexcept = default;
         VertexAttributeInfoImpl& operator=(VertexAttributeInfoImpl&&) noexcept = default;
         std::string name;
-        spirv_cross::SPIRType type;
+        SpvReflectTypeFlags type;
+        SpvReflectFormat format;
         uint32_t location;
         uint32_t offset;
     };
@@ -133,16 +134,11 @@ namespace st
         impl->name = _name;
     }
 
-    void VertexAttributeInfo::SetType(const void* spir_type_ptr)
+    void VertexAttributeInfo::SetType(const uint32_t spv_reflect_type_bits)
     {
         // note: this is mostly just to avoid having to do stupid includes across DLL boundaries, or spreading the mega-web
         // of SPIR-V includes further than source files (yucky)
-        impl->type = *reinterpret_cast<const spirv_cross::SPIRType*>(spir_type_ptr);
-    }
-
-    void VertexAttributeInfo::SetTypeFromText(const char* str)
-    {
-        impl->type = SPIR_TypeFromString(str);
+        impl->type = spv_reflect_type_bits;
     }
 
     void VertexAttributeInfo::SetLocation(uint32_t loc) noexcept
@@ -162,7 +158,7 @@ namespace st
 
     const char* VertexAttributeInfo::TypeAsText() const noexcept
     {
-        return SPIR_TypeToString(impl->type).c_str();
+        return spvReflect_TypeToString(impl->type);
     }
 
     const uint32_t& VertexAttributeInfo::Location() const noexcept
@@ -177,7 +173,7 @@ namespace st
 
     VkFormat VertexAttributeInfo::GetAsFormat() const noexcept
     {
-        return VkFormatFromSPIRType(impl->type);
+        return VkFormatFromSpvReflectFormat(impl->format);
     }
 
     VertexAttributeInfo::operator VkVertexInputAttributeDescription() const noexcept

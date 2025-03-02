@@ -71,7 +71,7 @@ namespace st
     {
     public:
 
-        explicit ShaderGeneratorImpl(ShaderStage _stage, SessionImpl* errorSession) noexcept;  
+        explicit ShaderGeneratorImpl(ShaderStage _stage, SessionImpl* errorSession) noexcept;
         ~ShaderGeneratorImpl() noexcept;
 
         ShaderGeneratorImpl(ShaderGeneratorImpl&& other) noexcept;
@@ -86,7 +86,7 @@ namespace st
         [[nodiscard]] ShaderToolsErrorCode parseInterfaceBlock(const std::string& str);
         void parseConstantBlock(const std::string& str);
         [[nodiscard]] ShaderToolsErrorCode parseInclude(const std::string& str, bool local);
-        
+
         [[nodiscard]] ShaderToolsErrorCode getResourceQualifiers(const ShaderResource& rsrc, std::string& result) const;
         [[nodiscard]] std::string getResourcePrefix(size_t active_set, const std::string& image_format, const ShaderResource& rsrc) const;
         [[nodiscard]] std::string getBufferMembersString(const ShaderResource & resource) const;
@@ -112,7 +112,7 @@ namespace st
         [[nodiscard]] ShaderToolsErrorCode generate(const ShaderStage& handle, const std::string& path_to_src, const size_t num_extensions, const char* const* extensions);
         [[nodiscard]] std::string getFullSource() const;
         void addIncludePath(const char* include_path);
-        void addExtension(const std::string& extension_str);  
+        void addExtension(const std::string& extension_str);
 
         ShaderStage Stage{ 0u, 0u };
         std::multiset<shaderFragment> fragments;
@@ -124,7 +124,7 @@ namespace st
 
         size_t currentLine{0u};
         size_t currentColumn{0u};
-        
+
         bool constructionSuccessful = false;
 
 

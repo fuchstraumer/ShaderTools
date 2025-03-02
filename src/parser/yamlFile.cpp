@@ -20,7 +20,7 @@ namespace st
     {
         return static_cast<VkDescriptorType>(type | ARRAY_TYPE_FLAG_BITS);
     }
-    
+
 
     static constexpr std::array<std::pair<const char*, VkShaderStageFlags>, 12> valid_shader_stages
     {
@@ -35,7 +35,7 @@ namespace st
         std::pair{ "Intersection", VK_SHADER_STAGE_INTERSECTION_BIT_KHR },
         std::pair{ "Callable", VK_SHADER_STAGE_CALLABLE_BIT_KHR },
         std::pair{ "Task", VK_SHADER_STAGE_TASK_BIT_EXT },
-        std::pair{ "Mesh", VK_SHADER_STAGE_MESH_BIT_EXT }  
+        std::pair{ "Mesh", VK_SHADER_STAGE_MESH_BIT_EXT }
     };
 
     static const std::unordered_map<std::string, VkDescriptorType> descriptor_type_from_str_map =
@@ -155,21 +155,21 @@ namespace st
             throw e;
         }
 
-		ShaderToolsErrorCode parseOptionsStatus = parseCompilerOptions(session);
+        ShaderToolsErrorCode parseOptionsStatus = parseCompilerOptions(session);
         ShaderToolsErrorCode parseGroupsStatus = parseGroups(session);
         ShaderToolsErrorCode parseResourcesStatus = parseResources(session);
 
 
-		if (parseOptionsStatus == ShaderToolsErrorCode::Success &&
+        if (parseOptionsStatus == ShaderToolsErrorCode::Success &&
             parseGroupsStatus == ShaderToolsErrorCode::Success &&
-            parseResourcesStatus == ShaderToolsErrorCode::Success) 
+            parseResourcesStatus == ShaderToolsErrorCode::Success)
         {
             sortResourcesAndSetBindingIndices();
         }
     }
 
 
-	yamlFile::yamlFile(yamlFile&& other) noexcept :
+    yamlFile::yamlFile(yamlFile&& other) noexcept :
         stages{ std::move(other.stages) },
         shaderGroups{ std::move(other.shaderGroups) },
         groupTags{ std::move(other.groupTags) },
@@ -177,12 +177,12 @@ namespace st
         resourceGroups{ std::move(other.resourceGroups) },
         compilerOptions{ std::move(other.compilerOptions) },
         packName{ std::move(other.packName) }
-	{
-	}
+    {
+    }
 
 
-	yamlFile& yamlFile::operator=(yamlFile&& other) noexcept
-	{
+    yamlFile& yamlFile::operator=(yamlFile&& other) noexcept
+    {
         stages = std::move(other.stages);
         shaderGroups = std::move(other.shaderGroups);
         groupTags = std::move(other.groupTags);
@@ -191,9 +191,9 @@ namespace st
         compilerOptions = std::move(other.compilerOptions);
         packName = std::move(other.packName);
         return *this;
-	}
+    }
 
-	yamlFile::~yamlFile() {}
+    yamlFile::~yamlFile() {}
 
     // Used during reflection stage to make sure mappings of client resources to compiled binary resources match
     ShaderResource* yamlFile::FindResource(const std::string& name)
@@ -225,23 +225,23 @@ namespace st
 
     ShaderStage yamlFile::addShaderStage(const std::string& group_name, std::string shader_name, VkShaderStageFlags stage_flags)
     {
-		if (stages.count(shader_name) == 0)
-		{
-			auto iter = stages.emplace(shader_name, ShaderStage{ shader_name.c_str(), stage_flags });
-			shaderGroups[group_name].emplace(iter.first->second);
-			return iter.first->second;
-		}
-		else
-		{
-			shaderGroups[group_name].emplace(stages.at(shader_name));
-			return stages.at(shader_name);
-		}
+        if (stages.count(shader_name) == 0)
+        {
+            auto iter = stages.emplace(shader_name, ShaderStage{ shader_name.c_str(), stage_flags });
+            shaderGroups[group_name].emplace(iter.first->second);
+            return iter.first->second;
+        }
+        else
+        {
+            shaderGroups[group_name].emplace(stages.at(shader_name));
+            return stages.at(shader_name);
+        }
     }
 
     std::vector<ShaderStage> yamlFile::addShaderStages(const std::string& group_name, const YAML::Node& shaders)
     {
         std::vector<ShaderStage> stages_added;
-        
+
         // Handle compute shader case
         if (shaders["ComputeShader"])
         {
@@ -342,7 +342,7 @@ namespace st
         if (!opt_disabled_stages.empty())
         {
             std::vector<WriteRequest> write_requests;
-            std::transform(opt_disabled_stages.begin(), opt_disabled_stages.end(), std::back_inserter(write_requests), 
+            std::transform(opt_disabled_stages.begin(), opt_disabled_stages.end(), std::back_inserter(write_requests),
             [](const ShaderStage& stage)
             {
                 return WriteRequest{ WriteRequest::Type::SetStageOptimizationDisabled, stage, true };

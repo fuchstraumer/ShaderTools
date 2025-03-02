@@ -10,6 +10,7 @@
 #include <set>
 #include <string>
 #include <vulkan/vulkan_core.h>
+#include "spirv_reflect.h"
 
 namespace spirv_cross
 {
@@ -31,6 +32,8 @@ namespace st
         uint32_t Binding;
         std::map<uint32_t, ResourceUsage> Members;
     };
+
+	void DestroySpvReflectShaderModule(SpvReflectShaderModule* module);
 
     class ShaderReflectorImpl
     {
@@ -62,12 +65,15 @@ namespace st
         std::unordered_map<VkShaderStageFlags, std::vector<VertexAttributeInfo>> outputAttributes;
         std::unordered_map<std::string, uint32_t> resourceGroupSetIndices;
         std::unordered_set<std::string> usedResourceGroupNames;
-        std::unique_ptr<spirv_cross::CompilerGLSL> recompiler;
+		std::unique_ptr<SpvReflectShaderModule, decltype(&DestroySpvReflectShaderModule)> spvReflectModule;
         
         yamlFile* rsrcFile;
         SessionImpl* errorSession;
 
         size_t getNumSets() const noexcept;
+
+        std::vector<VertexAttributeInfo> parseInputAttributes();
+        std::vector<VertexAttributeInfo> parseOutputAttributes();
 
     };
 

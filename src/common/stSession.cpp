@@ -21,7 +21,7 @@ namespace st
     {}
 
     Session::Session(Session&& other) noexcept : impl(std::move(other.impl))
-    {}   
+    {}
 
     Session& Session::operator=(Session&& other) noexcept
     {
@@ -29,25 +29,25 @@ namespace st
         return *this;
     }
 
-	bool Session::HasErrors() const
+    bool Session::HasErrors() const
     {
         return impl->errors.size() > 0;
     }
-    
-	dll_retrieved_strings_t Session::GetErrorStrings()
-	{
-		if (impl->errors.empty())
-		{
-			return dll_retrieved_strings_t{};
-		}
+
+    dll_retrieved_strings_t Session::GetErrorStrings()
+    {
+        if (impl->errors.empty())
+        {
+            return dll_retrieved_strings_t{};
+        }
 
         size_t numStringsTotal = 0;
         for (auto& [pointer, errors] : impl->errors)
         {
-			numStringsTotal += errors.size();
+            numStringsTotal += errors.size();
         }
 
-		dll_retrieved_strings_t strings;
+        dll_retrieved_strings_t strings;
         strings.SetNumStrings(numStringsTotal);
 
         size_t currErrorIdx = 0u;
@@ -57,7 +57,7 @@ namespace st
             {
 
                 std::string_view errorCodeStr = ErrorCodeToText(error.code);
-				std::string_view errorSourceStr = ErrorSourceToText(error.source);
+                std::string_view errorSourceStr = ErrorSourceToText(error.source);
                 std::string errorHeaderStr = std::format(
                     "Error code: {} | Error Source: {} \n", errorCodeStr, errorSourceStr);
 
@@ -73,43 +73,43 @@ namespace st
                     error.sourceLocation.file_name(),
                     std::to_string(error.sourceLocation.line()),
                     function_name_str);
-                
-				std::string messageStr = error.message != nullptr ? error.message : "No message provided";
+
+                std::string messageStr = error.message != nullptr ? error.message : "No message provided";
                 messageStr += "\n";
 
-				std::string fullErrorStr = errorHeaderStr + locationStr + messageStr;
-				strings.Strings[currErrorIdx] = strdup(fullErrorStr.c_str());
+                std::string fullErrorStr = errorHeaderStr + locationStr + messageStr;
+                strings.Strings[currErrorIdx] = strdup(fullErrorStr.c_str());
 
                 ++currErrorIdx;
             }
         }
 
         return strings;
-	}
+    }
 
-	void Session::MergeSessions(Session& rootSession, Session&& otherSession)
+    void Session::MergeSessions(Session& rootSession, Session&& otherSession)
     {
         MergeSessions(rootSession.GetImpl(), std::move(otherSession));
     }
 
 
-	void Session::MergeSessions(SessionImpl* rootSession, Session&& otherSession)
-	{
+    void Session::MergeSessions(SessionImpl* rootSession, Session&& otherSession)
+    {
         if (otherSession.HasErrors())
         {
             std::lock_guard<std::mutex> lock(sessionMergeMutex);
-			auto& otherErrors = otherSession.impl->errors;
-			// reserve memory for the new errors
-			rootSession->errors.reserve(rootSession->errors.size() + otherErrors.size());
-			// Other session is an rvalue, so we can move it's data into the root session and avoid a copy (please don't change this)
-			rootSession->errors.insert(otherErrors.begin(), otherErrors.end());
-			otherSession.impl->errors.clear();
+            auto& otherErrors = otherSession.impl->errors;
+            // reserve memory for the new errors
+            rootSession->errors.reserve(rootSession->errors.size() + otherErrors.size());
+            // Other session is an rvalue, so we can move it's data into the root session and avoid a copy (please don't change this)
+            rootSession->errors.insert(otherErrors.begin(), otherErrors.end());
+            otherSession.impl->errors.clear();
         }
-	}
+    }
 
-	SessionImpl* Session::GetImpl() noexcept
-	{
+    SessionImpl* Session::GetImpl() noexcept
+    {
         return impl.get();
-	}
+    }
 
 }

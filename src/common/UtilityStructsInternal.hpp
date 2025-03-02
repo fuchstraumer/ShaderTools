@@ -18,7 +18,7 @@ namespace st
         std::optional<std::vector<uint32_t>> optimizedSpirv;
     };
 
-    
+
     struct ShaderCompilerOptions
     {
         enum class OptimizationLevel : uint8_t
@@ -43,7 +43,7 @@ namespace st
         {
             GLSL = 0,
             HLSL = 1,
-            Metal = 2,  
+            Metal = 2,
         };
 
         OptimizationLevel Optimization = OptimizationLevel::Performance;

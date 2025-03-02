@@ -63,7 +63,7 @@ namespace st
 
     Shader::Shader(Shader && other) noexcept : impl(std::move(other.impl)) {}
 
-	Shader& Shader::operator=(Shader&& other) noexcept
+    Shader& Shader::operator=(Shader&& other) noexcept
     {
         impl = std::move(other.impl);
         return *this;

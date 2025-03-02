@@ -44,8 +44,8 @@ namespace st
         ShaderCompilerOptions compilerOptions;
         std::string packName;
 
-	private:
-		ShaderStage addShaderStage(const std::string& group_name, std::string shader_name, VkShaderStageFlags stage_flags);
+    private:
+        ShaderStage addShaderStage(const std::string& group_name, std::string shader_name, VkShaderStageFlags stage_flags);
         std::vector<ShaderStage> addShaderStages(const std::string& group_name, const YAML::Node& shaders);
         ShaderToolsErrorCode parseResources(SessionImpl* session);
         ShaderToolsErrorCode parseGroups(SessionImpl* session);

@@ -30,14 +30,14 @@ namespace st
 
     union RequestKey
     {
-		explicit RequestKey(ShaderStage handle) noexcept;
-		explicit RequestKey(std::string_view key_string) noexcept;
+        explicit RequestKey(ShaderStage handle) noexcept;
+        explicit RequestKey(std::string_view key_string) noexcept;
         RequestKey(const RequestKey&) noexcept = default;
         RequestKey(RequestKey&&) noexcept = default;
         RequestKey& operator=(const RequestKey&) noexcept = default;
         RequestKey& operator=(RequestKey&&) noexcept = default;
-		ShaderStage ShaderHandle;
-		std::string_view KeyString;
+        ShaderStage ShaderHandle;
+        std::string_view KeyString;
     };
 
     struct ReadRequest
@@ -46,12 +46,12 @@ namespace st
         enum class Type : uint64_t
         {
             Invalid = 0,
-			FindShaderBody,
-			FindShaderBinary, // returns optimized binaries, in particular to users
-			FindRecompiledShaderSource,
-			FindAssemblyString,
-			FindLastModificationTime,
-			FindFullSourceString,
+            FindShaderBody,
+            FindShaderBinary, // returns optimized binaries, in particular to users
+            FindRecompiledShaderSource,
+            FindAssemblyString,
+            FindLastModificationTime,
+            FindFullSourceString,
             FindOptimizationStatus,
             FindShaderName,
             HasFullSourceString,
@@ -74,12 +74,12 @@ namespace st
     {
         enum class Type : uint8_t
         {
-			Invalid = 0,
-			AddShaderBody,
+            Invalid = 0,
+            AddShaderBody,
             AddShaderAssembly,
-			AddShaderBinary,
-			UpdateModificationTime,
-			AddShaderBodyPath,
+            AddShaderBinary,
+            UpdateModificationTime,
+            AddShaderBodyPath,
             AddFullSourceString,
             AddUsedResourceBlocks,
             SetRecompiledSourceString,
@@ -117,7 +117,7 @@ namespace st
             RecompiledSource,
             BinarySource
         };
-        
+
         Type RequestType{ Type::Invalid };
         Target RequestTarget{ Target::Invalid };
         ShaderStage ShaderHandle;

@@ -232,6 +232,7 @@ namespace st
         ShaderBinaryData binaryData;
 
         // Do optimized compilation first since it's most likely to fail, but also isn't blocking if it does fail
+        if (!optimization_disabled)
         {
             options.SetOptimizationLevel(shaderc_optimization_level_performance);
             shaderc::SpvCompilationResult optimizedResult = compiler.CompileGlslToSpv(src_str, kind, name.c_str(), options);

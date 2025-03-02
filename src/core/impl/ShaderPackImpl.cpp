@@ -55,11 +55,11 @@ namespace st
             else
             {
                 std::string errorStr = "Shader pack found shader with name " + stage.first + " had invalid path " + body_path.string();
-				errorSession->AddError(
-					this,
-					ShaderToolsErrorSource::ShaderPack,
-					ShaderToolsErrorCode::FilesystemPathDoesNotExist,
-					errorStr.c_str());
+                errorSession->AddError(
+                    this,
+                    ShaderToolsErrorSource::ShaderPack,
+                    ShaderToolsErrorCode::FilesystemPathDoesNotExist,
+                    errorStr.c_str());
                 return ShaderToolsErrorCode::FilesystemPathDoesNotExist;
             }
         }
@@ -72,17 +72,17 @@ namespace st
         }
 
         for (const auto& stage : filePack->stages)
-		{
-			fs::path body_path = fs::canonical(workingDir / fs::path(stage.first));
+        {
+            fs::path body_path = fs::canonical(workingDir / fs::path(stage.first));
             processors.emplace(stage.second, std::make_unique<ShaderStageProcessor>(stage.second, filePack.get()));
-            processorFutures.emplace(stage.second, 
-				std::async(std::launch::async,
-					&ShaderStageProcessor::Process,
-					processors.at(stage.second).get(),
-					stage.first,
-					body_path.string(),
-					filePack->stageExtensions[stage.second],
-					base_includes));
+            processorFutures.emplace(stage.second,
+                std::async(std::launch::async,
+                    &ShaderStageProcessor::Process,
+                    processors.at(stage.second).get(),
+                    stage.first,
+                    body_path.string(),
+                    filePack->stageExtensions[stage.second],
+                    base_includes));
         }
 
         return ShaderToolsErrorCode::Success;
@@ -143,11 +143,11 @@ namespace st
             for (const auto& resource : resource_set.second)
             {
                 ShaderToolsErrorCode error = CountDescriptorType(resource.DescriptorType(), typeCounts);
-				if (error != ShaderToolsErrorCode::Success)
-				{
-					std::string errorStr = std::format("Shader pack failed to count descriptor type for resource {}", resource.Name());
-					errorSession->AddError(this, ShaderToolsErrorSource::ShaderPack, error, errorStr.c_str());
-				}
+                if (error != ShaderToolsErrorCode::Success)
+                {
+                    std::string errorStr = std::format("Shader pack failed to count descriptor type for resource {}", resource.Name());
+                    errorSession->AddError(this, ShaderToolsErrorSource::ShaderPack, error, errorStr.c_str());
+                }
             }
         }
     }

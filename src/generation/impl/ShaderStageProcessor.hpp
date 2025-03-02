@@ -42,9 +42,9 @@ namespace st
         // Each processor has it's own session, so it can collect results on the thread it
         // executes on and the pack launching these will merge them later
         Session ErrorSession;
-        
+
     private:
-    
+
         ShaderStage stage{ 0u, 0u };
         yamlFile* rsrcFile{ nullptr };
         std::string bodyPath;

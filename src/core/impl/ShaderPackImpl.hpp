@@ -42,7 +42,7 @@ namespace st
         std::unordered_map<std::string, std::unique_ptr<ResourceGroup>> resourceGroups;
         mutable descriptor_type_counts_t typeCounts;
         SessionImpl* errorSession;
-        
+
     };
 
 }

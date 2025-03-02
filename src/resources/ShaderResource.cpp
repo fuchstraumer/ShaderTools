@@ -165,16 +165,16 @@ namespace st
             }
         }
 
-		if (auto iter = impl->perUsageQualifiers.find(stage); iter != std::end(impl->perUsageQualifiers))
-		{
-			for (const auto& qual : iter->second)
-			{
-				if (qual == glsl_qualifier::ReadOnly || qual == glsl_qualifier::WriteOnly)
-				{
-					return qual;
-				}
-			}
-		}
+        if (auto iter = impl->perUsageQualifiers.find(stage); iter != std::end(impl->perUsageQualifiers))
+        {
+            for (const auto& qual : iter->second)
+            {
+                if (qual == glsl_qualifier::ReadOnly || qual == glsl_qualifier::WriteOnly)
+                {
+                    return qual;
+                }
+            }
+        }
 
         return glsl_qualifier::InvalidQualifier;
     }

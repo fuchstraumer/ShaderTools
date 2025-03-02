@@ -41,7 +41,7 @@ namespace st
         };
 
     } // namespace detail
-    
+
     const char* ErrorCodeToText(ShaderToolsErrorCode code) noexcept
     {
         switch (code)
@@ -175,8 +175,8 @@ namespace st
         }
     }
 
-	const char* ErrorSourceToText(ShaderToolsErrorSource source) noexcept
-	{   
+    const char* ErrorSourceToText(ShaderToolsErrorSource source) noexcept
+    {
         switch (source)
         {
             case ShaderToolsErrorSource::Parser:
@@ -200,6 +200,6 @@ namespace st
             default:
                 return "InvalidErrorSource: cannot find error source string for this ErrorSource code";
         }
-	}
+    }
 
 }

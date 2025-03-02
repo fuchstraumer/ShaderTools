@@ -12,7 +12,7 @@ namespace st
         groupName(group_name),
         reflector(std::make_unique<ShaderReflector>(yaml_file, error_session)),
         rsrcFile(yaml_file),
-        idx{ 0u } 
+        idx{ 0u }
     {
     }
 

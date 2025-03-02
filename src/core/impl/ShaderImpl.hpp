@@ -16,7 +16,7 @@ namespace st
     class ShaderReflector;
     struct yamlFile;
     struct Session;
-    
+
     class ShaderGroupImpl
     {
         ShaderGroupImpl(const ShaderGroupImpl& other) = delete;
@@ -30,11 +30,11 @@ namespace st
 
         void addShaderStage(ShaderStage handle);
 
-		std::unique_ptr<ShaderReflector> reflector;
-		yamlFile* rsrcFile{ nullptr };
-		size_t idx;
-		std::string groupName;
-		std::filesystem::path resourceScriptPath;
+        std::unique_ptr<ShaderReflector> reflector;
+        yamlFile* rsrcFile{ nullptr };
+        size_t idx;
+        std::string groupName;
+        std::filesystem::path resourceScriptPath;
         std::unordered_set<st::ShaderStage> stHandles{};
         std::unordered_map<st::ShaderStage, bool> optimizationEnabled;
         std::vector<std::string> tags;
