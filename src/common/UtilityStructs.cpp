@@ -18,6 +18,14 @@ namespace st
 
     dll_retrieved_strings_t& dll_retrieved_strings_t::operator=(dll_retrieved_strings_t&& other) noexcept
     {
+        if (this == &other)
+        {
+            return *this;
+        }
+
+        // Clean up existing resources
+        FreeMemory();
+        
         NumStrings = std::move(other.NumStrings);
         other.NumStrings = 0;
         Strings = std::move(other.Strings);
@@ -56,6 +64,10 @@ namespace st
 
     char* CopyString(const char* string_to_copy)
     {
+        if (string_to_copy == nullptr)
+        {
+            return nullptr;
+        }
         char* new_string = new char[std::strlen(string_to_copy) + 1];
         std::strcpy(new_string, string_to_copy);
         return new_string;
@@ -86,6 +98,10 @@ namespace st
 
     ShaderResourceSubObject& ShaderResourceSubObject::operator=(const ShaderResourceSubObject& other) noexcept
     {
+        if (this == &other)
+        {
+            return *this;
+        }
         SetType(other.Type);
         SetName(other.Name);
         Offset = other.Offset;
@@ -97,12 +113,28 @@ namespace st
 
     ShaderResourceSubObject& ShaderResourceSubObject::operator=(ShaderResourceSubObject&& other) noexcept
     {
-        Type = std::move(other.Type);
-        Name = std::move(other.Name);
-        NumElements = std::move(other.NumElements);
-        isComplex = std::move(other.isComplex);
-        Size = std::move(other.Size);
-        Offset = std::move(other.Offset);
+        if (this == &other)
+        {
+            return *this;
+        }
+        
+        // Clean up existing resources
+        if (Type != nullptr)
+        {
+            delete[] Type;
+        }
+        
+        if (Name != nullptr)
+        {
+            delete[] Name;
+        }
+        
+        Type = other.Type;
+        Name = other.Name;
+        NumElements = other.NumElements;
+        isComplex = other.isComplex;
+        Size = other.Size;
+        Offset = other.Offset;
         other.Type = nullptr;
         other.Name = nullptr;
         return *this;
@@ -196,6 +228,10 @@ namespace st
 
     SpecializationConstant& SpecializationConstant::operator=(const SpecializationConstant& other) noexcept
     {
+        if (this == &other)
+        {
+            return *this;
+        }
         SetName(other.Name);
         Type = other.Type;
         ConstantID = other.ConstantID;
@@ -205,9 +241,20 @@ namespace st
 
     SpecializationConstant& SpecializationConstant::operator=(SpecializationConstant&& other) noexcept
     {
-        Name = std::move(other.Name);
-        Type = std::move(other.Type);
-        ConstantID = std::move(other.ConstantID);
+        if (this == &other)
+        {
+            return *this;
+        }
+        
+        // Clean up existing resources
+        if (Name != nullptr)
+        {
+            delete[] Name;
+        }
+        
+        Name = other.Name;
+        Type = other.Type;
+        ConstantID = other.ConstantID;
         SetSpecializationConstantValue(*this, other);
         other.Name = nullptr;
         return *this;
