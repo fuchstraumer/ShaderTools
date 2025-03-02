@@ -241,13 +241,31 @@ namespace st
     std::vector<ShaderStage> yamlFile::addShaderStages(const std::string& group_name, const YAML::Node& shaders)
     {
         std::vector<ShaderStage> stages_added;
-        for (const auto& [stage_name, stage_flags] : valid_shader_stages)
+        
+        // Handle compute shader case
+        if (shaders["ComputeShader"])
         {
-            if (shaders[stage_name])
+            stages_added.emplace_back(addShaderStage(group_name, shaders["ComputeShader"].as<std::string>(), VK_SHADER_STAGE_COMPUTE_BIT));
+            return stages_added;
+        }
+
+        // Handle render shader case
+        if (shaders["RenderShaders"])
+        {
+            auto renderShaders = shaders["RenderShaders"];
+            for (const auto& [stage_name, stage_flags] : valid_shader_stages)
             {
-				stages_added.emplace_back(addShaderStage(group_name, shaders[stage_name].as<std::string>(), stage_flags));
+                // Skip compute stage since we handled it above
+                if (stage_flags == VK_SHADER_STAGE_COMPUTE_BIT)
+                    continue;
+
+                if (renderShaders[stage_name])
+                {
+                    stages_added.emplace_back(addShaderStage(group_name, renderShaders[stage_name].as<std::string>(), stage_flags));
+                }
             }
         }
+
         return stages_added;
     }
 
@@ -270,20 +288,18 @@ namespace st
             std::string group_name = iter->first.as<std::string>();
 
             {
-                auto shaders = iter->second["Shaders"];
-
-                if (std::distance(shaders.begin(), shaders.end()) == 0)
+                // Check if either ComputeShader or RenderShaders exists
+                if (!iter->second["ComputeShader"] && !iter->second["RenderShaders"])
                 {
                     return ShaderToolsErrorCode::ParserYamlFileHadNoShadersInGroup;
                 }
 
+                std::vector<ShaderStage> stages_added = addShaderStages(group_name, iter->second);
 
-                std::vector<ShaderStage> stages_added = addShaderStages(group_name, shaders);
-
-                // Defined inline with list of shaders. Disables optimization for all shaders in this group (so, compute/render shaders)
-                if (shaders["OptimizationDisabled"])
+                // Defined inline with list of shaders. Disables optimization for all shaders in this group
+                if (iter->second["OptimizationDisabled"])
                 {
-                    const bool disabled_value = shaders["OptimizationDisabled"].as<bool>();
+                    const bool disabled_value = iter->second["OptimizationDisabled"].as<bool>();
                     if (disabled_value)
                     {
                         opt_disabled_stages.insert(opt_disabled_stages.end(), stages_added.begin(), stages_added.end());
@@ -309,7 +325,6 @@ namespace st
             // adding them to the completed output. Makes it possible to define shaderpacks as closer to pipeline specs
             if (iter->second["Tags"])
             {
-
                 if (!iter->second["Tags"].IsSequence())
                 {
                     return ShaderToolsErrorCode::ParserYamlFileHadInvalidOrEmptyTagsArray;
@@ -322,12 +337,10 @@ namespace st
                     }
                 }
             }
-
         }
 
         if (!opt_disabled_stages.empty())
         {
-            
             std::vector<WriteRequest> write_requests;
             std::transform(opt_disabled_stages.begin(), opt_disabled_stages.end(), std::back_inserter(write_requests), 
             [](const ShaderStage& stage)
@@ -340,7 +353,6 @@ namespace st
             {
                 return status;
             }
-
         }
 
         return ShaderToolsErrorCode::Success;

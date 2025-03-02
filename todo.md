@@ -1,15 +1,12 @@
+- Add handling of acceleration structures to the generator, as right now the reflection system could handle them but we can't actually use/generate them 
 - Add unit and integration tests
 - Figure out if we can do a debug info compile to get reflection info, and then a stripped compile for the binary that the API will actually use for PSO creation
     - In this vein, allow us to retry failed compiles with reduced optimizations to see what works
 - Identify how much more info we can pack into the YAML file to allow for the definition of PSOs entirely in data
     - Will need to identify in these requests what vulkan extensions and features are needed to do this, and save them in the data as well
 - Identify a new binary format for the generated content
-- Fix the horrendous mess of threading bugs that is the file tracker. What was I thinking?
-    - This could be made into something that runs per-session like the error session system as well
-    - This is probably the best place we could do a message-passing paradigm to make things thread nicely
 - Source location parsing for errors when generating source text. Include handling would be nice too, but need to figure out how that works with shaderc
     - This would allow us to compile the include sources ahead of time, and parse them for errors. Kinda like a language server!
-- Change shader yaml spec to be "ComputeShader" for compute shaders, use "RenderShaders" + (Stage) as next subgroup for rendering shaders. More succinct, more clear.
 - Reduce lambda function usage. Untestable, hidden, cluttered.
 - Preprocess includes for errors and warnings, if possible, so that the line numbers in the errors and warnings match the original source code
 - Review usage of strdup to see if we couldn't use string_view, or some way to keep the strings alive in our storage so we can just use pointers
