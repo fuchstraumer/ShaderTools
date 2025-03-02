@@ -1,11 +1,9 @@
-- Vastly improve the error handling. Figure out how we could potentially sub in stub content
-- As part of the above, disable easyloggingpp. Anytime we'd log an error, store an error in the generated content. Allows users/clients to introspect on errors and decide what to do. We shouldn't do that for them.
-- Return errors, not to top level functions - just internally. Store them in binarized result.
-- Explore what we can do with the new (?) vulkan headers for enum-string mapping, could delete or simplify some code! 
-- Figure out something smarter for how we're saving the common "state" in the shader file tracker. This works for now, but we can do better
-- Identify how to handle some kind of static branching functionality
-- Distill responsibilities down to minimum. Cleanup fragments: too much content saved here. 
-- Build out integration tests
-- Change shader yaml spec to be "ComputeShader" for compute shaders, use "RenderShaders" + (Stage) as next subgroup for rendering shaders. More succinct, more clear.
-- Reduce lambda function usage. Untestable, hidden, cluttered.
-- Fix usage of fixed vulkan version, allow for targeting by users
+- Add handling of acceleration structures to the generator, as right now the reflection system could handle them but we can't actually use/generate them 
+- Add unit and integration tests
+- Identify how much more info we can pack into the YAML file to allow for the definition of PSOs entirely in data
+    - Will need to identify in these requests what vulkan extensions and features are needed to do this, and save them in the data as well
+- Identify a new binary format for the generated content
+- Generator now needs to extract type information and a name from the specialization constants it parses, so that we can correlate that with what reflection finds
+    - Reflection system no longer gives type info, but does give name and binding index. This will allow us to reduce it down to only use SPCs, at least.
+- Structure support for interface inputs and outputs: Will help with possible eventual HLSL support, and will let us clean things up a bit.
+    - Potentially look at making it so we auto-generate locations even in cases of interface overrides if we use this

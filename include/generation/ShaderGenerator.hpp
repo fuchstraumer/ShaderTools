@@ -9,6 +9,7 @@ namespace st
 
     class ShaderGeneratorImpl;
     struct yamlFile;
+    struct Session;
 
     class ST_API ShaderGenerator
     {
@@ -16,13 +17,16 @@ namespace st
         ShaderGenerator& operator=(const ShaderGenerator&) = delete;
     public:
 
-        ShaderGenerator(ShaderStage stage);
+        ShaderGenerator(ShaderStage stage, Session& error_session);
         ~ShaderGenerator();
         ShaderGenerator(ShaderGenerator&& other) noexcept;
         ShaderGenerator& operator=(ShaderGenerator&& other) noexcept;
 
         void SetResourceFile(yamlFile* rsrc_file);
-        void Generate(const ShaderStage& handle, const char* path_to_src, const size_t num_extensions, const char* const* extensions,
+        ShaderToolsErrorCode Generate(
+            const ShaderStage& handle,
+            const char* path_to_src,
+            const size_t num_extensions, const char* const* extensions,
             const size_t num_includes, const char* const* paths);
         void AddIncludePath(const char* path_to_include);
         void GetFullSource(size_t* len, char* dest) const;

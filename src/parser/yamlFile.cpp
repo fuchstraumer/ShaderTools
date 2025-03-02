@@ -1,9 +1,14 @@
 #include "yamlFile.hpp"
 #include "yaml-cpp/yaml.h"
+#include "../common/impl/SessionImpl.hpp"
 #include "../util/ResourceFormats.hpp"
 #include "../util/ShaderFileTracker.hpp"
+#include "shaderc/env.h"
+#include "shaderc/shaderc.h"
 #include <filesystem>
-#include <cassert>
+#include <iterator>
+#include <array>
+#include <utility>
 
 namespace st
 {
@@ -15,6 +20,23 @@ namespace st
     {
         return static_cast<VkDescriptorType>(type | ARRAY_TYPE_FLAG_BITS);
     }
+
+
+    static constexpr std::array<std::pair<const char*, VkShaderStageFlags>, 12> valid_shader_stages
+    {
+        std::pair{ "Vertex", VK_SHADER_STAGE_VERTEX_BIT },
+        std::pair{ "Geometry", VK_SHADER_STAGE_GEOMETRY_BIT },
+        std::pair{ "Fragment", VK_SHADER_STAGE_FRAGMENT_BIT },
+        std::pair{ "Compute", VK_SHADER_STAGE_COMPUTE_BIT },
+        std::pair{ "RayGen", VK_SHADER_STAGE_RAYGEN_BIT_KHR },
+        std::pair{ "AnyHit", VK_SHADER_STAGE_ANY_HIT_BIT_KHR },
+        std::pair{ "ClosestHit", VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR },
+        std::pair{ "Miss", VK_SHADER_STAGE_MISS_BIT_KHR },
+        std::pair{ "Intersection", VK_SHADER_STAGE_INTERSECTION_BIT_KHR },
+        std::pair{ "Callable", VK_SHADER_STAGE_CALLABLE_BIT_KHR },
+        std::pair{ "Task", VK_SHADER_STAGE_TASK_BIT_EXT },
+        std::pair{ "Mesh", VK_SHADER_STAGE_MESH_BIT_EXT }
+    };
 
     static const std::unordered_map<std::string, VkDescriptorType> descriptor_type_from_str_map =
     {
@@ -46,6 +68,23 @@ namespace st
         { "writeonly", glsl_qualifier::WriteOnly },
         { "volatile", glsl_qualifier::Volatile },
         { "restrict", glsl_qualifier::Restrict }
+    };
+
+    static const std::unordered_map<std::string, ShaderCompilerOptions::OptimizationLevel> optimization_level_from_str_map =
+    {
+        { "Disabled", ShaderCompilerOptions::OptimizationLevel::Disabled },
+        { "Size", ShaderCompilerOptions::OptimizationLevel::Size },
+        { "Performance", ShaderCompilerOptions::OptimizationLevel::Performance }
+    };
+
+    static const std::unordered_map<std::string, ShaderCompilerOptions::TargetVersionEnum> env_version_from_str_map =
+    {
+        { "Vulkan_1_0", ShaderCompilerOptions::TargetVersionEnum::Vulkan1_0 },
+        { "Vulkan_1_1", ShaderCompilerOptions::TargetVersionEnum::Vulkan1_1 },
+        { "Vulkan_1_2", ShaderCompilerOptions::TargetVersionEnum::Vulkan1_2 },
+        { "Vulkan_1_3", ShaderCompilerOptions::TargetVersionEnum::Vulkan1_3 },
+        { "Vulkan_1_4", ShaderCompilerOptions::TargetVersionEnum::Vulkan1_4 },
+        { "VulkanLatest", ShaderCompilerOptions::TargetVersionEnum::VulkanLatest }
     };
 
     glsl_qualifier singleQualifierFromString(const std::string& single_qualifier)
@@ -105,7 +144,7 @@ namespace st
         YAML::Node rootFileNode;
     };
 
-    yamlFile::yamlFile(const char* fname)
+    yamlFile::yamlFile(const char* fname, SessionImpl* session)
     {
         try
         {
@@ -115,9 +154,46 @@ namespace st
         {
             throw e;
         }
-        parseGroups();
-        parseResources();
-        sortResourcesAndSetBindingIndices();
+
+        filePath = std::filesystem::canonical(fname);
+        filePath = filePath.parent_path();
+
+        ShaderToolsErrorCode parseOptionsStatus = parseCompilerOptions(session);
+        ShaderToolsErrorCode parseGroupsStatus = parseGroups(session);
+        ShaderToolsErrorCode parseResourcesStatus = parseResources(session);
+
+
+        if (parseOptionsStatus == ShaderToolsErrorCode::Success &&
+            parseGroupsStatus == ShaderToolsErrorCode::Success &&
+            parseResourcesStatus == ShaderToolsErrorCode::Success)
+        {
+            sortResourcesAndSetBindingIndices();
+        }
+    }
+
+
+    yamlFile::yamlFile(yamlFile&& other) noexcept :
+        stages{ std::move(other.stages) },
+        shaderGroups{ std::move(other.shaderGroups) },
+        groupTags{ std::move(other.groupTags) },
+        stageExtensions{ std::move(other.stageExtensions) },
+        resourceGroups{ std::move(other.resourceGroups) },
+        compilerOptions{ std::move(other.compilerOptions) },
+        packName{ std::move(other.packName) }
+    {
+    }
+
+
+    yamlFile& yamlFile::operator=(yamlFile&& other) noexcept
+    {
+        stages = std::move(other.stages);
+        shaderGroups = std::move(other.shaderGroups);
+        groupTags = std::move(other.groupTags);
+        stageExtensions = std::move(other.stageExtensions);
+        resourceGroups = std::move(other.resourceGroups);
+        compilerOptions = std::move(other.compilerOptions);
+        packName = std::move(other.packName);
+        return *this;
     }
 
     yamlFile::~yamlFile() {}
@@ -150,69 +226,86 @@ namespace st
         return nullptr;
     }
 
-    void yamlFile::parseGroups()
+    ShaderStage yamlFile::addShaderStage(const std::string& group_name, std::string shader_name, VkShaderStageFlags stage_flags)
+    {
+        if (stages.count(shader_name) == 0)
+        {
+            auto iter = stages.emplace(shader_name, ShaderStage{ shader_name.c_str(), stage_flags });
+            shaderGroups[group_name].emplace(iter.first->second);
+            return iter.first->second;
+        }
+        else
+        {
+            shaderGroups[group_name].emplace(stages.at(shader_name));
+            return stages.at(shader_name);
+        }
+    }
+
+    std::vector<ShaderStage> yamlFile::addShaderStages(const std::string& group_name, const YAML::Node& shaders)
+    {
+        std::vector<ShaderStage> stages_added;
+
+        // Handle compute shader case
+        if (shaders["ComputeShader"])
+        {
+            stages_added.emplace_back(addShaderStage(group_name, shaders["ComputeShader"].as<std::string>(), VK_SHADER_STAGE_COMPUTE_BIT));
+            return stages_added;
+        }
+
+        // Handle render shader case
+        if (shaders["RenderShaders"])
+        {
+            auto renderShaders = shaders["RenderShaders"];
+            for (const auto& [stage_name, stage_flags] : valid_shader_stages)
+            {
+                // Skip compute stage since we handled it above
+                if (stage_flags == VK_SHADER_STAGE_COMPUTE_BIT)
+                    continue;
+
+                if (renderShaders[stage_name])
+                {
+                    stages_added.emplace_back(addShaderStage(group_name, renderShaders[stage_name].as<std::string>(), stage_flags));
+                }
+            }
+        }
+
+        return stages_added;
+    }
+
+    ShaderToolsErrorCode yamlFile::parseGroups(SessionImpl* session)
     {
         using namespace YAML;
 
         auto& file_node = impl->rootFileNode;
         if (!file_node["shader_groups"])
         {
-            throw std::runtime_error("YAML file had no shader groups specified!");
+            session->AddError(this, ShaderToolsErrorSource::Parser, ShaderToolsErrorCode::ParserHadNoShaderGroups, nullptr);
+            return ShaderToolsErrorCode::ParserHadNoShaderGroups;
         }
 
         auto groups = file_node["shader_groups"];
+        std::vector<ShaderStage> opt_disabled_stages;
 
         for (auto iter = groups.begin(); iter != groups.end(); ++iter)
         {
             std::string group_name = iter->first.as<std::string>();
 
-            auto add_stage = [this, &group_name](std::string shader_name, VkShaderStageFlags stage)->ShaderStage
             {
-                if (stages.count(shader_name) == 0)
+                // Check if either ComputeShader or RenderShaders exists
+                if (!iter->second["ComputeShader"] && !iter->second["RenderShaders"])
                 {
-                    auto iter = stages.emplace(shader_name, ShaderStage{ shader_name.c_str(), stage });
-                    shaderGroups[group_name].emplace(iter.first->second);
-                    return iter.first->second;
-                }
-                else
-                {
-                    shaderGroups[group_name].emplace(stages.at(shader_name));
-                    return stages.at(shader_name);
-                }
-            };
-
-            {
-                std::vector<ShaderStage> stages_added;
-                auto shaders = iter->second["Shaders"];
-
-                if (shaders["Vertex"])
-                {
-                    stages_added.emplace_back(add_stage(shaders["Vertex"].as<std::string>(), VK_SHADER_STAGE_VERTEX_BIT));
+                    return ShaderToolsErrorCode::ParserYamlFileHadNoShadersInGroup;
                 }
 
-                if (shaders["Geometry"])
-                {
-                    stages_added.emplace_back(add_stage(shaders["Geometry"].as<std::string>(), VK_SHADER_STAGE_GEOMETRY_BIT));
-                }
+                std::vector<ShaderStage> stages_added = addShaderStages(group_name, iter->second);
 
-                if (shaders["Fragment"])
+                // Defined inline with list of shaders. Disables optimization for all shaders in this group
+                if (iter->second["OptimizationDisabled"])
                 {
-                    stages_added.emplace_back(add_stage(shaders["Fragment"].as<std::string>(), VK_SHADER_STAGE_FRAGMENT_BIT));
-                }
-
-                if (shaders["Compute"])
-                {
-                    stages_added.emplace_back(add_stage(shaders["Compute"].as<std::string>(), VK_SHADER_STAGE_COMPUTE_BIT));
-                }
-
-                // Defined inline with list of shaders. Disables optimization for all shaders in this group (so, compute/render shaders)
-                if (shaders["OptimizationDisabled"])
-                {
-                    auto& sft = ShaderFileTracker::GetFileTracker();
-                    const bool disabled_value = shaders["OptimizationDisabled"].as<bool>();
-                    for (const auto& stage : stages_added)
+                    const bool disabled_value = iter->second["OptimizationDisabled"].as<bool>();
+                    if (disabled_value)
                     {
-                        sft.StageOptimizationDisabled.emplace(stage, disabled_value);
+                        opt_disabled_stages.insert(opt_disabled_stages.end(), stages_added.begin(), stages_added.end());
                     }
                 }
 
@@ -235,17 +328,115 @@ namespace st
             // adding them to the completed output. Makes it possible to define shaderpacks as closer to pipeline specs
             if (iter->second["Tags"])
             {
-                assert(iter->second["Tags"].IsSequence());
-                for (const auto& tag : iter->second["Tags"])
+                if (!iter->second["Tags"].IsSequence())
                 {
-                    groupTags[group_name].emplace_back(tag.as<std::string>());
+                    return ShaderToolsErrorCode::ParserYamlFileHadInvalidOrEmptyTagsArray;
+                }
+                else
+                {
+                    for (const auto& tag : iter->second["Tags"])
+                    {
+                        groupTags[group_name].emplace_back(tag.as<std::string>());
+                    }
+                }
+            }
+        }
+
+        if (!opt_disabled_stages.empty())
+        {
+            std::vector<WriteRequest> write_requests;
+            std::transform(opt_disabled_stages.begin(), opt_disabled_stages.end(), std::back_inserter(write_requests),
+            [](const ShaderStage& stage)
+            {
+                return WriteRequest{ WriteRequest::Type::SetStageOptimizationDisabled, stage, true };
+            });
+
+            ShaderToolsErrorCode status = MakeFileTrackerBatchWriteRequest(std::move(write_requests));
+            if (status != ShaderToolsErrorCode::Success)
+            {
+                return status;
+            }
+        }
+
+        return ShaderToolsErrorCode::Success;
+    }
+
+    ShaderToolsErrorCode yamlFile::parseCompilerOptions(SessionImpl* session)
+    {
+        using namespace YAML;
+        ShaderToolsErrorCode mostRecentError = ShaderToolsErrorCode::Success;
+
+        auto& file_node = impl->rootFileNode;
+        if (!file_node["compiler_options"])
+        {
+            // TODO: This is somewhere we could probably start using warnings
+            compilerOptions = ShaderCompilerOptions();
+        }
+        else
+        {
+            const YAML::Node compiler_options = file_node["compiler_options"];
+
+            if (compiler_options["GenerateDebugInfo"])
+            {
+                compilerOptions.GenerateDebugInfo = compiler_options["GenerateDebugInfo"].as<bool>();
+            }
+
+            if (compiler_options["Optimization"])
+            {
+                const std::string opt_str = compiler_options["Optimization"].as<std::string>();
+                auto opt_iter = optimization_level_from_str_map.find(opt_str);
+                if (opt_iter == optimization_level_from_str_map.end())
+                {
+                    mostRecentError = ShaderToolsErrorCode::ParserYamlFileHadInvalidOptimizationLevel;
+                    session->AddError(this, ShaderToolsErrorSource::Parser, mostRecentError, opt_str.c_str());
+                }
+                else
+                {
+                    compilerOptions.Optimization = opt_iter->second;
+                }
+            }
+
+            if (compiler_options["TargetVersion"])
+            {
+                const std::string target_version_str = compiler_options["TargetVersion"].as<std::string>();
+                auto target_version_iter = env_version_from_str_map.find(target_version_str);
+                if (target_version_iter == env_version_from_str_map.end())
+                {
+                    mostRecentError = ShaderToolsErrorCode::ParserYamlFileHadInvalidTargetVersion;
+                    session->AddError(this, ShaderToolsErrorSource::Parser, mostRecentError, target_version_str.c_str());
+                }
+                else
+                {
+                    compilerOptions.TargetVersion = target_version_iter->second;
+                }
+            }
+
+            if (compiler_options["IncludePaths"])
+            {
+                namespace fs = std::filesystem;
+                // We will add the working dir, but also the parent path of this file itself
+                fs::path working_dir = fs::current_path();
+                compilerOptions.IncludePaths.reserve(compiler_options["IncludePaths"].size() + 2);
+                compilerOptions.IncludePaths.emplace_back(working_dir);
+                compilerOptions.IncludePaths.emplace_back(filePath);
+                for (const auto& include_path : compiler_options["IncludePaths"])
+                {
+                    fs::path include_path_fs = include_path.as<std::string>();
+                    if (include_path_fs.is_relative())
+                    {
+                        include_path_fs = filePath / include_path_fs;
+                    }
+
+                    compilerOptions.IncludePaths.emplace_back(include_path_fs);
                 }
             }
 
         }
 
+        return mostRecentError;
     }
 
+    // Sorts resources by type, and sets binding indices
     void yamlFile::sortResourcesAndSetBindingIndices()
     {
         for (auto& resource_block : resourceGroups)
@@ -287,13 +478,16 @@ namespace st
 
     }
 
-    void yamlFile::parseResources()
+    ShaderToolsErrorCode yamlFile::parseResources(SessionImpl* session)
     {
         using namespace YAML;
+        // Store most recent error, so we can return that one. We will store every error that occurs in the session,
+        // so that users can see all errors but we still stop processing after any error occurs.
+        ShaderToolsErrorCode mostRecentError = ShaderToolsErrorCode::Success;
 
         if (!impl->rootFileNode["resource_groups"])
         {
-            throw std::runtime_error("YAML file had no resource groups!");
+            mostRecentError = ShaderToolsErrorCode::ParserHadNoResourceGroups;
         }
 
         auto groups = impl->rootFileNode["resource_groups"];
@@ -312,13 +506,17 @@ namespace st
 
                 if (!rsrc_node["Type"])
                 {
-                    throw std::runtime_error("Failed to find type field in resource entry in YAML file.");
+                    const std::string errorMsg = "Group '" + group_name + "' has resource '" + rsrc_name + "' with no type specifier.";
+                    session->AddError(this, ShaderToolsErrorSource::Parser, ShaderToolsErrorCode::ParserMissingResourceTypeSpecifier, errorMsg.c_str());
+                    mostRecentError = ShaderToolsErrorCode::ParserMissingResourceTypeSpecifier;
                 }
 
                 auto type_iter = descriptor_type_from_str_map.find(rsrc_node["Type"].as<std::string>());
                 if (type_iter == descriptor_type_from_str_map.end())
                 {
-                    throw std::runtime_error("Could not match type str to valid VkDescriptorType value!");
+                    const std::string errorMsg = "Group '" + group_name + "' has resource '" + rsrc_name + "' with type specifier '" + rsrc_node["Type"].as<std::string>() + "' which has no corresponding Vulkan equivalent.";
+                    session->AddError(this, ShaderToolsErrorSource::Parser, ShaderToolsErrorCode::ParserResourceTypeSpecifierNoVulkanEquivalent, errorMsg.c_str());
+                    mostRecentError = ShaderToolsErrorCode::ParserResourceTypeSpecifierNoVulkanEquivalent;
                 }
 
                 ShaderResource rsrc;
@@ -360,7 +558,14 @@ namespace st
 
                 if (rsrc_node["Format"])
                 {
-                    rsrc.SetFormat(VkFormatFromString(rsrc_node["Format"].as<std::string>()));
+                    VkFormat format = VkFormatFromString(rsrc_node["Format"].as<std::string>());
+                    if (format == VK_FORMAT_UNDEFINED)
+                    {
+                        const std::string errorMsg = "Group '" + group_name + "' has resource '" + rsrc_name + "' with format '" + rsrc_node["Format"].as<std::string>() + "' which has no corresponding Vulkan equivalent.";
+                        session->AddError(this, ShaderToolsErrorSource::Parser, ShaderToolsErrorCode::ParserResourceFormatNoVulkanEquivalent, errorMsg.c_str());
+                        mostRecentError = ShaderToolsErrorCode::ParserResourceFormatNoVulkanEquivalent;
+                    }
+                    rsrc.SetFormat(format);
                 }
 
                 if (rsrc_node["Members"])
@@ -395,6 +600,8 @@ namespace st
 
             }
         }
+
+        return mostRecentError;
     }
 
 }

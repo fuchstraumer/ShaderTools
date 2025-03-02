@@ -11,6 +11,8 @@ namespace st
     class ResourceGroupImpl;
     struct yamlFile;
     struct ShaderStage;
+    struct Session;
+    struct SessionImpl;
 
     class ST_API ResourceGroup
     {
@@ -19,7 +21,7 @@ namespace st
         friend class ResourceFile;
     public:
 
-        ResourceGroup(yamlFile* resource_file, const char* group_name);
+        ResourceGroup(yamlFile* resource_file, const char* group_name, SessionImpl* error_session);
         ~ResourceGroup();
 
         dll_retrieved_strings_t ResourceNames() const noexcept;

@@ -10,7 +10,7 @@ namespace st
         FreeMemory();
     }
 
-    dll_retrieved_strings_t::dll_retrieved_strings_t(dll_retrieved_strings_t&& other) noexcept : NumStrings(std::move(other.NumStrings)), Strings(std::move(other.Strings))
+    dll_retrieved_strings_t::dll_retrieved_strings_t(dll_retrieved_strings_t&& other) noexcept : NumStrings(other.NumStrings), Strings(other.Strings)
     {
         other.NumStrings = 0;
         other.Strings = nullptr;
@@ -18,6 +18,14 @@ namespace st
 
     dll_retrieved_strings_t& dll_retrieved_strings_t::operator=(dll_retrieved_strings_t&& other) noexcept
     {
+        if (this == &other)
+        {
+            return *this;
+        }
+
+        // Clean up existing resources
+        FreeMemory();
+
         NumStrings = std::move(other.NumStrings);
         other.NumStrings = 0;
         Strings = std::move(other.Strings);
@@ -54,9 +62,20 @@ namespace st
         return Strings[idx];
     }
 
+    char* CopyString(const char* string_to_copy)
+    {
+        if (string_to_copy == nullptr)
+        {
+            return nullptr;
+        }
+        char* new_string = new char[std::strlen(string_to_copy) + 1];
+        std::strcpy(new_string, string_to_copy);
+        return new_string;
+    }
+
     ShaderResourceSubObject::ShaderResourceSubObject(const ShaderResourceSubObject& other) noexcept :
-        Type(strdup(other.Type)),
-        Name(strdup(other.Name)),
+        Type(CopyString(other.Type)),
+        Name(CopyString(other.Name)),
         NumElements(other.NumElements),
         isComplex(other.isComplex),
         Offset(other.Offset),
@@ -66,12 +85,12 @@ namespace st
     }
 
     ShaderResourceSubObject::ShaderResourceSubObject(ShaderResourceSubObject&& other) noexcept :
-        Type(std::move(other.Type)),
-        Name(std::move(other.Name)),
-        NumElements(std::move(other.NumElements)),
-        isComplex(std::move(other.isComplex)),
-        Offset(std::move(other.Offset)),
-        Size(std::move(other.Size))
+        Type(other.Type),
+        Name(other.Name),
+        NumElements(other.NumElements),
+        isComplex(other.isComplex),
+        Offset(other.Offset),
+        Size(other.Size)
     {
         other.Type = nullptr;
         other.Name = nullptr;
@@ -79,8 +98,12 @@ namespace st
 
     ShaderResourceSubObject& ShaderResourceSubObject::operator=(const ShaderResourceSubObject& other) noexcept
     {
-        Type = strdup(other.Type);
-        Name = strdup(other.Name);
+        if (this == &other)
+        {
+            return *this;
+        }
+        SetType(other.Type);
+        SetName(other.Name);
         Offset = other.Offset;
         Size = other.Size;
         NumElements = other.NumElements;
@@ -90,12 +113,28 @@ namespace st
 
     ShaderResourceSubObject& ShaderResourceSubObject::operator=(ShaderResourceSubObject&& other) noexcept
     {
-        Type = std::move(other.Type);
-        Name = std::move(other.Name);
-        NumElements = std::move(other.NumElements);
-        isComplex = std::move(other.isComplex);
-        Size = std::move(other.Size);
-        Offset = std::move(other.Offset);
+        if (this == &other)
+        {
+            return *this;
+        }
+        
+        // Clean up existing resources
+        if (Type != nullptr)
+        {
+            delete[] Type;
+        }
+        
+        if (Name != nullptr)
+        {
+            delete[] Name;
+        }
+        
+        Type = other.Type;
+        Name = other.Name;
+        NumElements = other.NumElements;
+        isComplex = other.isComplex;
+        Size = other.Size;
+        Offset = other.Offset;
         other.Type = nullptr;
         other.Name = nullptr;
         return *this;
@@ -105,13 +144,129 @@ namespace st
     {
         if (Type != nullptr)
         {
-            free(Type);
+            delete[] Type;
         }
 
         if (Name != nullptr)
         {
-            free(Name);
+            delete[] Name;
         }
+    }
+
+    void ShaderResourceSubObject::SetName(const char* name)
+    {
+        if (Name != nullptr)
+        {
+            delete[] Name;
+        }
+        Name = CopyString(name);
+    }
+
+    void ShaderResourceSubObject::SetType(const char* type)
+    {
+        if (Type != nullptr)
+        {
+            delete[] Type;
+        }
+        Type = CopyString(type);
+    }
+
+    void SetSpecializationConstantValue(SpecializationConstant& constant, const SpecializationConstant& other)
+    {
+        switch (constant.Type)
+        {
+        case SpecializationConstant::constant_type::b32:
+            constant.value_b32 = other.value_b32;
+            break;
+        case SpecializationConstant::constant_type::f32:
+            constant.value_f32 = other.value_f32;
+            break;
+        case SpecializationConstant::constant_type::f64:
+            constant.value_f64 = other.value_f64;
+            break;
+        case SpecializationConstant::constant_type::i32:
+            constant.value_i32 = other.value_i32;
+            break;
+        case SpecializationConstant::constant_type::i64:
+            constant.value_i64 = other.value_i64;
+            break;
+        case SpecializationConstant::constant_type::ui32:
+            constant.value_ui32 = other.value_ui32;
+            break;
+        case SpecializationConstant::constant_type::ui64:
+            constant.value_ui64 = other.value_ui64;
+            break;
+        case SpecializationConstant::constant_type::invalid:
+            break;
+        }
+    }
+
+    SpecializationConstant::~SpecializationConstant()
+    {
+        if (Name != nullptr)
+        {
+            delete[] Name;
+        }
+    }
+
+    SpecializationConstant::SpecializationConstant(const SpecializationConstant& other) noexcept :
+        Type(other.Type),
+        ConstantID(other.ConstantID),
+        Name(CopyString(other.Name))
+    {
+        SetSpecializationConstantValue(*this, other);
+    }
+
+    SpecializationConstant::SpecializationConstant(SpecializationConstant&& other) noexcept :
+        Type(other.Type),
+        ConstantID(other.ConstantID),
+        Name(other.Name)
+    {
+        SetSpecializationConstantValue(*this, other);
+        other.Name = nullptr;
+    }
+
+    SpecializationConstant& SpecializationConstant::operator=(const SpecializationConstant& other) noexcept
+    {
+        if (this == &other)
+        {
+            return *this;
+        }
+        SetName(other.Name);
+        Type = other.Type;
+        ConstantID = other.ConstantID;
+        SetSpecializationConstantValue(*this, other);
+        return *this;
+    }
+
+    SpecializationConstant& SpecializationConstant::operator=(SpecializationConstant&& other) noexcept
+    {
+        if (this == &other)
+        {
+            return *this;
+        }
+        
+        // Clean up existing resources
+        if (Name != nullptr)
+        {
+            delete[] Name;
+        }
+        
+        Name = other.Name;
+        Type = other.Type;
+        ConstantID = other.ConstantID;
+        SetSpecializationConstantValue(*this, other);
+        other.Name = nullptr;
+        return *this;
+    }
+
+    void SpecializationConstant::SetName(const char* name)
+    {
+        if (Name != nullptr)
+        {
+            delete[] Name;
+        }
+        Name = CopyString(name);
     }
 
 }

@@ -9,15 +9,15 @@ namespace st
     struct ST_API ShaderStage
     {
         ShaderStage(const char* shader_name, const VkShaderStageFlags stages);
-        ShaderStage(uint32_t hash, uint32_t stageBits) noexcept;
-        ShaderStage(const ShaderStage& other) noexcept = default;
-        ShaderStage& operator=(const ShaderStage& other) noexcept = default;
-        ShaderStage(ShaderStage&& other) noexcept = default;
-        ShaderStage& operator=(ShaderStage&& other) noexcept = default;
+        constexpr ShaderStage(uint32_t hash, uint32_t stageBits) noexcept;
+        constexpr ShaderStage(const ShaderStage& other) noexcept = default;
+        constexpr ShaderStage& operator=(const ShaderStage& other) noexcept = default;
+        constexpr ShaderStage(ShaderStage&& other) noexcept = default;
+        constexpr ShaderStage& operator=(ShaderStage&& other) noexcept = default;
         uint32_t hash;
         uint32_t stageBits;
-        bool operator==(const ShaderStage& other) const noexcept;
-        bool operator<(const ShaderStage& other) const noexcept;
+        constexpr bool operator==(const ShaderStage& other) const noexcept;
+        constexpr bool operator<(const ShaderStage& other) const noexcept;
     };
 
 }

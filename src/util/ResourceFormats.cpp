@@ -1,4 +1,5 @@
 #include "ResourceFormats.hpp"
+#include <unordered_map>
 
 namespace st
 {
@@ -139,472 +140,70 @@ namespace st
         }
     }
 
-    std::string SPIR_TypeToString(const spirv_cross::SPIRType& stype)
-    {
-        using namespace spirv_cross;
-        std::string result_str;
-        bool add_width = true;
 
-        switch (stype.basetype)
+    const char* spvReflect_TypeToString(const SpvReflectTypeFlags type)
+    {
+        if (type & SPV_REFLECT_TYPE_FLAG_VOID)
         {
-        case SPIRType::Boolean:
-            result_str = "bool";
-            break;
-        case SPIRType::Char:
-            result_str = "char";
-            break;
-        case SPIRType::Half:
-            result_str = "half";
-            break;
-        case SPIRType::Float:
-            result_str = "float";
-            break;
-        case SPIRType::Int:
-            result_str = "int";
-            break;
-        case SPIRType::Int64:
-            result_str = "int64";
-            add_width = false;
-            break;
-        case SPIRType::UInt:
-            result_str = "uint";
-            break;
-        case SPIRType::UInt64:
-            result_str = "uint64";
-            add_width = false;
-            break;
-        case SPIRType::Double:
-            result_str = "double";
-            break;
-        case SPIRType::Struct:
+            return "void";
+        }
+        else if (type & SPV_REFLECT_TYPE_FLAG_BOOL)
+        {
+            return "bool";
+        }
+        else if (type & SPV_REFLECT_TYPE_FLAG_INT)
+        {
+            return "int";
+        }
+        else if (type & SPV_REFLECT_TYPE_FLAG_FLOAT)
+        {
+            return "float";
+        }
+        else if (type & SPV_REFLECT_TYPE_FLAG_VECTOR)
+        {
+            return "vector";
+        }
+        else if (type & SPV_REFLECT_TYPE_FLAG_MATRIX)
+        {
+            return "matrix";
+        }
+        else if (type & SPV_REFLECT_TYPE_FLAG_EXTERNAL_IMAGE)
+        {
+            return "image";
+        }
+        else if (type & SPV_REFLECT_TYPE_FLAG_EXTERNAL_SAMPLER)
+        {
+            return "sampler";
+        }
+        else if (type & SPV_REFLECT_TYPE_FLAG_EXTERNAL_SAMPLED_IMAGE)
+        {
+            return "sampled_image";
+        }
+        else if (type & SPV_REFLECT_TYPE_FLAG_EXTERNAL_BLOCK)
+        {
+            return "block";
+        }
+        else if (type & SPV_REFLECT_TYPE_FLAG_EXTERNAL_ACCELERATION_STRUCTURE)
+        {
+            return "acceleration_structure";
+        }
+        else if (type & SPV_REFLECT_TYPE_FLAG_STRUCT)
+        {
             return "struct";
-            break;
-        case SPIRType::Sampler:
-            result_str = "sampler";
-            break;
-        case SPIRType::Image:
-            result_str = "image";
-            break;
-        case SPIRType::SampledImage:
-            result_str = "sampledImage";
-            break;
-        default:
-            return "INVALID_TYPE";
         }
-
-        if (add_width)
+        else if (type & SPV_REFLECT_TYPE_FLAG_ARRAY)
         {
-            result_str += std::to_string(stype.width);
-        }
-
-        if (stype.vecsize <= 1)
-        {
-            return result_str;
+            return "array";
         }
         else
         {
-            result_str += std::string("_vector");
-            result_str += std::to_string(stype.vecsize);
-            return result_str;
-        }
-
-    }
-
-    spirv_cross::SPIRType::BaseType SPIR_BaseTypeEnumFromString(const std::string& str)
-    {
-        using namespace spirv_cross;
-        if (str == std::string("float"))
-        {
-            return SPIRType::Float;
-        }
-        else if (str == std::string("int"))
-        {
-            return SPIRType::Int;
-        }
-        else if (str == std::string("int64"))
-        {
-            return SPIRType::Int64;
-        }
-        else if (str == std::string("uint"))
-        {
-            return SPIRType::UInt;
-        }
-        else if (str == std::string("uint64"))
-        {
-            return SPIRType::UInt64;
-        }
-        else if (str == std::string("double"))
-        {
-            return SPIRType::Double;
-        }
-        else if (str == std::string("bool"))
-        {
-            return SPIRType::Boolean;
-        }
-        else if (str == std::string("half"))
-        {
-            return SPIRType::Half;
-        }
-        else if (str == std::string("char"))
-        {
-            return SPIRType::Char;
-        }
-        else if (str == std::string("struct"))
-        {
-            return SPIRType::Struct;
-        }
-        else if (str == std::string("sampler"))
-        {
-            return SPIRType::Sampler;
-        }
-        else if (str == std::string("image"))
-        {
-            return SPIRType::Image;
-        }
-        else if (str == std::string("sampledImage"))
-        {
-            return SPIRType::SampledImage;
-        }
-        else
-        {
-            return SPIRType::Unknown;
+            return "unknown";
         }
     }
 
-    spirv_cross::SPIRType SPIR_TypeFromString(const std::string& str)
+    VkFormat VkFormatFromSpvReflectFormat(const SpvReflectFormat type)
     {
-        using namespace spirv_cross;
-        SPIRType result;
-
-        size_t idx = str.find_first_of('_');
-
-        if (idx != std::string::npos)
-        {
-            std::string type_substr = str.substr(0, idx);
-            result.basetype = SPIR_BaseTypeEnumFromString(type_substr);
-            // set vec size now.
-            std::string vec_substr = str.substr(0, idx + 1);
-            vec_substr.erase(0, 6);
-            result.vecsize = static_cast<uint32_t>(std::stoi(vec_substr));
-            return result;
-        }
-        else
-        {
-            result = SPIRType();
-            result.basetype = SPIR_BaseTypeEnumFromString(str);
-            return result;
-        }
-    }
-
-    VkFormat VkFormatFromSPIRType(const spirv_cross::SPIRType& type)
-    {
-        using namespace spirv_cross;
-        if (type.basetype == SPIRType::Struct || type.basetype == SPIRType::Sampler)
-        {
-            return VK_FORMAT_UNDEFINED;
-        }
-        else if (type.basetype == SPIRType::Image || type.basetype == SPIRType::SampledImage)
-        {
-            switch (type.image.format)
-            {
-            case spv::ImageFormatR8:
-                return VK_FORMAT_R8_UNORM;
-            case spv::ImageFormatR8Snorm:
-                return VK_FORMAT_R8_SNORM;
-            case spv::ImageFormatR8ui:
-                return VK_FORMAT_R8_UINT;
-            case spv::ImageFormatR8i:
-                return VK_FORMAT_R8_SINT;
-            case spv::ImageFormatRg8:
-                return VK_FORMAT_R8G8_UNORM;
-            case spv::ImageFormatRg8Snorm:
-                return VK_FORMAT_R8G8_SNORM;
-            case spv::ImageFormatRg8ui:
-                return VK_FORMAT_R8G8_UINT;
-            case spv::ImageFormatRg8i:
-                return VK_FORMAT_R8G8_SINT;
-            case spv::ImageFormatRgba8i:
-                return VK_FORMAT_R8G8B8A8_SINT;
-            case spv::ImageFormatRgba8ui:
-                return VK_FORMAT_R8G8B8A8_UINT;
-            case spv::ImageFormatRgba8:
-                return VK_FORMAT_R8G8B8A8_UNORM;
-            case spv::ImageFormatRgba8Snorm:
-                return VK_FORMAT_R8G8B8A8_SNORM;
-            case spv::ImageFormatR32i:
-                return VK_FORMAT_R32_SINT;
-            case spv::ImageFormatR32ui:
-                return VK_FORMAT_R32_UINT;
-            case spv::ImageFormatRg32i:
-                return VK_FORMAT_R32G32_SINT;
-            case spv::ImageFormatRg32ui:
-                return VK_FORMAT_R32G32_UINT;
-            case spv::ImageFormatRgba32f:
-                return VK_FORMAT_R32G32B32A32_SFLOAT;
-            case spv::ImageFormatRgba16f:
-                return VK_FORMAT_R16G16B16A16_SFLOAT;
-            case spv::ImageFormatR32f:
-                return VK_FORMAT_R32_SFLOAT;
-            case spv::ImageFormatRg32f:
-                return VK_FORMAT_R32G32_SFLOAT;
-            case spv::ImageFormatR16f:
-                return VK_FORMAT_R16_SFLOAT;
-            case spv::ImageFormatRgba32i:
-                return VK_FORMAT_R32G32B32A32_SINT;
-            case spv::ImageFormatRgba32ui:
-                return VK_FORMAT_R32G32B32A32_UINT;
-            default:
-                return VK_FORMAT_UNDEFINED;
-            }
-        }
-        else if (type.vecsize == 1)
-        {
-            if (type.width == 8)
-            {
-                switch (type.basetype)
-                {
-                case SPIRType::Int:
-                    return VK_FORMAT_R8_SINT;
-                case SPIRType::UInt:
-                    return VK_FORMAT_R8_UINT;
-                default:
-                    return VK_FORMAT_UNDEFINED;
-                }
-            }
-            else if (type.width == 16)
-            {
-                switch (type.basetype)
-                {
-                case SPIRType::Int:
-                    return VK_FORMAT_R16_SINT;
-                case SPIRType::UInt:
-                    return VK_FORMAT_R16_UINT;
-                case SPIRType::Float:
-                    return VK_FORMAT_R16_SFLOAT;
-                default:
-                    return VK_FORMAT_UNDEFINED;
-                }
-            }
-            else if (type.width == 32)
-            {
-                switch (type.basetype)
-                {
-                case SPIRType::Int:
-                    return VK_FORMAT_R32_SINT;
-                case SPIRType::UInt:
-                    return VK_FORMAT_R32_UINT;
-                case SPIRType::Float:
-                    return VK_FORMAT_R32_SFLOAT;
-                default:
-                    return VK_FORMAT_UNDEFINED;
-                }
-            }
-            else if (type.width == 64)
-            {
-                switch (type.basetype)
-                {
-                    case SPIRType::Int64:
-                        return VK_FORMAT_R64_SINT;
-                    case SPIRType::UInt64:
-                        return VK_FORMAT_R64_UINT;
-                    case SPIRType::Double:
-                        return VK_FORMAT_R64_SFLOAT;
-                    default:
-                        return VK_FORMAT_UNDEFINED;
-                }
-            }
-            else
-            {
-                return VK_FORMAT_UNDEFINED;
-            }
-        }
-        else if (type.vecsize == 2)
-{
-            if (type.width == 8)
-            {
-                switch (type.basetype)
-                {
-                case SPIRType::Int:
-                    return VK_FORMAT_R8G8_SINT;
-                case SPIRType::UInt:
-                    return VK_FORMAT_R8G8_UINT;
-                default:
-                    return VK_FORMAT_UNDEFINED;
-                }
-            }
-            else if (type.width == 16)
-            {
-                switch (type.basetype)
-                {
-                case SPIRType::Int:
-                    return VK_FORMAT_R16G16_SINT;
-                case SPIRType::UInt:
-                    return VK_FORMAT_R16G16_UINT;
-                case SPIRType::Float:
-                    return VK_FORMAT_R16G16_SFLOAT;
-                default:
-                    return VK_FORMAT_UNDEFINED;
-                }
-            }
-            else if (type.width == 32)
-            {
-                switch (type.basetype)
-                {
-                case SPIRType::Int:
-                    return VK_FORMAT_R32G32_SINT;
-                case SPIRType::UInt:
-                    return VK_FORMAT_R32G32_UINT;
-                case SPIRType::Float:
-                    return VK_FORMAT_R32G32_SFLOAT;
-                default:
-                    return VK_FORMAT_UNDEFINED;
-                }
-            }
-            else if (type.width == 64)
-            {
-                switch (type.basetype)
-                {
-                    case SPIRType::Int64:
-                        return VK_FORMAT_R64G64_SINT;
-                    case SPIRType::UInt64:
-                        return VK_FORMAT_R64G64_UINT;
-                    case SPIRType::Double:
-                        return VK_FORMAT_R64G64_SFLOAT;
-                    default:
-                        return VK_FORMAT_UNDEFINED;
-                }
-            }
-            else
-            {
-                return VK_FORMAT_UNDEFINED;
-            }
-        }
-        else if (type.vecsize == 3)
-{
-            if (type.width == 8)
-            {
-                switch (type.basetype)
-                {
-                case SPIRType::Int:
-                    return VK_FORMAT_R8G8B8_SINT;
-                case SPIRType::UInt:
-                    return VK_FORMAT_R8G8B8_UINT;
-                default:
-                    return VK_FORMAT_UNDEFINED;
-                }
-            }
-            else if (type.width == 16)
-            {
-                switch (type.basetype)
-                {
-                case SPIRType::Int:
-                    return VK_FORMAT_R16G16B16_SINT;
-                case SPIRType::UInt:
-                    return VK_FORMAT_R16G16B16_UINT;
-                case SPIRType::Float:
-                    return VK_FORMAT_R16G16B16_SFLOAT;
-                default:
-                    return VK_FORMAT_UNDEFINED;
-                }
-            }
-            else if (type.width == 32)
-            {
-                switch (type.basetype)
-                {
-                case SPIRType::Int:
-                    return VK_FORMAT_R32G32B32_SINT;
-                case SPIRType::UInt:
-                    return VK_FORMAT_R32G32B32_UINT;
-                case SPIRType::Float:
-                    return VK_FORMAT_R32G32B32_SFLOAT;
-                default:
-                    return VK_FORMAT_UNDEFINED;
-                }
-            }
-            else if (type.width == 64)
-            {
-                switch (type.basetype)
-                {
-                    case SPIRType::Int64:
-                        return VK_FORMAT_R64G64B64_SINT;
-                    case SPIRType::UInt64:
-                        return VK_FORMAT_R64G64B64_UINT;
-                    case SPIRType::Double:
-                        return VK_FORMAT_R64G64B64_SFLOAT;
-                    default:
-                        return VK_FORMAT_UNDEFINED;
-                }
-            }
-            else
-            {
-                return VK_FORMAT_UNDEFINED;
-            }
-        }
-        else if (type.vecsize == 4)
-{
-            if (type.width == 8)
-            {
-                switch (type.basetype)
-                {
-                case SPIRType::Int:
-                    return VK_FORMAT_R8G8B8A8_SINT;
-                case SPIRType::UInt:
-                    return VK_FORMAT_R8G8B8A8_UINT;
-                default:
-                    return VK_FORMAT_UNDEFINED;
-                }
-            }
-            else if (type.width == 16)
-            {
-                switch (type.basetype)
-                {
-                case SPIRType::Int:
-                    return VK_FORMAT_R16G16B16A16_SINT;
-                case SPIRType::UInt:
-                    return VK_FORMAT_R16G16B16A16_UINT;
-                case SPIRType::Float:
-                    return VK_FORMAT_R16G16B16A16_SFLOAT;
-                default:
-                    return VK_FORMAT_UNDEFINED;
-                }
-            }
-            else if (type.width == 32)
-            {
-                switch (type.basetype)
-                {
-                case SPIRType::Int:
-                    return VK_FORMAT_R32G32B32A32_SINT;
-                case SPIRType::UInt:
-                    return VK_FORMAT_R32G32B32A32_UINT;
-                case SPIRType::Float:
-                    return VK_FORMAT_R32G32B32A32_SFLOAT;
-                default:
-                    return VK_FORMAT_UNDEFINED;
-                }
-            }
-            else if (type.width == 64)
-            {
-                switch (type.basetype)
-                {
-                    case SPIRType::Int64:
-                        return VK_FORMAT_R64G64B64A64_SINT;
-                    case SPIRType::UInt64:
-                        return VK_FORMAT_R64G64B64A64_UINT;
-                    case SPIRType::Double:
-                        return VK_FORMAT_R64G64B64A64_SFLOAT;
-                    default:
-                        return VK_FORMAT_UNDEFINED;
-                }
-            }
-            else
-            {
-                return VK_FORMAT_UNDEFINED;
-            }
-        }
-        else
-        {
-            return VK_FORMAT_UNDEFINED;
-        }
+        return VK_FORMAT_UNDEFINED;
     }
 
     VkFormat VkFormatFromString(const std::string& string)
@@ -832,3 +431,4 @@ namespace st
         }
     }
 }
+

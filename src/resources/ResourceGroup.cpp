@@ -1,7 +1,10 @@
 #include "resources/ResourceGroup.hpp"
 #include "../parser/yamlFile.hpp"
 #include "../util/ShaderFileTracker.hpp"
+#include "../common/UtilityStructsInternal.hpp"
+#include "../common/impl/SessionImpl.hpp"
 #include "common/ShaderStage.hpp"
+
 #include <unordered_map>
 #include <string>
 #include <set>
@@ -13,7 +16,7 @@ namespace st
     class ResourceGroupImpl
     {
     public:
-        ResourceGroupImpl(yamlFile* resource_file, const char* group_name);
+        ResourceGroupImpl(yamlFile* resource_file, const char* group_name, SessionImpl* error_session);
         ~ResourceGroupImpl() = default;
 
         bool hasResource(const char* str) const;
@@ -24,9 +27,12 @@ namespace st
         std::unordered_map<ShaderStage, uint32_t> stageSetIndices;
         std::vector<std::string> tags;
         std::set<std::string> usedByShaders;
+        SessionImpl* errorSession;
     };
 
-    ResourceGroupImpl::ResourceGroupImpl(yamlFile* resource_file, const char* group_name) : name(group_name),
+    ResourceGroupImpl::ResourceGroupImpl(yamlFile* resource_file, const char* group_name, SessionImpl* error_session) :
+        errorSession(error_session),
+        name(group_name),
         resources(resource_file->resourceGroups.at(group_name))
     {
         if (resource_file->groupTags.count(name) != 0)
@@ -36,49 +42,10 @@ namespace st
 
         for (const auto& rsrc : resources)
         {
-            switch (rsrc.DescriptorType())
+            ShaderToolsErrorCode error = CountDescriptorType(rsrc.DescriptorType(), descriptorCounts);
+            if (error != ShaderToolsErrorCode::Success)
             {
-            case VK_DESCRIPTOR_TYPE_SAMPLER:
-                descriptorCounts.Samplers++;
-                break;
-            case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
-                descriptorCounts.CombinedImageSamplers++;
-                break;
-            case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
-                descriptorCounts.SampledImages++;
-                break;
-            case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
-                descriptorCounts.StorageImages++;
-                break;
-            case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
-                descriptorCounts.UniformTexelBuffers++;
-                break;
-            case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
-                descriptorCounts.StorageTexelBuffers++;
-                break;
-            case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
-                descriptorCounts.UniformBuffers++;
-                break;
-            case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
-                descriptorCounts.StorageBuffers++;
-                break;
-            case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
-                descriptorCounts.UniformBuffersDynamic++;
-                break;
-            case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
-                descriptorCounts.StorageBuffersDynamic++;
-                break;
-            case VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT:
-                descriptorCounts.InputAttachments++;
-                break;
-            case VK_DESCRIPTOR_TYPE_INLINE_UNIFORM_BLOCK_EXT:
-                descriptorCounts.InlineUniformBlockEXT++;
-                break;
-            //case VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_NVX:
-            //    descriptorCounts.AccelerationStructureNVX++;
-            //    break;
-            default:
-                throw std::domain_error("Invalid VK_DESCRIPTOR_TYPE value for a ShaderResource in a ResourceGroup!");
+                errorSession->AddError(this, ShaderToolsErrorSource::ResourceGroup, error, nullptr);
             }
         }
 
@@ -96,8 +63,8 @@ namespace st
         return false;
     }
 
-    ResourceGroup::ResourceGroup(yamlFile* resource_file, const char* group_name) :
-        impl(std::make_unique<ResourceGroupImpl>(resource_file, group_name))
+    ResourceGroup::ResourceGroup(yamlFile* resource_file, const char* group_name, SessionImpl* error_session) :
+        impl(std::make_unique<ResourceGroupImpl>(resource_file, group_name, error_session))
     {}
 
     ResourceGroup::~ResourceGroup()
@@ -121,7 +88,7 @@ namespace st
         dll_retrieved_strings_t results;
         results.SetNumStrings(impl->usedByShaders.size());
         size_t i = 0;
-        for (auto& entry : impl->usedByShaders)
+        for (const auto& entry : impl->usedByShaders)
         {
             results.Strings[i] = strdup(entry.c_str());
             ++i;
@@ -134,7 +101,7 @@ namespace st
         dll_retrieved_strings_t results;
         results.SetNumStrings(impl->tags.size());
         size_t i = 0;
-        for (auto& entry : impl->tags)
+        for (const auto& entry : impl->tags)
         {
             results.Strings[i] = strdup(entry.c_str());
             ++i;
@@ -152,13 +119,22 @@ namespace st
         return impl->name.c_str();
     }
 
-    uint32_t ResourceGroup::DescriptorSetIdxInStage(const ShaderStage & handle) const
+    uint32_t ResourceGroup::DescriptorSetIdxInStage(const ShaderStage& handle) const
     {
         if (impl->stageSetIndices.empty())
         {
-            // grab the map from the file tracker
-            auto& f_tracker = ShaderFileTracker::GetFileTracker();
-            impl->stageSetIndices = f_tracker.ResourceGroupSetIndexMaps.at(impl->name);
+            ReadRequest readReq{ ReadRequest::Type::FindResourceGroupSetIndexMap, handle };
+            ReadRequestResult readResult = MakeFileTrackerReadRequest(readReq);
+            if (readResult.has_value())
+            {
+                impl->stageSetIndices = std::get<decltype(impl->stageSetIndices)>(*readResult);
+            }
+            else
+            {
+                impl->errorSession->AddError(this, ShaderToolsErrorSource::ResourceGroup, readResult.error(), "ResourceGroup couldn't get SetIndexMap from FileTracker");
+                // oh shit how do we log an error
+                return std::numeric_limits<uint32_t>::max();
+            }
         }
 
         auto iter = impl->stageSetIndices.find(handle);
@@ -183,6 +159,7 @@ namespace st
         }
         else
         {
+            impl->errorSession->AddError(this, ShaderToolsErrorSource::ResourceGroup, ShaderToolsErrorCode::ResourceNotFound, name);
             return nullptr;
         }
     }
@@ -198,6 +175,7 @@ namespace st
         }
         else
         {
+            impl->errorSession->AddError(this, ShaderToolsErrorSource::ResourceGroup, ShaderToolsErrorCode::ResourceNotFound, name);
             return nullptr;
         }
     }

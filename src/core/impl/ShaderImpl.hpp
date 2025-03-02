@@ -15,6 +15,7 @@ namespace st
     class ShaderCompiler;
     class ShaderReflector;
     struct yamlFile;
+    struct Session;
 
     class ShaderGroupImpl
     {
@@ -22,23 +23,22 @@ namespace st
         ShaderGroupImpl& operator=(const ShaderGroupImpl& other) = delete;
     public:
 
-        ShaderGroupImpl(const std::string& group_name, yamlFile* yaml_file);
+        ShaderGroupImpl(const std::string& group_name, yamlFile* yaml_file, Session& error_session);
         ~ShaderGroupImpl();
         ShaderGroupImpl(ShaderGroupImpl&& other) noexcept;
         ShaderGroupImpl& operator=(ShaderGroupImpl&& other) noexcept;
 
-        void addShaderStage(const ShaderStage& handle);
+        void addShaderStage(ShaderStage handle);
 
-        std::string groupName;
+        std::unique_ptr<ShaderReflector> reflector;
+        yamlFile* rsrcFile{ nullptr };
         size_t idx;
+        std::string groupName;
+        std::filesystem::path resourceScriptPath;
         std::unordered_set<st::ShaderStage> stHandles{};
         std::unordered_map<st::ShaderStage, bool> optimizationEnabled;
-        std::unique_ptr<ShaderReflector> reflector{ nullptr };
-        yamlFile* rsrcFile{ nullptr };
         std::vector<std::string> tags;
         std::unordered_map<std::string, size_t> resourceGroupBindingIndices;
-
-        std::filesystem::path resourceScriptPath;
     };
 
 }

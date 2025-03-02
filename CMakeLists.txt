@@ -5,7 +5,6 @@ PROJECT(ShaderTools)
 # Much better than cluttering up an entire IDE just with our dependencies lol
 SET_PROPERTY(GLOBAL PROPERTY USE_FOLDERS ON)
 
-#ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/spirv-headers" EXCLUDE_FROM_ALL)
 SET(SPIRV-Headers_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/third_party/spirv-headers")
 SET(SKIP_SPIRV_TOOLS_INSTALL ON CACHE BOOL "Skip installation")
 SET(SPIRV_SKIP_EXECUTABLES ON CACHE BOOL "Skip building the executable and tests along with the library")
@@ -25,13 +24,10 @@ SET(SHADERC_ENABLE_SHARED_CRT ON CACHE BOOL "Use the shared CRT instead of the s
 SET(ENABLE_GLSLANG_BINARIES OFF CACHE BOOL "Builds glslangValidator and spirv-remap")
 SET(SKIP_GLSLANG_INSTALL ON CACHE BOOL "Skip installation")
 ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/shaderc" EXCLUDE_FROM_ALL)
-SET(SPIRV_CROSS_ENABLE_C_API OFF CACHE BOOL "Enable C API wrapper support in static library.")
-SET(SPIRV_CROSS_CLI OFF CACHE BOOL "Build the CLI binary. Requires SPIRV_CROSS_STATIC.")
-SET(SPIRV_CROSS_ENABLE_REFLECT OFF CACHE BOOL "Enable JSON reflection target support.")
-SET(SPIRV_CROSS_ENABLE_TESTS OFF CACHE BOOL "Enable SPIRV-Cross tests.")
-SET(SPIRV_CROSS_ENABLE_UTIL OFF CACHE BOOL "Enable util module support.")
-ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/spirv-cross" EXCLUDE_FROM_ALL)
-
+SET(SPIRV_REFLECT_EXECUTABLE OFF CACHE BOOL "Build spirv-reflect executable")
+SET(SPIRV_REFLECT_STATIC_LIB ON CACHE BOOL "Build a SPIRV-Reflect static library")
+SET(SPIRV_REFLECT_ENABLE_ASSERTS OFF CACHE BOOL "Enable asserts for debugging")
+ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/spirv-reflect" EXCLUDE_FROM_ALL)
 SET(YAML_CPP_BUILD_CONTRIB OFF CACHE BOOL "Enable contrib stuff in library")
 SET(YAML_CPP_BUILD_TESTS OFF CACHE BOOL "Enable testing")
 SET(YAML_CPP_BUILD_TOOLS OFF CACHE BOOL "Enable parse tools")
@@ -43,9 +39,17 @@ OPTION(SHADERTOOLS_PROFILING "Profile key steps in the execution of ShaderTools,
 SET(ST_COMMON_SRCS
     "${CMAKE_CURRENT_SOURCE_DIR}/include/common/CommonInclude.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/include/common/ShaderStage.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/common/ShaderToolsErrors.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/common/stSession.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/include/common/UtilityStructs.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/common/impl/SessionImpl.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/common/impl/SessionImpl.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/common/UtilityStructsInternal.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/common/ShaderStage.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/common/UtilityStructs.cpp")
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/common/ShaderToolsErrors.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/common/UtilityStructs.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/common/stSession.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/common/UtilityStructsInternal.cpp")
 
 SET(ST_CORE_SRCS
     "${CMAKE_CURRENT_SOURCE_DIR}/include/core/Shader.hpp"
@@ -65,6 +69,8 @@ SET(ST_GENERATION_SRCS
     "${CMAKE_CURRENT_SOURCE_DIR}/src/generation/ShaderGenerator.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/generation/impl/CompilerImpl.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/generation/impl/CompilerImpl.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/generation/impl/IncludeHandler.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/generation/impl/IncludeHandler.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/generation/impl/ShaderGeneratorImpl.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/generation/impl/ShaderGeneratorImpl.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/generation/impl/ShaderStageProcessor.hpp"
@@ -122,8 +128,8 @@ ENDIF()
 
 set_target_properties(ShaderTools PROPERTIES FOLDER "ShaderTools")
 
-# Require CXX17 for all compilers
-SET_PROPERTY(TARGET ShaderTools PROPERTY CXX_STANDARD 20)
+# Require CXX23 for all compilers
+SET_PROPERTY(TARGET ShaderTools PROPERTY CXX_STANDARD 23)
 
 IF(SHADERTOOLS_PROFILING)
     TARGET_COMPILE_DEFINITIONS(ShaderTools PRIVATE "SHADERTOOLS_PROFILING_ENABLED")
@@ -131,14 +137,15 @@ ENDIF()
 
 TARGET_COMPILE_DEFINITIONS(ShaderTools PRIVATE -DSHADERTOOLS_BUILD_DLL)
 
-TARGET_LINK_LIBRARIES(ShaderTools PRIVATE shaderc spirv-cross-core spirv-cross-glsl spirv-cross-cpp yaml-cpp)
+TARGET_LINK_LIBRARIES(ShaderTools PRIVATE shaderc spirv-reflect-static yaml-cpp)
 
 TARGET_INCLUDE_DIRECTORIES(ShaderTools PUBLIC  "${CMAKE_CURRENT_SOURCE_DIR}/include" "${Vulkan_INCLUDE_DIRS}")
 TARGET_INCLUDE_DIRECTORIES(ShaderTools PRIVATE 
     "${CMAKE_CURRENT_SOURCE_DIR}/third_party/" 
     "${CMAKE_CURRENT_SOURCE_DIR}/ext/include"
-    "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bitsery/include/"
-    "${CMAKE_CURRENT_SOURCE_DIR}/third_party/yaml-cpp/include")
+    "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bitsery/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/third_party/yaml-cpp/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/third_party/spirv-reflect")
 
 IF(MSVC)
     TARGET_COMPILE_DEFINITIONS(ShaderTools PRIVATE 
@@ -151,42 +158,6 @@ IF(MSVC)
         "_CRT_NONSTDC_NO_DEPRECATE"
         "NOMINMAX")
 ENDIF()
-
-# Note that these are IDE-only organization parameters. This changes nothing about the build,
-# just keeps clutter out of the IDE solution view in VS especially (yuck, sorry, but this is CMake's fault...)
-SET_TARGET_PROPERTIES(
-    shaderc shaderc_util spirv-cross-core spirv-cross-cpp spirv-cross-glsl
-    spirv-tools-pkg-config spirv-tools-shared-pkg-config
-    core_tables enum_string_mapping extinst_tables
-    PROPERTIES FOLDER "ShaderTools Dependencies")
-    
-SET_TARGET_PROPERTIES(HLSL PROPERTIES FOLDER "ShaderTools Dependencies/hlsl")
-
-SET_TARGET_PROPERTIES(
-    GenericCodeGen glslang glslang-default-resource-limits MachineIndependent
-    OGLCompiler OSDependent SPIRV SPVRemapper 
-    PROPERTIES FOLDER "ShaderTools Dependencies/glslang")
-
-SET_TARGET_PROPERTIES(
-    spirv-tools-build-version spirv-tools-header-DebugInfo
-    spirv-tools-header-NonSemanticShaderDebugInfo100
-    spirv-tools-header-OpenCLDebugInfo100
-    spv-tools-cldi100 spv-tools-clspvreflection
-    spv-tools-clspvreflection spv-tools-debuginfo
-    spv-tools-shdi100 spv-tools-spv-amd-gs spv-tools-spv-amd-sb
-    spv-tools-spv-amd-sevp spv-tools-spv-amd-stm
-    PROPERTIES FOLDER "ShaderTools Dependencies/SPIRV-Tools/build")
-
-SET_TARGET_PROPERTIES(
-    SPIRV-Tools-link SPIRV-Tools-lint SPIRV-Tools-opt 
-    SPIRV-Tools-reduce SPIRV-Tools-shared SPIRV-Tools-static
-    PROPERTIES FOLDER "ShaderTools Dependencies/SPIRV-Tools/libraries")
-
-SET_TARGET_PROPERTIES(
-    spirv-tools-vimsyntax PROPERTIES FOLDER "ShaderTools Dependencies/SPIRV-Tools/utilities")
-
-SET_TARGET_PROPERTIES(
-    glslangValidator spirv-remap PROPERTIES FOLDER "ShaderTools Dependencies/tools")
 
 INSTALL(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/include/" DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/ShaderTools/")
 INSTALL(TARGETS ShaderTools RUNTIME DESTINATION "bin" LIBRARY DESTINATION "lib" ARCHIVE DESTINATION "lib")
@@ -201,5 +172,5 @@ IF(SHADERTOOLS_BUILD_TESTS)
     TARGET_LINK_LIBRARIES(ParseTest0 ShaderTools)
     TARGET_INCLUDE_DIRECTORIES(ParseTest0 PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include")
     SET_TARGET_PROPERTIES(ParseTest0 PROPERTIES FOLDER "ShaderTools")
-    SET_PROPERTY(TARGET ParseTest0 PROPERTY CXX_STANDARD 20)
+    SET_PROPERTY(TARGET ParseTest0 PROPERTY CXX_STANDARD 23)
 ENDIF()

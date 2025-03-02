@@ -1,9 +1,90 @@
 #include "reflection/ReflectionStructs.hpp"
 #include "../util/ResourceFormats.hpp"
-#include "spirv-cross/spirv_cross.hpp"
+#include <spirv_reflect.h>
 
 namespace st
 {
+
+    constexpr VkFormat GetVkFormatFromSpvReflectFormat(SpvReflectFormat format) noexcept
+    {
+        switch (format)
+        {
+        case SPV_REFLECT_FORMAT_R16_UINT:
+            return VK_FORMAT_R16_UINT;
+        case SPV_REFLECT_FORMAT_R16_SINT:
+            return VK_FORMAT_R16_SINT;
+        case SPV_REFLECT_FORMAT_R16_SFLOAT:
+            return VK_FORMAT_R16_SFLOAT;
+        case SPV_REFLECT_FORMAT_R32_UINT:
+            return VK_FORMAT_R32_UINT;
+        case SPV_REFLECT_FORMAT_R32_SINT:
+            return VK_FORMAT_R32_SINT;
+        case SPV_REFLECT_FORMAT_R32_SFLOAT:
+            return VK_FORMAT_R32_SFLOAT;
+        case SPV_REFLECT_FORMAT_R64_UINT:
+            return VK_FORMAT_R64_UINT;
+        case SPV_REFLECT_FORMAT_R64_SINT:
+            return VK_FORMAT_R64_SINT;
+        case SPV_REFLECT_FORMAT_R64_SFLOAT:
+            return VK_FORMAT_R64_SFLOAT;
+        case SPV_REFLECT_FORMAT_R16G16_UINT:
+            return VK_FORMAT_R16G16_UINT;
+        case SPV_REFLECT_FORMAT_R16G16_SINT:
+            return VK_FORMAT_R16G16_SINT;
+        case SPV_REFLECT_FORMAT_R16G16_SFLOAT:
+            return VK_FORMAT_R16G16_SFLOAT;
+        case SPV_REFLECT_FORMAT_R16G16B16_UINT:
+            return VK_FORMAT_R16G16B16_UINT;
+        case SPV_REFLECT_FORMAT_R16G16B16_SINT:
+            return VK_FORMAT_R16G16B16_SINT;
+        case SPV_REFLECT_FORMAT_R16G16B16_SFLOAT:
+            return VK_FORMAT_R16G16B16_SFLOAT;
+        case SPV_REFLECT_FORMAT_R16G16B16A16_UINT:
+            return VK_FORMAT_R16G16B16A16_UINT;
+        case SPV_REFLECT_FORMAT_R16G16B16A16_SINT:
+            return VK_FORMAT_R16G16B16A16_SINT;
+        case SPV_REFLECT_FORMAT_R16G16B16A16_SFLOAT:
+            return VK_FORMAT_R16G16B16A16_SFLOAT;
+        case SPV_REFLECT_FORMAT_R32G32_UINT:
+            return VK_FORMAT_R32G32_UINT;
+        case SPV_REFLECT_FORMAT_R32G32_SINT:
+            return VK_FORMAT_R32G32_SINT;
+        case SPV_REFLECT_FORMAT_R32G32_SFLOAT:
+            return VK_FORMAT_R32G32_SFLOAT;
+        case SPV_REFLECT_FORMAT_R32G32B32_UINT:
+            return VK_FORMAT_R32G32B32_UINT;
+        case SPV_REFLECT_FORMAT_R32G32B32_SINT:
+            return VK_FORMAT_R32G32B32_SINT;
+        case SPV_REFLECT_FORMAT_R32G32B32_SFLOAT:
+            return VK_FORMAT_R32G32B32_SFLOAT;
+        case SPV_REFLECT_FORMAT_R32G32B32A32_UINT:
+            return VK_FORMAT_R32G32B32A32_UINT;
+        case SPV_REFLECT_FORMAT_R32G32B32A32_SINT:
+            return VK_FORMAT_R32G32B32A32_SINT;
+        case SPV_REFLECT_FORMAT_R32G32B32A32_SFLOAT:
+            return VK_FORMAT_R32G32B32A32_SFLOAT;
+        case SPV_REFLECT_FORMAT_R64G64_UINT:
+            return VK_FORMAT_R64G64_UINT;
+        case SPV_REFLECT_FORMAT_R64G64_SINT:
+            return VK_FORMAT_R64G64_SINT;
+        case SPV_REFLECT_FORMAT_R64G64_SFLOAT:
+            return VK_FORMAT_R64G64_SFLOAT;
+        case SPV_REFLECT_FORMAT_R64G64B64_UINT:
+            return VK_FORMAT_R64G64B64_UINT;
+        case SPV_REFLECT_FORMAT_R64G64B64_SINT:
+            return VK_FORMAT_R64G64B64_SINT;
+        case SPV_REFLECT_FORMAT_R64G64B64_SFLOAT:
+            return VK_FORMAT_R64G64B64_SFLOAT;
+        case SPV_REFLECT_FORMAT_R64G64B64A64_UINT:
+            return VK_FORMAT_R64G64B64A64_UINT;
+        case SPV_REFLECT_FORMAT_R64G64B64A64_SINT:
+            return VK_FORMAT_R64G64B64A64_SINT;
+        case SPV_REFLECT_FORMAT_R64G64B64A64_SFLOAT:
+            return VK_FORMAT_R64G64B64A64_SFLOAT;       
+        default:
+            return VK_FORMAT_UNDEFINED;
+        }
+    }
 
     struct PushConstantInfoImpl
     {
@@ -103,8 +184,16 @@ namespace st
 
     struct VertexAttributeInfoImpl
     {
+        VertexAttributeInfoImpl() noexcept : name{}, type{ 0 }, format{ VK_FORMAT_UNDEFINED }, location { 0 }, offset{ 0 }
+        {
+        }
+        VertexAttributeInfoImpl(const VertexAttributeInfoImpl&) noexcept = default;
+        VertexAttributeInfoImpl(VertexAttributeInfoImpl&&) noexcept = default;
+        VertexAttributeInfoImpl& operator=(const VertexAttributeInfoImpl&) noexcept = default;
+        VertexAttributeInfoImpl& operator=(VertexAttributeInfoImpl&&) noexcept = default;
         std::string name;
-        spirv_cross::SPIRType type;
+        SpvReflectTypeFlags type;
+        VkFormat format;
         uint32_t location;
         uint32_t offset;
     };
@@ -126,16 +215,9 @@ namespace st
         impl->name = _name;
     }
 
-    void VertexAttributeInfo::SetType(const void* spir_type_ptr)
+    void VertexAttributeInfo::SetFormatFromSpvReflectFlags(uint32_t spv_reflect_format_flags)
     {
-        // note: this is mostly just to avoid having to do stupid includes across DLL boundaries, or spreading the mega-web
-        // of SPIR-V includes further than source files (yucky)
-        impl->type = *reinterpret_cast<const spirv_cross::SPIRType*>(spir_type_ptr);
-    }
-
-    void VertexAttributeInfo::SetTypeFromText(const char* str)
-    {
-        impl->type = SPIR_TypeFromString(str);
+        impl->format = GetVkFormatFromSpvReflectFormat(static_cast<SpvReflectFormat>(spv_reflect_format_flags));
     }
 
     void VertexAttributeInfo::SetLocation(uint32_t loc) noexcept
@@ -155,27 +237,27 @@ namespace st
 
     const char* VertexAttributeInfo::TypeAsText() const noexcept
     {
-        return SPIR_TypeToString(impl->type).c_str();
+        return spvReflect_TypeToString(impl->type);
     }
 
-    const uint32_t& VertexAttributeInfo::Location() const noexcept
+    uint32_t VertexAttributeInfo::Location() const noexcept
     {
         return impl->location;
     }
 
-    const uint32_t& VertexAttributeInfo::Offset() const noexcept
+    uint32_t VertexAttributeInfo::Offset() const noexcept
     {
         return impl->offset;
     }
 
     VkFormat VertexAttributeInfo::GetAsFormat() const noexcept
     {
-        return VkFormatFromSPIRType(impl->type);
+        return impl->format;
     }
 
     VertexAttributeInfo::operator VkVertexInputAttributeDescription() const noexcept
     {
-        return VkVertexInputAttributeDescription{ impl->location, 0, GetAsFormat(), impl->offset };
+        return VkVertexInputAttributeDescription{ impl->location, 0, impl->format, impl->offset };
     }
 
 }

@@ -275,69 +275,71 @@ resource_groups :
                 mat4 dbView;
                 mat4 dbProjection;
 
+compiler_options : 
+    GenerateDebugInfo : false
+    Optimization : "Performance"
+    TargetVersion : "VulkanLatest"
+    SourceLanguage : "GLSL"
+    # Working directory is always default added during parse.
+    # These are relative to that working directory, unless specified otherwise.
+    IncludePaths : [
+        "compute",
+        "debug"
+    ]
+
 shader_groups : 
     UpdateLights : 
-        Shaders : 
-            Compute : "compute/UpdateLights.comp"
+        ComputeShader : "compute/UpdateLights.comp"
     ReduceLights : 
-        Shaders : 
-            Compute : "compute/ReduceLightsAABB.comp"
+        ComputeShader : "compute/ReduceLightsAABB.comp"
         Extensions : [
             "GL_EXT_control_flow_attributes"
         ]
     ComputeMortonCodes : 
-        Shaders : 
-            Compute : "compute/ComputeMortonCodes.comp"
+        ComputeShader : "compute/ComputeMortonCodes.comp"
     RadixSort : 
-        Shaders : 
-            Compute : "compute/RadixSort.comp"
+        ComputeShader : "compute/RadixSort.comp"
         Extensions : [
             "GL_EXT_control_flow_attributes"
         ]
     MergeSort : 
-        Shaders : 
-            Compute : "compute/MergeSort.comp"
+        ComputeShader : "compute/MergeSort.comp"
         Extensions : [
             "GL_EXT_control_flow_attributes"
         ]
     BuildBVH : 
-        Shaders : 
-            Compute : "compute/BuildBVH.comp"
+        ComputeShader : "compute/BuildBVH.comp"
         Extensions : [
             "GL_EXT_control_flow_attributes"
         ]
     DepthPrePass : 
-        Shaders : 
+        RenderShaders : 
             Vertex : "Default.vert"
         # Use DepthOnly tag to force front-end to attach a depth stencil output
         # These shaders probably don't write to the backbuffer for color but
         # we want to keep depth info.
         Tags : [ "DepthOnly" ]
     ClusterSamples : 
-        Shaders : 
+        RenderShaders : 
             Vertex : "Default.vert"
             Fragment : "ClusterSamples.frag"
         Tags : [ "DepthOnlyAsInput" ]
     FindUniqueClusters : 
-        Shaders : 
-            Compute : "compute/FindUniqueClusters.comp"
+        ComputeShader : "compute/FindUniqueClusters.comp"
     UpdateClusterIndirectArgs : 
-        Shaders : 
-            Compute : "compute/UpdateClusterIndirectArgs.comp"
+        ComputeShader : "compute/UpdateClusterIndirectArgs.comp"
     AssignLightsToClustersBVH : 
-        Shaders : 
-            Compute : "compute/AssignLightsToClustersBVH.glsl"
+        ComputeShader : "compute/AssignLightsToClustersBVH.glsl"
         Extensions : [
             "GL_EXT_control_flow_attributes"
         ]
     AssignLightsToClusters :
-        Shaders :
-            Compute : "compute/AssignLightsToClusters.comp"
+        ComputeShader : "compute/AssignLightsToClusters.comp"
         Extensions : [
             "GL_EXT_control_flow_attributes"
         ]
     DrawPass : 
-        Shaders : 
+        RenderShaders : 
             Vertex : "DrawID.vert"
             Fragment : "Clustered.frag"
         Extensions : [
@@ -345,10 +347,9 @@ shader_groups :
             "GL_EXT_nonuniform_qualifier"
         ]
     ComputeClusterAABBs : 
-        Shaders : 
-            Compute : "compute/ComputeClusterAABBs.comp"
+        ComputeShader : "compute/ComputeClusterAABBs.comp"
     DebugClusters : 
-        Shaders : 
+        RenderShaders : 
             Vertex : "debug/DebugClusters.vert"
             Geometry : "debug/DebugClusters.geom"
             Fragment : "debug/DebugClusters.frag"
@@ -356,7 +357,7 @@ shader_groups :
             "GL_EXT_control_flow_attributes"
         ]
     DebugLights : 
-        Shaders : 
+        RenderShaders : 
             Vertex : "debug/DebugLights.vert"
             Fragment : "debug/DebugLights.frag"
         Extensions : [

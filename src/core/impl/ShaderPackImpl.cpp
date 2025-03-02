@@ -2,18 +2,23 @@
 #include "ShaderImpl.hpp"
 #include "resources/ShaderResource.hpp"
 #include "resources/ResourceGroup.hpp"
+#include "../../common/impl/SessionImpl.hpp"
 #include "../../generation/impl/ShaderStageProcessor.hpp"
 #include "../../reflection/impl/ShaderReflectorImpl.hpp"
 #include "../../util/ShaderFileTracker.hpp"
-#include <array>
+#include "../../common/UtilityStructsInternal.hpp"
 #include <filesystem>
 #include <iostream>
+#include <format>
 
 namespace st
 {
     namespace fs = std::filesystem;
 
-    ShaderPackImpl::ShaderPackImpl(const char* shader_pack_file_path) : filePack(std::make_unique<yamlFile>(shader_pack_file_path)), workingDir(shader_pack_file_path)
+    ShaderPackImpl::ShaderPackImpl(const char* shader_pack_file_path, SessionImpl* error_session) :
+        filePack(std::make_unique<yamlFile>(shader_pack_file_path, error_session)),
+        workingDir(shader_pack_file_path),
+        errorSession(error_session)
     {
         workingDir = fs::canonical(workingDir);
         packPath = workingDir.string();
@@ -29,26 +34,58 @@ namespace st
 
     void ShaderPackImpl::createPackScript(const char* fname)
     {
-        filePack = std::make_unique<yamlFile>(fname);
+        filePack = std::make_unique<yamlFile>(fname, errorSession);
     }
 
-    void ShaderPackImpl::processShaderStages()
+    ShaderToolsErrorCode ShaderPackImpl::processShaderStages()
     {
-        auto& ftracker = ShaderFileTracker::GetFileTracker();
         const std::string working_dir_str = workingDir.string();
         const std::vector<std::string> base_includes{ working_dir_str };
 
-        for (auto& stage : filePack->stages)
+        std::vector<WriteRequest> write_requests;
+        // Handle body paths first
+        for (const auto& stage : filePack->stages)
         {
-            processors.emplace(stage.second, std::make_unique<ShaderStageProcessor>(stage.second, filePack.get()));
             fs::path body_path = fs::canonical(workingDir / fs::path(stage.first));
-            if (!fs::exists(body_path))
+
+            if (fs::exists(body_path))
             {
-                throw std::runtime_error("Path for shader stage to be generated does not exist!");
+                write_requests.emplace_back(WriteRequest::Type::AddShaderBodyPath, stage.second, std::move(body_path));
             }
-            ftracker.BodyPaths.emplace(stage.second, body_path);
-            processorFutures.emplace(stage.second, std::async(std::launch::async, &ShaderStageProcessor::Process, processors.at(stage.second).get(), body_path.string(), filePack->stageExtensions[stage.second], base_includes));
+            else
+            {
+                std::string errorStr = "Shader pack found shader with name " + stage.first + " had invalid path " + body_path.string();
+                errorSession->AddError(
+                    this,
+                    ShaderToolsErrorSource::ShaderPack,
+                    ShaderToolsErrorCode::FilesystemPathDoesNotExist,
+                    errorStr.c_str());
+                return ShaderToolsErrorCode::FilesystemPathDoesNotExist;
+            }
         }
+
+        ShaderToolsErrorCode batchWriteError = MakeFileTrackerBatchWriteRequest(std::move(write_requests));
+        if (!WasWriteRequestSuccessful(batchWriteError))
+        {
+            errorSession->AddError(this, ShaderToolsErrorSource::ShaderPack, batchWriteError, "ShaderPack failed to write body paths to file tracker, exiting");
+            return batchWriteError;
+        }
+
+        for (const auto& stage : filePack->stages)
+        {
+            fs::path body_path = fs::canonical(workingDir / fs::path(stage.first));
+            processors.emplace(stage.second, std::make_unique<ShaderStageProcessor>(stage.second, filePack.get()));
+            processorFutures.emplace(stage.second,
+                std::async(std::launch::async,
+                    &ShaderStageProcessor::Process,
+                    processors.at(stage.second).get(),
+                    stage.first,
+                    body_path.string(),
+                    filePack->stageExtensions[stage.second],
+                    base_includes));
+        }
+
+        return ShaderToolsErrorCode::Success;
     }
 
     void ShaderPackImpl::createShaders()
@@ -65,7 +102,7 @@ namespace st
     {
         for (const auto& entry : filePack->resourceGroups)
         {
-            resourceGroups.emplace(entry.first, std::make_unique<ResourceGroup>(filePack.get(), entry.first.c_str()));
+            resourceGroups.emplace(entry.first, std::make_unique<ResourceGroup>(filePack.get(), entry.first.c_str(), errorSession));
         }
     }
 
@@ -88,7 +125,14 @@ namespace st
                 throw e;
             }
         }
-        groups.emplace(name, std::make_unique<Shader>(name.c_str(), shaders.size(), shaders.data(), filePack.get()));
+
+        // Merge all error sessions together
+        for (auto& processor : processors)
+        {
+            Session::MergeSessions(errorSession, std::move(processor.second->ErrorSession));
+        }
+
+        groups.emplace(name, std::make_unique<Shader>(name.c_str(), shaders.size(), shaders.data(), filePack.get(), errorSession));
     }
 
     void ShaderPackImpl::setDescriptorTypeCounts() const
@@ -98,40 +142,11 @@ namespace st
         {
             for (const auto& resource : resource_set.second)
             {
-                switch (resource.DescriptorType())
+                ShaderToolsErrorCode error = CountDescriptorType(resource.DescriptorType(), typeCounts);
+                if (error != ShaderToolsErrorCode::Success)
                 {
-                case VK_DESCRIPTOR_TYPE_SAMPLER:
-                    typeCounts.Samplers++;
-                    break;
-                case VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER:
-                    typeCounts.CombinedImageSamplers++;
-                    break;
-                case VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE:
-                    typeCounts.SampledImages++;
-                    break;
-                case VK_DESCRIPTOR_TYPE_STORAGE_IMAGE:
-                    typeCounts.SampledImages++;
-                    break;
-                case VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER:
-                    typeCounts.UniformTexelBuffers++;
-                    break;
-                case VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER:
-                    typeCounts.StorageTexelBuffers++;
-                    break;
-                case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER:
-                    typeCounts.UniformBuffers++;
-                    break;
-                case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER:
-                    typeCounts.StorageBuffers++;
-                    break;
-                case VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC:
-                    typeCounts.UniformBuffersDynamic++;
-                    break;
-                case VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC:
-                    typeCounts.StorageBuffersDynamic++;
-                    break;
-                default:
-                    throw std::runtime_error("Invalid VkDescriptor type value when counting up descriptors of each type");
+                    std::string errorStr = std::format("Shader pack failed to count descriptor type for resource {}", resource.Name());
+                    errorSession->AddError(this, ShaderToolsErrorSource::ShaderPack, error, errorStr.c_str());
                 }
             }
         }

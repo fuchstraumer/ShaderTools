@@ -1,48 +1,108 @@
 #include "CompilerImpl.hpp"
-#include "spirv_glsl.hpp"
+#include "IncludeHandler.hpp"
 #include "../../util/ShaderFileTracker.hpp"
+#include "../../common/impl/SessionImpl.hpp"
+
+#include <iostream>
 #include <filesystem>
 #include <fstream>
+#include <unordered_map>
 
 namespace st
 {
+    
+    static const std::unordered_map<ShaderCompilerOptions::OptimizationLevel, shaderc_optimization_level> opt_level_map =
+    {
+        { ShaderCompilerOptions::OptimizationLevel::Disabled, shaderc_optimization_level_zero },
+        { ShaderCompilerOptions::OptimizationLevel::Performance, shaderc_optimization_level_performance },
+        { ShaderCompilerOptions::OptimizationLevel::Size, shaderc_optimization_level_size }
+    };
+
+    static const std::unordered_map<ShaderCompilerOptions::TargetVersionEnum, uint32_t> target_version_map =
+    {
+        { ShaderCompilerOptions::TargetVersionEnum::Vulkan1_0, shaderc_env_version_vulkan_1_0 },
+        { ShaderCompilerOptions::TargetVersionEnum::Vulkan1_1, shaderc_env_version_vulkan_1_1 },
+        { ShaderCompilerOptions::TargetVersionEnum::Vulkan1_2, shaderc_env_version_vulkan_1_2 },
+        { ShaderCompilerOptions::TargetVersionEnum::Vulkan1_3, shaderc_env_version_vulkan_1_3 },
+        { ShaderCompilerOptions::TargetVersionEnum::Vulkan1_4, shaderc_env_version_vulkan_1_4 },
+        { ShaderCompilerOptions::TargetVersionEnum::VulkanLatest, shaderc_env_version_vulkan_1_4 }
+    };
 
     namespace fs = std::filesystem;
 
-    shaderc::CompileOptions ShaderCompilerImpl::getCompilerOptions() const
+    ShaderCompilerImpl::ShaderCompilerImpl(const ShaderCompilerOptions& options, SessionImpl* error_session) noexcept : compilerOptions(options), errorSession(error_session)
+    {}
+
+
+	ShaderCompilerImpl::~ShaderCompilerImpl() noexcept
+	{}
+
+	shaderc::CompileOptions ShaderCompilerImpl::getCompilerOptions() const
     {
         shaderc::CompileOptions options;
-        // Debug info is actually required, as it's this that also becomes much of the reflection info!
-        // it slows down compile a bit, but not as much as optimization does. keep it around.
-        options.SetGenerateDebugInfo();
-        options.SetOptimizationLevel(shaderc_optimization_level_performance);
-        // todo - figure out what we gotta fix up to make bumping this possible ASAP
-        options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_1);
+        // We can't use this until we figure out how to get the debug info even if we don't actually use debug-info-build shaders for PSO creation
+        // if (compilerOptions->GenerateDebugInfo)
+        {
+            options.SetGenerateDebugInfo();
+        }
+
+        options.SetOptimizationLevel(opt_level_map.at(compilerOptions.Optimization));
+        options.SetTargetEnvironment(shaderc_target_env_vulkan, target_version_map.at(compilerOptions.TargetVersion));
         options.SetSourceLanguage(shaderc_source_language_glsl);
+        options.SetIncluder(std::make_unique<IncludeHandler>(compilerOptions.IncludePaths, errorSession));
         return options;
     }
 
-    shaderc_shader_kind ShaderCompilerImpl::getShaderKind(const uint32_t& flags) const
+    ShaderToolsErrorCode ShaderCompilerImpl::getShaderKind(const uint32_t& flags, shaderc_shader_kind& result) const
     {
         switch (static_cast<VkShaderStageFlagBits>(flags))
         {
         case VK_SHADER_STAGE_VERTEX_BIT:
-            return shaderc_glsl_vertex_shader;
-        case VK_SHADER_STAGE_FRAGMENT_BIT:
-            return shaderc_glsl_fragment_shader;
-            // MoltenVK cannot yet use the geometry or tesselation shaders.
+            result = shaderc_glsl_vertex_shader;    
+            return ShaderToolsErrorCode::Success;
+        // MoltenVK cannot yet use the geometry or tesselation shaders.
+        // TODO: is this still true?
 #ifndef __APPLE__
         case VK_SHADER_STAGE_GEOMETRY_BIT:
-            return shaderc_glsl_geometry_shader;
+            result = shaderc_glsl_geometry_shader;
+            return ShaderToolsErrorCode::Success;
         case VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT:
-            return shaderc_glsl_tess_control_shader;
+            result = shaderc_glsl_tess_control_shader;
+            return ShaderToolsErrorCode::Success;
         case VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT:
-            return shaderc_glsl_tess_evaluation_shader;
+            result = shaderc_glsl_tess_evaluation_shader;
+            return ShaderToolsErrorCode::Success;
 #endif
+        case VK_SHADER_STAGE_FRAGMENT_BIT:
+            result = shaderc_glsl_fragment_shader;
+            return ShaderToolsErrorCode::Success;
         case VK_SHADER_STAGE_COMPUTE_BIT:
-            return shaderc_glsl_compute_shader;
+            result = shaderc_glsl_compute_shader;
+            return ShaderToolsErrorCode::Success;
+        case VK_SHADER_STAGE_RAYGEN_BIT_KHR:
+            result = shaderc_glsl_raygen_shader;
+            return ShaderToolsErrorCode::Success;
+        case VK_SHADER_STAGE_ANY_HIT_BIT_KHR:
+            result = shaderc_glsl_anyhit_shader;
+            return ShaderToolsErrorCode::Success;
+        case VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR:
+            result = shaderc_glsl_closesthit_shader;
+            return ShaderToolsErrorCode::Success;
+        case VK_SHADER_STAGE_MISS_BIT_KHR:
+            result = shaderc_glsl_miss_shader;
+            return ShaderToolsErrorCode::Success;
+        case VK_SHADER_STAGE_INTERSECTION_BIT_KHR:
+            result = shaderc_glsl_intersection_shader;
+            return ShaderToolsErrorCode::Success;
+        case VK_SHADER_STAGE_CALLABLE_BIT_KHR:
+            result = shaderc_glsl_callable_shader;
+            return ShaderToolsErrorCode::Success;
+        //case VK_SHADER_STAGE_TASK_BIT_KHR:
+        //    return shaderc_glsl_task_shader;
+        //case VK_SHADER_STAGE_MESH_BIT_KHR:
+        //    return shaderc_glsl_mesh_shader;
         default:
-            throw std::runtime_error("Invalid shader stage bitfield, or shader stage not supported on current platform!");
+            return ShaderToolsErrorCode::CompilerShaderKindNotSupported;
         }
     }
 
@@ -50,12 +110,26 @@ namespace st
     {
         failed_compile = 0,
         failed_recompile = 1,
+        failed_optimized_compile = 2,
     };
 
     void dump_bad_source_to_file(const std::string& name, const std::string& src, const std::string& err_text, dump_reason reason)
     {
 
-        std::string suffix = (reason == dump_reason::failed_compile) ? std::string{ "_failed_compile.glsl" } : std::string{ "_failed_recompile.glsl" };
+        std::string suffix;
+        switch (reason)
+        {
+        case dump_reason::failed_compile:
+            suffix = "_failed_compile.glsl";
+            break;
+        case dump_reason::failed_recompile:
+            suffix = "_failed_recompile.glsl";
+            break;
+        case dump_reason::failed_optimized_compile:
+            suffix = "_failed_optimized_compile.glsl";
+            break;
+        };
+
         const std::string output_name = name + suffix;
 
         std::ofstream output_stream(output_name);
@@ -63,7 +137,7 @@ namespace st
         output_stream.flush();
         output_stream.close();
 
-        if (reason == dump_reason::failed_compile)
+        if (reason == dump_reason::failed_compile || reason == dump_reason::failed_optimized_compile)
         {
             const std::string err_msg_output = name + std::string{ "_compiliation_errors.txt" };
             output_stream.open(err_msg_output);
@@ -73,179 +147,185 @@ namespace st
         }
     }
 
-    void ShaderCompilerImpl::prepareToCompile(const ShaderStage& handle, const std::string& name, const std::string& src)
+    ShaderToolsErrorCode ShaderCompilerImpl::prepareToCompile(const ShaderStage& handle, std::string name, std::string src)
     {
-        const shaderc_shader_kind shader_stage = getShaderKind(handle.stageBits);
-        compile(handle, shader_stage, name, src);
+        shaderc_shader_kind shaderStage;
+        ShaderToolsErrorCode error = getShaderKind(handle.stageBits, shaderStage);
+        if (error != ShaderToolsErrorCode::Success)
+        {
+            errorSession->AddError(this, ShaderToolsErrorSource::Compiler, error, nullptr);
+            return error;
+        }
+
+        error = compile(handle, shaderStage, std::move(name), std::move(src));
+        if (error != ShaderToolsErrorCode::Success)
+        {
+            errorSession->AddError(this, ShaderToolsErrorSource::Compiler, error, nullptr);
+        }
+
+        return error;
     }
 
-    void ShaderCompilerImpl::prepareToCompile(const ShaderStage& handle, const char* path_to_source_str)
+    ShaderToolsErrorCode ShaderCompilerImpl::prepareToCompile(const ShaderStage& handle, const char* path_to_source_str)
     {
         fs::path path_to_source(path_to_source_str);
 
         // First check to verify the path given exists.
         if (!fs::exists(path_to_source))
         {
-            std::cerr << "Given shader source path/file does not exist!\n";
-            throw std::runtime_error("Failed to open/find given shader file.");
+            errorSession->AddError(this, ShaderToolsErrorSource::Compiler, ShaderToolsErrorCode::FilesystemPathDoesNotExist, path_to_source_str);
+            return ShaderToolsErrorCode::FilesystemPathDoesNotExist;
         }
-
-        const auto shader_stage = getShaderKind(handle.stageBits);
 
         std::ifstream input_file(path_to_source);
         if (!input_file.is_open())
         {
-            std::cerr << "Failed to open " << path_to_source_str << " for compiliation.\n";
+            errorSession->AddError(this, ShaderToolsErrorSource::Compiler, ShaderToolsErrorCode::FilesystemPathExistedFileCouldNotBeOpened, path_to_source_str);
+            return ShaderToolsErrorCode::FilesystemPathExistedFileCouldNotBeOpened;
+        }
+
+        shaderc_shader_kind shaderStage;
+        ShaderToolsErrorCode error = getShaderKind(handle.stageBits, shaderStage);
+        if (error != ShaderToolsErrorCode::Success)
+        {
+            errorSession->AddError(this, ShaderToolsErrorSource::Compiler, error, nullptr);
+            return error;
         }
 
         const std::string source_code((std::istreambuf_iterator<char>(input_file)), (std::istreambuf_iterator<char>()));
         const std::string file_name = path_to_source.filename().replace_extension().string();
-        compile(handle, shader_stage, file_name, source_code);
+        error = compile(handle, shaderStage, file_name, source_code);
+        if (error != ShaderToolsErrorCode::Success)
+        {
+            errorSession->AddError(this, ShaderToolsErrorSource::Compiler, error, nullptr);
+        }
 
+        return error;
     }
 
 
-    void ShaderCompilerImpl::compile(const ShaderStage& handle, const shaderc_shader_kind& kind, const std::string& name, const std::string& src_str)
+    ShaderToolsErrorCode ShaderCompilerImpl::compile(const ShaderStage& handle, const shaderc_shader_kind& kind, std::string name, std::string src_str)
     {
-        auto& FileTracker = ShaderFileTracker::GetFileTracker();
+
         shaderc::Compiler compiler;
-        auto options = getCompilerOptions();
+        shaderc::CompileOptions options = getCompilerOptions();
 
         // We allow for optimization to be disabled for shaders in case they break or need debugging
         // Should probably make this part of a try-catch with compiling shaders, where we try a second pass and notify the user if their shader fails optimized compile
-        auto disableOptsIter = FileTracker.StageOptimizationDisabled.find(handle);
-        bool configDisableOptimization = disableOptsIter != std::end(FileTracker.StageOptimizationDisabled) ? disableOptsIter->second : false;
-        shaderc_optimization_level optimizationLevel = configDisableOptimization ? shaderc_optimization_level_zero : shaderc_optimization_level_performance;
-
-        options.SetOptimizationLevel(optimizationLevel);
-
-        // Wholly unneeded and is going to artifically inflate our compile times. ifdef'd out in non-debug builds because of that
-#ifndef NDEBUG
-        shaderc::AssemblyCompilationResult assembly_result = compiler.CompileGlslToSpvAssembly(src_str, kind, name.c_str(), options);
-        if (assembly_result.GetCompilationStatus() == shaderc_compilation_status_success)
+        // Of note, this is due to a bunch of shaders that only failed compile when optimized, but compiled fine otherwise.
+        bool optimization_disabled = false;
         {
-            auto assemblyIter = FileTracker.AssemblyStrings.emplace(handle, std::string{ assembly_result.begin(), assembly_result.end() });
-            if (!assemblyIter.second)
+            ReadRequest read_request{ ReadRequest::Type::FindOptimizationStatus, handle };
+            ReadRequestResult read_result = MakeFileTrackerReadRequest(read_request);
+            if (read_result.has_value())
             {
-                std::cerr << "Failed to emplace non-critical assembly string into state storage.";
-            }
-        }
-#endif
-
-        shaderc::SpvCompilationResult compiliation_result = compiler.CompileGlslToSpv(src_str, kind, name.c_str(), options);
-
-        if (compiliation_result.GetCompilationStatus() != shaderc_compilation_status_success)
-        {
-            const std::string err_msg = compiliation_result.GetErrorMessage();
-            std::cerr << "Shader compiliation to assembly failed: " << err_msg.c_str() << "\n";
-#ifndef NDEBUG
-            std::cerr << "Dumping shader source to file...";
-            dump_bad_source_to_file(name, src_str, err_msg, dump_reason::failed_compile);
-#endif
-            const std::string except_msg = std::string("Failed to compile shader to assembly: ") + err_msg + std::string("\n");
-            throw std::runtime_error(except_msg.c_str());
-        }
-
-        if (FileTracker.Binaries.count(handle) != 0)
-        {
-            // erase as we're gonna replace with an updated binary
-            FileTracker.Binaries.erase(handle);
-        }
-
-        auto binary_iter = FileTracker.Binaries.emplace(handle, std::vector<uint32_t>{compiliation_result.begin(), compiliation_result.end()});
-        if (!binary_iter.second)
-        {
-            throw std::runtime_error("Emplacement of compiled shader SPIR-V binary failed.");
-        }
-
-    }
-
-    void ShaderCompilerImpl::recompileBinaryToGLSL(const ShaderStage& handle, size_t* str_size, char* dest_str)
-    {
-
-        auto& FileTracker = ShaderFileTracker::GetFileTracker();
-
-        std::string recompiled_src_str;
-        if (!FileTracker.FindRecompiledShaderSource(handle, recompiled_src_str))
-        {
-
-            std::vector<uint32_t> found_binary;
-
-            if (FileTracker.FindShaderBinary(handle, found_binary))
-            {
-                using namespace spirv_cross;
-                CompilerGLSL recompiler(found_binary);
-
-                spirv_cross::CompilerGLSL::Options options;
-                options.vulkan_semantics = true;
-                // as commented elsewhere, we do this ourselves or will otherwise leave it be
-                options.enable_storage_image_qualifier_deduction = false;
-
-                recompiler.set_common_options(options);
-
-                std::string recompiled_source;
-
-                try
-                {
-                    recompiled_source = recompiler.compile();
-                }
-                catch (const spirv_cross::CompilerError& e)
-                {
-                    std::cerr << "Failed to fully parse/recompile SPIR-V binary back to GLSL text. Outputting partial source thus far.";
-                    std::cerr << "spirv_cross::CompilerError.what(): " << e.what() << "\n";
-                    recompiled_source = recompiler.get_partial_source();
-                    dump_bad_source_to_file(FileTracker.GetShaderName(handle), recompiled_source, "", dump_reason::failed_recompile);
-                    throw e;
-                }
-
-                auto iter = FileTracker.RecompiledSourcesFromBinaries.emplace(handle, recompiled_source);
-                if (!iter.second)
-                {
-                    std::cerr << "Failed to emplace recompiled shader source into program's filetracker system!";
-                }
-
-                *str_size = recompiled_source.size();
-                if (dest_str != nullptr)
-                {
-                    std::copy(recompiled_source.cbegin(), recompiled_source.cend(), dest_str);
-                }
-
+                optimization_disabled = std::get<bool>(*read_result);
             }
             else
             {
-                std::cerr << "Failed to find or recompile shader's binary to GLSL code.";
-                *str_size = 0;
-                return;
+                //errorSession->AddError(this, ShaderToolsErrorSource::Compiler, read_result.error(), "WARNING: Couldn't find optimization status for given shader");
             }
+        }
+
+        // Perform dual compilation, where we compile first with zero optimization + all the debug info we need to run the reflection step
+        // Then we compile again with selected optimization from the config, and that's what we'll give the user as needed.
+        ShaderBinaryData binaryData;
+
+        // Do optimized compilation first since it's most likely to fail, but also isn't blocking if it does fail
+        if (!optimization_disabled)
+        {
+            options.SetOptimizationLevel(shaderc_optimization_level_performance);
+            shaderc::SpvCompilationResult optimizedResult = compiler.CompileGlslToSpv(src_str, kind, name.c_str(), options);
+            if (optimizedResult.GetCompilationStatus() != shaderc_compilation_status_success)
+            {
+                const std::string err_msg = "Optimized binary compiliation failed, debug unoptimized binary is all that will be available! \n" + optimizedResult.GetErrorMessage();
+                errorSession->AddError(this, ShaderToolsErrorSource::Compiler, ShaderToolsErrorCode::CompilerShaderCompilationFailed, err_msg.c_str());
+#ifndef NDEBUG
+                std::cerr << "Dumping source for " << name << "to file....\n";
+                dump_bad_source_to_file(name, src_str, err_msg, dump_reason::failed_optimized_compile);
+#endif
+            }
+            else
+            {
+                binaryData.optimizedSpirv = std::vector<uint32_t>{ optimizedResult.begin(), optimizedResult.end() };
+            }
+        }
+
+        {
+            // Now compile with zero optimization and debug info
+            options.SetOptimizationLevel(shaderc_optimization_level_zero);
+            options.SetGenerateDebugInfo();
+            shaderc::SpvCompilationResult debugResult = compiler.CompileGlslToSpv(src_str, kind, name.c_str(), options);
+            if (debugResult.GetCompilationStatus() != shaderc_compilation_status_success)
+            {
+                const std::string err_msg = debugResult.GetErrorMessage();
+                errorSession->AddError(this, ShaderToolsErrorSource::Compiler, ShaderToolsErrorCode::CompilerShaderCompilationFailed, err_msg.c_str());          
+#ifndef NDEBUG
+            std::cerr << "Dumping source for " << name << "to file....\n";
+            dump_bad_source_to_file(name, src_str, err_msg, dump_reason::failed_compile);
+#endif
+                return ShaderToolsErrorCode::CompilerShaderCompilationFailed;
+            }
+            else
+            {
+                binaryData.spirvForReflection = std::vector<uint32_t>{ debugResult.begin(), debugResult.end() };
+            }   
+        }
+
+        WriteRequest write_request{ WriteRequest::Type::AddShaderBinary, handle, binaryData };
+        ShaderToolsErrorCode write_result = MakeFileTrackerWriteRequest(std::move(write_request));  
+        if (write_result != ShaderToolsErrorCode::Success)
+        {
+            errorSession->AddError(this, ShaderToolsErrorSource::Compiler, write_result, name.c_str());
+        }
+
+        return write_result;
+    }
+
+    ShaderToolsErrorCode ShaderCompilerImpl::recompileBinaryToGLSL(const ShaderStage& handle, size_t* str_size, char* dest_str)
+    {
+        ReadRequest read_request{ ReadRequest::Type::FindRecompiledShaderSource, handle };
+        ReadRequestResult request_result = MakeFileTrackerReadRequest(read_request);
+        if (request_result.has_value())
+        {
+
+            const std::string& recompiledSrcStrRef = std::get<std::string>(*request_result);
+            *str_size = recompiledSrcStrRef.size();
+            if (dest_str != nullptr)
+            {
+                // use a move this time since I want to tell the compiler to, hopefully, move this result too
+                std::string finalSrcString = std::move(std::get<std::string>(*request_result));
+                std::copy(finalSrcString.begin(), finalSrcString.end(), dest_str);
+            }
+
+            return ShaderToolsErrorCode::Success;
         }
         else
         {
-            *str_size = recompiled_src_str.size();
-            if (dest_str != nullptr)
-            {
-                std::copy(recompiled_src_str.cbegin(), recompiled_src_str.cend(), dest_str);
-            }
+            return request_result.error();
         }
     }
 
-    void ShaderCompilerImpl::getBinaryAssemblyString(const ShaderStage& handle, size_t* str_size, char* dest_str)
+    ShaderToolsErrorCode ShaderCompilerImpl::getBinaryAssemblyString(const ShaderStage& handle, size_t* str_size, char* dest_str)
     {
-
-        auto& FileTracker = ShaderFileTracker::GetFileTracker();
-        std::string recompiled_src_str;
-        if (!FileTracker.FindAssemblyString(handle, recompiled_src_str))
+        ReadRequest read_request{ ReadRequest::Type::FindAssemblyString, handle };
+        ReadRequestResult request_result = MakeFileTrackerReadRequest(read_request);
+        if (request_result.has_value())
         {
-            std::cerr << "Could not find requested shader's assembly source!";
-            *str_size = 0;
-            return;
+
+            const std::string& assemblyStrRef = std::get<std::string>(*request_result);
+            *str_size = assemblyStrRef.size();
+            if (dest_str != nullptr)
+            {
+                std::string assemblyStr = std::move(std::get<std::string>(*request_result));
+                std::copy(assemblyStr.begin(), assemblyStr.end(), dest_str);
+            }
+
+            return ShaderToolsErrorCode::Success;
         }
         else
         {
-            *str_size = recompiled_src_str.size();
-            if (dest_str != nullptr)
-            {
-                std::copy(recompiled_src_str.cbegin(), recompiled_src_str.cend(), dest_str);
-            }
+            return request_result.error();
         }
     }
 

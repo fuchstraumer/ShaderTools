@@ -3,6 +3,11 @@
 #include <iostream>
 #include <fstream>
 #include <filesystem>
+#include <unordered_map>
+#include <string>
+#include <vector>
+#include <memory>
+#include <shared_mutex>
 
 
 namespace fs = std::filesystem;
@@ -10,245 +15,417 @@ namespace fs = std::filesystem;
 namespace st
 {
 
-    ShaderFileTracker::ShaderFileTracker(const std::string& initial_directory)
+    namespace detail
     {
-        if (!initial_directory.empty())
+
+        struct RwLockGuard
         {
-            cacheDir = fs::canonical(fs::path(initial_directory));
+            enum class Mode : uint8_t
+            {
+                Read,
+                Write
+            };
+
+            RwLockGuard(Mode _mode, std::shared_mutex& _mutex) noexcept :
+                mode{ _mode }, mutex{ _mutex }
+            {
+                if (mode == Mode::Read)
+                {
+                    mutex.lock_shared();
+                }
+                else if (mode == Mode::Write)
+                {
+                    mutex.lock();
+                }
+            }
+
+            ~RwLockGuard() noexcept
+            {
+                if (mode == Mode::Read)
+                {
+                    mutex.unlock_shared();
+                }
+                else if (mode == Mode::Write)
+                {
+                    mutex.unlock();
+                }
+            }
+
+        private:
+            Mode mode{ Mode::Read };
+            std::shared_mutex& mutex;
+        };
+
+
+        template<typename Key, typename Value>
+        struct MapAndMutex
+        {
+            std::unordered_map<Key, Value> map;
+            std::shared_mutex mutex;
+
+            void clear()
+            {
+                RwLockGuard guard(RwLockGuard::Mode::Write, mutex);
+                map.clear();
+            }
+        };
+
+        MapAndMutex<ShaderStage, std::string> ShaderBodies;
+        MapAndMutex<ShaderStage, ShaderBinaryData> Binaries;
+        MapAndMutex<ShaderStage, std::string> RecompiledSourcesFromBinaries;
+        MapAndMutex<ShaderStage, std::string> AssemblyStrings;
+        MapAndMutex<ShaderStage, std::filesystem::file_time_type> StageLastModificationTimes;
+        MapAndMutex<ShaderStage, std::string> FullSourceStrings;
+        MapAndMutex<ShaderStage, bool> StageOptimizationDisabled;
+        MapAndMutex<ShaderStage, std::unordered_multimap<ShaderStage, std::string>> ShaderUsedResourceBlocks;
+        // first key is resource group, second map is stage and index of group in that stage
+        MapAndMutex<std::string, std::unordered_map<ShaderStage, uint32_t>> ResourceGroupSetIndexMaps;
+        MapAndMutex<ShaderStage, std::filesystem::path> BodyPaths;
+        MapAndMutex<ShaderStage, std::filesystem::path> BinaryPaths;
+
+    } // namespace detail
+
+    RequestKey::RequestKey(ShaderStage handle) noexcept : ShaderHandle{ handle }
+    {}
+
+    RequestKey::RequestKey(std::string_view key_string) noexcept : KeyString{ key_string }
+    {}
+
+    WriteRequest::WriteRequest(Type type, ShaderStage handle, RequestPayload payload) noexcept : RequestType{ type }, Key{ handle }, Payload{ payload }
+    {}
+
+    WriteRequest::WriteRequest(Type type, std::string_view key_string, RequestPayload payload) noexcept : RequestType{ type }, Key{ key_string }, Payload{ payload }
+    {}
+
+    ReadRequest::ReadRequest(Type type, ShaderStage handle) noexcept : RequestType{ type }, Key{ handle }
+    {}
+
+    ReadRequest::ReadRequest(Type type, std::string_view key_string) noexcept : RequestType{ type }, Key{ key_string }
+    {}
+
+    template<typename KeyType, typename ResultType>
+    ReadRequestResult FindRequestedPayload(const KeyType key, detail::MapAndMutex<KeyType, ResultType>& map_and_mutex)
+    {
+        static_assert(std::is_default_constructible_v<ResultType>);
+        using namespace detail;
+        RwLockGuard lock_guard(RwLockGuard::Mode::Read, map_and_mutex.mutex);
+        auto& map = map_and_mutex.map;
+        auto iter = map.find(key);
+        if (iter != map.end())
+        {
+            return iter->second;
         }
         else
         {
-            cacheDir = fs::temp_directory_path() / fs::path("ShaderToolsCache");
-
-        }
-        if (!fs::exists(cacheDir))
-        {
-            if (!fs::create_directories(cacheDir))
-            {
-                std::cerr << "Couldn't create cache directory, outputs won't be cached for future runs (non-critical).\n";
-            }
+            return std::unexpected(ShaderToolsErrorCode::FileTrackerReadRequestFailed);
         }
     }
 
-    ShaderFileTracker::~ShaderFileTracker()
+    ReadRequestResult FindShaderBinary(const ShaderStage handle, bool isOptimizedBinaryRequest)
     {
-        DumpContentsToCacheDir();
-    }
-
-    void ShaderFileTracker::ClearAllContainers()
-    {
-        StageLastModificationTimes.clear();
-        ShaderBodies.clear();
-        RecompiledSourcesFromBinaries.clear();
-        FullSourceStrings.clear();
-        Binaries.clear();
-        ShaderUsedResourceBlocks.clear();
-        ResourceGroupSetIndexMaps.clear();
-        BodyPaths.clear();
-        BinaryPaths.clear();
-    }
-
-    void ShaderFileTracker::DumpContentsToCacheDir()
-    {
-
-        auto write_output = [&](const ShaderStage& handle, const std::string& contents, const std::string& extension)
+        using namespace detail;
+        RwLockGuard lock_guard(RwLockGuard::Mode::Read, Binaries.mutex);
+        auto& map = Binaries.map;
+        auto iter = map.find(handle);
+        if (iter != map.end())
         {
-            const std::string output_name = GetShaderName(handle) + GetShaderStageString(handle.stageBits) + extension;
-            const fs::path output_path = cacheDir / output_name;
-            std::ofstream output_stream(output_path);
-            if (output_stream.is_open())
+            if (isOptimizedBinaryRequest && iter->second.optimizedSpirv)
             {
-                output_stream << contents;
-            }
-            output_stream.flush();
-            output_stream.close();
-        };
-
-        for (const auto& handle : ShaderBodies)
-        {
-            write_output(handle.first, handle.second, std::string("Body.glsl"));
-        }
-
-        for (const auto& handle : FullSourceStrings)
-        {
-            write_output(handle.first, handle.second, std::string("Generated.glsl"));
-        }
-
-        for (const auto& handle : AssemblyStrings)
-        {
-            write_output(handle.first, handle.second, std::string(".spvasm"));
-        }
-
-        for (const auto& handle : RecompiledSourcesFromBinaries)
-        {
-            write_output(handle.first, handle.second, std::string("FromBinary.glsl"));
-        }
-    }
-
-    bool ShaderFileTracker::FindShaderBody(const ShaderStage& handle, std::string& dest_str)
-    {
-        if (ShaderBodies.count(handle) != 0)
-        {
-            dest_str = ShaderBodies.at(handle);
-            return true;
-        }
-        else if (BodyPaths.count(handle) != 0)
-        {
-
-            std::lock_guard map_guard(mapMutex);
-            // Load source string into memory
-            std::ifstream input_file(BodyPaths.at(handle));
-            if (!input_file.is_open())
-            {
-                throw std::runtime_error("Failed to open shader source file, path existed in program state but file couldn't be opened.");
-            }
-
-            auto iter = ShaderBodies.emplace(handle, std::string{ std::istreambuf_iterator<char>(input_file), std::istreambuf_iterator<char>() });
-            if (!iter.second)
-            {
-                throw std::runtime_error("Source path was valid, and file was read successfully: failed to embed into program state.");
-            }
-
-            dest_str = iter.first->second;
-            return true;
-        }
-        else {
-            return false;
-        }
-    }
-
-    bool ShaderFileTracker::AddShaderBodyPath(const ShaderStage& handle, const std::string& shader_body_path) {
-        if (BodyPaths.count(handle) != 0)
-        {
-            // Already had this path registered. Shouldn't really reach this point.
-            return true;
-        }
-        else {
-
-            std::lock_guard map_guard(mapMutex);
-            fs::path source_body_path(shader_body_path);
-            if (!fs::exists(source_body_path))
-            {
-                throw std::runtime_error("Failed to open given file: invalid path.");
-            }
-
-            BodyPaths.emplace(handle, fs::canonical(source_body_path));
-            StageLastModificationTimes.emplace(handle, fs::last_write_time(BodyPaths.at(handle)));
-
-            std::ifstream input_stream(source_body_path);
-            if (!input_stream.is_open())
-            {
-                throw std::runtime_error("Failed to open input stream for given shader body path.");
-            }
-
-            auto iter = ShaderBodies.emplace(handle, std::string{ std::istreambuf_iterator<char>(input_stream), std::istreambuf_iterator<char>() });
-            if (iter.second)
-            {
-                return true;
+                return iter->second.optimizedSpirv.value();
             }
             else
             {
-                return false;
+                // default return reflection spir-v
+                return iter->second.spirvForReflection;
             }
-        }
-    }
-
-    bool ShaderFileTracker::FindShaderBinary(const ShaderStage& handle, std::vector<uint32_t>& dest_binary_vector)
-    {
-        if (Binaries.count(handle) != 0)
-        {
-            dest_binary_vector = Binaries.at(handle);
-            return true;
-        }
-        else if (BinaryPaths.count(handle) != 0)
-        {
-
-            std::lock_guard map_guard(mapMutex);
-            std::ifstream input_file(BinaryPaths.at(handle), std::ios::binary | std::ios::in | std::ios::ate);
-            if (!input_file.is_open())
-            {
-                throw std::runtime_error("Shader binary path existed in program state, but we couldn't open the file referenced!");
-            }
-
-            size_t code_size = static_cast<size_t>(input_file.tellg());
-            std::vector<char> buffer(code_size);
-            input_file.seekg(0, std::ios::beg);
-            input_file.read(buffer.data(), code_size);
-            input_file.close();
-
-            std::vector<uint32_t> imported_binary(code_size / sizeof(uint32_t) + 1);
-            memcpy(imported_binary.data(), buffer.data(), buffer.size());
-            auto iter = Binaries.emplace(handle, imported_binary);
-
-            if (!iter.second)
-            {
-                throw std::runtime_error("Path to shader binary valid, file read successfully - failure to emplace in internal state container.");
-            }
-
-            dest_binary_vector = iter.first->second;
-            return true;
         }
         else
         {
-            return false;
+            return std::unexpected(ShaderToolsErrorCode::FileTrackerReadRequestFailed);
         }
     }
 
-    bool ShaderFileTracker::FindRecompiledShaderSource(const ShaderStage& handle, std::string& destination_str)
+    ReadRequestResult FindShaderName(const ShaderStage handle)
     {
-        if (RecompiledSourcesFromBinaries.count(handle) != 0)
+        ReadRequestResult result = FindRequestedPayload(handle, detail::BodyPaths);
+        // gotta do a silly little transform, oops
+        if (result.has_value())
         {
-            destination_str = RecompiledSourcesFromBinaries.at(handle);
-            return true;
-        }
-        return false;
-    }
+            fs::path bodyPath = std::get<fs::path>(*result);
+            // note, filename() first strips that path info before we convert the rest to string
+            std::string filename = bodyPath.filename().string();
+            size_t idx = filename.find_first_of('.');
+            if (idx != std::string::npos)
+            {
+                filename = filename.substr(0, idx);
+            }
 
-    bool ShaderFileTracker::FindAssemblyString(const ShaderStage& handle, std::string& destination_str)
-    {
-        if (AssemblyStrings.count(handle) != 0)
+            return filename;
+        }
+        else
         {
-            destination_str = AssemblyStrings.at(handle);
-            return true;
+            return result;
         }
-        return false;
     }
 
-    std::string ShaderFileTracker::GetShaderName(const ShaderStage& handle)
+    ReadRequestResult HasFullSourceString(const ShaderStage handle)
     {
-        auto iter = BodyPaths.find(handle);
-        if (iter == std::cend(BodyPaths))
+        // Annoying special case because of type conversions
+        detail::MapAndMutex<ShaderStage, std::string>& curr = detail::FullSourceStrings;
+        detail::RwLockGuard lock_guard(detail::RwLockGuard::Mode::Read, curr.mutex);
+        auto& map = curr.map;
+        return map.count(handle) != 0;
+    }
+
+    template<typename KeyType, typename PayloadType>
+    ShaderToolsErrorCode DoWriteRequest(KeyType key, PayloadType payload, detail::MapAndMutex<KeyType, PayloadType>& map_and_mutex)
+    {
+        using namespace detail;
+        RwLockGuard lock_guard(RwLockGuard::Mode::Write, map_and_mutex.mutex);
+        auto& map = map_and_mutex.map;
+        auto result = map.try_emplace(key, std::move(payload));
+        if (!result.second)
         {
-            return std::string{};
+            auto iter = result.first;
+            // payload already exists
+            if (iter->first == key)
+            {
+                return ShaderToolsErrorCode::FileTrackerPayloadAlreadyStored;
+            }
+            else
+            {
+                return ShaderToolsErrorCode::FileTrackerWriteCouldNotAddPayloadToStorage;
+            }
         }
-
-        std::string filename = iter->second.filename().string();
-        // now strip .(stage) if found
-        size_t idx = filename.find_first_of('.');
-        if (idx != std::string::npos)
+        else
         {
-            filename = filename.substr(0, idx);
+            return ShaderToolsErrorCode::Success;
+        }
+    }
+
+    ShaderToolsErrorCode DoWriteRequest(ShaderStage key, std::vector<std::string> payload, detail::MapAndMutex<ShaderStage, std::unordered_multimap<ShaderStage, std::string>>& map_and_mutex)
+    {
+        using namespace detail;
+        RwLockGuard lock_guard(RwLockGuard::Mode::Write, map_and_mutex.mutex);
+        auto& map_of_maps = map_and_mutex.map;
+        auto iter_to_contained_map = map_of_maps.find(key);
+        if (iter_to_contained_map == map_of_maps.end())
+        {
+            auto& curr_map = map_of_maps[key];
+            for (auto&& resource_block : payload)
+            {
+                auto result = curr_map.emplace(key, std::move(resource_block));
+                if (result == curr_map.end())
+                {
+                    return ShaderToolsErrorCode::FileTrackerWriteCouldNotAddPayloadToStorage;
+                }
+            }
+            return ShaderToolsErrorCode::Success;
+        }
+        else
+        {
+            auto& curr_map = iter_to_contained_map->second;
+            for (auto&& resource_block : payload)
+            {
+                auto result = curr_map.emplace(key, std::move(resource_block));
+                if (result == curr_map.end())
+                {
+                    return ShaderToolsErrorCode::FileTrackerWriteCouldNotAddPayloadToStorage;
+                }
+            }
+            return ShaderToolsErrorCode::Success;
+        }
+    }
+
+    template<>
+    ShaderToolsErrorCode DoWriteRequest<ShaderStage, std::filesystem::path>(ShaderStage key, std::filesystem::path payload, detail::MapAndMutex<ShaderStage, std::filesystem::path>& map_and_mutex)
+    {
+        using namespace detail;
+        RwLockGuard lock_guard(RwLockGuard::Mode::Write, map_and_mutex.mutex);
+        auto& path_map = map_and_mutex.map;
+        auto result = path_map.try_emplace(key, std::move(payload));
+        if (!result.second)
+        {
+            auto iter = result.first;
+            // payload already exists
+            if (iter->first == key)
+            {
+                return ShaderToolsErrorCode::FileTrackerPayloadAlreadyStored;
+            }
+            else
+            {
+                return ShaderToolsErrorCode::FileTrackerWriteCouldNotAddPayloadToStorage;
+            }
+        }
+        else
+        {
+            namespace fs = std::filesystem;
+
+            std::filesystem::path path_to_body_file = fs::canonical((result.first)->second);
+            if (!fs::exists(path_to_body_file))
+            {
+                return ShaderToolsErrorCode::FilesystemPathDoesNotExist;
+            }
+
+            std::ifstream body_file_stream(path_to_body_file);
+            if (!body_file_stream.is_open())
+            {
+                return ShaderToolsErrorCode::FilesystemPathExistedFileCouldNotBeOpened;
+            }
+
+            std::string body_string{ std::istreambuf_iterator<char>(body_file_stream), std::istreambuf_iterator<char>() };
+            RwLockGuard body_string_lock_guard(RwLockGuard::Mode::Write, detail::ShaderBodies.mutex);
+            auto& body_map = detail::ShaderBodies.map;
+            auto body_emplace_result = body_map.try_emplace(key, std::move(body_string));
+            if (!body_emplace_result.second)
+            {
+                auto iter = body_emplace_result.first;
+                // payload already exists
+                if (iter->first == key)
+                {
+                    return ShaderToolsErrorCode::FileTrackerPayloadAlreadyStored;
+                }
+                else
+                {
+                    return ShaderToolsErrorCode::FileTrackerWriteCouldNotAddPayloadToStorage;
+                }
+            }
+            else
+            {
+                return ShaderToolsErrorCode::Success;
+            }
+        }
+    }
+
+    template<typename KeyType, typename PayloadType>
+    ShaderToolsErrorCode ClearMap(detail::MapAndMutex<KeyType, PayloadType>& map_and_mutex)
+    {
+        using namespace detail;
+        RwLockGuard lock_guard(RwLockGuard::Mode::Write, map_and_mutex.mutex);
+        map_and_mutex.map.clear();
+        return ShaderToolsErrorCode::Success;
+    }
+
+    ReadRequestResult MakeFileTrackerReadRequest(ReadRequest request)
+    {
+        switch (request.RequestType)
+        {
+            case ReadRequest::Type::Invalid:
+                return std::unexpected{ ShaderToolsErrorCode::FileTrackerInvalidRequest };
+            case ReadRequest::Type::FindShaderBody:
+                return FindRequestedPayload(request.Key.ShaderHandle, detail::ShaderBodies);
+            case ReadRequest::Type::FindShaderBinary:
+                return FindShaderBinary(request.Key.ShaderHandle, true);
+            case ReadRequest::Type::FindRecompiledShaderSource:
+                return FindRequestedPayload(request.Key.ShaderHandle, detail::RecompiledSourcesFromBinaries);
+            case ReadRequest::Type::FindAssemblyString:
+                return FindRequestedPayload(request.Key.ShaderHandle, detail::AssemblyStrings);
+            case ReadRequest::Type::FindLastModificationTime:
+                return FindRequestedPayload(request.Key.ShaderHandle, detail::StageLastModificationTimes);
+            case ReadRequest::Type::FindFullSourceString:
+                return FindRequestedPayload(request.Key.ShaderHandle, detail::FullSourceStrings);
+            case ReadRequest::Type::FindOptimizationStatus:
+                return FindRequestedPayload(request.Key.ShaderHandle, detail::StageOptimizationDisabled);
+            case ReadRequest::Type::FindShaderName:
+                return FindShaderName(request.Key.ShaderHandle);
+            case ReadRequest::Type::HasFullSourceString:
+                return HasFullSourceString(request.Key.ShaderHandle);
+            case ReadRequest::Type::FindResourceGroupSetIndexMap:
+                return FindRequestedPayload(std::string{ request.Key.KeyString }, detail::ResourceGroupSetIndexMaps);
+            case ReadRequest::Type::FindShaderBinaryForReflection:
+                return FindShaderBinary(request.Key.ShaderHandle, false);
+            default:
+                return std::unexpected{ ShaderToolsErrorCode::FileTrackerInvalidRequest };
+        }
+    }
+
+    std::vector<ReadRequestResult> MakeFileTrackerBatchReadRequest(std::vector<ReadRequest> readRequests)
+    {
+        std::vector<ReadRequestResult> results(readRequests.size(), std::unexpected{ ShaderToolsErrorCode::InvalidErrorCode });
+
+        // We'll get fancier later, for now I want to get to testing
+        for (size_t i = 0; i < readRequests.size(); ++i)
+        {
+            results[i] = MakeFileTrackerReadRequest(std::move(readRequests[i]));
         }
 
-        return filename;
+        return results;
     }
 
-    ShaderFileTracker & ShaderFileTracker::GetFileTracker()
+    ShaderToolsErrorCode MakeFileTrackerWriteRequest(WriteRequest request)
     {
-        static ShaderFileTracker fileTracker;
-        return fileTracker;
+        switch (request.RequestType)
+        {
+        case WriteRequest::Type::Invalid:
+            return ShaderToolsErrorCode::FileTrackerInvalidRequest;
+        case WriteRequest::Type::AddShaderBody:
+            return DoWriteRequest(request.Key.ShaderHandle, std::move(std::get<std::string>(request.Payload)), detail::ShaderBodies);
+        case WriteRequest::Type::AddShaderAssembly:
+            return DoWriteRequest(request.Key.ShaderHandle, std::move(std::get<std::string>(request.Payload)), detail::AssemblyStrings);
+        case WriteRequest::Type::AddShaderBinary:
+            return DoWriteRequest(request.Key.ShaderHandle, std::move(std::get<ShaderBinaryData>(request.Payload)), detail::Binaries);
+        case WriteRequest::Type::UpdateModificationTime:
+            return DoWriteRequest(request.Key.ShaderHandle, std::move(std::get<std::filesystem::file_time_type>(request.Payload)), detail::StageLastModificationTimes);
+        case WriteRequest::Type::AddShaderBodyPath:
+            return DoWriteRequest(request.Key.ShaderHandle, std::move(std::get<std::filesystem::path>(request.Payload)), detail::BodyPaths);
+        case WriteRequest::Type::AddFullSourceString:
+            return DoWriteRequest(request.Key.ShaderHandle, std::move(std::get<std::string>(request.Payload)), detail::FullSourceStrings);
+        case WriteRequest::Type::AddUsedResourceBlocks:
+            return DoWriteRequest(request.Key.ShaderHandle, std::move(std::get<std::vector<std::string>>(request.Payload)), detail::ShaderUsedResourceBlocks);
+        case WriteRequest::Type::SetRecompiledSourceString:
+            return DoWriteRequest(request.Key.ShaderHandle, std::move(std::get<std::string>(request.Payload)), detail::RecompiledSourcesFromBinaries);
+        case WriteRequest::Type::SetStageOptimizationDisabled:
+            return DoWriteRequest(request.Key.ShaderHandle, std::get<bool>(request.Payload), detail::StageOptimizationDisabled);
+        default:
+            return ShaderToolsErrorCode::FileTrackerInvalidRequest;
+        };
+
     }
 
-    void ST_API ClearProgramState()
+    ShaderToolsErrorCode MakeFileTrackerBatchWriteRequest(std::vector<WriteRequest> writeRequests)
     {
-        auto& ftracker = ShaderFileTracker::GetFileTracker();
-        ftracker.ClearAllContainers();
+        std::vector<ShaderToolsErrorCode> error_codes(writeRequests.size(), ShaderToolsErrorCode::Success);
+
+        for (size_t i = 0; i < writeRequests.size(); ++i)
+        {
+            error_codes[i] = MakeFileTrackerWriteRequest(std::move(writeRequests[i]));
+        }
+
+        bool allSuccessful = std::any_of(error_codes.cbegin(), error_codes.cend(), &WasWriteRequestSuccessful);
+
+        return allSuccessful ? ShaderToolsErrorCode::Success : ShaderToolsErrorCode::FileTrackerBatchWriteRequestFailed;
     }
 
-    void ST_API DumpProgramStateToCache()
+    ShaderToolsErrorCode MakeFileTrackerEraseRequest(EraseRequest request)
     {
-        auto& ftrack = ShaderFileTracker::GetFileTracker();
-        ftrack.DumpContentsToCacheDir();
+        return ShaderToolsErrorCode::Success;
+    }
+
+    ShaderToolsErrorCode MakeFileTrackerBatchEraseRequest(std::vector<EraseRequest> writeRequests)
+    {
+        return ShaderToolsErrorCode::Success;
+    }
+
+    constexpr bool WasWriteRequestSuccessful(ShaderToolsErrorCode code) noexcept
+    {
+        return (code == ShaderToolsErrorCode::Success) || (code == ShaderToolsErrorCode::FileTrackerPayloadAlreadyStored);
+    }
+
+    ShaderToolsErrorCode ClearAllInternalStorage()
+    {
+        ShaderToolsErrorCode result = ClearMap(detail::ShaderBodies);
+        result = ClearMap(detail::Binaries);
+        result = ClearMap(detail::RecompiledSourcesFromBinaries);
+        result = ClearMap(detail::AssemblyStrings);
+        result = ClearMap(detail::StageLastModificationTimes);
+        result = ClearMap(detail::FullSourceStrings);
+        result = ClearMap(detail::StageOptimizationDisabled);
+        result = ClearMap(detail::ShaderUsedResourceBlocks);
+        result = ClearMap(detail::ResourceGroupSetIndexMaps);
+        result = ClearMap(detail::BodyPaths);
+        result = ClearMap(detail::BinaryPaths);
+        result = ClearMap(detail::AssemblyStrings);
+        return result;
     }
 
 }

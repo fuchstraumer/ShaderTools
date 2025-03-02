@@ -8,24 +8,44 @@
 namespace st
 {
 
-    ShaderGroupImpl::ShaderGroupImpl(const std::string& group_name, yamlFile* yaml_file) : groupName(group_name), reflector(std::make_unique<ShaderReflector>(yaml_file)), rsrcFile(yaml_file) {}
+    ShaderGroupImpl::ShaderGroupImpl(const std::string& group_name, yamlFile* yaml_file, Session& error_session) :
+        groupName(group_name),
+        reflector(std::make_unique<ShaderReflector>(yaml_file, error_session)),
+        rsrcFile(yaml_file),
+        idx{ 0u }
+    {
+    }
 
     ShaderGroupImpl::~ShaderGroupImpl() { }
 
-    ShaderGroupImpl::ShaderGroupImpl(ShaderGroupImpl && other) noexcept : stHandles(std::move(other.stHandles)), reflector(std::move(other.reflector)), rsrcFile(std::move(other.rsrcFile)),
-        groupName(std::move(other.groupName)), resourceScriptPath(std::move(other.resourceScriptPath)) {}
-
-    ShaderGroupImpl & ShaderGroupImpl::operator=(ShaderGroupImpl && other) noexcept
+    ShaderGroupImpl::ShaderGroupImpl(ShaderGroupImpl&& other) noexcept :
+        groupName{ std::move(other.groupName) },
+        idx{ std::move(other.idx) },
+        stHandles{ std::move(other.stHandles) },
+        optimizationEnabled{ std::move(other.optimizationEnabled) },
+        reflector{ std::move(other.reflector) },
+        rsrcFile{ other.rsrcFile },
+        tags{ std::move(other.tags) },
+        resourceGroupBindingIndices{ std::move(other.resourceGroupBindingIndices) },
+        resourceScriptPath{ std::move(other.resourceScriptPath) }
     {
-        stHandles = std::move(other.stHandles);
-        reflector = std::move(other.reflector);
-        rsrcFile = std::move(other.rsrcFile);
+    }
+
+    ShaderGroupImpl& ShaderGroupImpl::operator=(ShaderGroupImpl&& other) noexcept
+    {
         groupName = std::move(other.groupName);
+        idx = std::move(other.idx);
+        stHandles = std::move(other.stHandles);
+        optimizationEnabled = std::move(other.optimizationEnabled);
+        reflector = std::move(other.reflector);
+        rsrcFile = other.rsrcFile;
+        tags = std::move(other.tags);
+        resourceGroupBindingIndices = std::move(other.resourceGroupBindingIndices);
         resourceScriptPath = std::move(other.resourceScriptPath);
         return *this;
     }
 
-    void ShaderGroupImpl::addShaderStage(const ShaderStage& handle)
+    void ShaderGroupImpl::addShaderStage(ShaderStage handle)
     {
         stHandles.emplace(handle);
         reflector->ParseBinary(handle);

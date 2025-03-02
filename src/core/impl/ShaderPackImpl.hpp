@@ -4,6 +4,7 @@
 #include "core/Shader.hpp"
 #include "generation/ShaderGenerator.hpp"
 #include "../../parser/yamlFile.hpp"
+#include "common/stSession.hpp"
 #include <filesystem>
 #include <future>
 #include <memory>
@@ -20,12 +21,12 @@ namespace st
         ShaderPackImpl(const ShaderPackImpl&) = delete;
         ShaderPackImpl& operator=(const ShaderPackImpl&) = delete;
 
-        ShaderPackImpl(const char* shader_pack_file_path);
+        ShaderPackImpl(const char* shader_pack_file_path, SessionImpl* errorSession);
         ~ShaderPackImpl();
 
         void createPackScript(const char * fname);
 
-        void processShaderStages();
+        ShaderToolsErrorCode processShaderStages();
         void createShaders();
         void createResourceGroups();
         void createSingleGroup(const std::string& name, const std::vector<ShaderStage> shaders);
@@ -40,6 +41,8 @@ namespace st
         std::mutex guardMutex;
         std::unordered_map<std::string, std::unique_ptr<ResourceGroup>> resourceGroups;
         mutable descriptor_type_counts_t typeCounts;
+        SessionImpl* errorSession;
+
     };
 
 }

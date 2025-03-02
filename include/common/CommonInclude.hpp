@@ -1,4 +1,6 @@
 #pragma once
+#ifndef SHADERTOOLS_COMMON_INCLUDE_HPP
+#define SHADERTOOLS_COMMON_INCLUDE_HPP
 
 // Declare DLL interface
 #if defined(__GNUC__)
@@ -17,11 +19,26 @@
 #define ST_API
 #endif
 
+#ifdef SHADERTOOLS_ENABLE_SPV_ASSEMBLY
+constexpr static bool k_EnableSpvAssembly = true;
+#else
+constexpr static bool k_EnableSpvAssembly = false;
+#endif
+
 #ifdef _MSC_VER
 // Disable warning about dll interface for impl members.
 #pragma warning(disable: 4251 )
 #endif
 
-#include <vulkan/vulkan_core.h>
 #include <cstdint>
 #include <memory>
+#include <vulkan/vulkan_core.h>
+
+// forward define our error code enum, so that it can be in headers as return values w/o user includes needed
+namespace st
+{
+    enum class ShaderToolsErrorCode : uint16_t;
+}
+
+#endif //!SHADERTOOLS_COMMON_INCLUDE_HPP
+
