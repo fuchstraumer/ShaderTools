@@ -25,13 +25,10 @@ SET(SHADERC_ENABLE_SHARED_CRT ON CACHE BOOL "Use the shared CRT instead of the s
 SET(ENABLE_GLSLANG_BINARIES OFF CACHE BOOL "Builds glslangValidator and spirv-remap")
 SET(SKIP_GLSLANG_INSTALL ON CACHE BOOL "Skip installation")
 ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/shaderc" EXCLUDE_FROM_ALL)
-SET(SPIRV_CROSS_ENABLE_C_API OFF CACHE BOOL "Enable C API wrapper support in static library.")
-SET(SPIRV_CROSS_CLI OFF CACHE BOOL "Build the CLI binary. Requires SPIRV_CROSS_STATIC.")
-SET(SPIRV_CROSS_ENABLE_REFLECT OFF CACHE BOOL "Enable JSON reflection target support.")
-SET(SPIRV_CROSS_ENABLE_TESTS OFF CACHE BOOL "Enable SPIRV-Cross tests.")
-SET(SPIRV_CROSS_ENABLE_UTIL OFF CACHE BOOL "Enable util module support.")
-ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/spirv-cross" EXCLUDE_FROM_ALL)
-
+SET(SPIRV_REFLECT_EXECUTABLE OFF CACHE BOOL "Build spirv-reflect executable")
+SET(SPIRV_REFLECT_STATIC_LIB ON CACHE BOOL "Build a SPIRV-Reflect static library")
+SET(SPIRV_REFLECT_ENABLE_ASSERTS OFF CACHE BOOL "Enable asserts for debugging")
+ADD_SUBDIRECTORY("${CMAKE_CURRENT_SOURCE_DIR}/third_party/spirv-reflect" EXCLUDE_FROM_ALL)
 SET(YAML_CPP_BUILD_CONTRIB OFF CACHE BOOL "Enable contrib stuff in library")
 SET(YAML_CPP_BUILD_TESTS OFF CACHE BOOL "Enable testing")
 SET(YAML_CPP_BUILD_TOOLS OFF CACHE BOOL "Enable parse tools")
@@ -139,7 +136,7 @@ ENDIF()
 
 TARGET_COMPILE_DEFINITIONS(ShaderTools PRIVATE -DSHADERTOOLS_BUILD_DLL)
 
-TARGET_LINK_LIBRARIES(ShaderTools PRIVATE shaderc spirv-cross-core spirv-cross-glsl spirv-cross-cpp yaml-cpp)
+TARGET_LINK_LIBRARIES(ShaderTools PRIVATE shaderc spirv-reflect-static yaml-cpp)
 
 TARGET_INCLUDE_DIRECTORIES(ShaderTools PUBLIC  "${CMAKE_CURRENT_SOURCE_DIR}/include" "${Vulkan_INCLUDE_DIRS}")
 TARGET_INCLUDE_DIRECTORIES(ShaderTools PRIVATE 
