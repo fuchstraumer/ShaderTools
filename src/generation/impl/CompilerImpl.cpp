@@ -1,8 +1,7 @@
 #include "CompilerImpl.hpp"
-#include "spirv_glsl.hpp"
+#include "IncludeHandler.hpp"
 #include "../../util/ShaderFileTracker.hpp"
 #include "../../common/impl/SessionImpl.hpp"
-#include "../../common/UtilityStructsInternal.hpp"
 
 #include <iostream>
 #include <filesystem>
@@ -50,6 +49,7 @@ namespace st
         options.SetOptimizationLevel(opt_level_map.at(compilerOptions.Optimization));
         options.SetTargetEnvironment(shaderc_target_env_vulkan, target_version_map.at(compilerOptions.TargetVersion));
         options.SetSourceLanguage(shaderc_source_language_glsl);
+        options.SetIncluder(std::make_unique<IncludeHandler>(compilerOptions.IncludePaths, errorSession));
         return options;
     }
 

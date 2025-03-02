@@ -70,6 +70,8 @@ SET(ST_GENERATION_SRCS
     "${CMAKE_CURRENT_SOURCE_DIR}/src/generation/ShaderGenerator.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/generation/impl/CompilerImpl.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/generation/impl/CompilerImpl.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/generation/impl/IncludeHandler.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/generation/impl/IncludeHandler.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/generation/impl/ShaderGeneratorImpl.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/generation/impl/ShaderGeneratorImpl.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/generation/impl/ShaderStageProcessor.hpp"
@@ -142,8 +144,9 @@ TARGET_INCLUDE_DIRECTORIES(ShaderTools PUBLIC  "${CMAKE_CURRENT_SOURCE_DIR}/incl
 TARGET_INCLUDE_DIRECTORIES(ShaderTools PRIVATE 
     "${CMAKE_CURRENT_SOURCE_DIR}/third_party/" 
     "${CMAKE_CURRENT_SOURCE_DIR}/ext/include"
-    "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bitsery/include/"
-    "${CMAKE_CURRENT_SOURCE_DIR}/third_party/yaml-cpp/include")
+    "${CMAKE_CURRENT_SOURCE_DIR}/third_party/bitsery/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/third_party/yaml-cpp/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/third_party/spirv-reflect")
 
 IF(MSVC)
     TARGET_COMPILE_DEFINITIONS(ShaderTools PRIVATE 

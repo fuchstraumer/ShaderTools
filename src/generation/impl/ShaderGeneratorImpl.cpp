@@ -844,33 +844,6 @@ namespace st
         return ShaderToolsErrorCode::Success;
     }
 
-    ShaderToolsErrorCode ShaderGeneratorImpl::processBodyStrIncludes(std::string& body_src_str)
-    {
-
-        bool include_found = true;
-        while (include_found)
-        {
-            std::smatch match;
-            if (std::regex_search(body_src_str, match, include_local))
-            {
-                ShaderToolsErrorCode errorCode = parseInclude(match[1].str(), true);
-                
-                body_src_str.erase(body_src_str.begin() + match.position(), body_src_str.begin() + match.position() + match.length());
-            }
-            else if (std::regex_search(body_src_str, match, include_library))
-            {
-                ShaderToolsErrorCode errorCode = parseInclude(match[1].str(), false);
-                body_src_str.erase(body_src_str.begin() + match.position(), body_src_str.begin() + match.position() + match.length());
-            }
-            else
-            {
-                include_found = false;
-            }
-        }
-
-        return ShaderToolsErrorCode::Success;
-    }
-
     ShaderToolsErrorCode ShaderGeneratorImpl::processBodyStrResourceBlocks(const ShaderStage& handle, std::string& body_str)
     {
 		bool block_found = true;
@@ -908,12 +881,6 @@ namespace st
         if (body_str.empty())
         {
             return ShaderToolsErrorCode::GeneratorShaderBodyStringNotFound;
-        }
-
-        ec = processBodyStrIncludes(body_str);
-        if (ec != ShaderToolsErrorCode::Success)
-        {
-            return ec;
         }
 
         checkInterfaceOverrides(body_str);

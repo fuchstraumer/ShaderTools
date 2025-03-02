@@ -104,7 +104,6 @@ namespace st
 
         [[nodiscard]] std::string fetchBodyStr(const ShaderStage& handle, const std::string& path_to_source);
         void checkInterfaceOverrides(std::string& body_src_str);
-        [[nodiscard]] ShaderToolsErrorCode processBodyStrIncludes(std::string & body_src_str);
         [[nodiscard]] ShaderToolsErrorCode processBodyStrSpecializationConstants(std::string& body_src_str);
         [[nodiscard]] ShaderToolsErrorCode processBodyStrResourceBlocks(const ShaderStage& handle, std::string& body_str);
 

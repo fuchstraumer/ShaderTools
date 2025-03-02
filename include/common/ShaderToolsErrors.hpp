@@ -93,6 +93,10 @@ namespace st
 
         ShaderStageProcessorErrorsStart = 800,
         ShaderStageProcessorGivenBodyPathStringDidNotExist,
+
+        IncludeHandlerErrorsStart = 900,
+        IncludeHandlerFileNotFound,
+        
     };
 
     enum class ShaderToolsErrorSource : uint16_t
@@ -105,7 +109,8 @@ namespace st
         UserInput,
         ResourceGroup,
         ShaderPack,
-        ShaderStageProcessor
+        ShaderStageProcessor,
+        IncludeHandler,
     };
 
     // We don't include a file path, because that will be part of the error message we store

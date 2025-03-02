@@ -9,6 +9,7 @@
 #include <set>
 #include <vector>
 #include <string>
+#include <filesystem>
 
 namespace YAML
 {
@@ -39,6 +40,7 @@ namespace st
         std::unordered_map<std::string, std::vector<std::string>> groupTags;
         std::unordered_map<ShaderStage, std::vector<std::string>> stageExtensions;
         std::unordered_map<std::string, std::vector<ShaderResource>> resourceGroups;
+        std::vector<std::filesystem::path> includePaths;
         ShaderCompilerOptions compilerOptions;
         std::string packName;
 

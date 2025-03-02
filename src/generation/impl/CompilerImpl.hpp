@@ -3,6 +3,7 @@
 #define ST_SHADER_COMPILER_IMPL_HPP
 #include "common/ShaderStage.hpp"
 #include "common/UtilityStructs.hpp"
+#include "../../common/UtilityStructsInternal.hpp"
 
 #include <string>
 
