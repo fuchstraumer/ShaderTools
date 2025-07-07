@@ -7,3 +7,6 @@
     - Reflection system no longer gives type info, but does give name and binding index. This will allow us to reduce it down to only use SPCs, at least.
 - Structure support for interface inputs and outputs: Will help with possible eventual HLSL support, and will let us clean things up a bit.
     - Potentially look at making it so we auto-generate locations even in cases of interface overrides if we use this
+- Add a circular buffer caching retrievals of large vectors from client-level API calls, and move things internally so that clients and the internal API use a different function to retrieve data from other objects.
+    - This means client code won't be constantly locking, and also that the two-step call functionality required by the DLL will proceed much faster (as the data is cached)
+    - But internal API calls will still retrieve the most up to date version of the data, and can also be used to clear or reset the cache

@@ -147,6 +147,7 @@ TARGET_INCLUDE_DIRECTORIES(ShaderTools PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/third_party/yaml-cpp/include"
     "${CMAKE_CURRENT_SOURCE_DIR}/third_party/spirv-reflect")
 
+    
 IF(MSVC)
     TARGET_COMPILE_DEFINITIONS(ShaderTools PRIVATE 
         "_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS"
