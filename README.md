@@ -129,14 +129,13 @@ for (const auto& shader : shaderPack) {
 
 ## Performance & Caching
 
-ShaderTools includes a sophisticated binary caching system that dramatically improves build times:
+ShaderTools includes a basic binary caching system that dramatically improves build times:
 
-- **Intelligent Timestamp Checking**: Only recompiles shaders when source files have changed
+- **Timestamp Checking**: Only recompiles shaders when source files have changed
 - **Binary Serialization**: Saves complete shader metadata to disk for instant loading
-- **10x Performance Improvement**: Binary reload (23ms) vs. full compilation (250ms)
-- **Automatic Cache Management**: Handles dependencies and invalidation transparently
+- **~10-100x Faster Binary Load**: Unsurprisingly, reading the binary shaderpack data from disk is much much faster than compiling from scratch
 
-The caching system tracks all include dependencies and resource definitions, ensuring cache validity across complex shader hierarchies.
+The caching system still needs some further improvements to make sure that updating the .yaml schema file or included shader files also propagates an update to the relevant shaders, but that is planned work.
 
 ## Project Architecture
 
@@ -161,12 +160,11 @@ ShaderTools now features comprehensive error handling with detailed diagnostics:
 
 ### Recently Added Features (2024-2025)
 
-- **SPIRV-Reflect Integration**: Replaced SPIRV-Cross with modern reflection library
-- **Enhanced Include System**: Robust `#include` processing with dependency tracking  
-- **Improved Error Handling**: Comprehensive error reporting and session management
-- **Push Constant Support**: Full push constant reflection with structure analysis
-- **Specialization Constants**: Complete specialization constant extraction and management
-- **Vertex Attribute Reflection**: Automatic input/output layout generation
+- **SPIRV-Reflect Integration**: Replaced SPIRV-Cross with SPIRV-Reflect, which is a more lightweight library in general
+- **Enhanced Include System**: `#include` processing with dependency tracking  
+- **Improved Error Handling**: Session-based error reporting attached to each compile/generation/reflection session
+- **Push Constant Support**: Full push constant reflection
+- **Specialization Constants**: Complete specialization constant extraction
 
 ### Planned Features
 
@@ -233,7 +231,7 @@ DepthBuffer:
   Format: "d32_sfloat"
 ```
 
-**Advanced Qualifiers** can be applied globally or per-shader:
+**Access Qualifiers** can be applied globally or per-shader:
 
 ```yaml
 AtomicCounter:
@@ -244,6 +242,8 @@ AtomicCounter:
     ComputeShader: "readonly"
     FragmentShader: "writeonly"
 ```
+
+You can use these qualifiers to apply readonly/writeonly specifications for a resource across all usages, or give it a "PerUsageQualifier" that references a ShaderStage name it'll have a certain qualifier applied in.
 
 ### Shader Pack Definition
 
@@ -271,7 +271,7 @@ shader_groups:
 ```
 
 **Optional Fields:**
-- **`Tags`**: Metadata for frontend applications (e.g., "DepthOnly" for depth-only passes)
+- **`Tags`**: Text-based metadata for frontend applications (e.g., "DepthOnly" for depth-only passes)
 - **`Extensions`**: GLSL extensions enabled for all shaders in the group
 
 ### Reflection API Usage
@@ -351,14 +351,14 @@ shader.GetSpecializationConstants(&numSpecConstants, specConstants.data());
 
 - **`SHADERTOOLS_BUILD_STATIC`**: Build as static library (not recommended due to large dependencies)
 - **`SHADERTOOLS_BUILD_TESTS`**: Enable test target for validation
-- **`SHADERTOOLS_PROFILING`**: Enable performance profiling output
 
 ### Library Packaging
 
 ShaderTools builds as a shared library (DLL) by default. This is strongly recommended because:
-- Reduces client compilation overhead from large SPIRV ecosystem dependencies
+
+- We have to haul in a ton of SPIRV-ecosystem-related libraries that'll bloat a static library considerably
 - Provides stable C ABI for cross-compiler compatibility  
-- Enables runtime updates without client recompilation
+- And of course, it enables runtime updates without client recompilation
 
 ## Testing
 
