@@ -1,5 +1,5 @@
 INCLUDE(ExternalProject)
-CMAKE_MINIMUM_REQUIRED(VERSION 3.3)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.5)
 PROJECT(ShaderTools)
 # Hate global settings, but this just lets us pack away all those dependencies into one group
 # Much better than cluttering up an entire IDE just with our dependencies lol

@@ -27,6 +27,10 @@ namespace st
         ParserYamlFileHadInvalidOptimizationLevel,
         ParserResourceFormatNoVulkanEquivalent,
         ParserYamlFileHadInvalidTargetVersion,
+        ParserYamlFileHadNoBufferReferences,
+        ParserYamlFileHadInvalidBufferReferenceAlignment,
+        ParserYamlFileHadNoRequiredExtensions,
+        ParserRequiredExtensionNotAString,
 
         GeneratorErrorsStart = 100,
         GeneratorEmptyIncludePathArray,

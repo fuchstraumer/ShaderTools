@@ -1,19 +1,90 @@
 ---
 
+buffer_references :
+    # For use with bindless resources and device address extensions, we declare our types that will be used
+    # as buffer references upfront here. We then reference them in the resource group definitions, allowing us to 
+    # hopefully minimally disrupt non-bindless uses of this library
+    MaterialIndices:
+        IsArray : true
+        # Alignment can be manually specified, or left to "Auto" for us to determine based on size of contained type and nearest friendly alignment
+        Alignment : "Auto"
+        Members: |+1
+            int albedoMapIdx;
+            int alphaMapIdx;
+            int specularMapIdx;
+            int bumpMapIdx;
+            int displacementMapIdx;
+            int normalMapIdx;
+            int aoMapIdx;
+            int metallicMapIdx;
+            int roughnessMapIdx;
+            int emissiveMapIdx;
+    MaterialParameters:
+        IsArray : true
+        Alignment : "Auto"
+        Members: |+1
+            vec3 ambient;
+            vec3 diffuse;
+            vec3 specular;
+            vec3 transmittance;
+            vec3 emissive;
+            float shininess;
+            float ior;
+            float dissolve;
+            int illum;
+            float roughness;
+            float metallic;
+            float sheen;
+            float clearcoat_thickness;
+            float clearcoat_roughness;
+            float anisotropy;
+            float anisotropy_rotation;
+            float height_scale;
+    PointLights:
+        IsArray : true
+        Alignment : "Auto"
+        Members: |+1
+            vec4 Position;
+            vec4 PositionViewSpace;
+            vec3 Color;
+            float Range;
+            float Intensity;
+            bool Enabled;
+            vec2 Padding;
+    SpotLights:
+        IsArray : true
+        Alignment : "Auto"
+        Members: |+1
+            vec4 Position;
+            vec4 PositionViewSpace;
+            vec3 Color;
+            float Range;
+            float Intensity;
+            bool Enabled;
+            float InnerConeAngleCosine;
+            float OuterConeAngleCosine;
+    DirectionalLights:
+        IsArray : true
+        Alignment : "Auto"
+        Members: |+1
+            vec4 Direction;
+            vec4 DirectionViewSpace;
+            vec3 Color;
+            float Intensity;
+            bool Enabled;
+            vec3 Padding;
+    
+
 resource_groups : 
-    GlobalResources : 
-        matrices : 
+    GlobalUniformBuffers : 
+        GlobalMatrices : 
             Type : "UniformBuffer"
             Members : |+1
                 mat4 model;
                 mat4 view;
                 mat4 inverseView;
-                mat4 projection;
-                mat4 modelView;
-                mat4 modelViewProjection;
-                mat4 inverseTransposeModel;
-                mat4 inverseTransposeModelView;     
-        globals : 
+                mat4 projection;   
+        Globals : 
             Type : "UniformBuffer"
             Members : |+1
                 vec4 viewPosition;
@@ -24,6 +95,11 @@ resource_groups :
                 float exposure;
                 float gamma;
                 float brightness;
+    BindlessResources :
+        BindlessSamplers : 
+            Type : "SamplerArray"
+        BindlessTextures :
+            Type : "SampledImageArray"
     Material :
         MaterialIndices :
             Type : "StorageBufferArray"
@@ -303,31 +379,29 @@ compiler_options :
         "debug"
     ]
 
-shader_groups : 
+# These extensions are required to be supported, and are added to every shader
+# declared in shader_groups
+required_extensions : [
+    "GL_EXT_control_flow_attributes",
+    "GL_EXT_buffer_reference",
+    "GL_EXT_buffer_reference2",
+    "GL_EXT_buffer_reference_uvec2",
+    "GL_EXT_nonuniform_qualifier"
+]
+
+shader_groups :
     UpdateLights : 
         ComputeShader : "compute/UpdateLights.comp"
     ReduceLights : 
         ComputeShader : "compute/ReduceLightsAABB.comp"
-        Extensions : [
-            "GL_EXT_control_flow_attributes"
-        ]
     ComputeMortonCodes : 
         ComputeShader : "compute/ComputeMortonCodes.comp"
     RadixSort : 
         ComputeShader : "compute/RadixSort.comp"
-        Extensions : [
-            "GL_EXT_control_flow_attributes"
-        ]
     MergeSort : 
         ComputeShader : "compute/MergeSort.comp"
-        Extensions : [
-            "GL_EXT_control_flow_attributes"
-        ]
     BuildBVH : 
         ComputeShader : "compute/BuildBVH.comp"
-        Extensions : [
-            "GL_EXT_control_flow_attributes"
-        ]
     DepthPrePass : 
         RenderShaders : 
             Vertex : "Default.vert"
@@ -346,22 +420,12 @@ shader_groups :
         ComputeShader : "compute/UpdateClusterIndirectArgs.comp"
     AssignLightsToClustersBVH : 
         ComputeShader : "compute/AssignLightsToClustersBVH.glsl"
-        Extensions : [
-            "GL_EXT_control_flow_attributes"
-        ]
     AssignLightsToClusters :
         ComputeShader : "compute/AssignLightsToClusters.comp"
-        Extensions : [
-            "GL_EXT_control_flow_attributes"
-        ]
     DrawPass : 
         RenderShaders : 
             Vertex : "DrawID.vert"
             Fragment : "Clustered.frag"
-        Extensions : [
-            "GL_ARB_shader_draw_parameters",
-            "GL_EXT_nonuniform_qualifier"
-        ]
     ComputeClusterAABBs : 
         ComputeShader : "compute/ComputeClusterAABBs.comp"
     DebugClusters : 
@@ -369,14 +433,8 @@ shader_groups :
             Vertex : "debug/DebugClusters.vert"
             Geometry : "debug/DebugClusters.geom"
             Fragment : "debug/DebugClusters.frag"
-        Extensions : [
-            "GL_EXT_control_flow_attributes"
-        ]
     DebugLights : 
         RenderShaders : 
             Vertex : "debug/DebugLights.vert"
             Fragment : "debug/DebugLights.frag"
-        Extensions : [
-            "GL_EXT_control_flow_attributes"
-        ]
 

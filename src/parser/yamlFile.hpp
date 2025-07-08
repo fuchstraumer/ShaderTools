@@ -41,7 +41,9 @@ namespace st
         std::unordered_map<std::string, std::vector<std::string>> groupTags;
         std::unordered_map<ShaderStage, std::vector<std::string>> stageExtensions;
         std::unordered_map<std::string, std::vector<ShaderResource>> resourceGroups;
+        std::unordered_map<std::string, ParsedBufferReference> bufferReferences;
         std::vector<std::filesystem::path> includePaths;
+        std::vector<std::string> requiredExtensions;
         ShaderCompilerOptions compilerOptions;
         std::string packName;
         std::filesystem::path filePath;
@@ -49,6 +51,8 @@ namespace st
     private:
         ShaderStage addShaderStage(const std::string& group_name, std::string shader_name, VkShaderStageFlags stage_flags);
         std::vector<ShaderStage> addShaderStages(const std::string& group_name, const YAML::Node& shaders);
+        ShaderToolsErrorCode parseRequiredExtensions(SessionImpl* session);
+        ShaderToolsErrorCode parseBufferReferences(SessionImpl* session);
         ShaderToolsErrorCode parseResources(SessionImpl* session);
         ShaderToolsErrorCode parseGroups(SessionImpl* session);
         ShaderToolsErrorCode parseCompilerOptions(SessionImpl* session);

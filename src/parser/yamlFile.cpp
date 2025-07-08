@@ -158,6 +158,9 @@ namespace st
         filePath = std::filesystem::canonical(fname);
         filePath = filePath.parent_path();
 
+        // First two can return an error code and things are still fine, keep around now for later output to warnings or log
+        ShaderToolsErrorCode parseRequiredExtensionsStatus = parseRequiredExtensions(session);
+        ShaderToolsErrorCode parseBufferReferencesStatus = parseBufferReferences(session);
         ShaderToolsErrorCode parseOptionsStatus = parseCompilerOptions(session);
         ShaderToolsErrorCode parseGroupsStatus = parseGroups(session);
         ShaderToolsErrorCode parseResourcesStatus = parseResources(session);
@@ -186,6 +189,11 @@ namespace st
 
     yamlFile& yamlFile::operator=(yamlFile&& other) noexcept
     {
+        if (this == &other)
+        {
+            return *this; // self-assignment guard
+        }
+
         stages = std::move(other.stages);
         shaderGroups = std::move(other.shaderGroups);
         groupTags = std::move(other.groupTags);
@@ -270,6 +278,254 @@ namespace st
         }
 
         return stages_added;
+    }
+
+    ShaderToolsErrorCode yamlFile::parseRequiredExtensions(SessionImpl* session)
+    {
+        using namespace YAML;
+
+        if (!impl->rootFileNode["required_extensions"])
+        {
+            // non-critical error, return it now so we can at least report it and continue
+            return ShaderToolsErrorCode::ParserYamlFileHadNoRequiredExtensions;
+        }
+
+        for (const auto& ext : impl->rootFileNode["required_extensions"])
+        {
+            const std::string extName = ext.as<std::string>();
+            if (extName.empty())
+            {
+                const std::string errorMsg = "Required extension is not a string.";
+                session->AddError(this, ShaderToolsErrorSource::Parser, ShaderToolsErrorCode::ParserRequiredExtensionNotAString, errorMsg.c_str());
+                continue;
+            }
+
+            requiredExtensions.emplace_back(std::move(extName));
+        }
+
+        return ShaderToolsErrorCode::Success;
+    }
+
+    ShaderToolsErrorCode yamlFile::parseBufferReferences(SessionImpl* session)
+    {
+        using namespace YAML;
+
+        if (!impl->rootFileNode["buffer_references"])
+        {
+            // non-critical error, return it now so we can at least report it and continue
+            return ShaderToolsErrorCode::ParserYamlFileHadNoBufferReferences;
+        }
+
+        ShaderToolsErrorCode mostRecentError = ShaderToolsErrorCode::Success;
+
+        auto bufferReferencesNode = impl->rootFileNode["buffer_references"];
+        for (auto iter = bufferReferencesNode.begin(); iter != bufferReferencesNode.end(); ++iter)
+        {
+            std::string buffer_reference_name = iter->first.as<std::string>();
+            ParsedBufferReference& buffer_reference = bufferReferences[buffer_reference_name];
+
+            auto& curr_node = iter->second;
+            
+            // Extract rest of attributes for buffer reference
+            if (curr_node["Members"])
+            {
+                std::string members_str = curr_node["Members"].as<std::string>();
+                std::vector<std::string> members;
+                // members are split by newlines and some spaces, so we have to extract and clean them up
+                // we'll add back the paragraph-style formatting once we have the full info figured out 
+                // and move on to generation
+
+                size_t pos = 0;
+                while ((pos = members_str.find_first_not_of(' ')) != std::string::npos)
+                {
+                    members_str.erase(0, pos); // remove leading spaces
+                    size_t newlinePos = members_str.find_first_of('\n');
+                    if (newlinePos == std::string::npos)
+                    {
+                        // No newline found, take the rest of the string
+                        members.emplace_back(members_str);
+                        break;
+                    }
+                    else
+                    {
+                        members.emplace_back(members_str.substr(0, newlinePos));
+                        members_str.erase(0, newlinePos + 1);
+                    }
+                }
+
+                // add tail member
+                if (!members_str.empty())
+                {
+                    members.emplace_back(members_str);
+                }
+
+                buffer_reference.BufferMembers = std::move(members);
+            }
+
+            if (curr_node["IsArray"])
+            {
+                buffer_reference.IsArray = curr_node["IsArray"].as<bool>();
+            }
+
+            if (curr_node["Alignment"])
+            {
+                const auto alignment_node = curr_node["Alignment"];
+                // Check to see if alignment is a string "Auto" or a number
+                if (alignment_node.IsScalar())
+                {
+                    buffer_reference.Alignment = alignment_node.as<size_t>();
+                }
+                else if (alignment_node.as<std::string>() == "Auto")
+                {
+                    // If alignment is "Auto", we will calculate it later
+                    buffer_reference.Alignment = 0;
+                }
+                else
+                {
+                    // If alignment is not a number or "Auto", we have an error
+                    const std::string errorMsg = "Buffer reference '" + buffer_reference_name + "' has invalid alignment value.";
+                    session->AddError(this, ShaderToolsErrorSource::Parser, ShaderToolsErrorCode::ParserYamlFileHadInvalidBufferReferenceAlignment, errorMsg.c_str());
+                    mostRecentError = ShaderToolsErrorCode::ParserYamlFileHadInvalidBufferReferenceAlignment;
+                    buffer_reference.Alignment = 0; // Set to 0 to avoid using an invalid value
+                }
+            }
+            else
+            {
+                // If not provided, we assume auto alignment
+                buffer_reference.Alignment = 0;
+            }
+
+        }
+
+        return mostRecentError;
+    }
+    
+    ShaderToolsErrorCode yamlFile::parseResources(SessionImpl* session)
+    {
+        using namespace YAML;
+        // Store most recent error, so we can return that one. We will store every error that occurs in the session,
+        // so that users can see all errors but we still stop processing after any error occurs.
+        ShaderToolsErrorCode mostRecentError = ShaderToolsErrorCode::Success;
+
+        if (!impl->rootFileNode["resource_groups"])
+        {
+            mostRecentError = ShaderToolsErrorCode::ParserHadNoResourceGroups;
+            return mostRecentError;
+        }
+
+        auto groups = impl->rootFileNode["resource_groups"];
+
+        for (auto iter = groups.begin(); iter != groups.end(); ++iter)
+        {
+            std::string group_name = iter->first.as<std::string>();
+            std::vector<st::ShaderResource>& group_resources = resourceGroups[group_name];
+
+            auto& curr_node = iter->second;
+            for (auto member_iter = curr_node.begin(); member_iter != curr_node.end(); ++member_iter)
+            {
+
+                std::string rsrc_name = member_iter->first.as<std::string>();
+                auto& rsrc_node = member_iter->second;
+
+                if (!rsrc_node["Type"])
+                {
+                    const std::string errorMsg = "Group '" + group_name + "' has resource '" + rsrc_name + "' with no type specifier.";
+                    session->AddError(this, ShaderToolsErrorSource::Parser, ShaderToolsErrorCode::ParserMissingResourceTypeSpecifier, errorMsg.c_str());
+                    mostRecentError = ShaderToolsErrorCode::ParserMissingResourceTypeSpecifier;
+                }
+
+                auto type_iter = descriptor_type_from_str_map.find(rsrc_node["Type"].as<std::string>());
+                if (type_iter == descriptor_type_from_str_map.end())
+                {
+                    const std::string errorMsg = "Group '" + group_name + "' has resource '" + rsrc_name + "' with type specifier '" + rsrc_node["Type"].as<std::string>() + "' which has no corresponding Vulkan equivalent.";
+                    session->AddError(this, ShaderToolsErrorSource::Parser, ShaderToolsErrorCode::ParserResourceTypeSpecifierNoVulkanEquivalent, errorMsg.c_str());
+                    mostRecentError = ShaderToolsErrorCode::ParserResourceTypeSpecifierNoVulkanEquivalent;
+                }
+
+                ShaderResource rsrc;
+                rsrc.SetParentGroupName(group_name.c_str());
+                rsrc.SetName(rsrc_name.c_str());
+                if (const VkDescriptorType rsrc_type = type_iter->second; rsrc_type & ARRAY_TYPE_FLAG_BITS)
+                {
+                    // We shove these bits in to make it clear elsewhere that something is a descriptor array
+                    const VkDescriptorType actual_type = static_cast<VkDescriptorType>(uint32_t(rsrc_type) & ~uint32_t(ARRAY_TYPE_FLAG_BITS));
+                    rsrc.SetType(actual_type);
+                    rsrc.SetDescriptorArray(true); // defaults false
+                    auto array_size_node = rsrc_node["ArraySize"];
+                    if (array_size_node.IsScalar())
+                    {
+                        const uint32_t arraySz = rsrc_node["ArraySize"].as<uint32_t>();
+                        rsrc.SetArraySize(arraySz);
+                    }
+                    else
+                    {
+                        // If not provided, it's an unbounded descriptor array: set size as largest uint val so we
+                        // can check against it elsewhere (at higher levels, mostly)
+                        rsrc.SetArraySize(std::numeric_limits<uint32_t>::max());
+                    }
+                }
+                else
+                {
+                    rsrc.SetType(type_iter->second);
+                }
+
+                if (rsrc_node["ImageSubtype"])
+                {
+                    auto subtype_str = rsrc_node["ImageSubtype"].as<std::string>();
+                    rsrc.SetImageSamplerSubtype(subtype_str.c_str());
+                }
+                else if (rsrc_node["SamplerSubtype"])
+                {
+                    auto subtype_str = rsrc_node["SamplerSubtype"].as<std::string>();
+                    rsrc.SetImageSamplerSubtype(subtype_str.c_str());
+                }
+
+                if (rsrc_node["Format"])
+                {
+                    VkFormat format = VkFormatFromString(rsrc_node["Format"].as<std::string>());
+                    if (format == VK_FORMAT_UNDEFINED)
+                    {
+                        const std::string errorMsg = "Group '" + group_name + "' has resource '" + rsrc_name + "' with format '" + rsrc_node["Format"].as<std::string>() + "' which has no corresponding Vulkan equivalent.";
+                        session->AddError(this, ShaderToolsErrorSource::Parser, ShaderToolsErrorCode::ParserResourceFormatNoVulkanEquivalent, errorMsg.c_str());
+                        mostRecentError = ShaderToolsErrorCode::ParserResourceFormatNoVulkanEquivalent;
+                    }
+                    rsrc.SetFormat(format);
+                }
+
+                if (rsrc_node["Members"])
+                {
+                    rsrc.SetMembersStr(rsrc_node["Members"].as<std::string>().c_str());
+                }
+
+                if (rsrc_node["Tags"])
+                {
+                    std::vector<std::string> tag_strs;
+                    for (auto tag : rsrc_node["Tags"])
+                    {
+                        tag_strs.emplace_back(tag.as<std::string>());
+                    }
+
+                    std::vector<const char*> tag_ptrs;
+                    for (auto& tag_str : tag_strs)
+                    {
+                        tag_ptrs.emplace_back(tag_str.c_str());
+                    }
+
+                    rsrc.SetTags(tag_ptrs.size(), tag_ptrs.data());
+                }
+
+                if (rsrc_node["Qualifiers"])
+                {
+                    std::vector<glsl_qualifier> qualifiers = qualifiersFromString(rsrc_node["Qualifiers"].as<std::string>());
+                    rsrc.SetQualifiers(qualifiers.size(), qualifiers.data());
+                }
+
+                group_resources.emplace_back(std::move(rsrc));
+
+            }
+        }
+
+        return mostRecentError;
     }
 
     ShaderToolsErrorCode yamlFile::parseGroups(SessionImpl* session)
@@ -476,132 +732,6 @@ namespace st
             }
         }
 
-    }
-
-    ShaderToolsErrorCode yamlFile::parseResources(SessionImpl* session)
-    {
-        using namespace YAML;
-        // Store most recent error, so we can return that one. We will store every error that occurs in the session,
-        // so that users can see all errors but we still stop processing after any error occurs.
-        ShaderToolsErrorCode mostRecentError = ShaderToolsErrorCode::Success;
-
-        if (!impl->rootFileNode["resource_groups"])
-        {
-            mostRecentError = ShaderToolsErrorCode::ParserHadNoResourceGroups;
-        }
-
-        auto groups = impl->rootFileNode["resource_groups"];
-
-        for (auto iter = groups.begin(); iter != groups.end(); ++iter)
-        {
-            std::string group_name = iter->first.as<std::string>();
-            std::vector<st::ShaderResource>& group_resources = resourceGroups[group_name];
-
-            auto& curr_node = iter->second;
-            for (auto member_iter = curr_node.begin(); member_iter != curr_node.end(); ++member_iter)
-            {
-
-                std::string rsrc_name = member_iter->first.as<std::string>();
-                auto& rsrc_node = member_iter->second;
-
-                if (!rsrc_node["Type"])
-                {
-                    const std::string errorMsg = "Group '" + group_name + "' has resource '" + rsrc_name + "' with no type specifier.";
-                    session->AddError(this, ShaderToolsErrorSource::Parser, ShaderToolsErrorCode::ParserMissingResourceTypeSpecifier, errorMsg.c_str());
-                    mostRecentError = ShaderToolsErrorCode::ParserMissingResourceTypeSpecifier;
-                }
-
-                auto type_iter = descriptor_type_from_str_map.find(rsrc_node["Type"].as<std::string>());
-                if (type_iter == descriptor_type_from_str_map.end())
-                {
-                    const std::string errorMsg = "Group '" + group_name + "' has resource '" + rsrc_name + "' with type specifier '" + rsrc_node["Type"].as<std::string>() + "' which has no corresponding Vulkan equivalent.";
-                    session->AddError(this, ShaderToolsErrorSource::Parser, ShaderToolsErrorCode::ParserResourceTypeSpecifierNoVulkanEquivalent, errorMsg.c_str());
-                    mostRecentError = ShaderToolsErrorCode::ParserResourceTypeSpecifierNoVulkanEquivalent;
-                }
-
-                ShaderResource rsrc;
-                rsrc.SetParentGroupName(group_name.c_str());
-                rsrc.SetName(rsrc_name.c_str());
-                if (const VkDescriptorType rsrc_type = type_iter->second; rsrc_type & ARRAY_TYPE_FLAG_BITS)
-                {
-                    // We shove these bits in to make it clear elsewhere that something is a descriptor array
-                    const VkDescriptorType actual_type = static_cast<VkDescriptorType>(uint32_t(rsrc_type) & ~uint32_t(ARRAY_TYPE_FLAG_BITS));
-                    rsrc.SetType(actual_type);
-                    rsrc.SetDescriptorArray(true); // defaults false
-                    if (rsrc_node["ArraySize"])
-                    {
-                        const uint32_t arraySz = rsrc_node["ArraySize"].as<uint32_t>();
-                        rsrc.SetArraySize(arraySz);
-                    }
-                    else
-                    {
-                        // If not provided, it's an unbounded descriptor array: set size as largest uint val so we
-                        // can check against it elsewhere (at higher levels, mostly)
-                        rsrc.SetArraySize(std::numeric_limits<uint32_t>::max());
-                    }
-                }
-                else
-                {
-                    rsrc.SetType(type_iter->second);
-                }
-
-                if (rsrc_node["ImageSubtype"])
-                {
-                    auto subtype_str = rsrc_node["ImageSubtype"].as<std::string>();
-                    rsrc.SetImageSamplerSubtype(subtype_str.c_str());
-                }
-                else if (rsrc_node["SamplerSubtype"])
-                {
-                    auto subtype_str = rsrc_node["SamplerSubtype"].as<std::string>();
-                    rsrc.SetImageSamplerSubtype(subtype_str.c_str());
-                }
-
-                if (rsrc_node["Format"])
-                {
-                    VkFormat format = VkFormatFromString(rsrc_node["Format"].as<std::string>());
-                    if (format == VK_FORMAT_UNDEFINED)
-                    {
-                        const std::string errorMsg = "Group '" + group_name + "' has resource '" + rsrc_name + "' with format '" + rsrc_node["Format"].as<std::string>() + "' which has no corresponding Vulkan equivalent.";
-                        session->AddError(this, ShaderToolsErrorSource::Parser, ShaderToolsErrorCode::ParserResourceFormatNoVulkanEquivalent, errorMsg.c_str());
-                        mostRecentError = ShaderToolsErrorCode::ParserResourceFormatNoVulkanEquivalent;
-                    }
-                    rsrc.SetFormat(format);
-                }
-
-                if (rsrc_node["Members"])
-                {
-                    rsrc.SetMembersStr(rsrc_node["Members"].as<std::string>().c_str());
-                }
-
-                if (rsrc_node["Tags"])
-                {
-                    std::vector<std::string> tag_strs;
-                    for (auto tag : rsrc_node["Tags"])
-                    {
-                        tag_strs.emplace_back(tag.as<std::string>());
-                    }
-
-                    std::vector<const char*> tag_ptrs;
-                    for (auto& tag_str : tag_strs)
-                    {
-                        tag_ptrs.emplace_back(tag_str.c_str());
-                    }
-
-                    rsrc.SetTags(tag_ptrs.size(), tag_ptrs.data());
-                }
-
-                if (rsrc_node["Qualifiers"])
-                {
-                    std::vector<glsl_qualifier> qualifiers = qualifiersFromString(rsrc_node["Qualifiers"].as<std::string>());
-                    rsrc.SetQualifiers(qualifiers.size(), qualifiers.data());
-                }
-
-                group_resources.emplace_back(std::move(rsrc));
-
-            }
-        }
-
-        return mostRecentError;
     }
 
 }

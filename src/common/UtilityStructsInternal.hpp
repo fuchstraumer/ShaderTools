@@ -12,6 +12,13 @@ namespace st
 
     ShaderToolsErrorCode CountDescriptorType(const VkDescriptorType& type, descriptor_type_counts_t& typeCounts);
 
+    /**
+     * @brief Stores both optimized and unoptimized SPIR-V binaries for a single shader stage, as we need both
+     * 
+     * spirvForReflection is not optional, as it is always required for the reflection system to use and introspect on. The 
+     * optimizedSpirv is optional, as it may not be available if the shader failed the optimized compile (which can occur spuriously),
+     * or if the user does not want to optimize this particular shader.
+     */
     struct ShaderBinaryData
     {
         std::vector<uint32_t> spirvForReflection;
@@ -19,6 +26,9 @@ namespace st
     };
 
 
+    /**
+     * @brief Configuration options for the shader compiler
+     */
     struct ShaderCompilerOptions
     {
         enum class OptimizationLevel : uint8_t
@@ -51,6 +61,33 @@ namespace st
         SourceLanguage SourceLanguage = SourceLanguage::GLSL;
         bool GenerateDebugInfo = false;
         std::vector<std::filesystem::path> IncludePaths;
+    };
+    
+    /**
+     * @brief Parser representation of a buffer reference, from GL_EXT_buffer_reference. Only contains key attributes and members list
+     * @note This is an intermediate representation, only used as output from parsing and is not yet valid to use
+     * @see GeneratedBufferReference for the final representation that can be subsituted into shader source code
+     */
+    struct ParsedBufferReference
+    {
+        std::vector<std::string> BufferMembers;
+        bool IsArray{ false };
+        /** @note If alignment is left at 0 after parsing, it means the user input "Auto" for the alignment and we'll calculate it when generating the final buffer reference */
+        size_t Alignment{ 0u };
+    };
+
+    /**
+     * @brief Generated buffer reference, using parsed data to generate the final string representation that can be inserted as needed into shaders
+     * @note In cases of array buffers, the string will contain the core type declaration first, followed by the array declaration that we actually read from
+     * @see ParsedBufferReference for the intermediate representation used during parsing
+     */
+    struct GeneratedBufferReference
+    {
+        std::vector<std::string_view> BufferMembers;
+        std::string GeneratedString;
+        size_t Size{ 0u };
+        size_t Alignment{ 0u };
+        
     };
 
 }

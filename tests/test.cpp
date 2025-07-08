@@ -17,7 +17,7 @@ int main(int argc, char* argv[])
         Session session;
         std::chrono::high_resolution_clock::time_point beforeExec;
         beforeExec = std::chrono::high_resolution_clock::now();
-        ShaderPack pack("../fragments/volumetric_forward/volumetric_forward.yaml", session);
+        ShaderPack pack("../fragments/volumetric_forward_bindless/volumetric_forward.yaml", session);
         std::chrono::duration<double, std::milli> work_time = std::chrono::high_resolution_clock::now() - beforeExec;
         std::cout << "Conventional creation of ShaderPack took: " << work_time.count() << "ms\n";
 
