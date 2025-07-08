@@ -4,11 +4,12 @@ ShaderTools is a modern Vulkan-oriented shader toolchain that dramatically simpl
 
 ## Key Features
 
-- **Smart Shader Generation**: Write only the essential shader logic - resources, bindings, and boilerplate are generated automatically
+- **Smart Shader Generation**: Write only the essential shader logic - resources, bindings, and boilerplate are generated automatically. It's like having `#include` files for shader resources!
 - **Advanced Reflection System**: Powered by SPIRV-Reflect, extracts complete metadata about resources, vertex layouts, push constants, and specialization constants
-- **Automatic Vulkan Integration**: Generate exact `VkDescriptorPool`s, `VkDescriptorSetLayout`s, and `VkPipelineLayout`s directly from shader analysis
+- **Vulkan Integration and Support**: Generate exact `VkDescriptorPool`s, `VkDescriptorSetLayout`s, and `VkPipelineLayout`s directly from shader analysis, reducing compiled code
+- **Configurable Compilation**: Fine-grained control over optimization levels, target versions, debug info generation, and include paths through YAML configuration
 - **Performance Optimized**: Binary caching system reduces compilation times by up to 10x
-- **C++23 Modern Design**: Built with modern C++ practices and comprehensive error handling
+- **Modern C++**: Built with modern C++ practices where possible (given our C-like API, sorry) and comprehensive error handling
 
 ## How It Works
 
@@ -274,6 +275,60 @@ shader_groups:
 - **`Tags`**: Text-based metadata for frontend applications (e.g., "DepthOnly" for depth-only passes)
 - **`Extensions`**: GLSL extensions enabled for all shaders in the group
 
+### Compiler Configuration
+
+ShaderTools provides fine-grained control over shader compilation through the `compiler_options` section in your YAML configuration. These settings affect how shaders are compiled and optimized.
+
+```yaml
+compiler_options:
+  GenerateDebugInfo: false
+  Optimization: "Performance"  # "Disabled", "Performance", or "Size"
+  TargetVersion: "VulkanLatest"  # Vulkan 1.0-1.4, VulkanLatest, or OpenGL
+  SourceLanguage: "GLSL"  # Currently supports GLSL
+  IncludePaths: [
+    "compute",
+    "debug",
+    "shared"
+  ]
+```
+
+**Available Options:**
+
+- **`GenerateDebugInfo`** (boolean): Enables debug symbol generation for shader debugging. When enabled, compiled shaders include source names, line numbers, and variable information. Defaults to `false` for production builds.
+
+- **`Optimization`** (string): Controls SPIR-V optimization level:
+  - `"Disabled"` - No optimization, fastest compilation, largest binaries
+  - `"Performance"` - Aggressive optimization for runtime performance (default)
+  - `"Size"` - Optimize for minimal binary size
+
+- **`TargetVersion`** (string): Specifies target Vulkan version for compilation:
+  - `"Vulkan_1_0"` through `"Vulkan_1_4"` - Specific Vulkan versions
+  - `"VulkanLatest"` - Latest supported Vulkan version (currently 1.4)
+  - Future support planned for `"OpenGL4_5"`
+
+- **`SourceLanguage`** (string): Source shader language (currently `"GLSL"` only, HLSL support planned)
+
+- **`IncludePaths`** (array): Additional directories searched for `#include` files. Paths are relative to the YAML file location unless absolute. The working directory and YAML file's directory are automatically included.
+
+**Optimization Behavior:**
+
+ShaderTools performs dual compilation when optimization is enabled:
+1. **Debug compilation** - Always compiled with debug info for reflection analysis
+2. **Optimized compilation** - Compiled with specified optimization level for runtime use
+
+If optimized compilation fails, ShaderTools falls back to debug compilation and logs a warning, ensuring development continuity.
+
+**Per-Shader Optimization Override:**
+
+Individual shader groups can disable optimization if needed:
+
+```yaml
+shader_groups:
+  ProblematicShader:
+    ComputeShader: "broken_when_optimized.comp"
+    OptimizationDisabled: true  # Override global optimization setting
+```
+
 ### Reflection API Usage
 
 Once configured, the reflection system provides comprehensive shader analysis:
@@ -350,7 +405,7 @@ shader.GetSpecializationConstants(&numSpecConstants, specConstants.data());
 ### Build Options
 
 - **`SHADERTOOLS_BUILD_STATIC`**: Build as static library (not recommended due to large dependencies)
-- **`SHADERTOOLS_BUILD_TESTS`**: Enable test target for validation
+- **`SHADERTOOLS_BUILD_TESTS`**: Enable test target for validation (compiles the VolumetricTiledForward shader pack)
 
 ### Library Packaging
 
@@ -362,7 +417,7 @@ ShaderTools builds as a shared library (DLL) by default. This is strongly recomm
 
 ## Testing
 
-Enable testing with `-DSHADERTOOLS_BUILD_TESTS=ON` to build the validation target that compiles the included `VolumetricTiledForward` shader pack - a comprehensive test featuring dozens of shader files and complex resource dependencies.
+Enable testing with `-DSHADERTOOLS_BUILD_TESTS=ON` to build the validation target that compiles the included `VolumetricTiledForward` shader pack - a comprehensive test featuring a little over a dozen shader files and a large quantity of shared shader resources.
 
 ## Current Limitations
 
@@ -384,4 +439,3 @@ Built with:
 
 ---
 
-*ShaderTools aims to make Vulkan shader development as straightforward as possible while maintaining the performance and flexibility that makes Vulkan powerful.*
