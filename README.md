@@ -65,6 +65,44 @@ layout(constant_id = 1) const bool ENABLE_SHADOWS = true;
 #SPC const bool ENABLE_SHADOWS = true;
 ```
 
+### GLSL Stage Interfaces
+
+In GLSL, we have to define interface specifications between our shader stages. This can be a little annoying and fiddly, much like managing resources. ShaderTools allows you to declare common reused interfaces upfront, which you can declare in your YAML configuration file like so:
+
+```yaml
+shader_interfaces :
+    # Shaders can use multiple interfaces, layout specifications will be applied 
+    # during generation. Users can also declare their own interfaces
+    SharedVertexInputs :
+        Members : |+1
+            in vec3 position;
+            # Rest of the members....
+    SharedVertexOutputs :
+        Members : |+1
+            out vec3 vPosition;
+            # and vNormal, and vTangent, etc
+```
+
+Referencing a pre-defined interface then becomes as simple as the following:
+
+```glsl
+#pragma USE_INTERFACE SharedVertexInputs
+#pragma USE_INTERFACE SharedVertexOutputs
+```
+
+#### Custom GLSL stage interfaces
+
+But wait, what if you still need some kind of custom interface or a few extra attributes for a singular shader? Easy! You can declare a custom interface with two `#pragma` defines, and then within that define fill out whatever extra attributes you need. Their layout/location will be automatically figured out after we substitute and layout any pre-defined interfaces you choose to use. Expanding on the previous example,
+
+```glsl
+#pragma USE_INTERFACE SharedVertexInputs
+#pragma USE_INTERFACE SharedVertexOutputs
+#pragma BEGIN_CUSTOM_INTERFACE
+in vec3 ExtraAttributeData;
+flat out int vInstanceID;
+#pragma END_CUSTOM_INTERFACE
+```
+
 ### Include System
 
 Full `#include` support allows modular shader development:
@@ -304,7 +342,7 @@ compiler_options:
 - **`TargetVersion`** (string): Specifies target Vulkan version for compilation:
   - `"Vulkan_1_0"` through `"Vulkan_1_4"` - Specific Vulkan versions
   - `"VulkanLatest"` - Latest supported Vulkan version (currently 1.4)
-  - Future support planned for `"OpenGL4_5"`
+  - Future support planned for `"OpenGL4_5"`, along with DX12
 
 - **`SourceLanguage`** (string): Source shader language (currently `"GLSL"` only, HLSL support planned)
 
@@ -313,10 +351,11 @@ compiler_options:
 **Optimization Behavior:**
 
 ShaderTools performs dual compilation when optimization is enabled:
-1. **Debug compilation** - Always compiled with debug info for reflection analysis
-2. **Optimized compilation** - Compiled with specified optimization level for runtime use
 
-If optimized compilation fails, ShaderTools falls back to debug compilation and logs a warning, ensuring development continuity.
+1. **Debug compilation** - Always compiled with debug info, as it is required for reflection to function
+2. **Optimized compilation** - Compiled with specified optimization level for runtime use and binding to pipelines
+
+If optimized compilation fails, ShaderTools falls back to debug compilation and logs a warning, ensuring development continuity. Failures to perform an optimizing compile are logged as part of the session, so check for this when you can - the compile failure should also be logged, hopefully allowing you to better target the issue that could be breaking the optimized compile.
 
 **Per-Shader Optimization Override:**
 
