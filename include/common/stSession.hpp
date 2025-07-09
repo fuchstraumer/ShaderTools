@@ -1,9 +1,3 @@
-/**
- * @file stSession.hpp
- * @ingroup Common
- * @brief Session management and error handling
- */
-
 #pragma once
 #ifndef ST_SESSION_HPP
 #define ST_SESSION_HPP
