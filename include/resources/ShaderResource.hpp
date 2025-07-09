@@ -25,6 +25,7 @@ namespace st
      * @brief Describes a single resource used by shaders, including multiple shaders. Provides core type information, binding indices when applicable, and more. 
      * Frontends can use this to understand how resources are used across multiple shaders, how to construct descriptor sets, and how to optimize or structure pipelines
      * and pipeline dispatches to ensure data validity and correctness.
+     * @ingroup Resources
      */
     class ST_API ShaderResource
     {

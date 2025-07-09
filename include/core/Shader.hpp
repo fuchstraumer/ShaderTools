@@ -26,6 +26,7 @@ namespace st
     * 
     * @see ShaderStage
     * @see ShaderReflector
+    * @ingroup Core
     */
     class ST_API Shader
     {

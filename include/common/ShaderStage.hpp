@@ -12,6 +12,7 @@ namespace st
      * equality comparisons.
      * 
      * @todo Improve how we hash the shader name, as I think uniqueness is not guaranteed currently. Maybe distribute bits differently.
+     * @ingroup Common
      */
     struct ST_API ShaderStage
     {

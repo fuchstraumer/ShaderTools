@@ -18,6 +18,7 @@ namespace st
      * simple so that's why we still sorta do a "dual-stage" compiliation process.
      * 
      * @see ShaderFileTracker for where the data is actually stored and how it is tracked
+     * @ingroup Generation
      */
     class ST_API ShaderCompiler
     {
@@ -30,7 +31,9 @@ namespace st
         ShaderCompiler(ShaderCompiler&& other) noexcept;
         ShaderCompiler& operator=(ShaderCompiler&& other) noexcept;
 
+        /** @brief Compile a shader using a provided source string */
         ShaderToolsErrorCode Compile(const ShaderStage& handle, const char* shader_name, const char* src_str, const size_t src_len);
+        /** @brief Compile a shader using a provided file path (not used by internal code) */
         ShaderToolsErrorCode Compile(const ShaderStage& handle, const char* path_to_source);
 
         void GetBinary(const ShaderStage& shader_handle, size_t* binary_sz, uint32_t* binary_dest_ptr) const;

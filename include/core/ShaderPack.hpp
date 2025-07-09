@@ -22,6 +22,7 @@ namespace st
      * about each shader and prepare pipelines for construction in your application.'
      * 
      * @note First requires a valid st::Session object to be created, as this is what we store all our errors and warnings in.
+     * @ingroup Core
      */
     class ST_API ShaderPack
     {

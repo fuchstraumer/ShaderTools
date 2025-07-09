@@ -13,6 +13,7 @@ namespace st
      * relative to actual C code. This class does manually allocate memory for the strings, but uses RAII to make cleanup easier and more reliable. Be
      * careful with how you store and use this object - ideally you should use it as a temp buffer, copy into your programs storage, and then let it go out of scope
      * to free the memory.
+     * @ingroup Common
      */
     struct ST_API dll_retrieved_strings_t
     {
@@ -44,6 +45,7 @@ namespace st
     /**
      * @brief Provides information about quantity of descriptor types used at various grains, based on where you retrieve it from.
      * @note This object is much less useful in bindless mode, when most of these counts are just going to be 1 since everything will be a single descriptor array
+     * @ingroup Common
      */
     struct ST_API descriptor_type_counts_t
     {
@@ -70,6 +72,7 @@ namespace st
      * lets frontends know how large the value is and how to interpret it, while the ID is used to identify the binding location that will
      * be needed to set the value in the shader during pipeline creation. The name is the name used in the shader code, but can also be used however
      * the frontend wants to use it.
+     * @ingroup Common
      */
     struct ST_API SpecializationConstant
     {
@@ -112,6 +115,7 @@ namespace st
      * 
      * All of the information provided is intended to make it possible to reconstruct the struct/shader resource in full
      * in the frontend, and then be able to copy and write to this value appropriately if name associativity can be established.
+     * @ingroup Common
      */
     struct ST_API ShaderResourceSubObject
     {

@@ -22,6 +22,7 @@ namespace st
      * This class helps inform higher-level APIs about how resources are used, so things like rendergraphs can understand how to optimize dispatch of shaders and structure
      * dependencies based on data defined by the YAML file and what we can infer from the shader code itself. 
      * @note In bindless setups, this class can not generate a unique descriptor set layout binding, but you can still use it to understand how resources are accessed in a shader stage
+     * @ingroup Resources
      */
     class ST_API ResourceUsage
     {

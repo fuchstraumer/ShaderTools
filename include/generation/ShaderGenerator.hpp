@@ -17,6 +17,7 @@ namespace st
      * vertex interfaces if they're used by the shader.
      * 
      * @note This is effectively an internal class that end users should not need to use directly, but I have added some documentation to provide insight on it's functionality.
+     * @ingroup Generation
      */
     class ST_API ShaderGenerator
     {

@@ -20,6 +20,7 @@ namespace st
      * stick to the const functions that don't mutate the state of this object.
      * @note A resource group usually ends up representing a singular descriptor set in the final pipeline, but this is not a requirement.
      * @see ShaderResource for the struct giving more info about individual resources
+     * @ingroup Resources
      */
     class ST_API ResourceGroup
     {

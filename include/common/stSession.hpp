@@ -1,4 +1,11 @@
+/**
+ * @file stSession.hpp
+ * @ingroup Common
+ * @brief Session management and error handling
+ */
+
 #pragma once
+#ifndef ST_SESSION_HPP
 #define ST_SESSION_HPP
 #include "CommonInclude.hpp"
 #include "ShaderToolsErrors.hpp"
@@ -22,6 +29,7 @@ namespace st
      * @todo Dump a file of stats about the session, including the number of errors and warnings, and the time taken to generate
      * 
      * @see SessionImpl for further implementation details
+     * @ingroup Common
      */
     struct ST_API Session
     {

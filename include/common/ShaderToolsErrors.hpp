@@ -12,6 +12,7 @@ namespace st
      * Error codes are grouped into categories, such as Parser, Generator, Compiler, Reflection, Filesystem, etc. Each category
      * is prefixed with the name of that category, followed by specific error information. String conversion is provided
      * for each error code, so that users can easily convert error codes to human-readable strings
+     * @ingroup Common
      */
     enum class ShaderToolsErrorCode : uint16_t
     {
@@ -118,6 +119,7 @@ namespace st
 
     /**
      * @brief Represents the source or "domain" of the error, allowing for more specific categorization of errors
+     * @ingroup Common
      */
     enum class ShaderToolsErrorSource : uint16_t
     {
@@ -135,6 +137,7 @@ namespace st
 
     /**
      * @brief Effectively a re-implementation of std::source_location, but to avoid including that header across the DLL boundary
+     * @ingroup Common
      */
     struct SourceLocation
     {
@@ -151,6 +154,7 @@ namespace st
     /** 
      * @brief Clears all internal storage used by the current instance (usually, DLL) of this library.
      * @see ShaderFileTracker for the storage that is actually cleared
+     * @ingroup Common
      */
     ST_API ShaderToolsErrorCode ClearAllInternalStorage();
 }
