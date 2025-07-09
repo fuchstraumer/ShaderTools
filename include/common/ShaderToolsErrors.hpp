@@ -6,7 +6,13 @@
 
 namespace st
 {
-
+    /**
+     * @brief Contains verbose and specific errors for most internal errors that can occur in ShaderTools
+     * 
+     * Error codes are grouped into categories, such as Parser, Generator, Compiler, Reflection, Filesystem, etc. Each category
+     * is prefixed with the name of that category, followed by specific error information. String conversion is provided
+     * for each error code, so that users can easily convert error codes to human-readable strings
+     */
     enum class ShaderToolsErrorCode : uint16_t
     {
         Success = 0,
@@ -110,6 +116,9 @@ namespace st
         
     };
 
+    /**
+     * @brief Represents the source or "domain" of the error, allowing for more specific categorization of errors
+     */
     enum class ShaderToolsErrorSource : uint16_t
     {
         Parser,
@@ -124,8 +133,9 @@ namespace st
         IncludeHandler,
     };
 
-    // We don't include a file path, because that will be part of the error message we store
-    // in the error structure anyways.
+    /**
+     * @brief Effectively a re-implementation of std::source_location, but to avoid including that header across the DLL boundary
+     */
     struct SourceLocation
     {
         size_t line;
@@ -138,6 +148,10 @@ namespace st
     ST_API const char* ErrorCodeToText(ShaderToolsErrorCode code) noexcept;
     ST_API const char* ErrorSourceToText(ShaderToolsErrorSource source) noexcept;
 
+    /** 
+     * @brief Clears all internal storage used by the current instance (usually, DLL) of this library.
+     * @see ShaderFileTracker for the storage that is actually cleared
+     */
     ST_API ShaderToolsErrorCode ClearAllInternalStorage();
 }
 

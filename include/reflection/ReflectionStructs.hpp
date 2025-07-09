@@ -10,6 +10,12 @@ namespace st
     struct PushConstantInfoImpl;
     struct VertexAttributeInfoImpl;
 
+    /**
+     * @brief Represents a push constant range in a single pipeline (compute or graphics).
+     * Contains meta-information, along with everything you need to construct a `VkPushConstantRange` object (which can be done with the conversion operator).
+     * Also allows you to query the members of the push constant range, and with `ShaderResourceSubObject` you can potentially dynamically fill and construct
+     * buffers for the push constant range at runtime (instead of baking in structs). Does require retrieving data by name, though.
+     */
     struct ST_API PushConstantInfo
     {
         PushConstantInfo() noexcept;
@@ -29,6 +35,10 @@ namespace st
         std::unique_ptr<PushConstantInfoImpl> impl;
     };
 
+    /**
+     * @brief Represents a single vertex attribute, which can be directly converted to a `VkVertexInputAttributeDescription` object.
+     * Contains meta-information about the attribute, such as its name, location, offset, and format. Users may also retrieve the type of the attribute as a string, if desired.
+     */
     struct ST_API VertexAttributeInfo
     {
         VertexAttributeInfo() noexcept;

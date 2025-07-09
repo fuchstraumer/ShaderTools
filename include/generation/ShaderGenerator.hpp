@@ -11,6 +11,13 @@ namespace st
     struct yamlFile;
     struct Session;
 
+    /**
+     * @brief Takes the incomplete abstracted source code provided by the YAML file/user, and generates a valid shader source string from it.
+     * Substitutes in includes, extensions, preprocessor directives, and the actual resource declarations given the USE_RESOURCE macros it detects in the source code. Also inserts or handles
+     * vertex interfaces if they're used by the shader.
+     * 
+     * @note This is effectively an internal class that end users should not need to use directly, but I have added some documentation to provide insight on it's functionality.
+     */
     class ST_API ShaderGenerator
     {
         ShaderGenerator(const ShaderGenerator&) = delete;
@@ -22,6 +29,9 @@ namespace st
         ShaderGenerator(ShaderGenerator&& other) noexcept;
         ShaderGenerator& operator=(ShaderGenerator&& other) noexcept;
 
+        /**
+         * @brief Sets the YAML file to pull extra data from when generating the given ShaderStage into a valid source string
+         */
         void SetResourceFile(yamlFile* rsrc_file);
         ShaderToolsErrorCode Generate(
             const ShaderStage& handle,

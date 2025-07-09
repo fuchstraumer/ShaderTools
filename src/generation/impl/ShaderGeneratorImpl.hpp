@@ -5,6 +5,7 @@
 #include "common/stSession.hpp"
 #include "resources/ShaderResource.hpp"
 #include "common/ShaderToolsErrors.hpp"
+#include "../../common/UtilityStructsInternal.hpp"
 #include <string>
 #include <filesystem>
 #include <vector>
@@ -77,16 +78,19 @@ namespace st
         ShaderGeneratorImpl(ShaderGeneratorImpl&& other) noexcept;
         ShaderGeneratorImpl& operator=(ShaderGeneratorImpl&& other) noexcept;
 
+
+        static ShaderToolsErrorCode GenerateBufferReferencesFromParsedInput(
+            const std::unordered_map<std::string, struct ParsedBufferReference>& parsed_buffer_references,
+            std::unordered_map<std::string, struct GeneratedBufferReference>& result_generated_buffer_references);
+
     private:
 
-        [[nodiscard]] ShaderToolsErrorCode addFragment(const fs::path& path_to_source, std::string& addedFragment);
         void addPerVertex();
         [[nodiscard]] ShaderToolsErrorCode addPreamble(const fs::path& str);
         [[nodiscard]] ShaderToolsErrorCode addStageInterface(uint32_t stageBits, fs::path interfacePath);
         [[nodiscard]] ShaderToolsErrorCode parseInterfaceBlock(const std::string& str);
         void parseConstantBlock(const std::string& str);
         [[nodiscard]] ShaderToolsErrorCode processBodyStrIncludePaths(std::string& body_src_str);
-        [[nodiscard]] ShaderToolsErrorCode parseInclude(const std::string& str, bool local);
 
         [[nodiscard]] ShaderToolsErrorCode getResourceQualifiers(const ShaderResource& rsrc, std::string& result) const;
         [[nodiscard]] std::string getResourcePrefix(size_t active_set, const std::string& image_format, const ShaderResource& rsrc) const;

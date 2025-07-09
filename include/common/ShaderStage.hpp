@@ -5,7 +5,14 @@
 
 namespace st
 {
-
+    /**
+     * @brief Represents a single programmable shader stage, storing a hash of the shader name and the Vulkan stage bits
+     * 
+     * This structure is used to uniquely identify a shader stage during a session, allowing for efficient lookups and quick
+     * equality comparisons.
+     * 
+     * @todo Improve how we hash the shader name, as I think uniqueness is not guaranteed currently. Maybe distribute bits differently.
+     */
     struct ST_API ShaderStage
     {
         ShaderStage(const char* shader_name, const VkShaderStageFlags stages);

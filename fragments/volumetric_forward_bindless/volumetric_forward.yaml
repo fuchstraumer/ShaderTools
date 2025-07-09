@@ -4,6 +4,8 @@ buffer_references :
     # For use with bindless resources and device address extensions, we declare our types that will be used
     # as buffer references upfront here. We then reference them in the resource group definitions, allowing us to 
     # hopefully minimally disrupt non-bindless uses of this library
+    # This is partially required because the buffer references declare schemas of structs that are effectively just stored
+    # as buckets of bytes in a storage buffer. This buffer_reference type just tells the compiler how to interpret the data
     MaterialIndices:
         IsArray : true
         # Alignment can be manually specified, or left to "Auto" for us to determine based on size of contained type and nearest friendly alignment

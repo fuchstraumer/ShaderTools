@@ -17,6 +17,11 @@ namespace st
     struct yamlFile;
     struct Session;
 
+    /**
+     * @brief Generates reflection information for individual shader stages, by parsing the compiled SPIR-V binary of a shader stage.
+     * This class does not store any of the information itself, instead retrieving it from the `ShaderFileTracker`. Users of this library will
+     * not have any need to interact with or use this class directly, as it is used internally to construct reflection information provided via other interfaces.
+     */
     class ShaderReflector
     {
         ShaderReflector(const ShaderReflector&) = delete;

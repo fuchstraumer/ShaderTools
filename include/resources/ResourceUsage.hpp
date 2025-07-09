@@ -17,6 +17,12 @@ namespace st
         INVALID = std::numeric_limits<uint8_t>::max()
     };
 
+    /**
+     * @brief Represents a single usage of a shader resource in a single shader stage.
+     * This class helps inform higher-level APIs about how resources are used, so things like rendergraphs can understand how to optimize dispatch of shaders and structure
+     * dependencies based on data defined by the YAML file and what we can infer from the shader code itself. 
+     * @note In bindless setups, this class can not generate a unique descriptor set layout binding, but you can still use it to understand how resources are accessed in a shader stage
+     */
     class ST_API ResourceUsage
     {
     public:
@@ -30,6 +36,9 @@ namespace st
         ResourceUsage& operator=(const ResourceUsage& other) noexcept;
         ResourceUsage& operator=(ResourceUsage&& other) noexcept;
 
+        /**
+         * @note This conversion operator is not valid in bindless mode, as each usage is not a unique descriptor set layout binding.
+         */
         explicit operator VkDescriptorSetLayoutBinding() const;
         bool operator<(const ResourceUsage& other) const noexcept;
         bool operator==(const ResourceUsage& other) const noexcept;
