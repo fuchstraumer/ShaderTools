@@ -77,6 +77,8 @@ SET(ST_GENERATION_SRCS
     "${CMAKE_CURRENT_SOURCE_DIR}/src/generation/impl/ShaderStageProcessor.cpp")
 
 SET(ST_PARSER_SRCS
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/parser/SchemaParser.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/parser/SchemaParser.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/parser/yamlFile.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/parser/yamlFile.cpp")
 
