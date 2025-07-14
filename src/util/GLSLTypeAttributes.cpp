@@ -140,37 +140,40 @@ namespace alignment_calculator
 {
 
     /**
-     * Scalar alignment of OpTypeStruct member is defined recursively as follows:
-     * - A scalar of size N has alignment N.
-     * - A vector type has a scalar alignment equal to that of it's component type.
-     * - An array type has a scalar alignment equal to that of its element type.
-     * - A structure has a scalar alignment equal to the largest scalar alignment of its members.
-     * - A matrix type inherits scalar alignment from the equivalent array declaration (e.g, mat2x2 is vec2[2], mat2x3 is vec4[2], etc.)
-     * 
-     * The base alignment of the type of an OpTypeStructMember is defined recursively as follows:
-     * - A scalar has a base alignment equal to its scalar alignment.
-     * - A two component vector has a base alignment equal to twice it's scalar alignment.
-     * - A three- or four-component vector has a base alignment equal to four times its scalar alignment.
-     * - An array has a base alignment equal to the base alignment of its element type.
-     * - A structure has a base alignment equal to the largest base alignment of any of its members.
-     * - A matrix type inherits base alignment from the equivalent array declaration
-     * 
-     * The extended alignment of the type of an OpTypeStructMember is defined recursively as follows:
-     * - A scalar or vector type has an extended alignment equal to its base alignment.
-     * - An array or structure type has an extended alignment equal to the largest extended alignment of any of its members, rounded up to a multiple of 16.
-     * 
-     * "Scalar" alignment qualifier is just scalar alignment of type, i.e. first ruleset.
-     * "Std430" alignment uses the base alignment of the type, which is the second ruleset.
-     * "Std140" alignment uses the extended alignment of the type, which is the third ruleset.
-     * 
-     * Thus, we can calculate the alignment and size of a GLSL type based on these rules
-     */
+    * From https://docs.vulkan.org/spec/latest/chapters/interfaces.html#interfaces-alignment-requirements, rewritten here to make myself think about
+    * it more and have a quick reference to look back at as I implement this alignment calculator.
+    * 
+    * Scalar alignment of OpTypeStruct member is defined recursively as follows:
+    * - A scalar of size N has alignment N.
+    * - A vector type has a scalar alignment equal to that of it's component type.
+    * - An array type has a scalar alignment equal to that of its element type.
+    * - A structure has a scalar alignment equal to the largest scalar alignment of its members.
+    * - A matrix type inherits scalar alignment from the equivalent array declaration (e.g, mat2x2 is vec2[2], mat2x3 is vec4[2], etc.)
+    * 
+    * The base alignment of the type of an OpTypeStructMember is defined recursively as follows:
+    * - A scalar has a base alignment equal to its scalar alignment.
+    * - A two component vector has a base alignment equal to twice it's scalar alignment.
+    * - A three- or four-component vector has a base alignment equal to four times its scalar alignment.
+    * - An array has a base alignment equal to the base alignment of its element type.
+    * - A structure has a base alignment equal to the largest base alignment of any of its members.
+    * - A matrix type inherits base alignment from the equivalent array declaration
+    * 
+    * The extended alignment of the type of an OpTypeStructMember is defined recursively as follows:
+    * - A scalar or vector type has an extended alignment equal to its base alignment.
+    * - An array or structure type has an extended alignment equal to the largest extended alignment of any of its members, rounded up to a multiple of 16.
+    * 
+    * "Scalar" alignment qualifier is just scalar alignment of type, i.e. first ruleset.
+    * "Std430" alignment uses the base alignment of the type, which is the second ruleset.
+    * "Std140" alignment uses the extended alignment of the type, which is the third ruleset.
+    * 
+    * Thus, we can calculate the alignment and size of a GLSL type based on these rules
+    */
 
     /**
-     * @brief Underlying type of any component of a GLSL type, including explicit width
-     */
-     enum class ComponentType : uint8_t
-     {
+    * @brief Underlying type of any component of a GLSL type, including explicit width
+    */
+    enum class ComponentType : uint8_t
+    {
         i8, // signed 8-bit integer
         ui8, // unsigned 8-bit integer
         i16, // signed 16-bit integer
@@ -184,13 +187,13 @@ namespace alignment_calculator
         f64, // 64-bit floating point,
         NUM_COMPONENT_TYPES,
         Invalid = NUM_COMPONENT_TYPES // Invalid type, used for error handling
-     };
+    };
 
-     /**
-      * @brief Size of each ComponentType in bytes, which usually just becomes the alignment of the type.
-      */
-     constexpr static std::array<size_t, static_cast<size_t>(ComponentType::NUM_COMPONENT_TYPES)> component_type_sizes
-     {
+    /**
+    * @brief Size of each ComponentType in bytes, which usually just becomes the alignment of the type.
+    */
+    constexpr static std::array<size_t, static_cast<size_t>(ComponentType::NUM_COMPONENT_TYPES)> component_type_sizes
+    {
         1, // i8
         1, // ui8
         2, // i16
@@ -202,13 +205,13 @@ namespace alignment_calculator
         8, // i64
         8, // ui64
         8  // f64
-     };
+    };
 
-     /**
-      * @brief The dimensionality of a GLSL type, with matrices equal to arrays for the purpose of alignment calculations.
-      */
-     enum class TypeDimensionality : uint8_t
-     {
+    /**
+    * @brief The dimensionality of a GLSL type, with matrices equal to arrays for the purpose of alignment calculations.
+    */
+    enum class TypeDimensionality : uint8_t
+    {
         Scalar,
         Vector2,
         Vector3, // Vector3 will be treated as a 4-component vector for alignment purposes
@@ -217,13 +220,13 @@ namespace alignment_calculator
         Matrix, // Matrix is treated as an array of column vectors, but can't be same enum value since we need to differentiate slightly (column length)
         Struct,
         Invalid
-     };
+    };
 
-     /**
-      * @brief Key attributes we need to do the actual alignment calculation for a given ruleset for a GLSL type extracted from a string.
-      */
-     struct TypeAlignmentAttributes
-     {
+    /**
+    * @brief Key attributes we need to do the actual alignment calculation for a given ruleset for a GLSL type extracted from a string.
+    */
+    struct TypeAlignmentAttributes
+    {
         ComponentType ComponentType{ ComponentType::Invalid };
         size_t ComponentSize{ 0u };
         TypeDimensionality Dimensionality{ TypeDimensionality::Invalid };
@@ -233,13 +236,15 @@ namespace alignment_calculator
         size_t MatrixColumnLength{ 0u };
         /** For array types, parsed name of contained element. Can be a name of a struct type, in which case we'll have to refer back to the current parsing run to back-reference. */
         std::string_view ElementTypename;
-     };
+    };
 
-     /**
-      * @brief Map of GLSL builtin type names to their alignment attributes
-      */
-     const static std::unordered_map<std::string_view, TypeAlignmentAttributes> glsl_type_alignment_attributes
-     {
+    /**
+    * @brief Map of GLSL builtin type names to their alignment attributes. 
+    * We use this to quickly look up builtin attributes when we can, falling back to manual parsing when we can't.
+    * @note Only the first 39 entries are true builtins, the following entries are from extensions and will cause issues if relevant extensions are not enabled as well.
+    */
+    const static std::unordered_map<std::string_view, TypeAlignmentAttributes> glsl_type_alignment_attributes
+    {
         // Basic scalar types
         { glsl_builtin_type_names[0], { ComponentType::f32, component_type_sizes[static_cast<size_t>(ComponentType::f32)], TypeDimensionality::Scalar, 0, 0 } }, // float
         { glsl_builtin_type_names[1], { ComponentType::f64, component_type_sizes[static_cast<size_t>(ComponentType::f64)], TypeDimensionality::Scalar, 0, 0 } }, // double
@@ -380,172 +385,110 @@ namespace alignment_calculator
         { glsl_builtin_type_names[116], { ComponentType::ui8, component_type_sizes[static_cast<size_t>(ComponentType::ui8)], TypeDimensionality::Vector2, 0, 0 } }, // u8vec2
         { glsl_builtin_type_names[117], { ComponentType::ui8, component_type_sizes[static_cast<size_t>(ComponentType::ui8)], TypeDimensionality::Vector3, 0, 0 } }, // u8vec3
         { glsl_builtin_type_names[118], { ComponentType::ui8, component_type_sizes[static_cast<size_t>(ComponentType::ui8)], TypeDimensionality::Vector4, 0, 0 } } // u8vec4
-     };
+    };
 
-     TypeAlignmentAttributes ExtractTypeAlignmentAttributes(std::string_view type_string)
-     {
-        if (type_string.empty())
-        {
-           return TypeAlignmentAttributes{};
-        }
-        
+    /**
+    * @brief Context or "session" for parsing alignment attributes of types declared in schema definition part of YAML config file.
+    * This context is used to store memory layout rules, cache of already-parsed struct types, and whether we are allowed to optimize alignment.
+    */
+    struct AlignmentParserContext
+    {
+        /** @brief MemoryLayout rule from user input governs how alignment will work: see lines 143-166 of GLSLTypeAttributes.cpp.
+         *  @note Defaults to Std430.
+         */
+        st::MemoryLayout LayoutRules{ st::MemoryLayout::Std430 };
+        /** 
+         * @brief Cache of already-parsed struct types that we can check. 
+         * Intended to be populated with user-defined structs, in cases of schema definitions that are recursive (i.e., user declares a struct and then uses it in another struct).
+         * */
+        std::unordered_map<std::string, TypeAlignmentAttributes> StructCache;
+        /** 
+         * @brief If the alignment parser is allowed to rearrange members of structs to save space and improve alignment. Default is true.
+         * Frontends can query ST to still find pointers to relocated members, or get back a struct describing the new layout. We also preserve the original layout
+         * for debugging or visualization purposes.
+         * @note Not really applicable outside of `Std430` memory layout, `Std140` rounds everything up to 16 bytes and `Scalar` is just a bucket of bytes with no real alignment.
+         */
+        bool AllowOptimizingAlignment{ true };
+    };
 
-        auto iter = glsl_type_alignment_attributes.find(type_string);
-        if (iter != glsl_type_alignment_attributes.end())
-        {
-           return iter->second;
-        }
-        else
-        {
-            // Now we need to handle the case where the type is not found in the map. 
-            // First, check to see if it's an array type
-            if (type_string.back() == ']')
-            {
-                // Extract the base type and array size
-                size_t array_start = type_string.find('[');
-                if (array_start != std::string_view::npos)
-                {
-                    std::string_view base_type = type_string.substr(0, array_start);
-                    std::string_view array_size_str = type_string.substr(array_start + 1, type_string.size() - array_start - 2);
-                    size_t array_size = std::stoul(std::string(array_size_str));
-
-                    // now we try to find the TypeAlignmentAttributes for the base type
-                    auto base_iter = glsl_type_alignment_attributes.find(base_type);
-                    if (base_iter != glsl_type_alignment_attributes.end())
-                    {
-                        TypeAlignmentAttributes base_attributes = base_iter->second;
-                        base_attributes.Dimensionality = TypeDimensionality::Array;
-                        base_attributes.ArraySize = array_size;
-                        return base_attributes;
-                    }
-                    else
-                    {
-                        // The type is probably a custom struct type, so we need to find the attributes for that struct
-                        // I'm not doing that yet because I really don't want to do that right now lol
-                        return TypeAlignmentAttributes{};
-                    }            
-                }
-            }
-            else
-            {
-                // Type is probably a custom struct type, and we're still not handling that yet
-                return TypeAlignmentAttributes{};
-            }
-        }
-     }
-
-     struct TypeAlignmentResult
-     {
-        size_t Size{ 0u};
+    struct AlignmentParserResult
+    {
+        /** @brief Variable name of the type represented here. */
+        std::string_view VarName;
+        /** @brief Name of the underlying type represented here. */
+        std::string_view TypeName;
+        /** @brief Dimensionality of this type (gives us important context for alignment) */
+        TypeDimensionality Dimensionality{ TypeDimensionality::Invalid };
+        /** @brief Total memory size of this object in bytes */
+        size_t Size{ 0u };
         size_t Alignment{ 0u };
         bool IsArrayType{ false };
-        size_t ArraySize{ 0u };
-     };
+        /** @brief Stride between consecutive elements in the array (or matrix) in bytes. */
+        size_t ArrayStride{ 0u };
+        /** @brief Number of elements in the array */
+        size_t ArrayLength{ 0u };
+        /** @brief If this result is part of a struct, this is the offset of this particular attribute in the struct */
+        size_t Offset{ 0u };
+        /** @brief If this result is a struct, this contains it's member variables. Not applicable for matrices or arrays of fundamental types, however. */
+        std::optional<std::vector<AlignmentParserResult>> Members{ std::nullopt };
+    };
 
-     void SetAlignmentForArrayStd430(const TypeAlignmentAttributes& attributes, TypeAlignmentResult& result)
-     {
-        
-     }
+    constexpr size_t CalculateScalarAlignment(const TypeAlignmentAttributes& type_attributes) noexcept
+    {
+        return type_attributes.ComponentSize;
+    }
 
-     void SetAlignmentForStd430(const TypeAlignmentAttributes& attributes, TypeAlignmentResult& result)
+     constexpr size_t CalculateBaseAlignment(const TypeAlignmentAttributes& type_attributes) noexcept
      {
-        switch (attributes.Dimensionality)
+        switch (type_attributes.Dimensionality)
         {
             case TypeDimensionality::Scalar:
-                result.Size = attributes.ComponentSize;
-                // Scalar alignment in std430 is the size of the component type
-                result.Alignment = attributes.ComponentSize;
-                break;
+                return CalculateScalarAlignment(type_attributes);
             case TypeDimensionality::Vector2:
-                result.Size = attributes.ComponentSize * 2;
-                // std430 vector2 alignment is 2 * component size
-                result.Alignment = result.Size;
-                break;
-
+               return type_attributes.ComponentSize * 2;
             case TypeDimensionality::Vector3:
-                [[fallthrough]]; // Vector3 is treated as Vector4 in std430
-            case TypeDimensionality::Vector4: // also matches for vector3
-                // std430 alignment for vector3 and vector4 is 4 * component size
-                result.Size = attributes.ComponentSize * 4;
-                result.Alignment = result.Size;
-                break;
-            case TypeDimensionality::Array:
-                SetAlignmentForArrayStd430(attributes, result);
-                break;
-            case TypeDimensionality::Matrix:
-                // Matrix alignment in std430 is the alignment of their column vectors (same as arrays, alignment of element type)
-                result.Size = attributes.ComponentSize * attributes.ArraySize * attributes.MatrixColumnLength;
-                // so as mentioned above, alignment is just equivalent to what we'd find for a vec2/vec3/vec4 
-                result.Alignment = attributes.ComponentSize * attributes.MatrixColumnLength;
-                break;
-            default:
-                // Handle other dimensionalities if necessary
-                break;
-        }
-     }
-
-     void SetAlignmentForStd140(const TypeAlignmentAttributes& attributes, TypeAlignmentResult& result)
-     {
-        // This alignment is more challenging, especially in struct case. 
-        switch (attributes.Dimensionality)
-        {
-            case TypeDimensionality::Scalar:
-
-                break;
-
-            case TypeDimensionality::Vector2:
-
-                break;
-
-            case TypeDimensionality::Vector3:
-
-                break;
-
+               [[fallthrough]]; // vec3 aligns same as vec4
             case TypeDimensionality::Vector4:
-
-                break;
-
+               return type_attributes.ComponentSize * 4;
             case TypeDimensionality::Matrix:
-
-                break;
-
+               // matrix alignment comes from alignment of component type (i.e., what types its column vectors are)
+               if (type_attributes.MatrixColumnLength == 2)
+               {
+                    return type_attributes.ComponentSize * 2;
+               }
+               else // column length is 3 or 4 (and if 3, it's really 4)
+               {
+                  return type_attributes.ComponentSize * 4;
+               }
+            case TypeDimensionality::Struct:
+               // Structs align to the largest members alignment in base alignment, so we'll handle this case separately before we get here
+               [[fallthrough]];
+            case TypeDimensionality::Invalid:
+                [[fallthrough]];
             default:
-                // Handle other dimensionalities if necessary
-                break;
+                return 0; // Invalid or unsupported dimensionality
         }
-     }
+    }
 
-     void SetAlignmentForScalar(const TypeAlignmentAttributes& attributes, TypeAlignmentResult& result)
-     {
+    constexpr size_t CalculateExtendedAlignment(const TypeAlignmentAttributes& type_attributes) noexcept
+    {
         
-     }
+    }
 
-     TypeAlignmentResult GetFinalAlignmentResult(const TypeAlignmentAttributes& attributes, st::MemoryLayout layout_rules)
-     {
-        TypeAlignmentResult result;
+    class TypeAlignmentParser
+    {
+    public:
+        
+        /**
+         * @brief Entrypoint parsing function. Recursively parses `type` string and returns alignment attributes.
+         * @param type GLSL type string to parse, e.g. "vec3[2]", "mat4x2", "myStruct[3]", etc.
+         * @param context Context containing memory layout rules and struct cache.
+         * @return `AlignmentParserResult` containing everything needed to understand memory layout of the type
+         */
+        AlignmentParserResult ParseType(std::string_view type, AlignmentParserContext& context) noexcept;
 
-        // Calculate the final size and alignment based on the layout rules
-        switch (layout_rules)
-        {
-            case st::MemoryLayout::Std430:
-                SetAlignmentForStd430(attributes, result);
-                break;
-
-            case st::MemoryLayout::Std140:
-                SetAlignmentForStd140(attributes, result);
-                break;
-            case st::MemoryLayout::Scalar:
-                SetAlignmentForScalar(attributes, result);
-                break;
-            default:
-                throw std::runtime_error("Unsupported memory layout");
-        }
-
-        result.IsArrayType = attributes.Dimensionality == TypeDimensionality::Array;
-        result.ArraySize = attributes.ArraySize;
-
-        return result;
-     }
+    };
+    
 
 }
 
@@ -559,48 +502,6 @@ namespace st
 
     std::optional<GLSLTypeAttributes> GetGLSLTypeAttributes(std::string_view type, MemoryLayout memory_layout) noexcept
     {
-        if (!IsArrayType(type))
-        {
-            auto it = glsl_builtin_type_attributes_std430.find(type);
-            if (it != glsl_builtin_type_attributes_std430.end())
-            {
-                return it->second;
-            }
-        }
-        else
-        {
-            // Extract underlying type by getting everything before the first '['
-            size_t pos = type.find('[');
-            std::string_view base_type = type.substr(0, pos);
-            auto it = glsl_builtin_type_attributes_std430.find(base_type);
-            if (it != glsl_builtin_type_attributes_std430.end())
-            {
-                // okay, now we've found the base type: we need to extract the array size from between the brackets
-                size_t end_pos = type.find(']', pos);
-                if (end_pos != std::string_view::npos)
-                {
-                    std::string_view array_size_str = type.substr(pos + 1, end_pos - pos - 1);
-                    // use charconv to convert the string to an integer real quick like
-                    size_t array_size = 0;
-                    if (auto [ptr, ec] = std::from_chars(array_size_str.data(), array_size_str.data() + array_size_str.size(), array_size); ec == std::errc())
-                    {
-                        GLSLTypeAttributes attrs = it->second;
-                        attrs.ElementTypename = base_type;
-                        attrs.ElementSize = it->second.Size; // store the element size
-                        attrs.Size *= array_size; // multiply the size by the array size
-                        attrs.IsArrayType = true;
-                        attrs.ArraySize = array_size; // store the array size
-                        return attrs;
-                    }
-                    else
-                    {
-                        // if we can't convert the array size, we return an empty optional
-                        return std::nullopt;
-                    }
-                }
-            }
-        }
-
         return std::nullopt;
     }
 }
