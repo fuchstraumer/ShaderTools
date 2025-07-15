@@ -6,7 +6,7 @@
 namespace st
 {
     std::vector<std::filesystem::path> IncludeHandler::libaryIncludePaths;
-
+    constexpr size_t MAX_INCLUDE_DEPTH = 8; // Limit the include depth to prevent infinite recursion
     
     IncludeHandler::IncludeHandler(const std::vector<std::filesystem::path>& include_paths, SessionImpl* error_session) noexcept : includePaths(include_paths), errorSession(error_session) {}
 
@@ -15,6 +15,13 @@ namespace st
         namespace fs = std::filesystem;
         fs::path found_include_path;
         bool found_include = false;
+
+        if (include_depth > MAX_INCLUDE_DEPTH)
+        {
+            std::string error_message = std::format("Include depth exceeded maximum limit of {} for requested source: {}", MAX_INCLUDE_DEPTH, requested_source);
+            errorSession->AddError(this, ShaderToolsErrorSource::IncludeHandler, ShaderToolsErrorCode::IncludeHandlerMaxIncludeDepthExceeded, error_message.c_str());
+            return nullptr;
+        }
 
         if (type == shaderc_include_type_relative)
         {
