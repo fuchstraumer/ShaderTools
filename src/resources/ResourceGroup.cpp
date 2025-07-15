@@ -72,7 +72,7 @@ namespace st
         impl.reset();
     }
 
-    dll_retrieved_strings_t ResourceGroup::ResourceNames() const noexcept
+    dll_retrieved_strings_t ResourceGroup::GetResourceNames() const noexcept
     {
         dll_retrieved_strings_t results;
         results.SetNumStrings(impl->resources.size());
@@ -83,7 +83,7 @@ namespace st
         return results;
     }
 
-    dll_retrieved_strings_t ResourceGroup::UsedByGroups() const noexcept
+    dll_retrieved_strings_t ResourceGroup::GetNamesOfShadersThatUseThisGroup() const noexcept
     {
         dll_retrieved_strings_t results;
         results.SetNumStrings(impl->usedByShaders.size());

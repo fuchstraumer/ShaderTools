@@ -78,11 +78,6 @@ namespace st
         ShaderGeneratorImpl(ShaderGeneratorImpl&& other) noexcept;
         ShaderGeneratorImpl& operator=(ShaderGeneratorImpl&& other) noexcept;
 
-
-        static ShaderToolsErrorCode GenerateBufferReferencesFromParsedInput(
-            const std::unordered_map<std::string, struct ParsedBufferReference>& parsed_buffer_references,
-            std::unordered_map<std::string, struct GeneratedBufferReference>& result_generated_buffer_references);
-
     private:
 
         void addPerVertex();

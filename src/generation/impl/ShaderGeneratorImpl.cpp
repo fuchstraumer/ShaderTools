@@ -197,11 +197,6 @@ namespace st
         return ShaderToolsErrorCode::Success;
     }
 
-    st::ShaderToolsErrorCode ShaderGeneratorImpl::GenerateBufferReferencesFromParsedInput(const std::unordered_map<std::string, ParsedBufferReference>& parsed_buffer_references, std::unordered_map<std::string, GeneratedBufferReference>& result_generated_buffer_references)
-    {
-
-    }
-
     void ShaderGeneratorImpl::addPerVertex()
     {
         static const std::string per_vertex

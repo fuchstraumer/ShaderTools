@@ -270,7 +270,7 @@ namespace st
 
     }
 
-    dll_retrieved_strings_t Shader::GetUsedResourceBlocks() const
+    dll_retrieved_strings_t Shader::GetUsedResourceGroups() const
     {
 
         const auto* refl_impl = GetShaderReflectorImpl();

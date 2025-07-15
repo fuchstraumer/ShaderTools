@@ -114,6 +114,13 @@ namespace st
 
         IncludeHandlerErrorsStart = 900,
         IncludeHandlerFileNotFound,
+
+        SchemaParserErrorsStart = 1000,
+
+        AlignmentParserErrorsStart = 1100,
+        AlignmentParserMissingEndBracketInArrayDeclaration,
+        AlignmentParserInvalidArrayDimension,
+        AlignmentParserUnknownGLSLType,
         
     };
 
@@ -133,6 +140,8 @@ namespace st
         ShaderPack,
         ShaderStageProcessor,
         IncludeHandler,
+        SchemaParser,
+        SchemaAlignmentParser,
     };
 
     /**
