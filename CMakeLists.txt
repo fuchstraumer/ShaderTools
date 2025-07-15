@@ -101,6 +101,8 @@ SET(ST_RESOURCES_SRCS
 SET(ST_UTIL_SRCS
     "${CMAKE_CURRENT_SOURCE_DIR}/src/util/FilesystemUtils.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/util/FilesystemUtils.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/util/GLSLTypeAttributes.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/util/GLSLTypeAttributes.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/util/ResourceFormats.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/util/ResourceFormats.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/util/ShaderFileTracker.hpp"
