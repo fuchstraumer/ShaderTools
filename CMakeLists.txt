@@ -76,6 +76,19 @@ SET(ST_GENERATION_SRCS
     "${CMAKE_CURRENT_SOURCE_DIR}/src/generation/impl/ShaderStageProcessor.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/generation/impl/ShaderStageProcessor.cpp")
 
+set(ST_FRAGMENT_GENERATOR_SRCS
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/generation/impl/stages/ExtensionFragmentGenerator.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/generation/impl/stages/ExtensionFragmentGenerator.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/generation/impl/stages/FragmentGeneratorBase.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/generation/impl/stages/IncludeFragmentGenerator.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/generation/impl/stages/IncludeFragmentGenerator.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/generation/impl/stages/PerVertexFragmentGenerator.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/generation/impl/stages/PerVertexFragmentGenerator.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/generation/impl/stages/PreambleFragmentGenerator.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/generation/impl/stages/PreambleFragmentGenerator.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/generation/impl/stages/SpecializationConstantFragmentGenerator.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/generation/impl/stages/SpecializationConstantFragmentGenerator.cpp")
+
 SET(ST_PARSER_SRCS
     "${CMAKE_CURRENT_SOURCE_DIR}/src/parser/SchemaParser.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/parser/SchemaParser.cpp"
@@ -111,6 +124,7 @@ SET(ST_UTIL_SRCS
 SOURCE_GROUP("common" FILES ${ST_COMMON_SRCS})
 SOURCE_GROUP("core" FILES ${ST_CORE_SRCS})
 SOURCE_GROUP("generation" FILES ${ST_GENERATION_SRCS})
+SOURCE_GROUP("generation\\stages" FILES ${ST_FRAGMENT_GENERATOR_SRCS})
 SOURCE_GROUP("parser" FILES ${ST_PARSER_SRCS})
 SOURCE_GROUP("reflection" FILES ${ST_REFLECTION_SRCS})
 SOURCE_GROUP("resources" FILES ${ST_RESOURCES_SRCS})
@@ -121,11 +135,11 @@ FIND_PACKAGE(Vulkan REQUIRED)
 OPTION(SHADERTOOLS_BUILD_STATIC "Build as a static library instead of a DLL. Not recommended." OFF)
 
 IF(SHADERTOOLS_BUILD_STATIC) 
-    ADD_LIBRARY(ShaderTools STATIC ${ST_COMMON_SRCS} ${ST_UTIL_SRCS} ${ST_GENERATION_SRCS} 
+    ADD_LIBRARY(ShaderTools STATIC ${ST_COMMON_SRCS} ${ST_UTIL_SRCS} ${ST_GENERATION_SRCS} ${ST_FRAGMENT_GENERATOR_SRCS}
         ${ST_REFLECTION_SRCS} ${ST_CORE_SRCS} ${ST_PARSER_SRCS} ${ST_RESOURCES_SRCS})
     TARGET_COMPILE_DEFINITIONS(ShaderTools PRIVATE "ST_BUILDING_STATIC")
 ELSE()
-    ADD_LIBRARY(ShaderTools SHARED ${ST_COMMON_SRCS} ${ST_UTIL_SRCS} ${ST_GENERATION_SRCS} 
+    ADD_LIBRARY(ShaderTools SHARED ${ST_COMMON_SRCS} ${ST_UTIL_SRCS} ${ST_GENERATION_SRCS} ${ST_FRAGMENT_GENERATOR_SRCS}
         ${ST_REFLECTION_SRCS} ${ST_CORE_SRCS} ${ST_PARSER_SRCS} ${ST_RESOURCES_SRCS})
     TARGET_COMPILE_DEFINITIONS(ShaderTools PUBLIC "$<BUILD_INTERFACE:SHADERTOOLS_BUILD_DLL>" "$<INSTALL_INTERFACE:SHADERTOOLS_DLL>")
 ENDIF()
