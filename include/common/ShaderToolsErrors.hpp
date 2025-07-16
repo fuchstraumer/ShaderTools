@@ -61,6 +61,9 @@ namespace st
         GeneratorUnableToFindEndingOfInterfaceOverride,
         GeneratorNoBodyStringInFileTrackerStorage,
 
+        FragmentGeneratorErrorsStart = 150,
+        ExtensionFragmentGeneratorNoExtensionsProvided,
+
         CompilerErrorsStart = 200,
         CompilerShaderKindNotSupported,
         CompilerShaderCompilationFailed,
@@ -114,6 +117,7 @@ namespace st
 
         IncludeHandlerErrorsStart = 900,
         IncludeHandlerFileNotFound,
+        IncludeHandlerMaxIncludeDepthExceeded,
 
         SchemaParserErrorsStart = 1000,
 

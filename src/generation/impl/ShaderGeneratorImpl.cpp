@@ -24,9 +24,8 @@ namespace st
     static const std::regex inline_resources_begin("#pragma BEGIN_INLINE_RESOURCES");
     static const std::regex inline_resources_end("#pragma END_INLINE_RESOURCES");
     static const std::regex use_set_resources("#pragma\\s+USE_RESOURCES\\s+(\\S+)\n");
-    static const std::regex include_library("#include <(\\S+)>\n");
-    static const std::regex include_local("#include \"(\\S+)\"\n");
-    static const std::regex specialization_constant("SPC\\s+(const.*$)");
+
+    static const std::regex specialization_constant("#pragma\\s+SPC\\s+(const.*$)");
 
     ShaderGeneratorImpl::ShaderGeneratorImpl(ShaderStage _stage, SessionImpl* errorSession) noexcept : Stage(std::move(_stage)), errorSession(errorSession)
     {
