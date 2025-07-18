@@ -41,7 +41,7 @@ namespace st
         std::unordered_map<std::string, std::vector<std::string>> groupTags;
         std::unordered_map<ShaderStage, std::vector<std::string>> stageExtensions;
         std::unordered_map<std::string, std::vector<ShaderResource>> resourceGroups;
-        std::unordered_map<std::string, ParsedBufferReference> bufferReferences;
+        std::unordered_map<std::string, ParsedStructureSchema> structureSchemas;
         std::vector<std::filesystem::path> includePaths;
         std::vector<std::string> requiredExtensions;
         ShaderCompilerOptions compilerOptions;

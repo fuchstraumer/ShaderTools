@@ -1,5 +1,5 @@
 INCLUDE(ExternalProject)
-CMAKE_MINIMUM_REQUIRED(VERSION 3.5)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.10)
 PROJECT(ShaderTools)
 # Hate global settings, but this just lets us pack away all those dependencies into one group
 # Much better than cluttering up an entire IDE just with our dependencies lol
@@ -89,11 +89,11 @@ set(ST_FRAGMENT_GENERATOR_SRCS
     "${CMAKE_CURRENT_SOURCE_DIR}/src/generation/impl/stages/SpecializationConstantFragmentGenerator.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/generation/impl/stages/SpecializationConstantFragmentGenerator.cpp")
 
-SET(ST_PARSER_SRCS
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/parser/SchemaParser.hpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/parser/SchemaParser.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/parser/yamlFile.hpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/parser/yamlFile.cpp")
+SET(ST_PARSING_SRCS
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/parsing/SchemaParser.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/parsing/SchemaParser.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/parsing/yamlFile.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/parsing/yamlFile.cpp")
 
 SET(ST_REFLECTION_SRCS
     "${CMAKE_CURRENT_SOURCE_DIR}/include/reflection/ReflectionStructs.hpp"
@@ -136,11 +136,11 @@ OPTION(SHADERTOOLS_BUILD_STATIC "Build as a static library instead of a DLL. Not
 
 IF(SHADERTOOLS_BUILD_STATIC) 
     ADD_LIBRARY(ShaderTools STATIC ${ST_COMMON_SRCS} ${ST_UTIL_SRCS} ${ST_GENERATION_SRCS} ${ST_FRAGMENT_GENERATOR_SRCS}
-        ${ST_REFLECTION_SRCS} ${ST_CORE_SRCS} ${ST_PARSER_SRCS} ${ST_RESOURCES_SRCS})
+        ${ST_REFLECTION_SRCS} ${ST_CORE_SRCS} ${ST_PARSING_SRCS} ${ST_RESOURCES_SRCS})
     TARGET_COMPILE_DEFINITIONS(ShaderTools PRIVATE "ST_BUILDING_STATIC")
 ELSE()
     ADD_LIBRARY(ShaderTools SHARED ${ST_COMMON_SRCS} ${ST_UTIL_SRCS} ${ST_GENERATION_SRCS} ${ST_FRAGMENT_GENERATOR_SRCS}
-        ${ST_REFLECTION_SRCS} ${ST_CORE_SRCS} ${ST_PARSER_SRCS} ${ST_RESOURCES_SRCS})
+        ${ST_REFLECTION_SRCS} ${ST_CORE_SRCS} ${ST_PARSING_SRCS} ${ST_RESOURCES_SRCS})
     TARGET_COMPILE_DEFINITIONS(ShaderTools PUBLIC "$<BUILD_INTERFACE:SHADERTOOLS_BUILD_DLL>" "$<INSTALL_INTERFACE:SHADERTOOLS_DLL>")
 ENDIF()
 

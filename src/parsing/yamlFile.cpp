@@ -21,7 +21,6 @@ namespace st
         return static_cast<VkDescriptorType>(type | ARRAY_TYPE_FLAG_BITS);
     }
 
-
     static constexpr std::array<std::pair<const char*, VkShaderStageFlags>, 12> valid_shader_stages
     {
         std::pair{ "Vertex", VK_SHADER_STAGE_VERTEX_BIT },
