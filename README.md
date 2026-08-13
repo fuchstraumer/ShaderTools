@@ -1,3 +1,6 @@
+# ShaderTools has been retired
+If you are viewing this, you are seeing the repository at it's tagged final state before I wiped the slate clean and replaced it with my new Slang-based architecture and cooker. The new code is a direct philosophical follow on of this code, but was so fundamentally different that I chose to wipe all of this and import the new.
+
 # ShaderTools - A Vulkan Shader Toolchain
 
 ShaderTools is a modern Vulkan-oriented shader toolchain that dramatically simplifies shader development and Vulkan resource management through intelligent code generation and comprehensive reflection capabilities.
