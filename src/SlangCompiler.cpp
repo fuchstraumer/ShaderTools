@@ -190,6 +190,263 @@ namespace
         }
     }
 
+    VertexScalarType FromSlangVertexScalarType(slang::TypeReflection::ScalarType scalar_type) noexcept
+    {
+        switch (scalar_type)
+        {
+        case slang::TypeReflection::ScalarType::Float16:
+            return VertexScalarType::Float16;
+        case slang::TypeReflection::ScalarType::Float32:
+            return VertexScalarType::Float32;
+        case slang::TypeReflection::ScalarType::Int32:
+            return VertexScalarType::SignedInteger32;
+        case slang::TypeReflection::ScalarType::UInt32:
+            return VertexScalarType::UnsignedInteger32;
+        default:
+            return VertexScalarType::Invalid;
+        }
+    }
+
+    /** Splits one varying into a scalar type and a component count. A scalar counts as one component,
+     * so a caller never has to test the kind again. */
+    void ReadVaryingShape(slang::TypeLayoutReflection* type_layout,
+                          VertexScalarType& out_scalar_type,
+                          uint32_t& out_component_count) noexcept
+    {
+        out_scalar_type = VertexScalarType::Invalid;
+        out_component_count = 0u;
+
+        if (type_layout == nullptr)
+        {
+            return;
+        }
+
+        if (type_layout->getKind() == slang::TypeReflection::Kind::Vector)
+        {
+            slang::TypeLayoutReflection* elementLayout = type_layout->getElementTypeLayout();
+            out_component_count = static_cast<uint32_t>(type_layout->getElementCount());
+            if (elementLayout != nullptr)
+            {
+                out_scalar_type = FromSlangVertexScalarType(elementLayout->getType()->getScalarType());
+            }
+            return;
+        }
+
+        if (type_layout->getKind() == slang::TypeReflection::Kind::Scalar)
+        {
+            out_component_count = 1u;
+            out_scalar_type = FromSlangVertexScalarType(type_layout->getType()->getScalarType());
+        }
+    }
+
+    /** True for a name the hardware supplies, such as SV_Position. Those never become a vertex buffer
+     * attribute, so they must not reach the vertex input list. */
+    bool IsSystemSemantic(std::string_view semantic_name) noexcept
+    {
+        return semantic_name.size() >= 3u && (semantic_name.substr(0u, 3u) == "SV_" ||
+                                              semantic_name.substr(0u, 3u) == "sv_");
+    }
+
+    bool IsDepthSemantic(std::string_view semantic_name) noexcept
+    {
+        return semantic_name == "SV_Depth" || semantic_name == "SV_DEPTH" ||
+               semantic_name == "SV_DepthGreaterEqual" || semantic_name == "SV_DepthLessEqual";
+    }
+
+    /** Flattens one uniform block into rows of name, offset, and size. A nested struct recurses and
+     * its fields take a dotted name, because the consumer compares offsets and a tree would only make
+     * that harder. */
+    void CollectUniformMembers(slang::TypeLayoutReflection* struct_layout,
+                               const std::string& name_prefix,
+                               uint32_t base_offset,
+                               std::vector<ReflectedUniformMember>& members)
+    {
+        if (struct_layout == nullptr || struct_layout->getKind() != slang::TypeReflection::Kind::Struct)
+        {
+            return;
+        }
+
+        const unsigned int fieldCount = struct_layout->getFieldCount();
+        for (unsigned int i = 0u; i < fieldCount; ++i)
+        {
+            slang::VariableLayoutReflection* field = struct_layout->getFieldByIndex(i);
+            if (field == nullptr)
+            {
+                continue;
+            }
+
+            const char* fieldName = field->getName();
+            if (fieldName == nullptr)
+            {
+                continue;
+            }
+
+            const uint32_t offset =
+                base_offset + static_cast<uint32_t>(field->getOffset(SLANG_PARAMETER_CATEGORY_UNIFORM));
+            const std::string qualifiedName =
+                name_prefix.empty() ? std::string{ fieldName } : name_prefix + "." + fieldName;
+
+            slang::TypeLayoutReflection* fieldLayout = field->getTypeLayout();
+            if (fieldLayout == nullptr)
+            {
+                continue;
+            }
+
+            if (fieldLayout->getKind() == slang::TypeReflection::Kind::Struct)
+            {
+                CollectUniformMembers(fieldLayout, qualifiedName, offset, members);
+                continue;
+            }
+
+            ReflectedUniformMember member;
+            member.Name = qualifiedName;
+            member.Offset = offset;
+            member.Size = static_cast<uint32_t>(fieldLayout->getSize(SLANG_PARAMETER_CATEGORY_UNIFORM));
+            member.ArrayCount = fieldLayout->getKind() == slang::TypeReflection::Kind::Array
+                                    ? static_cast<uint32_t>(fieldLayout->getElementCount())
+                                    : 1u;
+
+            members.push_back(std::move(member));
+        }
+    }
+
+    std::string_view ReadSemanticName(slang::VariableLayoutReflection* var_layout) noexcept
+    {
+        const char* name = var_layout->getSemanticName();
+        if (name == nullptr)
+        {
+            return {};
+        }
+
+        return std::string_view{ name };
+    }
+
+    /** Walks the vertex entry point parameters and records every attribute a vertex buffer must
+     * supply. Nested structs recurse, and the location accumulates down the tree, because Slang
+     * states each field's offset against its parent. */
+    void CollectVertexInputs(slang::VariableLayoutReflection* var_layout,
+                             uint32_t base_location,
+                             ReflectedRasterState& raster)
+    {
+        if (var_layout == nullptr)
+        {
+            return;
+        }
+
+        slang::TypeLayoutReflection* typeLayout = var_layout->getTypeLayout();
+        if (typeLayout == nullptr)
+        {
+            return;
+        }
+
+        const uint32_t location =
+            base_location +
+            static_cast<uint32_t>(var_layout->getOffset(SLANG_PARAMETER_CATEGORY_VARYING_INPUT));
+
+        if (typeLayout->getKind() == slang::TypeReflection::Kind::Struct)
+        {
+            const unsigned int fieldCount = typeLayout->getFieldCount();
+            for (unsigned int i = 0u; i < fieldCount; ++i)
+            {
+                CollectVertexInputs(typeLayout->getFieldByIndex(i), location, raster);
+            }
+            return;
+        }
+
+        const std::string_view semantic = ReadSemanticName(var_layout);
+        if (semantic.empty() || IsSystemSemantic(semantic))
+        {
+            return;
+        }
+
+        ReflectedVertexInput input;
+        input.SemanticName = std::string{ semantic };
+        input.SemanticIndex = static_cast<uint32_t>(var_layout->getSemanticIndex());
+        input.Location = location;
+        ReadVaryingShape(typeLayout, input.ScalarType, input.ComponentCount);
+
+        raster.VertexInputs.push_back(std::move(input));
+    }
+
+    /** Walks the fragment entry point result and records every color target, plus whether the shader
+     * writes depth itself. */
+    void CollectColorTargets(slang::VariableLayoutReflection* var_layout,
+                             uint32_t base_location,
+                             ReflectedRasterState& raster)
+    {
+        if (var_layout == nullptr)
+        {
+            return;
+        }
+
+        slang::TypeLayoutReflection* typeLayout = var_layout->getTypeLayout();
+        if (typeLayout == nullptr)
+        {
+            return;
+        }
+
+        const uint32_t location =
+            base_location +
+            static_cast<uint32_t>(var_layout->getOffset(SLANG_PARAMETER_CATEGORY_VARYING_OUTPUT));
+
+        if (typeLayout->getKind() == slang::TypeReflection::Kind::Struct)
+        {
+            const unsigned int fieldCount = typeLayout->getFieldCount();
+            for (unsigned int i = 0u; i < fieldCount; ++i)
+            {
+                CollectColorTargets(typeLayout->getFieldByIndex(i), location, raster);
+            }
+            return;
+        }
+
+        const std::string_view semantic = ReadSemanticName(var_layout);
+        if (IsDepthSemantic(semantic))
+        {
+            raster.WritesFragDepth = true;
+            return;
+        }
+
+        ReflectedColorTarget target;
+        target.Location = location;
+        ReadVaryingShape(typeLayout, target.ScalarType, target.ComponentCount);
+
+        if (target.ComponentCount == 0u)
+        {
+            return;
+        }
+
+        raster.ColorTargets.push_back(target);
+    }
+
+    void CollectDepthWrites(slang::VariableLayoutReflection* var_layout, ReflectedRasterState& raster)
+    {
+        if (var_layout == nullptr)
+        {
+            return;
+        }
+
+        slang::TypeLayoutReflection* typeLayout = var_layout->getTypeLayout();
+        if (typeLayout == nullptr)
+        {
+            return;
+        }
+
+        if (typeLayout->getKind() == slang::TypeReflection::Kind::Struct)
+        {
+            const unsigned int fieldCount = typeLayout->getFieldCount();
+            for (unsigned int i = 0u; i < fieldCount; ++i)
+            {
+                CollectDepthWrites(typeLayout->getFieldByIndex(i), raster);
+            }
+            return;
+        }
+
+        if (IsDepthSemantic(ReadSemanticName(var_layout)))
+        {
+            raster.WritesFragDepth = true;
+        }
+    }
+
     /** Only the formats Velox curates. An unmapped format returns Invalid on purpose: the graph must
      * reject a shader that asks for a format the engine does not express. */
     TextureFormat FromSlangImageFormat(SlangImageFormat format) noexcept
@@ -334,6 +591,9 @@ struct SlangCompiler::Impl
     void ApplyEntryPointUsage(slang::IComponentType* linked_program,
                               SlangInt entry_point_index,
                               std::vector<ReflectedBinding>& bindings);
+    void ExtractRasterState(slang::EntryPointReflection* entry_point_layout,
+                            ShaderStageKind stage,
+                            ReflectedRasterState& raster);
 };
 
 CookResult<void> SlangCompiler::Impl::CreateSession(const SlangCompilerCreateInfo& create_info)
@@ -614,6 +874,7 @@ void SlangCompiler::Impl::ApplyLeafTypeLayout(slang::TypeLayoutReflection* globa
                 static_cast<uint64_t>(elementLayout->getSize(SLANG_PARAMETER_CATEGORY_UNIFORM));
         }
 
+        CollectUniformMembers(elementLayout, std::string{}, 0u, binding.UniformMembers);
         return;
     }
 
@@ -892,8 +1153,29 @@ CookResult<EntryPointReflection> SlangCompiler::Impl::ExtractEntryPointReflectio
         reflection.Workgroup.Z = static_cast<uint32_t>(workgroupSizes[2]);
     }
 
+    ExtractRasterState(entryPointLayout, reflection.Stage, reflection.Raster);
+
     ApplyEntryPointUsage(linked_program, entry_point_index, reflection.Bindings);
     return reflection;
+}
+
+void SlangCompiler::Impl::ExtractRasterState(slang::EntryPointReflection* entry_point_layout,
+                                             ShaderStageKind stage,
+                                             ReflectedRasterState& raster)
+{
+    if (stage == ShaderStageKind::Vertex)
+    {
+        CollectVertexInputs(entry_point_layout->getVarLayout(), 0u, raster);
+        return;
+    }
+
+    if (stage != ShaderStageKind::Fragment)
+    {
+        return;
+    }
+
+    CollectColorTargets(entry_point_layout->getResultVarLayout(), 0u, raster);
+    CollectDepthWrites(entry_point_layout->getVarLayout(), raster);
 }
 
 SlangCompiler::SlangCompiler() noexcept :
