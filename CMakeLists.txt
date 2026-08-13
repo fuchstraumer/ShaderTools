@@ -11,11 +11,13 @@ set(SHADER_COOKER_SOURCES
     src/PermutationSpace.cpp
     src/ShaderDataSchema.cpp
     src/ShaderLibraryEmitter.cpp
+    src/ShaderManifestEmitter.cpp
     src/SizeExpression.cpp
     src/SlangCompiler.cpp
     src/WgslBindingScanner.cpp
     src/main.cpp
-    ${CMAKE_SOURCE_DIR}/src/shader/ShaderLibraryTypes.cpp)
+    ${CMAKE_SOURCE_DIR}/src/shader/ShaderLibraryTypes.cpp
+    ${CMAKE_SOURCE_DIR}/src/shader/ShaderManifest.cpp)
 
 set(SHADER_COOKER_HEADERS
     include/CookerDriver.hpp
@@ -29,6 +31,7 @@ set(SHADER_COOKER_HEADERS
     include/DedupeReport.hpp
     include/ShaderDataSchema.hpp
     include/ShaderLibraryEmitter.hpp
+    include/ShaderManifestEmitter.hpp
     include/SizeExpression.hpp
     include/SlangCompiler.hpp
     include/WgslBindingScanner.hpp)
