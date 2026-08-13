@@ -141,26 +141,42 @@ namespace
                      entryPointNames.size());
 
         const PermutationSpace* space = FindPermutationSpaceForModule(moduleName);
-        const CookResult<std::vector<PermutationAssignment>> assignments =
-            EnumerateActiveCombinations(*space);
-        if (!assignments)
+
+        const CookResult<void> axisResult =
+            VerifyAxisNamesAreDeclared(*space, compiler.GetModuleSourceTexts(), moduleName);
+        if (!axisResult)
         {
-            return std::unexpected(assignments.error());
+            return std::unexpected(axisResult.error());
+        }
+
+        ReportUndrivenExternConstants(*space, compiler.GetModuleSourceTexts(), moduleName);
+
+        const CookResult<void> defaultsResult = compiler.ResolveExternConstantDefaults(*space);
+        if (!defaultsResult)
+        {
+            return std::unexpected(defaultsResult.error());
+        }
+
+        const CookResult<VariantSet> variantSet = EnumerateVariants(*space);
+        if (!variantSet)
+        {
+            return std::unexpected(variantSet.error());
         }
 
         std::println(stderr,
-                     "[shader_cooker] module {} expands to {} variants",
+                     "[shader_cooker] module {} expands to {} variants over an index space of {}",
                      moduleName,
-                     assignments.value().size());
+                     variantSet.value().Variants.size(),
+                     variantSet.value().SpaceSize);
 
-        for (const PermutationAssignment& assignment : assignments.value())
+        for (const VariantDescriptor& descriptor : variantSet.value().Variants)
         {
-            CookResult<CompiledVariant> variantResult = compiler.CompileVariant(assignment);
+            CookResult<CompiledVariant> variantResult = compiler.CompileVariant(descriptor);
             if (!variantResult)
             {
                 std::println(stderr,
                              "[shader_cooker] variant [{}] failed: {}",
-                             DescribeAssignment(assignment),
+                             DescribeAssignment(descriptor.Canonical),
                              ToString(variantResult.error()));
                 return std::unexpected(variantResult.error());
             }
