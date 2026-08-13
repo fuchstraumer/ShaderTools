@@ -69,6 +69,14 @@ CookResult<CookerOptions> ParseCommandLine(std::span<const std::string_view> arg
             }
             options.ModuleCacheDirectory = arguments[++i];
         }
+        else if (argument == "--no-dedupe")
+        {
+            options.DedupeEnabled = false;
+        }
+        else if (argument == "--verify-deterministic")
+        {
+            options.VerifyDeterministic = true;
+        }
         else if (argument == "--no-validate")
         {
             options.ValidateReflectionAgainstWgsl = false;

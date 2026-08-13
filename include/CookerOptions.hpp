@@ -19,6 +19,12 @@ struct CookerOptions
     bool ValidateReflectionAgainstWgsl{ true };
     bool ReportReflection{ true };
     bool MultithreadEntryPointCodegen{ true };
+    /** Turns off content dedup. Output stays correct, and every artifact takes its own index. This
+     * is the control arm of the A/B check, and the way out if dedup ever needs to be untangled. */
+    bool DedupeEnabled{ true };
+    /** Cooks twice into memory and compares. Catches an unordered container's iteration order when
+     * it reaches the emitted output. */
+    bool VerifyDeterministic{ false };
 };
 
 CookResult<CookerOptions> ParseCommandLine(std::span<const std::string_view> arguments);
