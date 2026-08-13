@@ -1,6 +1,7 @@
 #pragma once
 #ifndef VELOX_SHADER_COOKER_COOKED_LIBRARY_HPP
 #define VELOX_SHADER_COOKER_COOKED_LIBRARY_HPP
+#include "ContentInterner.hpp"
 #include "PermutationSpace.hpp"
 #include "ShaderDataSchema.hpp"
 #include <string>
@@ -24,6 +25,13 @@ struct LibraryEntryPoint
     ShaderStageKind Stage{ ShaderStageKind::Invalid };
 };
 
+/** Hashes one WGSL source. The interner compares bytes afterwards, so this only picks the bucket. */
+ContentHashValue HashSourcePayload(const std::string& source) noexcept;
+
+/** Hashes one binding table field by field. Every field that the graph reads takes part, so two
+ * layouts that differ only in a derived size stay separate. */
+ContentHashValue HashLayoutPayload(const std::vector<ReflectedBinding>& layout) noexcept;
+
 /** One (module, permutation) pair. The vectors run parallel to CookedModule::EntryPoints. */
 struct LibraryVariant
 {
@@ -36,6 +44,10 @@ struct LibraryVariant
     std::vector<WorkgroupSize> Workgroups;
 };
 
+using ShaderLayout = std::vector<ReflectedBinding>;
+
+/** Sources and layouts intern separately. They collapse at very different rates, and one number for
+ * both would hide the information in each. */
 struct CookedModule
 {
     std::string Name;
@@ -44,8 +56,11 @@ struct CookedModule
     uint32_t SpaceSize{ 0u };
     std::vector<LibraryEntryPoint> EntryPoints;
     std::vector<std::string> Sources;
-    std::vector<std::vector<ReflectedBinding>> Layouts;
+    std::vector<ShaderLayout> Layouts;
     std::vector<LibraryVariant> Variants;
+
+    ContentInterner<std::string> SourceInterner{ &HashSourcePayload, "fnv1a-64" };
+    ContentInterner<ShaderLayout> LayoutInterner{ &HashLayoutPayload, "fnv1a-64" };
 };
 
 struct CookedLibrary
@@ -55,7 +70,12 @@ struct CookedLibrary
 
 /** Adds one compiled variant to the module. It appends every source and layout, so each artifact
  * gets its own index. This is the identity mapping that dedup later collapses. */
-CookResult<void> AppendVariantToModule(CookedModule& module, const CompiledVariant& variant);
+CookResult<void> AppendVariantToModule(CookedModule& module,
+                                       const CompiledVariant& variant,
+                                       const PermutationAssignment& canonical);
+
+/** Copies the interned tables into the module, once every variant is in. */
+void FreezeModuleTables(CookedModule& module);
 
 /** Resolves what a caller would get back for one entry point of one variant. The round-trip check
  * compares this against the text the compiler produced. */
