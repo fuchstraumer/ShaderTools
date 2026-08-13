@@ -1,46 +1,27 @@
 #pragma once
 #ifndef VELOX_SHADER_COOKER_DATA_SCHEMA_HPP
 #define VELOX_SHADER_COOKER_DATA_SCHEMA_HPP
+#include "shader/ShaderLibraryTypes.hpp"
 #include <cstdint>
 #include <span>
 #include <string>
 #include <string_view>
 #include <vector>
 
-/** The schema the cooker extracts and the rendergraph eventually consumes. Deliberately free of any
- * Slang, WebGPU, or filesystem type: it is the contract between the offline tool and the runtime, and
- * anything that leaks a compiler type into it becomes a dependency the engine has to carry. */
+/** The schema the cooker extracts and the rendergraph eventually consumes. It names no Slang, WebGPU,
+ * or filesystem type. It is the contract between the offline tool and the runtime. A compiler type
+ * that leaks into it becomes a dependency the engine must carry.
+ *
+ * The enums live in shader/ShaderLibraryTypes.hpp, because the graph reads the same vocabulary. This
+ * schema adds only the parts that the offline tool needs: owning strings, and the raw expression text
+ * that a diagnostic must quote. */
 namespace velox::cooker
 {
 
-enum class BindingKind : uint8_t
-{
-    Invalid = 0,
-    UniformBuffer,
-    StorageBuffer,
-    ReadOnlyStorageBuffer,
-    SampledTexture,
-    StorageTexture,
-    Sampler,
-};
-
-enum class ShaderStageKind : uint8_t
-{
-    Invalid = 0,
-    Vertex,
-    Fragment,
-    Compute,
-};
-
 std::string_view ToString(BindingKind kind) noexcept;
 std::string_view ToString(ShaderStageKind stage) noexcept;
-
-struct WorkgroupSize
-{
-    uint32_t X{ 1u };
-    uint32_t Y{ 1u };
-    uint32_t Z{ 1u };
-};
+std::string_view ToString(ResourceShape shape) noexcept;
+std::string_view ToString(TextureSampleType sample_type) noexcept;
 
 /** A size the shader author declared with a `[vx_*]` attribute, already evaluated for this variant.
  * `Expression` is kept for diagnostics: when two shaders disagree about a shared resource, the error
@@ -56,6 +37,18 @@ struct DerivedSize
     bool HasExtent{ false };
 };
 
+/** What the shader states about one resource. The CPU side never writes any of this.
+ *
+ * `ElementStride` is the size of one element of a structured buffer, in bytes. The graph multiplies
+ * it by an element count. A caller therefore never writes a stride, and a mirrored CPU struct with
+ * wrong padding cannot size a buffer.
+ *
+ * `ByteSize` is the total size of a uniform block. Reflection fully determines it, so a uniform block
+ * must never take an explicit size from the caller.
+ *
+ * `StorageFormat` is set only for a storage texture, because the shader spells the format into the
+ * binding type there. A sampled texture leaves it Invalid: the shader says it samples a float4, not
+ * that the texture is Rgba16Float. That choice stays with the caller. */
 struct ReflectedBinding
 {
     std::string Name;
@@ -63,6 +56,17 @@ struct ReflectedBinding
     uint32_t Binding{ 0u };
     BindingKind Kind{ BindingKind::Invalid };
     uint32_t EntryPointUsageMask{ 0u };
+
+    uint32_t ElementStride{ 0u };
+    uint64_t ByteSize{ 0u };
+    uint32_t ArrayCount{ 1u };
+
+    ResourceShape Shape{ ResourceShape::Invalid };
+    TextureSampleType SampleType{ TextureSampleType::Invalid };
+    TextureFormat StorageFormat{ TextureFormat::Invalid };
+    StorageTextureAccess StorageAccess{ StorageTextureAccess::Invalid };
+    SamplerBindingType SamplerType{ SamplerBindingType::Invalid };
+
     DerivedSize Derived;
 };
 

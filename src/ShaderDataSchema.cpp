@@ -28,6 +28,54 @@ std::string_view ToString(BindingKind kind) noexcept
     return "Invalid";
 }
 
+std::string_view ToString(ResourceShape shape) noexcept
+{
+    switch (shape)
+    {
+    case ResourceShape::Buffer:
+        return "Buffer";
+    case ResourceShape::Texture1D:
+        return "Texture1D";
+    case ResourceShape::Texture2D:
+        return "Texture2D";
+    case ResourceShape::Texture2DArray:
+        return "Texture2DArray";
+    case ResourceShape::Texture3D:
+        return "Texture3D";
+    case ResourceShape::TextureCube:
+        return "TextureCube";
+    case ResourceShape::TextureCubeArray:
+        return "TextureCubeArray";
+    case ResourceShape::Texture2DMultisample:
+        return "Texture2DMultisample";
+    case ResourceShape::Invalid:
+        return "Invalid";
+    }
+
+    return "Invalid";
+}
+
+std::string_view ToString(TextureSampleType sample_type) noexcept
+{
+    switch (sample_type)
+    {
+    case TextureSampleType::Float:
+        return "Float";
+    case TextureSampleType::UnfilterableFloat:
+        return "UnfilterableFloat";
+    case TextureSampleType::Depth:
+        return "Depth";
+    case TextureSampleType::SignedInteger:
+        return "SignedInteger";
+    case TextureSampleType::UnsignedInteger:
+        return "UnsignedInteger";
+    case TextureSampleType::Invalid:
+        return "Invalid";
+    }
+
+    return "Invalid";
+}
+
 std::string_view ToString(ShaderStageKind stage) noexcept
 {
     switch (stage)
@@ -70,6 +118,31 @@ std::string DescribeBinding(const ReflectedBinding& binding)
                                           binding.Binding,
                                           binding.Name,
                                           ToString(binding.Kind));
+
+    if (binding.Shape != ResourceShape::Invalid)
+    {
+        description += std::format(" {}", ToString(binding.Shape));
+    }
+
+    if (binding.ElementStride != 0u)
+    {
+        description += std::format(" stride={}", binding.ElementStride);
+    }
+
+    if (binding.ByteSize != 0u)
+    {
+        description += std::format(" bytes={}", binding.ByteSize);
+    }
+
+    if (binding.SampleType != TextureSampleType::Invalid)
+    {
+        description += std::format(" sample={}", ToString(binding.SampleType));
+    }
+
+    if (binding.ArrayCount > 1u)
+    {
+        description += std::format(" array={}", binding.ArrayCount);
+    }
 
     if (binding.Derived.HasElementCount)
     {
