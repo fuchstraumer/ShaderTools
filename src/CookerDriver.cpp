@@ -1,5 +1,6 @@
 #include "CookerDriver.hpp"
 #include "CookedLibrary.hpp"
+#include "DedupeReport.hpp"
 #include "PermutationSpace.hpp"
 #include "ShaderLibraryEmitter.hpp"
 #include "SlangCompiler.hpp"
@@ -214,6 +215,13 @@ namespace
                          source.size() / 1024u);
         }
 
+        const std::string report = GenerateDedupeReport(library);
+        const CookResult<void> reportResult = sink.WriteArtifact("ShaderLibrary.dedupe.txt", report);
+        if (!reportResult)
+        {
+            return reportResult;
+        }
+
         return {};
     }
 
@@ -273,6 +281,11 @@ namespace
                      variantSet.value().SpaceSize);
 
         CookedModule cookedModule;
+        if (!options.DedupeEnabled)
+        {
+            cookedModule.SourceInterner.Disable();
+            cookedModule.LayoutInterner.Disable();
+        }
         cookedModule.Name = moduleName;
         cookedModule.Space = space;
         cookedModule.SpaceSize = variantSet.value().SpaceSize;
@@ -330,7 +343,8 @@ namespace
                 }
             }
 
-            const CookResult<void> appendResult = AppendVariantToModule(cookedModule, variant);
+            const CookResult<void> appendResult =
+                AppendVariantToModule(cookedModule, variant, descriptor.Canonical);
             if (!appendResult)
             {
                 return std::unexpected(appendResult.error());
@@ -339,6 +353,8 @@ namespace
             moduleVariants.push_back(variant);
             out_variants.push_back(std::move(variant));
         }
+
+        FreezeModuleTables(cookedModule);
 
         const CookResult<void> roundTripResult = VerifyLibraryRoundTrip(cookedModule, moduleVariants);
         if (!roundTripResult)
@@ -352,6 +368,13 @@ namespace
                      moduleName,
                      cookedModule.Variants.size());
 
+        const ModuleInfluence influence = ComputeAxisInfluence(cookedModule);
+        const CookResult<void> policyResult = EnforceModulePolicy(cookedModule, influence);
+        if (!policyResult)
+        {
+            return std::unexpected(policyResult.error());
+        }
+
         out_library.Modules.push_back(std::move(cookedModule));
         ++statistics.ModulesCooked;
         return {};
@@ -359,7 +382,7 @@ namespace
 
 } // namespace
 
-CookResult<CookStatistics> RunCook(const CookerOptions& options, OutputSink& sink)
+CookResult<CookStatistics> RunCookOnce(const CookerOptions& options, OutputSink& sink)
 {
     const std::chrono::steady_clock::time_point startTime = std::chrono::steady_clock::now();
 
@@ -396,6 +419,90 @@ CookResult<CookStatistics> RunCook(const CookerOptions& options, OutputSink& sin
     statistics.ElapsedMilliseconds = elapsed.count();
 
     return statistics;
+}
+
+namespace
+{
+
+    /** Cooks twice into memory and compares every artifact. Enumeration order is sorted and the
+     * interner numbers entries in first-encounter order, so two cooks of one input must agree byte
+     * for byte. A difference means an unordered container's iteration order reached the output, which
+     * otherwise shows up months later as a rebuild that changes nothing. */
+    CookResult<CookStatistics> RunCookTwiceAndCompare(const CookerOptions& options, OutputSink& sink)
+    {
+        std::println(stderr, "[shader_cooker] determinism check: cooking twice into memory");
+
+        MemoryOutputSink first;
+        const CookResult<CookStatistics> firstResult = RunCookOnce(options, first);
+        if (!firstResult)
+        {
+            return firstResult;
+        }
+
+        MemoryOutputSink second;
+        const CookResult<CookStatistics> secondResult = RunCookOnce(options, second);
+        if (!secondResult)
+        {
+            return secondResult;
+        }
+
+        if (first.GetContent() != second.GetContent())
+        {
+            std::println(stderr, "[shader_cooker] DETERMINISM FAILED: the header differs between cooks");
+            return std::unexpected(CookError::CookNotDeterministic);
+        }
+
+        if (first.GetArtifacts().size() != second.GetArtifacts().size())
+        {
+            std::println(stderr,
+                         "[shader_cooker] DETERMINISM FAILED: {} artifacts, then {}",
+                         first.GetArtifacts().size(),
+                         second.GetArtifacts().size());
+            return std::unexpected(CookError::CookNotDeterministic);
+        }
+
+        for (const auto& [name, content] : first.GetArtifacts())
+        {
+            const auto other = second.GetArtifacts().find(name);
+            if (other == second.GetArtifacts().end() || other->second != content)
+            {
+                std::println(stderr, "[shader_cooker] DETERMINISM FAILED: {} differs between cooks", name);
+                return std::unexpected(CookError::CookNotDeterministic);
+            }
+        }
+
+        std::println(stderr,
+                     "[shader_cooker] determinism verified: {} artifacts identical across two cooks",
+                     first.GetArtifacts().size() + 1u);
+
+        const CookResult<void> writeResult = sink.Write(first.GetContent());
+        if (!writeResult)
+        {
+            return std::unexpected(writeResult.error());
+        }
+
+        for (const auto& [name, content] : first.GetArtifacts())
+        {
+            const CookResult<void> artifactResult = sink.WriteArtifact(name, content);
+            if (!artifactResult)
+            {
+                return std::unexpected(artifactResult.error());
+            }
+        }
+
+        return secondResult;
+    }
+
+} // namespace
+
+CookResult<CookStatistics> RunCook(const CookerOptions& options, OutputSink& sink)
+{
+    if (options.VerifyDeterministic)
+    {
+        return RunCookTwiceAndCompare(options, sink);
+    }
+
+    return RunCookOnce(options, sink);
 }
 
 } // namespace velox::cooker
