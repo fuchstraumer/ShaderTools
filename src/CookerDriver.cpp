@@ -1,5 +1,7 @@
 #include "CookerDriver.hpp"
+#include "CookedLibrary.hpp"
 #include "PermutationSpace.hpp"
+#include "ShaderLibraryEmitter.hpp"
 #include "SlangCompiler.hpp"
 #include "WgslBindingScanner.hpp"
 #include <chrono>
@@ -115,9 +117,110 @@ namespace
         return mismatchCount;
     }
 
+    /** Replays every variant through the finished tables and compares the result against the text the
+     * compiler produced. This is the one check that makes a wrong shader impossible to ship: an index
+     * mistake, a table hole, or a bad collapse all show up here, and all of them fail the cook. */
+    CookResult<void> VerifyLibraryRoundTrip(const CookedModule& module,
+                                            std::span<const CompiledVariant> compiled)
+    {
+        if (module.Variants.size() != compiled.size())
+        {
+            std::println(stderr,
+                         "[shader_cooker] module {} holds {} variants but the cook produced {}",
+                         module.Name,
+                         module.Variants.size(),
+                         compiled.size());
+            return std::unexpected(CookError::LibraryRoundTripFailed);
+        }
+
+        uint32_t mismatches = 0u;
+        for (const LibraryVariant& variant : module.Variants)
+        {
+            const CompiledVariant* origin = nullptr;
+            for (const CompiledVariant& candidate : compiled)
+            {
+                if (candidate.VariantIndex == variant.Index)
+                {
+                    origin = &candidate;
+                    break;
+                }
+            }
+
+            if (origin == nullptr)
+            {
+                std::println(stderr,
+                             "[shader_cooker] variant index {} is in the library but not in the cook",
+                             variant.Index);
+                ++mismatches;
+                continue;
+            }
+
+            for (size_t i = 0u; i < origin->EntryPoints.size(); ++i)
+            {
+                if (ResolveSource(module, variant, i) != origin->EntryPoints[i].Code)
+                {
+                    std::println(stderr,
+                                 "[shader_cooker] ROUND TRIP FAILED for {} [{}]: the table returns "
+                                 "different text than the compiler produced",
+                                 origin->EntryPoints[i].Name,
+                                 variant.Description);
+                    ++mismatches;
+                }
+            }
+        }
+
+        if (mismatches != 0u)
+        {
+            return std::unexpected(CookError::LibraryRoundTripFailed);
+        }
+
+        return {};
+    }
+
+    /** Writes the header and one source file for each module. The header name comes from the sink, so
+     * the generated source includes exactly the file the user asked for. */
+    CookResult<void> EmitLibraryArtifacts(const CookedLibrary& library,
+                                          OutputSink& sink,
+                                          CookStatistics& statistics)
+    {
+        const std::string headerName{ sink.PrimaryName() };
+        const std::filesystem::path headerPath{ headerName };
+        const std::string headerStem = headerPath.stem().string();
+
+        const std::string header = EmitShaderLibraryHeader(library);
+        const CookResult<void> headerResult = sink.Write(header);
+        if (!headerResult)
+        {
+            return headerResult;
+        }
+
+        for (const CookedModule& module : library.Modules)
+        {
+            const std::string sourceName = MakeModuleSourceFileName(headerStem, module.Name);
+            const std::string source = EmitShaderLibraryModuleSource(module, headerName);
+
+            const CookResult<void> sourceResult = sink.WriteArtifact(sourceName, source);
+            if (!sourceResult)
+            {
+                return sourceResult;
+            }
+
+            statistics.GeneratedSourceBytes += source.size();
+            std::println(stderr,
+                         "[shader_cooker] wrote {} ({} unique sources, {} layouts, {} KiB)",
+                         sourceName,
+                         module.Sources.size(),
+                         module.Layouts.size(),
+                         source.size() / 1024u);
+        }
+
+        return {};
+    }
+
     CookResult<void> CookModule(const CookerOptions& options,
                                 const std::filesystem::path& module_path,
                                 std::vector<CompiledVariant>& out_variants,
+                                CookedLibrary& out_library,
                                 CookStatistics& statistics)
     {
         SlangCompilerCreateInfo createInfo;
@@ -169,6 +272,14 @@ namespace
                      variantSet.value().Variants.size(),
                      variantSet.value().SpaceSize);
 
+        CookedModule cookedModule;
+        cookedModule.Name = moduleName;
+        cookedModule.Space = space;
+        cookedModule.SpaceSize = variantSet.value().SpaceSize;
+
+        std::vector<CompiledVariant> moduleVariants;
+        moduleVariants.reserve(variantSet.value().Variants.size());
+
         for (const VariantDescriptor& descriptor : variantSet.value().Variants)
         {
             CookResult<CompiledVariant> variantResult = compiler.CompileVariant(descriptor);
@@ -209,9 +320,39 @@ namespace
                 ReportUnreferencedBindings(variant);
             }
 
+            if (cookedModule.EntryPoints.empty())
+            {
+                cookedModule.EntryPoints.reserve(variant.EntryPoints.size());
+                for (const CompiledEntryPoint& entryPoint : variant.EntryPoints)
+                {
+                    cookedModule.EntryPoints.push_back(
+                        LibraryEntryPoint{ entryPoint.Name, entryPoint.Reflection.Stage });
+                }
+            }
+
+            const CookResult<void> appendResult = AppendVariantToModule(cookedModule, variant);
+            if (!appendResult)
+            {
+                return std::unexpected(appendResult.error());
+            }
+
+            moduleVariants.push_back(variant);
             out_variants.push_back(std::move(variant));
         }
 
+        const CookResult<void> roundTripResult = VerifyLibraryRoundTrip(cookedModule, moduleVariants);
+        if (!roundTripResult)
+        {
+            return std::unexpected(roundTripResult.error());
+        }
+
+        std::println(stderr,
+                     "[shader_cooker] module {} round trip verified: {} variants resolve to the text "
+                     "the compiler produced",
+                     moduleName,
+                     cookedModule.Variants.size());
+
+        out_library.Modules.push_back(std::move(cookedModule));
         ++statistics.ModulesCooked;
         return {};
     }
@@ -226,11 +367,13 @@ CookResult<CookStatistics> RunCook(const CookerOptions& options, OutputSink& sin
 
     CookStatistics statistics;
     std::vector<CompiledVariant> variants;
+    CookedLibrary library;
 
     for (const std::filesystem::path& modulePath : options.ModulePaths)
     {
         std::println(stderr, "[shader_cooker] cooking {}", modulePath.string());
-        const CookResult<void> moduleResult = CookModule(options, modulePath, variants, statistics);
+        const CookResult<void> moduleResult =
+            CookModule(options, modulePath, variants, library, statistics);
         if (!moduleResult)
         {
             return std::unexpected(moduleResult.error());
@@ -242,11 +385,10 @@ CookResult<CookStatistics> RunCook(const CookerOptions& options, OutputSink& sin
         return std::unexpected(CookError::ReflectionMismatch);
     }
 
-    const std::string header = GenerateShaderHeader(variants);
-    const CookResult<void> writeResult = sink.Write(header);
-    if (!writeResult)
+    const CookResult<void> emitResult = EmitLibraryArtifacts(library, sink, statistics);
+    if (!emitResult)
     {
-        return std::unexpected(writeResult.error());
+        return std::unexpected(emitResult.error());
     }
 
     const std::chrono::steady_clock::time_point endTime = std::chrono::steady_clock::now();

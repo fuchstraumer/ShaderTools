@@ -18,6 +18,7 @@ struct CookStatistics
     uint32_t EntryPointsCompiled{ 0u };
     uint32_t ReflectionMismatches{ 0u };
     size_t TotalWgslBytes{ 0u };
+    size_t GeneratedSourceBytes{ 0u };
     double ElapsedMilliseconds{ 0.0 };
 };
 
