@@ -39,6 +39,96 @@ namespace
         return EnumeratorFor("BindingKind", ToString(kind));
     }
 
+    std::string_view VertexScalarTypeEnumeratorName(VertexScalarType scalar_type) noexcept
+    {
+        switch (scalar_type)
+        {
+        case VertexScalarType::Float16:
+            return "Float16";
+        case VertexScalarType::Float32:
+            return "Float32";
+        case VertexScalarType::SignedInteger32:
+            return "SignedInteger32";
+        case VertexScalarType::UnsignedInteger32:
+            return "UnsignedInteger32";
+        case VertexScalarType::Invalid:
+            return "Invalid";
+        }
+
+        return "Invalid";
+    }
+
+    /** The whole raster payload passes through this one function.
+     *
+     * The engine's RenderTarget type lands in parallel with this work. Keeping the emission in one
+     * place makes the remap one function body instead of a search through the emitter. */
+    std::string EmitRasterState(const ReflectedRasterState& raster, size_t index)
+    {
+        std::string emitted;
+
+        if (raster.VertexInputs.empty())
+        {
+            emitted += std::format("constexpr velox::VertexAttributeInfo k_VertexInputs{}[1]{{}};\n", index);
+            emitted += std::format("constexpr uint32_t k_VertexInputCount{} = 0u;\n", index);
+        }
+        else
+        {
+            emitted += std::format("constexpr velox::VertexAttributeInfo k_VertexInputs{}[]{{\n", index);
+            for (const ReflectedVertexInput& input : raster.VertexInputs)
+            {
+                emitted += std::format("    velox::VertexAttributeInfo{{ \"{}\", {}u, {}u, {}, {}u }},\n",
+                                       input.SemanticName,
+                                       input.SemanticIndex,
+                                       input.Location,
+                                       EnumeratorFor("VertexScalarType",
+                                                     VertexScalarTypeEnumeratorName(input.ScalarType)),
+                                       input.ComponentCount);
+            }
+            emitted += "};\n";
+            emitted += std::format("constexpr uint32_t k_VertexInputCount{} = {}u;\n",
+                                   index,
+                                   raster.VertexInputs.size());
+        }
+
+        if (raster.ColorTargets.empty())
+        {
+            emitted += std::format("constexpr velox::ColorTargetInfo k_ColorTargets{}[1]{{}};\n", index);
+            emitted += std::format("constexpr uint32_t k_ColorTargetCount{} = 0u;\n", index);
+        }
+        else
+        {
+            emitted += std::format("constexpr velox::ColorTargetInfo k_ColorTargets{}[]{{\n", index);
+            for (const ReflectedColorTarget& target : raster.ColorTargets)
+            {
+                emitted += std::format("    velox::ColorTargetInfo{{ {}u, {}, {}u }},\n",
+                                       target.Location,
+                                       EnumeratorFor("VertexScalarType",
+                                                     VertexScalarTypeEnumeratorName(target.ScalarType)),
+                                       target.ComponentCount);
+            }
+            emitted += "};\n";
+            emitted += std::format("constexpr uint32_t k_ColorTargetCount{} = {}u;\n",
+                                   index,
+                                   raster.ColorTargets.size());
+        }
+
+        emitted += std::format("constexpr bool k_WritesFragDepth{} = {};\n\n",
+                               index,
+                               raster.WritesFragDepth ? "true" : "false");
+        return emitted;
+    }
+
+    std::string EmitRasterRecordFields(size_t index)
+    {
+        return std::format("k_VertexInputs{}, k_VertexInputCount{}, k_ColorTargets{}, "
+                           "k_ColorTargetCount{}, k_WritesFragDepth{}",
+                           index,
+                           index,
+                           index,
+                           index,
+                           index);
+    }
+
     /** Splits a long source at a line end and emits the pieces as adjacent literals. The compiler
      * joins them, so the value is unchanged. */
     std::string EmitChunkedLiteral(std::string_view text)
@@ -77,7 +167,37 @@ namespace
         return emitted;
     }
 
-    std::string EmitBindingRow(const ReflectedBinding& binding)
+    std::string MakeUniformMemberTableName(size_t layout_index, size_t binding_index)
+    {
+        return std::format("k_Members_L{}_B{}", layout_index, binding_index);
+    }
+
+    /** One table for each uniform block of each layout. A block with no members emits nothing, and
+     * its BindingInfo takes an empty span. */
+    std::string EmitUniformMemberTable(const ReflectedBinding& binding,
+                                       size_t layout_index,
+                                       size_t binding_index)
+    {
+        if (binding.UniformMembers.empty())
+        {
+            return {};
+        }
+
+        std::string emitted = std::format("constexpr velox::UniformMemberInfo {}[]{{\n",
+                                          MakeUniformMemberTableName(layout_index, binding_index));
+        for (const ReflectedUniformMember& member : binding.UniformMembers)
+        {
+            emitted += std::format("    velox::UniformMemberInfo{{ \"{}\", {}u, {}u, {}u }},\n",
+                                   member.Name,
+                                   member.Offset,
+                                   member.Size,
+                                   member.ArrayCount);
+        }
+        emitted += "};\n";
+        return emitted;
+    }
+
+    std::string EmitBindingRow(const ReflectedBinding& binding, std::string_view member_table_name)
     {
         std::string row = std::format("    velox::BindingInfo{{ \"{}\", {}u, {}u, {}",
                                       binding.Name,
@@ -98,6 +218,16 @@ namespace
                            binding.Derived.ExtentX,
                            binding.Derived.ExtentY,
                            binding.Derived.ExtentZ);
+
+        if (member_table_name.empty())
+        {
+            row += ", {}";
+        }
+        else
+        {
+            row += std::format(", {}", member_table_name);
+        }
+
         row += " },\n";
         return row;
     }
@@ -336,6 +466,17 @@ std::string EmitShaderLibraryHeader(const CookedLibrary& library)
               "                                      uint32_t variant_index) noexcept;\n";
     header += "velox::ShaderStageKind GetStage(EntryPointId entry_point) noexcept;\n\n";
 
+    header += "/** The vertex attributes this entry point reads. Empty for every stage except vertex.\n"
+              " * The semantic name survives here and nowhere in the WGSL, so a vertex buffer layout\n"
+              " * can be checked against the shader by name. */\n";
+    header += "std::span<const velox::VertexAttributeInfo> GetVertexInputs(EntryPointId entry_point,\n"
+              "                                                            uint32_t variant_index) noexcept;\n";
+    header += "std::span<const velox::ColorTargetInfo> GetColorTargets(EntryPointId entry_point,\n"
+              "                                                        uint32_t variant_index) noexcept;\n";
+    header += "/** True when the fragment shader writes SV_Depth. This is not depthWrite in RenderState.\n"
+              " * A pass that writes depth from the shader while depthWrite is off is a real error. */\n";
+    header += "bool GetWritesFragDepth(EntryPointId entry_point, uint32_t variant_index) noexcept;\n\n";
+
     header += "/** Serves the baked tables through the provider seam. Sources live in the data segment\n"
               " * for the life of the process, so Generation() never changes. A watch-and-serve cooker\n"
               " * implements the same interface and increments it instead. */\n";
@@ -378,10 +519,19 @@ std::string EmitShaderLibraryModuleSource(const CookedModule& module, std::strin
             continue;
         }
 
-        source += std::format("constexpr velox::BindingInfo k_Layout{}[]{{\n", i);
-        for (const ReflectedBinding& binding : module.Layouts[i])
+        for (size_t bindingIndex = 0u; bindingIndex < module.Layouts[i].size(); ++bindingIndex)
         {
-            source += EmitBindingRow(binding);
+            source += EmitUniformMemberTable(module.Layouts[i][bindingIndex], i, bindingIndex);
+        }
+
+        source += std::format("constexpr velox::BindingInfo k_Layout{}[]{{\n", i);
+        for (size_t bindingIndex = 0u; bindingIndex < module.Layouts[i].size(); ++bindingIndex)
+        {
+            const ReflectedBinding& binding = module.Layouts[i][bindingIndex];
+            const std::string memberTableName =
+                binding.UniformMembers.empty() ? std::string{}
+                                               : MakeUniformMemberTableName(i, bindingIndex);
+            source += EmitBindingRow(binding, memberTableName);
         }
         source += "};\n";
         source += std::format("constexpr uint32_t k_LayoutCount{} = {}u;\n\n",
@@ -389,9 +539,17 @@ std::string EmitShaderLibraryModuleSource(const CookedModule& module, std::strin
                               module.Layouts[i].size());
     }
 
+    for (size_t i = 0u; i < module.RasterStates.size(); ++i)
+    {
+        source += EmitRasterState(module.RasterStates[i], i);
+    }
+
     source += "struct VariantRecord\n{\n    std::string_view Source;\n"
               "    const velox::BindingInfo* Bindings;\n    uint32_t BindingCount;\n"
-              "    velox::WorkgroupSize Workgroup;\n};\n\n";
+              "    velox::WorkgroupSize Workgroup;\n"
+              "    const velox::VertexAttributeInfo* VertexInputs;\n    uint32_t VertexInputCount;\n"
+              "    const velox::ColorTargetInfo* ColorTargets;\n    uint32_t ColorTargetCount;\n"
+              "    bool WritesFragDepth;\n};\n\n";
 
     // One table for each entry point, indexed by the dense variant index. A dependent axis leaves
     // holes; those rows stay empty and every accessor reports them as unknown.
@@ -423,13 +581,14 @@ std::string EmitShaderLibraryModuleSource(const CookedModule& module, std::strin
             const WorkgroupSize workgroup = variant->Workgroups[entryPointIndex];
 
             source += std::format("    VariantRecord{{ k_Source{}, k_Layout{}, k_LayoutCount{}, "
-                                  "velox::WorkgroupSize{{ {}u, {}u, {}u }} }},\n",
+                                  "velox::WorkgroupSize{{ {}u, {}u, {}u }}, {} }},\n",
                                   sourceIndex,
                                   layoutIndex,
                                   layoutIndex,
                                   workgroup.X,
                                   workgroup.Y,
-                                  workgroup.Z);
+                                  workgroup.Z,
+                                  EmitRasterRecordFields(variant->RasterIndices[entryPointIndex]));
         }
 
         source += "};\n\n";
@@ -465,6 +624,24 @@ std::string EmitShaderLibraryModuleSource(const CookedModule& module, std::strin
               "                                      uint32_t variant_index) noexcept\n"
               "{\n    const VariantRecord* record = FindRecord(entry_point, variant_index);\n"
               "    return record != nullptr ? record->Workgroup : velox::WorkgroupSize{};\n}\n\n";
+
+    source += "std::span<const velox::VertexAttributeInfo> GetVertexInputs(EntryPointId entry_point,\n"
+              "                                                            uint32_t variant_index) noexcept\n"
+              "{\n    const VariantRecord* record = FindRecord(entry_point, variant_index);\n"
+              "    if (record == nullptr || record->VertexInputCount == 0u)\n    {\n        return {};\n    }\n\n"
+              "    return std::span<const velox::VertexAttributeInfo>{ record->VertexInputs,\n"
+              "                                                        record->VertexInputCount };\n}\n\n";
+
+    source += "std::span<const velox::ColorTargetInfo> GetColorTargets(EntryPointId entry_point,\n"
+              "                                                        uint32_t variant_index) noexcept\n"
+              "{\n    const VariantRecord* record = FindRecord(entry_point, variant_index);\n"
+              "    if (record == nullptr || record->ColorTargetCount == 0u)\n    {\n        return {};\n    }\n\n"
+              "    return std::span<const velox::ColorTargetInfo>{ record->ColorTargets,\n"
+              "                                                    record->ColorTargetCount };\n}\n\n";
+
+    source += "bool GetWritesFragDepth(EntryPointId entry_point, uint32_t variant_index) noexcept\n"
+              "{\n    const VariantRecord* record = FindRecord(entry_point, variant_index);\n"
+              "    return record != nullptr ? record->WritesFragDepth : false;\n}\n\n";
 
     source += "velox::ShaderStageKind GetStage(EntryPointId entry_point) noexcept\n{\n    switch "
               "(entry_point)\n    {\n";
