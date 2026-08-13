@@ -29,14 +29,26 @@ namespace
 
     const PermutationSpace k_EmptySpace{};
 
+    // IfftPermuteCS reorders data and never reads a wave-op symbol, so both wave axes must stay inert
+    // for it. If that ever changes, the entry point started paying for a permutation it does not use.
+    const std::array<ExpectedAxisInfluence, 2> k_OceanFftExpectedInfluence{
+        ExpectedAxisInfluence{ "IfftPermuteCS", "IFFT_USE_WAVE_OPS", true },
+        ExpectedAxisInfluence{ "IfftPermuteCS", "IFFT_WAVE_SIZE", true }
+    };
+
+    const ModulePolicy k_OceanFftPolicy{ 64u, k_OceanFftExpectedInfluence };
+    const ModulePolicy k_EmptyPolicy{};
+
     struct ModuleSpaceEntry
     {
         std::string_view ModuleName;
         const PermutationSpace* Space;
+        const ModulePolicy* Policy;
     };
 
-    constexpr std::array<ModuleSpaceEntry, 1> k_ModuleSpaces{ ModuleSpaceEntry{ "OceanFft",
-                                                                                &k_OceanFftSpace } };
+    const std::array<ModuleSpaceEntry, 1> k_ModuleSpaces{
+        ModuleSpaceEntry{ "OceanFft", &k_OceanFftSpace, &k_OceanFftPolicy }
+    };
 
     const PermutationBinding* FindBindingForAxis(const PermutationAssignment& assignment,
                                                  const PermutationAxis* axis) noexcept
@@ -635,6 +647,19 @@ std::string DescribeAssignment(const PermutationAssignment& assignment)
     }
 
     return description;
+}
+
+const ModulePolicy* FindPolicyForModule(std::string_view module_name) noexcept
+{
+    for (const ModuleSpaceEntry& entry : k_ModuleSpaces)
+    {
+        if (entry.ModuleName == module_name)
+        {
+            return entry.Policy;
+        }
+    }
+
+    return &k_EmptyPolicy;
 }
 
 const PermutationSpace* FindPermutationSpaceForModule(std::string_view module_name) noexcept
