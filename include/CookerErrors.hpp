@@ -41,6 +41,8 @@ enum class CookError : uint16_t
     PermutationAxisNotDeclared = 83,
     PermutationVariantIndexCollision = 84,
 
+    LibraryRoundTripFailed = 90,
+
     OutputPathInvalid = 100,
     OutputWriteFailed = 101,
 };
