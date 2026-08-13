@@ -133,6 +133,115 @@ namespace
         }
     }
 
+    /** Slang packs the base shape and the array and multisample flags into one value, so the base
+     * shape must be masked out before the comparison. */
+    ResourceShape FromSlangResourceShape(SlangResourceShape shape) noexcept
+    {
+        const SlangResourceShape baseShape =
+            static_cast<SlangResourceShape>(shape & SLANG_RESOURCE_BASE_SHAPE_MASK);
+        const bool isArray = (shape & SLANG_TEXTURE_ARRAY_FLAG) != 0;
+        const bool isMultisample = (shape & SLANG_TEXTURE_MULTISAMPLE_FLAG) != 0;
+
+        switch (baseShape)
+        {
+        case SLANG_TEXTURE_1D:
+            return ResourceShape::Texture1D;
+        case SLANG_TEXTURE_2D:
+            if (isMultisample)
+            {
+                return ResourceShape::Texture2DMultisample;
+            }
+            return isArray ? ResourceShape::Texture2DArray : ResourceShape::Texture2D;
+        case SLANG_TEXTURE_3D:
+            return ResourceShape::Texture3D;
+        case SLANG_TEXTURE_CUBE:
+            return isArray ? ResourceShape::TextureCubeArray : ResourceShape::TextureCube;
+        case SLANG_STRUCTURED_BUFFER:
+        case SLANG_BYTE_ADDRESS_BUFFER:
+        case SLANG_TEXTURE_BUFFER:
+            return ResourceShape::Buffer;
+        default:
+            return ResourceShape::Invalid;
+        }
+    }
+
+    /** Maps the scalar type a texture returns onto the sample type WebGPU wants. A depth texture is
+     * not distinguishable here, so the graph decides that from the format it creates. */
+    TextureSampleType FromSlangScalarType(slang::TypeReflection::ScalarType scalar_type) noexcept
+    {
+        switch (scalar_type)
+        {
+        case slang::TypeReflection::ScalarType::Int8:
+        case slang::TypeReflection::ScalarType::Int16:
+        case slang::TypeReflection::ScalarType::Int32:
+        case slang::TypeReflection::ScalarType::Int64:
+            return TextureSampleType::SignedInteger;
+        case slang::TypeReflection::ScalarType::UInt8:
+        case slang::TypeReflection::ScalarType::UInt16:
+        case slang::TypeReflection::ScalarType::UInt32:
+        case slang::TypeReflection::ScalarType::UInt64:
+            return TextureSampleType::UnsignedInteger;
+        case slang::TypeReflection::ScalarType::Float16:
+        case slang::TypeReflection::ScalarType::Float32:
+        case slang::TypeReflection::ScalarType::Float64:
+            return TextureSampleType::Float;
+        default:
+            return TextureSampleType::Invalid;
+        }
+    }
+
+    /** Only the formats Velox curates. An unmapped format returns Invalid on purpose: the graph must
+     * reject a shader that asks for a format the engine does not express. */
+    TextureFormat FromSlangImageFormat(SlangImageFormat format) noexcept
+    {
+        switch (format)
+        {
+        case SLANG_IMAGE_FORMAT_r8:
+            return TextureFormat::R8Unorm;
+        case SLANG_IMAGE_FORMAT_rg8:
+            return TextureFormat::Rg8Unorm;
+        case SLANG_IMAGE_FORMAT_rgba8:
+            return TextureFormat::Rgba8Unorm;
+        case SLANG_IMAGE_FORMAT_r16f:
+            return TextureFormat::R16Float;
+        case SLANG_IMAGE_FORMAT_rg16f:
+            return TextureFormat::Rg16Float;
+        case SLANG_IMAGE_FORMAT_rgba16f:
+            return TextureFormat::Rgba16Float;
+        case SLANG_IMAGE_FORMAT_r32f:
+            return TextureFormat::R32Float;
+        case SLANG_IMAGE_FORMAT_rg32f:
+            return TextureFormat::Rg32Float;
+        case SLANG_IMAGE_FORMAT_rgba32f:
+            return TextureFormat::Rgba32Float;
+        case SLANG_IMAGE_FORMAT_r32ui:
+            return TextureFormat::R32Uint;
+        case SLANG_IMAGE_FORMAT_rg32ui:
+            return TextureFormat::Rg32Uint;
+        case SLANG_IMAGE_FORMAT_rgba32ui:
+            return TextureFormat::Rgba32Uint;
+        case SLANG_IMAGE_FORMAT_rgb10_a2:
+            return TextureFormat::Rgb10A2Unorm;
+        case SLANG_IMAGE_FORMAT_r11f_g11f_b10f:
+            return TextureFormat::Rg11B10Ufloat;
+        default:
+            return TextureFormat::Invalid;
+        }
+    }
+
+    StorageTextureAccess FromSlangBindingTypeAccess(slang::BindingType binding_type) noexcept
+    {
+        switch (binding_type)
+        {
+        case slang::BindingType::MutableTexture:
+            return StorageTextureAccess::ReadWrite;
+        case slang::BindingType::Texture:
+            return StorageTextureAccess::ReadOnly;
+        default:
+            return StorageTextureAccess::Invalid;
+        }
+    }
+
     std::vector<slang::CompilerOptionEntry> MakeCompilerOptions(uint32_t optimization_level)
     {
         std::vector<slang::CompilerOptionEntry> options;
@@ -210,6 +319,10 @@ struct SlangCompiler::Impl
                                                                  SlangInt entry_point_index);
     CookResult<std::vector<ReflectedBinding>> ExtractGlobalBindings(
         slang::ProgramLayout* program_layout);
+    void ApplyLeafTypeLayout(slang::TypeLayoutReflection* global_layout,
+                             SlangInt range_index,
+                             slang::BindingType binding_type,
+                             ReflectedBinding& binding);
     CookResult<DerivedSize> ExtractDerivedSize(slang::VariableReflection* leaf_variable,
                                                std::string_view binding_name);
     CookResult<void> ExtractDerivedExtent(slang::VariableReflection* leaf_variable,
@@ -443,6 +556,74 @@ std::vector<std::string> SlangCompiler::Impl::GenerateEntryPointCode(slang::ICom
     return generated;
 }
 
+/** Reads the size, shape, and type facts off one binding range's leaf type layout.
+ *
+ * Slang wraps a resource type around the type it carries, so the useful facts sit one level down.
+ * A structured buffer reports its element layout. A texture reports the type it returns. */
+void SlangCompiler::Impl::ApplyLeafTypeLayout(slang::TypeLayoutReflection* global_layout,
+                                              SlangInt range_index,
+                                              slang::BindingType binding_type,
+                                              ReflectedBinding& binding)
+{
+    slang::TypeLayoutReflection* leafLayout = global_layout->getBindingRangeLeafTypeLayout(range_index);
+    if (leafLayout == nullptr)
+    {
+        return;
+    }
+
+    if (binding.Kind == BindingKind::StorageTexture)
+    {
+        binding.StorageFormat = FromSlangImageFormat(global_layout->getBindingRangeImageFormat(range_index));
+        binding.StorageAccess = FromSlangBindingTypeAccess(binding_type);
+    }
+
+    if (binding.Kind == BindingKind::Sampler)
+    {
+        binding.Shape = ResourceShape::Invalid;
+        binding.SamplerType = SamplerBindingType::Filtering;
+        return;
+    }
+
+    slang::TypeReflection* leafType = leafLayout->getType();
+    if (leafType == nullptr)
+    {
+        return;
+    }
+
+    binding.Shape = FromSlangResourceShape(leafType->getResourceShape());
+
+    if (IsTextureBinding(binding.Kind))
+    {
+        slang::TypeReflection* resultType = leafType->getResourceResultType();
+        if (resultType != nullptr)
+        {
+            binding.SampleType = FromSlangScalarType(resultType->getScalarType());
+        }
+
+        return;
+    }
+
+    if (binding.Kind == BindingKind::UniformBuffer)
+    {
+        // A uniform block's size is fully determined. The graph must never take it from the caller.
+        binding.ByteSize = static_cast<uint64_t>(leafLayout->getSize(SLANG_PARAMETER_CATEGORY_UNIFORM));
+        slang::TypeLayoutReflection* elementLayout = leafLayout->getElementTypeLayout();
+        if (elementLayout != nullptr && binding.ByteSize == 0u)
+        {
+            binding.ByteSize =
+                static_cast<uint64_t>(elementLayout->getSize(SLANG_PARAMETER_CATEGORY_UNIFORM));
+        }
+
+        return;
+    }
+
+    slang::TypeLayoutReflection* elementLayout = leafLayout->getElementTypeLayout();
+    if (elementLayout != nullptr)
+    {
+        binding.ElementStride = static_cast<uint32_t>(elementLayout->getSize());
+    }
+}
+
 CookResult<uint32_t> SlangCompiler::Impl::EvaluateExtentArgument(slang::Attribute* attribute,
                                                                  uint32_t argument_index,
                                                                  std::string_view binding_name)
@@ -629,6 +810,9 @@ CookResult<std::vector<ReflectedBinding>> SlangCompiler::Impl::ExtractGlobalBind
         binding.Group = static_cast<uint32_t>(spaceOffset);
         binding.Binding = static_cast<uint32_t>(indexOffset);
         binding.Kind = FromSlangBindingType(bindingType);
+        binding.ArrayCount = static_cast<uint32_t>(globalLayout->getBindingRangeBindingCount(rangeIndex));
+
+        ApplyLeafTypeLayout(globalLayout, rangeIndex, bindingType, binding);
 
         CookResult<DerivedSize> derived = ExtractDerivedSize(leafVariable, binding.Name);
         if (!derived)
