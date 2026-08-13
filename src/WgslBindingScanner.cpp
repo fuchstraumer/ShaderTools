@@ -82,29 +82,93 @@ namespace
         return offset;
     }
 
-    size_t SkipTemplateArguments(std::string_view text, size_t offset) noexcept
+    WgslAddressSpace ClassifyAddressSpace(std::string_view space_word,
+                                          std::string_view access_word) noexcept
+    {
+        if (space_word == "uniform")
+        {
+            return WgslAddressSpace::Uniform;
+        }
+
+        if (space_word != "storage")
+        {
+            return WgslAddressSpace::Invalid;
+        }
+
+        if (access_word == "read_write")
+        {
+            return WgslAddressSpace::StorageReadWrite;
+        }
+
+        if (access_word.empty() || access_word == "read")
+        {
+            return WgslAddressSpace::StorageRead;
+        }
+
+        return WgslAddressSpace::Invalid;
+    }
+
+    /** Reads the `<...>` list after the `var` keyword and returns the offset past its `>`.
+     *
+     * A declaration with no list is a texture or a sampler, so the result is Handle. The list itself
+     * never nests, but the scan tracks depth to stay safe if WGSL grows a nested form. */
+    size_t ReadVarTemplateArguments(std::string_view text,
+                                    size_t offset,
+                                    WgslAddressSpace& out_address_space) noexcept
     {
         offset = SkipWhitespace(text, offset);
         if (offset >= text.size() || text[offset] != '<')
         {
+            out_address_space = WgslAddressSpace::Handle;
             return offset;
         }
 
+        out_address_space = WgslAddressSpace::Invalid;
+
+        std::string_view spaceWord;
+        std::string_view accessWord;
+        uint32_t wordIndex = 0u;
         int32_t depth = 0;
+
         while (offset < text.size())
         {
-            if (text[offset] == '<')
+            const char character = text[offset];
+
+            if (character == '<')
             {
                 ++depth;
+                ++offset;
+                continue;
             }
-            else if (text[offset] == '>')
+
+            if (character == '>')
             {
                 --depth;
+                ++offset;
                 if (depth == 0)
                 {
-                    return offset + 1u;
+                    out_address_space = ClassifyAddressSpace(spaceWord, accessWord);
+                    return offset;
                 }
+                continue;
             }
+
+            if (IsIdentifierCharacter(character))
+            {
+                std::string_view word;
+                offset = ReadIdentifier(text, offset, word);
+                if (depth == 1 && wordIndex == 0u)
+                {
+                    spaceWord = word;
+                }
+                else if (depth == 1 && wordIndex == 1u)
+                {
+                    accessWord = word;
+                }
+                ++wordIndex;
+                continue;
+            }
+
             ++offset;
         }
 
@@ -152,7 +216,8 @@ std::vector<WgslDeclaredBinding> ScanWgslBindings(std::string_view wgsl)
 
         if (identifier == k_VarKeyword && pendingGroup.has_value() && pendingBinding.has_value())
         {
-            const size_t afterTemplate = SkipTemplateArguments(wgsl, afterIdentifier);
+            WgslAddressSpace addressSpace = WgslAddressSpace::Invalid;
+            const size_t afterTemplate = ReadVarTemplateArguments(wgsl, afterIdentifier, addressSpace);
             const size_t nameStart = SkipWhitespace(wgsl, afterTemplate);
 
             std::string_view variableName;
@@ -162,7 +227,8 @@ std::vector<WgslDeclaredBinding> ScanWgslBindings(std::string_view wgsl)
             {
                 declared.emplace_back(WgslDeclaredBinding{ std::string{ variableName },
                                                            pendingGroup.value(),
-                                                           pendingBinding.value() });
+                                                           pendingBinding.value(),
+                                                           addressSpace });
             }
 
             pendingGroup.reset();
@@ -190,6 +256,46 @@ std::string_view StripSlangNameMangling(std::string_view mangled_name) noexcept
     }
 
     return mangled_name;
+}
+
+std::string_view ToString(WgslAddressSpace address_space) noexcept
+{
+    switch (address_space)
+    {
+    case WgslAddressSpace::Handle:
+        return "handle (texture or sampler)";
+    case WgslAddressSpace::Uniform:
+        return "var<uniform>";
+    case WgslAddressSpace::StorageRead:
+        return "var<storage, read>";
+    case WgslAddressSpace::StorageReadWrite:
+        return "var<storage, read_write>";
+    case WgslAddressSpace::Invalid:
+        return "unrecognized";
+    }
+
+    return "unrecognized";
+}
+
+bool AddressSpaceAgreesWithKind(WgslAddressSpace address_space, BindingKind kind) noexcept
+{
+    switch (kind)
+    {
+    case BindingKind::UniformBuffer:
+        return address_space == WgslAddressSpace::Uniform;
+    case BindingKind::StorageBuffer:
+        return address_space == WgslAddressSpace::StorageReadWrite;
+    case BindingKind::ReadOnlyStorageBuffer:
+        return address_space == WgslAddressSpace::StorageRead;
+    case BindingKind::SampledTexture:
+    case BindingKind::StorageTexture:
+    case BindingKind::Sampler:
+        return address_space == WgslAddressSpace::Handle;
+    case BindingKind::Invalid:
+        return false;
+    }
+
+    return false;
 }
 
 BindingComparison CompareBindings(std::span<const WgslDeclaredBinding> declared,
@@ -233,6 +339,18 @@ BindingComparison CompareBindings(std::span<const WgslDeclaredBinding> declared,
                                              declaredBinding.Binding,
                                              declaredName,
                                              match->Name);
+        }
+
+        if (!AddressSpaceAgreesWithKind(declaredBinding.AddressSpace, match->Kind))
+        {
+            comparison.Matches = false;
+            comparison.Report += std::format("  @group({}) @binding({}) {} address space mismatch: wgsl "
+                                             "declares {} but reflection reports {}\n",
+                                             declaredBinding.Group,
+                                             declaredBinding.Binding,
+                                             declaredName,
+                                             ToString(declaredBinding.AddressSpace),
+                                             ToString(match->Kind));
         }
     }
 
