@@ -1,8 +1,10 @@
 # OceanShaderCompiler — native host tool: Slang -> WGSL -> baked C++ header
 # Not included in Emscripten builds; invoke as a pre-build step from the host.
 set(SHADER_COOKER_SOURCES
+    src/ContentHash.cpp
     src/CookedLibrary.cpp
     src/CookerDriver.cpp
+    src/DedupeReport.cpp
     src/CookerErrors.cpp
     src/CookerOptions.cpp
     src/OutputSink.cpp
@@ -21,7 +23,10 @@ set(SHADER_COOKER_HEADERS
     include/CookerOptions.hpp
     include/OutputSink.hpp
     include/PermutationSpace.hpp
+    include/ContentHash.hpp
+    include/ContentInterner.hpp
     include/CookedLibrary.hpp
+    include/DedupeReport.hpp
     include/ShaderDataSchema.hpp
     include/ShaderLibraryEmitter.hpp
     include/SizeExpression.hpp

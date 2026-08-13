@@ -35,6 +35,8 @@ struct DerivedSize
     uint32_t ExtentZ{ 0u };
     bool HasElementCount{ false };
     bool HasExtent{ false };
+
+    friend bool operator==(const DerivedSize&, const DerivedSize&) = default;
 };
 
 /** What the shader states about one resource. The CPU side never writes any of this.
@@ -68,6 +70,9 @@ struct ReflectedBinding
     SamplerBindingType SamplerType{ SamplerBindingType::Invalid };
 
     DerivedSize Derived;
+
+    /** The interner compares whole layouts, so every field a consumer reads must take part. */
+    friend bool operator==(const ReflectedBinding&, const ReflectedBinding&) = default;
 };
 
 struct EntryPointReflection
