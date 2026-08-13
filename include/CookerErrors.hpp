@@ -25,6 +25,10 @@ enum class CookError : uint16_t
     ReflectionUnavailable = 40,
     ReflectionMismatch = 41,
     ReflectionSizeUnresolved = 42,
+    SizeExpressionParseFailed = 43,
+    SizeExpressionUnknownSymbol = 44,
+    SizeExpressionDivideByZero = 45,
+    SizeExpressionOutOfRange = 46,
 
     NoModulesSpecified = 60,
     NoOutputSpecified = 61,
@@ -33,6 +37,9 @@ enum class CookError : uint16_t
 
     PermutationSpaceNotFound = 80,
     PermutationParentAxisMissing = 81,
+    PermutationValueNotInAxis = 82,
+    PermutationAxisNotDeclared = 83,
+    PermutationVariantIndexCollision = 84,
 
     OutputPathInvalid = 100,
     OutputWriteFailed = 101,
