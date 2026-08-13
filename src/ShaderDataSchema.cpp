@@ -93,6 +93,55 @@ std::string_view ToString(ShaderStageKind stage) noexcept
     return "Invalid";
 }
 
+std::string_view ToString(VertexScalarType scalar_type) noexcept
+{
+    switch (scalar_type)
+    {
+    case VertexScalarType::Float16:
+        return "f16";
+    case VertexScalarType::Float32:
+        return "f32";
+    case VertexScalarType::SignedInteger32:
+        return "i32";
+    case VertexScalarType::UnsignedInteger32:
+        return "u32";
+    case VertexScalarType::Invalid:
+        return "Invalid";
+    }
+
+    return "Invalid";
+}
+
+std::string DescribeRasterState(const ReflectedRasterState& raster)
+{
+    std::string description;
+
+    for (const ReflectedVertexInput& input : raster.VertexInputs)
+    {
+        description += std::format("      @location({}) {}{} : {}x{}\n",
+                                   input.Location,
+                                   input.SemanticName,
+                                   input.SemanticIndex,
+                                   ToString(input.ScalarType),
+                                   input.ComponentCount);
+    }
+
+    for (const ReflectedColorTarget& target : raster.ColorTargets)
+    {
+        description += std::format("      target {} : {}x{} (format stays with the caller)\n",
+                                   target.Location,
+                                   ToString(target.ScalarType),
+                                   target.ComponentCount);
+    }
+
+    if (raster.WritesFragDepth)
+    {
+        description += "      writes SV_Depth\n";
+    }
+
+    return description;
+}
+
 bool SameBindingLocation(const ReflectedBinding& lhs, const ReflectedBinding& rhs) noexcept
 {
     return lhs.Group == rhs.Group && lhs.Binding == rhs.Binding;
@@ -157,6 +206,23 @@ std::string DescribeBinding(const ReflectedBinding& binding)
                                    binding.Derived.ExtentX,
                                    binding.Derived.ExtentY,
                                    binding.Derived.ExtentZ);
+    }
+
+    return description;
+}
+
+std::string DescribeUniformMembers(const ReflectedBinding& binding)
+{
+    std::string description;
+
+    for (const ReflectedUniformMember& member : binding.UniformMembers)
+    {
+        description += std::format("[shader_cooker]       +{} {} ({} bytes{})\n",
+                                   member.Offset,
+                                   member.Name,
+                                   member.Size,
+                                   member.ArrayCount > 1u ? std::format(", array={}", member.ArrayCount)
+                                                          : std::string{});
     }
 
     return description;
