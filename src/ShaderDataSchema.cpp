@@ -65,11 +65,28 @@ void SortBindingsByLocation(std::span<ReflectedBinding> bindings) noexcept
 
 std::string DescribeBinding(const ReflectedBinding& binding)
 {
-    return std::format("@group({}) @binding({}) {} : {}",
-                       binding.Group,
-                       binding.Binding,
-                       binding.Name,
-                       ToString(binding.Kind));
+    std::string description = std::format("@group({}) @binding({}) {} : {}",
+                                          binding.Group,
+                                          binding.Binding,
+                                          binding.Name,
+                                          ToString(binding.Kind));
+
+    if (binding.Derived.HasElementCount)
+    {
+        description += std::format(" count={} [{}]",
+                                   binding.Derived.ElementCount,
+                                   binding.Derived.Expression);
+    }
+
+    if (binding.Derived.HasExtent)
+    {
+        description += std::format(" extent={}x{}x{}",
+                                   binding.Derived.ExtentX,
+                                   binding.Derived.ExtentY,
+                                   binding.Derived.ExtentZ);
+    }
+
+    return description;
 }
 
 } // namespace velox::cooker

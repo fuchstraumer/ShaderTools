@@ -42,6 +42,20 @@ struct WorkgroupSize
     uint32_t Z{ 1u };
 };
 
+/** A size the shader author declared with a `[vx_*]` attribute, already evaluated for this variant.
+ * `Expression` is kept for diagnostics: when two shaders disagree about a shared resource, the error
+ * has to name what each of them actually wrote, not just the numbers they arrived at. */
+struct DerivedSize
+{
+    std::string Expression;
+    uint64_t ElementCount{ 0u };
+    uint32_t ExtentX{ 0u };
+    uint32_t ExtentY{ 0u };
+    uint32_t ExtentZ{ 0u };
+    bool HasElementCount{ false };
+    bool HasExtent{ false };
+};
+
 struct ReflectedBinding
 {
     std::string Name;
@@ -49,6 +63,7 @@ struct ReflectedBinding
     uint32_t Binding{ 0u };
     BindingKind Kind{ BindingKind::Invalid };
     uint32_t EntryPointUsageMask{ 0u };
+    DerivedSize Derived;
 };
 
 struct EntryPointReflection
@@ -71,6 +86,9 @@ struct CompiledVariant
 {
     std::string VariantSuffix;
     std::string VariantDescription;
+    /** Dense mixed-radix index over the canonical assignment. Stable across cooks, and the key the
+     * rendergraph resolves a variant with. */
+    uint32_t VariantIndex{ 0u };
     std::vector<CompiledEntryPoint> EntryPoints;
 };
 
