@@ -32,6 +32,10 @@ ContentHashValue HashSourcePayload(const std::string& source) noexcept;
  * layouts that differ only in a derived size stay separate. */
 ContentHashValue HashLayoutPayload(const std::vector<ReflectedBinding>& layout) noexcept;
 
+/** Hashes one raster state. A compute entry point gives an empty state, so every compute module has
+ * exactly one raster entry and the table costs almost nothing. */
+ContentHashValue HashRasterPayload(const ReflectedRasterState& raster) noexcept;
+
 /** One (module, permutation) pair. The vectors run parallel to CookedModule::EntryPoints. */
 struct LibraryVariant
 {
@@ -41,6 +45,7 @@ struct LibraryVariant
     PermutationAssignment Canonical;
     std::vector<uint32_t> SourceIndices;
     std::vector<uint32_t> LayoutIndices;
+    std::vector<uint32_t> RasterIndices;
     std::vector<WorkgroupSize> Workgroups;
 };
 
@@ -57,10 +62,12 @@ struct CookedModule
     std::vector<LibraryEntryPoint> EntryPoints;
     std::vector<std::string> Sources;
     std::vector<ShaderLayout> Layouts;
+    std::vector<ReflectedRasterState> RasterStates;
     std::vector<LibraryVariant> Variants;
 
     ContentInterner<std::string> SourceInterner{ &HashSourcePayload, "fnv1a-64" };
     ContentInterner<ShaderLayout> LayoutInterner{ &HashLayoutPayload, "fnv1a-64" };
+    ContentInterner<ReflectedRasterState> RasterInterner{ &HashRasterPayload, "fnv1a-64" };
 };
 
 struct CookedLibrary

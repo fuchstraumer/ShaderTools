@@ -32,9 +32,40 @@ ContentHashValue HashLayoutPayload(const std::vector<ReflectedBinding>& layout) 
         hash = CombineHash(hash, binding.Derived.ExtentX);
         hash = CombineHash(hash, binding.Derived.ExtentY);
         hash = CombineHash(hash, binding.Derived.ExtentZ);
+
+        for (const ReflectedUniformMember& member : binding.UniformMembers)
+        {
+            hash = CombineHash(hash, HashFnv1a64(member.Name));
+            hash = CombineHash(hash, member.Offset);
+            hash = CombineHash(hash, member.Size);
+            hash = CombineHash(hash, member.ArrayCount);
+        }
     }
 
     return hash;
+}
+
+ContentHashValue HashRasterPayload(const ReflectedRasterState& raster) noexcept
+{
+    ContentHashValue hash = HashFnv1a64("raster");
+
+    for (const ReflectedVertexInput& input : raster.VertexInputs)
+    {
+        hash = CombineHash(hash, HashFnv1a64(input.SemanticName));
+        hash = CombineHash(hash, input.SemanticIndex);
+        hash = CombineHash(hash, input.Location);
+        hash = CombineHash(hash, static_cast<uint64_t>(input.ScalarType));
+        hash = CombineHash(hash, input.ComponentCount);
+    }
+
+    for (const ReflectedColorTarget& target : raster.ColorTargets)
+    {
+        hash = CombineHash(hash, target.Location);
+        hash = CombineHash(hash, static_cast<uint64_t>(target.ScalarType));
+        hash = CombineHash(hash, target.ComponentCount);
+    }
+
+    return CombineHash(hash, raster.WritesFragDepth ? 1u : 0u);
 }
 
 CookResult<void> AppendVariantToModule(CookedModule& module,
@@ -59,6 +90,7 @@ CookResult<void> AppendVariantToModule(CookedModule& module,
     record.Canonical = canonical;
     record.SourceIndices.reserve(variant.EntryPoints.size());
     record.LayoutIndices.reserve(variant.EntryPoints.size());
+    record.RasterIndices.reserve(variant.EntryPoints.size());
     record.Workgroups.reserve(variant.EntryPoints.size());
 
     for (const CompiledEntryPoint& entryPoint : variant.EntryPoints)
@@ -73,6 +105,9 @@ CookResult<void> AppendVariantToModule(CookedModule& module,
         const InternResult layout =
             module.LayoutInterner.Intern(entryPoint.Reflection.Bindings, origin);
         record.LayoutIndices.push_back(layout.Index);
+
+        const InternResult raster = module.RasterInterner.Intern(entryPoint.Reflection.Raster, origin);
+        record.RasterIndices.push_back(raster.Index);
 
         record.Workgroups.push_back(entryPoint.Reflection.Workgroup);
     }
@@ -90,6 +125,9 @@ void FreezeModuleTables(CookedModule& module)
 
     const std::span<const ShaderLayout> layouts = module.LayoutInterner.UniqueEntries();
     module.Layouts.assign(layouts.begin(), layouts.end());
+
+    const std::span<const ReflectedRasterState> rasterStates = module.RasterInterner.UniqueEntries();
+    module.RasterStates.assign(rasterStates.begin(), rasterStates.end());
 }
 
 std::string_view ResolveSource(const CookedModule& module,
