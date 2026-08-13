@@ -34,10 +34,15 @@ public:
     SlangCompiler& operator=(SlangCompiler&&) noexcept;
 
     CookResult<void> Initialize(const SlangCompilerCreateInfo& create_info);
-    CookResult<CompiledVariant> CompileVariant(const PermutationAssignment& assignment);
+    /** Defaults of the extern constants no axis drives. A size expression may name them, so they must
+     * be resolved before the first CompileVariant call. */
+    CookResult<void> ResolveExternConstantDefaults(const PermutationSpace& space);
+    CookResult<CompiledVariant> CompileVariant(const VariantDescriptor& descriptor);
 
     std::string_view GetModuleName() const noexcept;
     std::span<const std::string> GetEntryPointNames() const noexcept;
+    /** Every source file the module pulled in, transitively, in Slang's dependency order. */
+    std::span<const std::string> GetModuleSourceTexts() const noexcept;
 
 private:
     struct Impl;

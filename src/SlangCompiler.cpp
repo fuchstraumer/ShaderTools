@@ -1,11 +1,14 @@
 #include "SlangCompiler.hpp"
+#include "SizeExpression.hpp"
 
 #include <slang-com-helper.h>
 #include <slang-com-ptr.h>
 #include <slang.h>
 
 #include <array>
+#include <fstream>
 #include <future>
+#include <iterator>
 #include <print>
 #include <vector>
 
@@ -19,6 +22,41 @@ namespace
     constexpr const char* k_AllWarningsAsErrors = "all";
     constexpr const char* k_DisabledWarnings = "31010";
     constexpr SlangUInt k_WorkgroupAxisCount = 3u;
+
+    // Slang drops the `Attribute` suffix from the struct name, so these match the declarations in
+    // assets/shaders/VeloxAttributes.slang.
+    constexpr const char* k_ElementCountAttribute = "vx_element_count";
+    constexpr const char* k_Extent2dAttribute = "vx_extent_2d";
+    constexpr const char* k_Extent3dAttribute = "vx_extent_3d";
+
+    /** Attribute string arguments reflect as a pointer plus a length, and a null return means the
+     * argument was not a string literal after all. That is a cook error rather than a skip: the
+     * annotation was written, so the author expects it to do something. */
+    CookResult<std::string> ReadStringArgument(slang::Attribute* attribute,
+                                               uint32_t argument_index,
+                                               std::string_view binding_name)
+    {
+        size_t length = 0u;
+        const char* text = attribute->getArgumentValueString(argument_index, &length);
+        if (text == nullptr)
+        {
+            std::println(stderr,
+                         "[shader_cooker] argument {} of [{}] on '{}' is not a string literal",
+                         argument_index,
+                         attribute->getName(),
+                         binding_name);
+            return std::unexpected(CookError::SizeExpressionParseFailed);
+        }
+
+        // The reflected span includes the surrounding quotes on some paths; trim them if present.
+        std::string_view value{ text, length };
+        if (value.size() >= 2u && value.front() == '"' && value.back() == '"')
+        {
+            value = value.substr(1u, value.size() - 2u);
+        }
+
+        return std::string{ value };
+    }
 
     std::string BlobToString(slang::IBlob* blob)
     {
@@ -152,19 +190,34 @@ struct SlangCompiler::Impl
     std::vector<Slang::ComPtr<slang::IEntryPoint>> entryPointHandles;
     std::vector<std::string> entryPointNames;
     std::vector<slang::CompilerOptionEntry> compilerOptions;
+    std::vector<std::string> moduleSourceTexts;
+    /** Rebuilt for each variant: what a `[vx_*]` size expression is allowed to name. */
+    std::vector<SizeSymbol> currentSymbols;
+    /** Module-wide and constant across variants; owns the strings `currentSymbols` points at. */
+    std::vector<ExternConstantDefault> externDefaults;
     std::string moduleName;
     bool multithreadEntryPointCodegen{ true };
 
     CookResult<void> CreateSession(const SlangCompilerCreateInfo& create_info);
     CookResult<void> LoadRootModule();
+    void ReadDependencySourceTexts();
     CookResult<void> CollectEntryPoints();
     CookResult<Slang::ComPtr<slang::IComponentType>> LinkVariant(
         const PermutationAssignment& assignment);
     std::vector<std::string> GenerateEntryPointCode(slang::IComponentType* linked_program);
-    EntryPointReflection ExtractEntryPointReflection(slang::IComponentType* linked_program,
-                                                     slang::ProgramLayout* program_layout,
-                                                     SlangInt entry_point_index);
-    std::vector<ReflectedBinding> ExtractGlobalBindings(slang::ProgramLayout* program_layout);
+    CookResult<EntryPointReflection> ExtractEntryPointReflection(slang::IComponentType* linked_program,
+                                                                 slang::ProgramLayout* program_layout,
+                                                                 SlangInt entry_point_index);
+    CookResult<std::vector<ReflectedBinding>> ExtractGlobalBindings(
+        slang::ProgramLayout* program_layout);
+    CookResult<DerivedSize> ExtractDerivedSize(slang::VariableReflection* leaf_variable,
+                                               std::string_view binding_name);
+    CookResult<void> ExtractDerivedExtent(slang::VariableReflection* leaf_variable,
+                                          std::string_view binding_name,
+                                          DerivedSize& derived);
+    CookResult<uint32_t> EvaluateExtentArgument(slang::Attribute* attribute,
+                                                uint32_t argument_index,
+                                                std::string_view binding_name);
     void ApplyEntryPointUsage(slang::IComponentType* linked_program,
                               SlangInt entry_point_index,
                               std::vector<ReflectedBinding>& bindings);
@@ -181,8 +234,13 @@ CookResult<void> SlangCompiler::Impl::CreateSession(const SlangCompilerCreateInf
 
     const std::filesystem::path canonicalModulePath = std::filesystem::canonical(create_info.ModulePath);
     const std::string sourceDirectory = canonicalModulePath.parent_path().string();
+    // The shared modules a shader imports -- VeloxAttributes among them -- sit one level above the
+    // per-stage directory, so the asset root resolves without a command-line switch.
+    const std::string sharedDirectory = canonicalModulePath.parent_path().parent_path().string();
     const std::string cacheDirectory = create_info.ModuleCacheDirectory.string();
-    const std::array<const char*, 2> searchPaths{ sourceDirectory.c_str(), cacheDirectory.c_str() };
+    const std::array<const char*, 3> searchPaths{ sourceDirectory.c_str(),
+                                                  sharedDirectory.c_str(),
+                                                  cacheDirectory.c_str() };
 
     slang::TargetDesc target{};
     target.format = SLANG_WGSL;
@@ -220,7 +278,37 @@ CookResult<void> SlangCompiler::Impl::LoadRootModule()
     baseComponents.clear();
     baseComponents.reserve(4u + static_cast<size_t>(rootModule->getDefinedEntryPointCount()));
     baseComponents.push_back(rootModule);
+
+    ReadDependencySourceTexts();
     return {};
+}
+
+/** Slang reports every file the module pulled in, transitively. That set is what the axis-name check
+ * searches, and it is also the right input for a future content hash driving live reload. */
+void SlangCompiler::Impl::ReadDependencySourceTexts()
+{
+    const SlangInt32 dependencyCount = rootModule->getDependencyFileCount();
+    moduleSourceTexts.clear();
+    moduleSourceTexts.reserve(static_cast<size_t>(dependencyCount));
+
+    for (SlangInt32 i = 0; i < dependencyCount; ++i)
+    {
+        const char* dependencyPath = rootModule->getDependencyFilePath(i);
+        if (dependencyPath == nullptr)
+        {
+            continue;
+        }
+
+        std::ifstream file{ dependencyPath, std::ios::binary };
+        if (!file)
+        {
+            std::println(stderr, "[shader_cooker] could not read dependency {}", dependencyPath);
+            continue;
+        }
+
+        moduleSourceTexts.emplace_back(std::istreambuf_iterator<char>{ file },
+                                       std::istreambuf_iterator<char>{});
+    }
 }
 
 CookResult<void> SlangCompiler::Impl::CollectEntryPoints()
@@ -355,7 +443,138 @@ std::vector<std::string> SlangCompiler::Impl::GenerateEntryPointCode(slang::ICom
     return generated;
 }
 
-std::vector<ReflectedBinding> SlangCompiler::Impl::ExtractGlobalBindings(
+CookResult<uint32_t> SlangCompiler::Impl::EvaluateExtentArgument(slang::Attribute* attribute,
+                                                                 uint32_t argument_index,
+                                                                 std::string_view binding_name)
+{
+    const CookResult<std::string> expression = ReadStringArgument(attribute, argument_index, binding_name);
+    if (!expression)
+    {
+        return std::unexpected(expression.error());
+    }
+
+    const CookResult<int64_t> value = EvaluateSizeExpression(expression.value(), currentSymbols);
+    if (!value)
+    {
+        return std::unexpected(value.error());
+    }
+
+    if (value.value() <= 0)
+    {
+        std::println(stderr,
+                     "[shader_cooker] extent argument {} on '{}' evaluated to {}, which is not a valid "
+                     "texture dimension",
+                     argument_index,
+                     binding_name,
+                     value.value());
+        return std::unexpected(CookError::SizeExpressionOutOfRange);
+    }
+
+    return static_cast<uint32_t>(value.value());
+}
+
+CookResult<void> SlangCompiler::Impl::ExtractDerivedExtent(slang::VariableReflection* leaf_variable,
+                                                           std::string_view binding_name,
+                                                           DerivedSize& derived)
+{
+    slang::Attribute* extent2d =
+        leaf_variable->findAttributeByName(globalSession.get(), k_Extent2dAttribute);
+    slang::Attribute* extent3d =
+        leaf_variable->findAttributeByName(globalSession.get(), k_Extent3dAttribute);
+
+    if (extent2d != nullptr && extent3d != nullptr)
+    {
+        std::println(stderr,
+                     "[shader_cooker] '{}' carries both [{}] and [{}]; only one may size a texture",
+                     binding_name,
+                     k_Extent2dAttribute,
+                     k_Extent3dAttribute);
+        return std::unexpected(CookError::ReflectionSizeUnresolved);
+    }
+
+    slang::Attribute* extent = extent2d != nullptr ? extent2d : extent3d;
+    if (extent == nullptr)
+    {
+        return {};
+    }
+
+    const uint32_t argumentCount = extent2d != nullptr ? 2u : 3u;
+    std::array<uint32_t, 3u> axes{ 1u, 1u, 1u };
+
+    for (uint32_t i = 0u; i < argumentCount; ++i)
+    {
+        const CookResult<uint32_t> value = EvaluateExtentArgument(extent, i, binding_name);
+        if (!value)
+        {
+            return std::unexpected(value.error());
+        }
+
+        axes[i] = value.value();
+    }
+
+    derived.ExtentX = axes[0];
+    derived.ExtentY = axes[1];
+    derived.ExtentZ = axes[2];
+    derived.HasExtent = true;
+    return {};
+}
+
+/** Reads the `[vx_*]` annotations off one declaration and evaluates them for this variant. A missing
+ * annotation is not an error -- most resources are sized by the caller -- but a malformed one is,
+ * because the alternative is a size that silently defaults to zero. */
+CookResult<DerivedSize> SlangCompiler::Impl::ExtractDerivedSize(slang::VariableReflection* leaf_variable,
+                                                                std::string_view binding_name)
+{
+    DerivedSize derived;
+    if (leaf_variable == nullptr)
+    {
+        return derived;
+    }
+
+    if (slang::Attribute* countAttribute =
+            leaf_variable->findAttributeByName(globalSession.get(), k_ElementCountAttribute))
+    {
+        const CookResult<std::string> expression = ReadStringArgument(countAttribute, 0u, binding_name);
+        if (!expression)
+        {
+            return std::unexpected(expression.error());
+        }
+
+        const CookResult<int64_t> value = EvaluateSizeExpression(expression.value(), currentSymbols);
+        if (!value)
+        {
+            std::println(stderr,
+                         "[shader_cooker] [{}] on '{}' did not evaluate",
+                         k_ElementCountAttribute,
+                         binding_name);
+            return std::unexpected(value.error());
+        }
+
+        if (value.value() <= 0)
+        {
+            std::println(stderr,
+                         "[shader_cooker] [{}] on '{}' evaluated to {}, which cannot size a buffer",
+                         k_ElementCountAttribute,
+                         binding_name,
+                         value.value());
+            return std::unexpected(CookError::SizeExpressionOutOfRange);
+        }
+
+        derived.Expression = expression.value();
+        derived.ElementCount = static_cast<uint64_t>(value.value());
+        derived.HasElementCount = true;
+    }
+
+    const CookResult<void> extentResult = ExtractDerivedExtent(leaf_variable, binding_name, derived);
+    if (!extentResult)
+    {
+        return std::unexpected(extentResult.error());
+    }
+
+    return derived;
+}
+
+CookResult<std::vector<ReflectedBinding>> SlangCompiler::Impl::ExtractGlobalBindings(
     slang::ProgramLayout* program_layout)
 {
     std::vector<ReflectedBinding> bindings;
@@ -410,6 +629,14 @@ std::vector<ReflectedBinding> SlangCompiler::Impl::ExtractGlobalBindings(
         binding.Group = static_cast<uint32_t>(spaceOffset);
         binding.Binding = static_cast<uint32_t>(indexOffset);
         binding.Kind = FromSlangBindingType(bindingType);
+
+        CookResult<DerivedSize> derived = ExtractDerivedSize(leafVariable, binding.Name);
+        if (!derived)
+        {
+            return std::unexpected(derived.error());
+        }
+
+        binding.Derived = std::move(derived.value());
         bindings.push_back(std::move(binding));
     }
 
@@ -447,14 +674,21 @@ void SlangCompiler::Impl::ApplyEntryPointUsage(slang::IComponentType* linked_pro
     }
 }
 
-EntryPointReflection SlangCompiler::Impl::ExtractEntryPointReflection(
+CookResult<EntryPointReflection> SlangCompiler::Impl::ExtractEntryPointReflection(
     slang::IComponentType* linked_program,
     slang::ProgramLayout* program_layout,
     SlangInt entry_point_index)
 {
     EntryPointReflection reflection;
     reflection.Name = entryPointNames[static_cast<size_t>(entry_point_index)];
-    reflection.Bindings = ExtractGlobalBindings(program_layout);
+
+    CookResult<std::vector<ReflectedBinding>> bindings = ExtractGlobalBindings(program_layout);
+    if (!bindings)
+    {
+        return std::unexpected(bindings.error());
+    }
+
+    reflection.Bindings = std::move(bindings.value());
 
     slang::EntryPointReflection* entryPointLayout =
         program_layout->getEntryPointByIndex(static_cast<SlangUInt>(entry_point_index));
@@ -506,14 +740,49 @@ CookResult<void> SlangCompiler::Initialize(const SlangCompilerCreateInfo& create
     return impl->CollectEntryPoints();
 }
 
-CookResult<CompiledVariant> SlangCompiler::CompileVariant(const PermutationAssignment& assignment)
+CookResult<void> SlangCompiler::ResolveExternConstantDefaults(const PermutationSpace& space)
 {
     if (impl == nullptr)
     {
         return std::unexpected(CookError::CompilerNotInitialized);
     }
 
-    CookResult<Slang::ComPtr<slang::IComponentType>> linkResult = impl->LinkVariant(assignment);
+    CookResult<std::vector<ExternConstantDefault>> defaults =
+        CollectUndrivenExternDefaults(space, impl->moduleSourceTexts);
+    if (!defaults)
+    {
+        return std::unexpected(defaults.error());
+    }
+
+    impl->externDefaults = std::move(defaults.value());
+    return {};
+}
+
+CookResult<CompiledVariant> SlangCompiler::CompileVariant(const VariantDescriptor& descriptor)
+{
+    if (impl == nullptr)
+    {
+        return std::unexpected(CookError::CompilerNotInitialized);
+    }
+
+    // Size expressions resolve against the canonical assignment, so every axis is nameable even when
+    // a dependent one is off. A disabled axis contributes nothing to the shader, so any expression
+    // that reads it was already independent of the value. Undriven externs come first, so an axis of
+    // the same name would win -- though the two sets are disjoint by construction.
+    impl->currentSymbols.clear();
+    impl->currentSymbols.reserve(descriptor.Canonical.size() + impl->externDefaults.size());
+    for (const ExternConstantDefault& entry : impl->externDefaults)
+    {
+        impl->currentSymbols.push_back(SizeSymbol{ entry.Name, entry.Value });
+    }
+
+    for (const PermutationBinding& binding : descriptor.Canonical)
+    {
+        impl->currentSymbols.push_back(
+            SizeSymbol{ binding.first->Name, PermutationValueToInt64(binding.second) });
+    }
+
+    CookResult<Slang::ComPtr<slang::IComponentType>> linkResult = impl->LinkVariant(descriptor.Active);
     if (!linkResult)
     {
         return std::unexpected(linkResult.error());
@@ -529,8 +798,9 @@ CookResult<CompiledVariant> SlangCompiler::CompileVariant(const PermutationAssig
     const std::vector<std::string> generatedCode = impl->GenerateEntryPointCode(linkedProgram);
 
     CompiledVariant variant;
-    variant.VariantSuffix = MakeAssignmentSuffix(assignment);
-    variant.VariantDescription = DescribeAssignment(assignment);
+    variant.VariantSuffix = MakeAssignmentSuffix(descriptor.Canonical);
+    variant.VariantDescription = DescribeAssignment(descriptor.Canonical);
+    variant.VariantIndex = descriptor.Index;
     variant.EntryPoints.reserve(impl->entryPointNames.size());
 
     for (size_t i = 0; i < impl->entryPointNames.size(); ++i)
@@ -540,12 +810,18 @@ CookResult<CompiledVariant> SlangCompiler::CompileVariant(const PermutationAssig
             return std::unexpected(CookError::CodeGenerationFailed);
         }
 
+        CookResult<EntryPointReflection> reflection =
+            impl->ExtractEntryPointReflection(linkedProgram, programLayout, static_cast<SlangInt>(i));
+        if (!reflection)
+        {
+            return std::unexpected(reflection.error());
+        }
+
         CompiledEntryPoint entryPoint;
         entryPoint.Name = impl->entryPointNames[i];
         entryPoint.VariantSuffix = variant.VariantSuffix;
         entryPoint.Code = generatedCode[i];
-        entryPoint.Reflection =
-            impl->ExtractEntryPointReflection(linkedProgram, programLayout, static_cast<SlangInt>(i));
+        entryPoint.Reflection = std::move(reflection.value());
         variant.EntryPoints.push_back(std::move(entryPoint));
     }
 
@@ -570,6 +846,16 @@ std::span<const std::string> SlangCompiler::GetEntryPointNames() const noexcept
     }
 
     return impl->entryPointNames;
+}
+
+std::span<const std::string> SlangCompiler::GetModuleSourceTexts() const noexcept
+{
+    if (impl == nullptr)
+    {
+        return {};
+    }
+
+    return impl->moduleSourceTexts;
 }
 
 } // namespace velox::cooker
