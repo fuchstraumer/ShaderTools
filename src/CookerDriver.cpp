@@ -3,6 +3,7 @@
 #include "DedupeReport.hpp"
 #include "PermutationSpace.hpp"
 #include "ShaderLibraryEmitter.hpp"
+#include "ShaderManifestEmitter.hpp"
 #include "SlangCompiler.hpp"
 #include "WgslBindingScanner.hpp"
 #include <chrono>
@@ -39,6 +40,18 @@ namespace
                          "[shader_cooker]     {} usedBy=0x{:x}",
                          DescribeBinding(binding),
                          binding.EntryPointUsageMask);
+
+            const std::string members = DescribeUniformMembers(binding);
+            if (!members.empty())
+            {
+                std::print(stderr, "{}", members);
+            }
+        }
+
+        const std::string raster = DescribeRasterState(entry_point.Reflection.Raster);
+        if (!raster.empty())
+        {
+            std::print(stderr, "{}", raster);
         }
     }
 
@@ -213,6 +226,21 @@ namespace
                          module.Sources.size(),
                          module.Layouts.size(),
                          source.size() / 1024u);
+
+            const std::string manifest = EmitShaderManifest(module);
+
+            const CookResult<void> manifestCheck = VerifyManifestRoundTrip(module, manifest);
+            if (!manifestCheck)
+            {
+                return manifestCheck;
+            }
+
+            const CookResult<void> manifestResult =
+                sink.WriteArtifact(MakeManifestFileName(module.Name), manifest);
+            if (!manifestResult)
+            {
+                return manifestResult;
+            }
         }
 
         const std::string report = GenerateDedupeReport(library);
