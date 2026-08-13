@@ -42,6 +42,8 @@ enum class CookError : uint16_t
     PermutationVariantIndexCollision = 84,
 
     LibraryRoundTripFailed = 90,
+    CookNotDeterministic = 91,
+    ModulePolicyViolated = 92,
 
     OutputPathInvalid = 100,
     OutputWriteFailed = 101,
