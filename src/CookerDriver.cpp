@@ -1,15 +1,26 @@
 #include "CookerDriver.hpp"
 #include "CookedLibrary.hpp"
+#include "CookerErrors.hpp"
+#include "CookerOptions.hpp"
 #include "DedupeReport.hpp"
+#include "OutputSink.hpp"
 #include "PermutationSpace.hpp"
+#include "ShaderDataSchema.hpp"
 #include "ShaderLibraryEmitter.hpp"
 #include "ShaderManifestEmitter.hpp"
 #include "SlangCompiler.hpp"
 #include "WgslBindingScanner.hpp"
 #include <chrono>
+#include <cstdio>
+#include <cstdint>
 #include <expected>
+#include <filesystem>
 #include <print>
+#include <span>
+#include <string>
+#include <string_view>
 #include <system_error>
+#include <vector>
 
 namespace velox::cooker
 {
@@ -94,27 +105,24 @@ namespace
             return;
         }
 
-        for (const ReflectedBinding& binding : variant.EntryPoints.front().Reflection.Bindings)
+        // Every entry point holds the same set of bindings, so we can just check the first one.
+        // What varies is the EntryPointUsageMask, which is set for each binding the entry point actually uses.
+        // We will use the first bindings list to find the bindings, but check to see if any point actually uses it
+        const std::vector<ReflectedBinding>& bindings = variant.EntryPoints.front().Reflection.Bindings;
+        const size_t declaredBindingCount = bindings.size();
+        for (size_t bindingIndex = 0u; bindingIndex < declaredBindingCount; ++bindingIndex)
         {
-            bool referencedByAnyEntryPoint = false;
-            for (const CompiledEntryPoint& entryPoint : variant.EntryPoints)
-            {
-                for (const ReflectedBinding& candidate : entryPoint.Reflection.Bindings)
+            const bool referenced = std::ranges::any_of(variant.EntryPoints,
+                [bindingIndex](const CompiledEntryPoint& entry_point)
                 {
-                    if (SameBindingLocation(candidate, binding) && candidate.EntryPointUsageMask != 0u)
-                    {
-                        referencedByAnyEntryPoint = true;
-                    }
-                }
-            }
-
-            if (!referencedByAnyEntryPoint)
+                return entry_point.Reflection.Bindings[bindingIndex].EntryPointUsageMask != 0u;
+                });
+            if (!referenced)
             {
                 std::println(stderr,
-                             "[shader_cooker] unreferenced binding in [{}]: {} is declared but no "
-                             "entrypoint reads it",
-                             variant.VariantDescription,
-                             DescribeBinding(binding));
+                    "[shader_cooker] unreferenced binding in [{}]: {} is declared but no entrypoint reads it",
+                    variant.VariantDescription,
+                    DescribeBinding(bindings[bindingIndex]));
             }
         }
     }
@@ -205,30 +213,18 @@ namespace
         return {};
     }
 
-    /** Writes the header and one source file for each module. The header name comes from the sink, so
-     * the generated source includes exactly the file the user asked for. */
-    CookResult<void> EmitLibraryArtifacts(const CookedLibrary& library,
-                                          OutputSink& sink,
-                                          CookStatistics& statistics)
+    CookResult<void> EmitLibraryModules(std::string_view header_stem,
+                                        std::string_view header_name,
+                                        const std::vector<CookedModule>& modules,
+                                        OutputSink& sink,
+                                        CookStatistics& statistics)
     {
-        const std::string headerName{ sink.PrimaryName() };
-        const std::filesystem::path headerPath{ headerName };
-        const std::string headerStem = headerPath.stem().string();
-
-        const std::string header = EmitShaderLibraryHeader(library);
-        const CookResult<void> headerResult = sink.Write(header);
-        if (!headerResult)
+        for (const CookedModule& module : modules)
         {
-            return headerResult;
-        }
+            const std::string sourceName = MakeModuleSourceFileName(header_stem, module.Name);
+            const std::string source = EmitShaderLibraryModuleSource(module, header_name);
 
-        for (const CookedModule& module : library.Modules)
-        {
-            const std::string sourceName = MakeModuleSourceFileName(headerStem, module.Name);
-            const std::string source = EmitShaderLibraryModuleSource(module, headerName);
-
-            const CookResult<void> sourceResult = sink.WriteArtifact(sourceName, source);
-            if (!sourceResult)
+            if (CookResult<void> sourceResult = sink.WriteArtifact(sourceName, source); !sourceResult)
             {
                 return sourceResult;
             }
@@ -243,23 +239,43 @@ namespace
 
             const std::string manifest = EmitShaderManifest(module);
 
-            const CookResult<void> manifestCheck = VerifyManifestRoundTrip(module, manifest);
-            if (!manifestCheck)
+            if (CookResult<void> manifestCheck = VerifyManifestRoundTrip(module, manifest); !manifestCheck)
             {
                 return manifestCheck;
             }
 
-            const CookResult<void> manifestResult =
-                sink.WriteArtifact(MakeManifestFileName(module.Name), manifest);
-            if (!manifestResult)
+            if (CookResult<void> manifestResult = sink.WriteArtifact(MakeManifestFileName(module.Name), manifest); !manifestResult)
             {
                 return manifestResult;
             }
         }
 
+        return {};
+    }
+
+    /** Writes the header and one source file for each module. The header name comes from the sink, so
+     * the generated source includes exactly the file the user asked for. */
+    CookResult<void> EmitLibraryArtifacts(const CookedLibrary& library,
+                                          OutputSink& sink,
+                                          CookStatistics& statistics)
+    {
+        const std::string headerName{ sink.PrimaryName() };
+        const std::filesystem::path headerPath{ headerName };
+        const std::string headerStem = headerPath.stem().string();
+
+        const std::string header = EmitShaderLibraryHeader(library);
+        if (auto headerResult = sink.Write(header); !headerResult)
+        {
+            return headerResult;
+        }
+
+        if (auto emitLibraryResult = EmitLibraryModules(headerStem, headerName, library.Modules, sink, statistics); !emitLibraryResult)
+        {
+            return emitLibraryResult;
+        }
+
         const std::string report = GenerateDedupeReport(library);
-        const CookResult<void> reportResult = sink.WriteArtifact("ShaderLibrary.dedupe.txt", report);
-        if (!reportResult)
+        if (auto reportResult = sink.WriteArtifact("ShaderLibrary.dedupe.txt", report); !reportResult)
         {
             return reportResult;
         }
@@ -280,8 +296,7 @@ namespace
         createInfo.MultithreadEntryPointCodegen = options.MultithreadEntryPointCodegen;
 
         SlangCompiler compiler;
-        const CookResult<void> initializeResult = compiler.Initialize(createInfo);
-        if (!initializeResult)
+        if (auto initializeResult = compiler.Initialize(createInfo); !initializeResult)
         {
             return initializeResult;
         }
@@ -432,7 +447,7 @@ CookResult<CookStatistics> RunCookOnce(const CookerOptions& options, OutputSink&
         
     if (!cacheDirectoryResult)
     {
-        return std::unexpected(cacheDirectoryResult.error());
+        return std::unexpected(CookError::FilesystemError);
     }
 
     CookStatistics statistics;
