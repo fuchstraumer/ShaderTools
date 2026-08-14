@@ -30,7 +30,7 @@
             }
         },
         {
-            "name": "ninja-msvc-clang",
+            "name": "ninja-clang-cl",
             "displayName": "Win64 Clang-CL",
             "inherits": "ninja-x64",
             "cacheVariables": {
@@ -51,7 +51,7 @@
             "name": "windows-ninja-clang-debug",
             "displayName": "Win64 Clang Debug",
             "description": "Builds the project using the Windows x64 Clang (MSVC Install) configure preset",
-            "configurePreset": "ninja-msvc-clang",
+            "configurePreset": "ninja-clang-cl",
             "configuration": "Debug"
         },
         {
@@ -65,7 +65,7 @@
             "name": "windows-ninja-clang-relwithdebinfo",
             "displayName": "Win64 Clang RelWithDebInfo",
             "description": "Builds the project using the Windows x64 Clang (MSCV Install) configure preset",
-            "configurePreset": "ninja-msvc-clang",
+            "configurePreset": "ninja-clang-cl",
             "configuration": "RelWithDebInfo"
         }
     ]

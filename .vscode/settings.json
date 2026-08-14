@@ -9,19 +9,19 @@
     },
     "clangd.arguments": [
         "--query-driver=C:/Program Files/LLVM/bin/clang++.exe,C:/Program Files/LLVM/bin/clang.exe",
-        "--compile-commands-dir=${workspaceFolder}/build/ninja-msvc-clang",
+        "--compile-commands-dir=${workspaceFolder}/build/ninja-clang-cl",
         "--background-index",
         "--header-insertion=never",
-        "--log=verbose",
         "--pch-storage=memory",
         "--limit-results=50",
         "--completion-style=detailed",
         "--clang-tidy",
         "--enable-config",
-        "-j=4"
+        "--fallback-style=none",
+        "-j=12"
     ],
     "clangd.onConfigChanged": "restart",
-    "clangd.checkUpdates": false,
+    "clangd.checkUpdates": true,
     "editor.semanticHighlighting.enabled": true,
     "search.exclude": {
         "**/build": true,
