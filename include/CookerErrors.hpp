@@ -47,6 +47,10 @@ enum class CookError : uint16_t
 
     OutputPathInvalid = 100,
     OutputWriteFailed = 101,
+
+    // start system errors
+    SystemError = 200,
+    FilesystemError = 201, // will expand later
 };
 
 template<typename T>

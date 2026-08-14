@@ -7,7 +7,9 @@
 #include "SlangCompiler.hpp"
 #include "WgslBindingScanner.hpp"
 #include <chrono>
+#include <expected>
 #include <print>
+#include <system_error>
 
 namespace velox::cooker
 {
@@ -15,12 +17,24 @@ namespace velox::cooker
 namespace
 {
 
-    void EnsureModuleCacheDirectory(const std::filesystem::path& cache_directory)
+    std::expected<std::filesystem::path, std::error_code> EnsureModuleCacheDirectory(const std::filesystem::path& cache_directory)
     {
-        if (!std::filesystem::exists(cache_directory))
+        std::error_code filesystemError;
+
+        if (!std::filesystem::exists(cache_directory, filesystemError))
         {
-            std::filesystem::create_directories(cache_directory);
+            std::filesystem::create_directories(cache_directory, filesystemError);
         }
+
+        // transform to canonical before returning (and since we know it exists), since it can be a little more robust
+        std::filesystem::path canonicalCacheDirectory = std::filesystem::canonical(cache_directory, filesystemError);
+
+        if (filesystemError)
+        {
+            return std::unexpected(filesystemError);
+        }
+
+        return canonicalCacheDirectory;
     }
 
     void ReportEntryPointReflection(const CompiledEntryPoint& entry_point)
@@ -413,8 +427,13 @@ namespace
 CookResult<CookStatistics> RunCookOnce(const CookerOptions& options, OutputSink& sink)
 {
     const std::chrono::steady_clock::time_point startTime = std::chrono::steady_clock::now();
-
-    EnsureModuleCacheDirectory(options.ModuleCacheDirectory);
+    std::expected<std::filesystem::path, std::error_code> cacheDirectoryResult =
+        EnsureModuleCacheDirectory(options.ModuleCacheDirectory);
+        
+    if (!cacheDirectoryResult)
+    {
+        return std::unexpected(cacheDirectoryResult.error());
+    }
 
     CookStatistics statistics;
     std::vector<CompiledVariant> variants;

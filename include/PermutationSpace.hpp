@@ -49,7 +49,7 @@ using PermutationAssignment = std::vector<PermutationBinding>;
  * and the canonicalized values to retrieve the variant. Think how trivial that is: if you know just the 
  * set of values you want to use, you can get your variant.
  * 
- * And fwiw, this is just compiler canoncilization of the values, which is to say flattening a multidimensional
+ * And fwiw, this is just compiler canonicalization of the values, which is to say flattening a multidimensional
  * space into a single dimension.
 */
 struct VariantDescriptor
