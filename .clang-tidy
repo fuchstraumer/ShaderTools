@@ -10,11 +10,12 @@ Checks: >
     readability-identifier-naming,
     -modernize-use-trailing-return-type,
     -cppcoreguidelines-avoid-magic-numbers,
-    -ppcoreguidelines-avoid-c-arrays,
+    -cppcoreguidelines-avoid-c-arrays,
     -modernize-avoid-c-arrays
 
 WarningsAsErrors: ''
-HeaderFilterRegex: '(src|include)/.*'
+# Only check headers from src/, include/, client/, tests/ - explicitly exclude third_party
+HeaderFilterRegex: '^(?!.*third_party).*(src|include|client|tests)/.*'
 
 CheckOptions:
     misc-include-cleaner.IgnoreHeaders: 'third_party/.*'

@@ -1,15 +1,54 @@
 cmake_minimum_required(VERSION 3.24) # need multiconfig support
 project(lodestone LANGUAGES CXX VERSION 0.1.0)
 
-set(SHADER_COOKER_CLIENT_HEADERS
+set(CMAKE_CXX_SCAN_FOR_MODULES OFF)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
+# cmake/ contains our own FindVulkanHeaders.cmake; must be set before any find_package calls
+list(PREPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
+find_package(Vulkan REQUIRED)
+set(VulkanHeaders_INCLUDE_DIR ${Vulkan_INCLUDE_DIR} CACHE PATH "" FORCE)
+
+include(cmake/ConfigureBuildFlags.cmake)
+
+if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" AND NOT EMSCRIPTEN)
+    if (CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "Clang")
+        message(FATAL_ERROR "Clang-CL in MSVC frontend variant is not supported. Please use a different compiler.")
+    else()
+        add_msvc_exclusive_build_flags_all_targets()
+        add_shared_msvc_style_build_flags_all_targets()
+    endif()
+elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND NOT EMSCRIPTEN)
+    if (CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+        # Running as clang, but with MSVC frontend (clang-cl as shim layer)
+        add_shared_msvc_style_build_flags_all_targets()
+        disable_msvc_frontend_clang_compiler_warnings_all_targets()
+    else()
+        add_clang_style_build_flags_all_targets()
+    endif()
+else()
+    message(STATUS
+        "Could not find supported compiler. Please use Clang, MSVC, or Emscripten and make sure they are on your PATH.")
+    message(FATAL_ERROR "Unsupported compiler: ${CMAKE_CXX_COMPILER_ID}")
+endif()
+
+include(cmake/ConfigureSlang.cmake)
+
+add_slang_subdirectory(third_party/slang)
+set_target_properties(slang PROPERTIES CXX_STANDARD 23 CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF)
+
+set(LODESTONE_CLIENT_HEADERS
+    "${CMAKE_CURRENT_SOURCE_DIR}/client/include/ResourceFlags.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/client/include/ShaderLibraryTypes.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/client/include/ShaderManifest.hpp")
 
-set(SHADER_COOKER_CLIENT_SOURCES
+set(LODESTONE_CLIENT_SOURCES
+    "${CMAKE_CURRENT_SOURCE_DIR}/client/src/ResourceFlags.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/client/src/ShaderLibraryTypes.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/client/src/ShaderManifest.cpp")
 
-set(SHADER_COOKER_HEADERS
+set(LODESTONE_HEADERS
     "${CMAKE_CURRENT_SOURCE_DIR}/include/CookerDriver.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/include/CookerErrors.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/include/CookerOptions.hpp"
@@ -26,7 +65,7 @@ set(SHADER_COOKER_HEADERS
     "${CMAKE_CURRENT_SOURCE_DIR}/include/SlangCompiler.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/include/WgslBindingScanner.hpp")
 
-set(SHADER_COOKER_SOURCES
+set(LODESTONE_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/src/ContentHash.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/CookedLibrary.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/CookerDriver.cpp"
@@ -40,23 +79,23 @@ set(SHADER_COOKER_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/src/ShaderManifestEmitter.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/SizeExpression.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/SlangCompiler.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/WgslBindingScanner.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp")
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/WgslBindingScanner.cpp")
 
-add_library(lodestone::cooker ${SHADER_COOKER_SOURCES} ${SHADER_COOKER_HEADERS})
-target_compile_features(lodestone::cooker PRIVATE cxx_std_23)
+add_library(lodestone STATIC ${LODESTONE_SOURCES} ${LODESTONE_HEADERS})
+set_target_properties(lodestone PROPERTIES CXX_STANDARD 23 CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF)
 # The engine include path carries shader/ShaderLibraryTypes.hpp and resource/ResourceFlags.hpp. The
 # cooker and the rendergraph share that vocabulary, so neither can drift from the other. Neither
 # header pulls in Dawn: ResourceFlagConversions.hpp is the only file that names a WebGPU type.
-target_include_directories(lodestone::cooker PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
-    ${CMAKE_SOURCE_DIR}/include
-    ${CMAKE_SOURCE_DIR}/third_party/slang/include)
-target_link_libraries(lodestone::cooker PRIVATE slang magic_enum::magic_enum)
-set_target_properties(lodestone::cooker PROPERTIES FOLDER "tools")
+target_include_directories(lodestone PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/client/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/third_party/slang/include"
+    "${CMAKE_CURRENT_SOURCE_DIR}/third_party/magic_enum/include")
+target_link_libraries(lodestone PRIVATE slang)
+target_compile_definitions(lodestone PRIVATE "_HAS_CXX23=1")
 
-source_group("include" FILES ${SHADER_COOKER_HEADERS})
-source_group("src" FILES ${SHADER_COOKER_SOURCES})
-source_group("client" FILES ${SHADER_COOKER_CLIENT_HEADERS} ${SHADER_COOKER_CLIENT_SOURCES})
+source_group("include" FILES ${LODESTONE_HEADERS})
+source_group("src" FILES ${LODESTONE_SOURCES})
+source_group("client" FILES ${LODESTONE_CLIENT_HEADERS} ${LODESTONE_CLIENT_SOURCES})
 
-copy_slang_dlls_to_target(lodestone::cooker)
+#copy_slang_dlls_to_target(lodestone)

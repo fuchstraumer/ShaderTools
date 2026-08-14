@@ -1,0 +1,80 @@
+---
+If:
+  PathMatch: .*(src|include|client|tests)/.*
+  PathExclude: .*(third_party|build)/.*
+
+CompileFlags:
+  Add: [ -std=c++23, -Wall, -Wpedantic, -Wextra, -Weverything,
+         -Wno-c++98-compat, -Wno-c++98-compat-pedantic, -Wno-pre-c++17-compat,
+         -Wno-exit-time-destructors, -Wno-global-constructors ]
+  Compiler: clang++
+
+Diagnostics:
+  UnusedIncludes: Strict
+  MissingIncludes: Strict
+  ClangTidy:
+    Add: [ bugprone-*, performance-*, modernize-*, readability-*, cppcoreguidelines-* ]
+    Remove: [ modernize-use-trailing-return-type, cppcoreguidelines-avoid-magic-numbers,
+              readability-magic-numbers, bugprone-easily-swappable-parameters,
+              readability-uppercase-literal-suffix, modernize-avoid-c-arrays,
+              cppcoreguidelines-pro-bounds-avoid-unchecked-container-access,
+              bugprone-throwing-static-initialization ]
+    CheckOptions:
+      # --- Types (CamelCase) ---
+      readability-identifier-naming.ClassCase: CamelCase
+      readability-identifier-naming.StructCase: CamelCase
+      readability-identifier-naming.EnumCase: CamelCase
+      readability-identifier-naming.EnumConstantCase: CamelCase
+      readability-identifier-naming.UnionCase: CamelCase
+      readability-identifier-naming.TypeAliasCase: CamelCase
+      readability-identifier-naming.TypedefCase: CamelCase
+
+      # --- Variables and Members ---
+      # Public / Local
+      readability-identifier-naming.VariableCase: CamelCase
+      readability-identifier-naming.PublicMemberCase: CamelCase
+      readability-identifier-naming.PublicMethodCase: CamelCase
+      # Private / Protected
+      readability-identifier-naming.PrivateMemberCase: camelBack
+      readability-identifier-naming.ProtectedMemberCase: camelBack
+
+      # --- Functions and Methods ---
+      # Public / Default
+      readability-identifier-naming.FunctionCase: CamelCase
+      readability-identifier-naming.MethodCase: CamelCase
+      # Private / Protected
+      readability-identifier-naming.PrivateMethodCase: camelBack
+      readability-identifier-naming.ProtectedMethodCase: camelBack
+
+      # --- Parameters (lower_case) ---
+      readability-identifier-naming.ParameterCase: lower_case
+      readability-identifier-naming.LocalVariableCase: camelBack
+
+      # --- Constants (k_CamelCase) ---
+      readability-identifier-naming.GlobalVariableCase: CamelCase
+      readability-identifier-naming.GlobalVariablePrefix: k_
+      readability-identifier-naming.StaticConstexprVariableCase: CamelCase
+      readability-identifier-naming.StaticConstexprVariablePrefix: k_
+      readability-identifier-naming.LocalConstexprVariableCase: CamelCase
+      readability-identifier-naming.LocalConstexprVariablePrefix: k_
+      readability-identifier-naming.ConstexprVariableCase: CamelCase
+      readability-identifier-naming.ConstexprVariablePrefix: k_
+      readability-identifier-naming.GlobalConstexprVariableCase: CamelCase
+      readability-identifier-naming.GlobalConstexprVariablePrefix: k_
+
+    FastCheckFilter: None
+
+InlayHints:
+  Enabled: Yes
+  ParameterNames: Yes
+  DeducedTypes: Yes
+
+Index:
+  Background: Build
+  StandardLibrary: true
+
+Completion:
+  HeaderInsertion: IWYU
+
+Documentation:
+  CommentFormat: Doxygen

@@ -1,4 +1,4 @@
-set(SLANG_ENABLE_DXIL ON CACHE BOOL "Enable generating DXIL using DXC")
+set(SLANG_ENABLE_DXIL OFF CACHE BOOL "Enable generating DXIL using DXC")
 set(SLANG_ENABLE_CUDA OFF CACHE BOOL "Enable CUDA tests using CUDA found in CUDA_PATH")
 set(SLANG_ENABLE_OPTIX OFF CACHE BOOL "Enable OptiX build/tests, requires SLANG_ENABLE_CUDA")
 set(SLANG_ENABLE_NVAPI OFF CACHE BOOL "Enable NVAPI usage (Only available for builds targeting Windows)")
@@ -16,8 +16,41 @@ set(SLANG_EXCLUDE_DAWN ON CACHE BOOL "Optionally exclude webgpu_dawn from the bu
 set(SLANG_EXCLUDE_TINT ON CACHE BOOL "Optionally exclude slang-tint from the build")
 set(SLANG_ENABLE_RELEASE_LTO ON CACHE BOOL "Enable LTO for release builds")
 set(SLANG_USE_SYSTEM_VULKAN_HEADERS ON)
-set(SLANG_ENABLE_MIMALLOC ON)
-set(SLANG_ENABLE_SPIRV_TOOLS_MIMALLOC ON)
+set(SLANG_ENABLE_MIMALLOC OFF)
+set(SLANG_ENABLE_SPIRV_TOOLS_MIMALLOC OFF)
+
+# Wraps add_subdirectory for Slang with warning suppression
+# This applies flags to ALL targets created within the Slang directory
+function(add_slang_subdirectory SLANG_DIR)
+    # Save current CMAKE flags
+    set(SAVED_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+    set(SAVED_C_FLAGS "${CMAKE_C_FLAGS}")
+    
+    # Determine warning suppression flags based on compiler
+    if(MSVC)
+        # Pure MSVC: /W0 disables all warnings
+        set(SUPPRESS_FLAGS " /W0")
+    elseif(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+        # Clang-cl (MSVC frontend): /W0 disables warnings
+        set(SUPPRESS_FLAGS " /W0 -Wno-everything")
+    else()
+        # Pure Clang/GCC: -w disables all warnings
+        set(SUPPRESS_FLAGS " -w")
+    endif()
+    
+    # Temporarily modify CMAKE flags for this subdirectory
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}${SUPPRESS_FLAGS}" PARENT_SCOPE)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}${SUPPRESS_FLAGS}" PARENT_SCOPE)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}${SUPPRESS_FLAGS}")
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}${SUPPRESS_FLAGS}")
+    
+    # Add Slang subdirectory - all targets will inherit the suppression flags
+    add_subdirectory(${SLANG_DIR} EXCLUDE_FROM_ALL)
+    
+    # Restore original flags for subsequent targets
+    set(CMAKE_CXX_FLAGS "${SAVED_CXX_FLAGS}" PARENT_SCOPE)
+    set(CMAKE_C_FLAGS "${SAVED_C_FLAGS}" PARENT_SCOPE)
+endfunction()
 
 # Function to organize all Slang targets into IDE folders
 function(organize_slang_targets)

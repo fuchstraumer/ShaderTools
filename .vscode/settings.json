@@ -2,8 +2,30 @@
     "git.ignoreLimitWarning": true,
     "cmake.buildDirectory": "${workspaceFolder}/build",
     "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
+    "C_Cpp.intelliSenseEngine": "disabled",
     "files.watcherExclude": {
         "build/**": true,
         "third_party/slang/**": true
+    },
+    "clangd.arguments": [
+        "--query-driver=C:/Program Files/LLVM/bin/clang++.exe,C:/Program Files/LLVM/bin/clang.exe",
+        "--compile-commands-dir=${workspaceFolder}/build/ninja-msvc-clang",
+        "--background-index",
+        "--header-insertion=never",
+        "--log=verbose",
+        "--pch-storage=memory",
+        "--limit-results=50",
+        "--completion-style=detailed",
+        "--clang-tidy",
+        "--enable-config",
+        "-j=4"
+    ],
+    "clangd.onConfigChanged": "restart",
+    "clangd.checkUpdates": false,
+    "editor.semanticHighlighting.enabled": true,
+    "search.exclude": {
+        "**/build": true,
+        "**/third_party": true,
+        "**/.git": true
     }
 }
