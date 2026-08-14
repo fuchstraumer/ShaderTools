@@ -1,10 +1,15 @@
 #pragma once
 #ifndef LODESTONE_SHADER_COOKER_COOKED_LIBRARY_HPP
 #define LODESTONE_SHADER_COOKER_COOKED_LIBRARY_HPP
+#include "ContentHash.hpp"
 #include "ContentInterner.hpp"
+#include "CookerErrors.hpp"
 #include "PermutationSpace.hpp"
 #include "ShaderDataSchema.hpp"
+#include "ShaderLibraryTypes.hpp"
+#include <cstdint>
 #include <string>
+#include <string_view>
 #include <vector>
 
 /** The frozen model every emitter reads.
