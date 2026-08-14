@@ -1,11 +1,23 @@
 #include "PermutationSpace.hpp"
+#include "CookerErrors.hpp"
 #include "SizeExpression.hpp"
 #include <algorithm>
 #include <array>
 #include <cctype>
+#include <cstddef>
+#include <cstdint>
+#include <cstdio>
+#include <expected>
 #include <format>
+#include <functional>
 #include <print>
+#include <span>
+#include <string>
+#include <string_view>
 #include <unordered_set>
+#include <utility>
+#include <variant>
+#include <vector>
 
 namespace velox::cooker
 {
@@ -13,17 +25,17 @@ namespace velox::cooker
 namespace
 {
 
-    const PermutationAxis k_IfftSizeAxis{ "IFFT_SIZE",
-                                          { 128u, 256u, 512u, 1024u, 2048u, 4096u, 8192u },
-                                          nullptr,
-                                          false };
+    const PermutationAxis k_IfftSizeAxis{ .Name="IFFT_SIZE",
+                                          .Values={ 128u, 256u, 512u, 1024u, 2048u, 4096u, 8192u },
+                                          .Parent=nullptr,
+                                          .RequiredParentValue=false };
 
-    const PermutationAxis k_IfftUseWaveOpsAxis{ "IFFT_USE_WAVE_OPS", { false, true }, nullptr, false };
+    const PermutationAxis k_IfftUseWaveOpsAxis{ .Name="IFFT_USE_WAVE_OPS", .Values={ false, true }, .Parent=nullptr, .RequiredParentValue=false };
 
-    const PermutationAxis k_IfftWaveSizeAxis{ "IFFT_WAVE_SIZE",
-                                              { 16u, 32u, 64u, 128u },
-                                              &k_IfftUseWaveOpsAxis,
-                                              true };
+    const PermutationAxis k_IfftWaveSizeAxis{ .Name="IFFT_WAVE_SIZE",
+                                              .Values={ 16u, 32u, 64u, 128u },
+                                              .Parent=&k_IfftUseWaveOpsAxis,
+                                              .RequiredParentValue=true };
 
     const PermutationSpace k_OceanFftSpace{ &k_IfftSizeAxis, &k_IfftUseWaveOpsAxis, &k_IfftWaveSizeAxis };
 
@@ -32,11 +44,11 @@ namespace
     // IfftPermuteCS reorders data and never reads a wave-op symbol, so both wave axes must stay inert
     // for it. If that ever changes, the entry point started paying for a permutation it does not use.
     const std::array<ExpectedAxisInfluence, 2> k_OceanFftExpectedInfluence{
-        ExpectedAxisInfluence{ "IfftPermuteCS", "IFFT_USE_WAVE_OPS", true },
-        ExpectedAxisInfluence{ "IfftPermuteCS", "IFFT_WAVE_SIZE", true }
+        ExpectedAxisInfluence{ .EntryPointName="IfftPermuteCS", .AxisName="IFFT_USE_WAVE_OPS", .IsInert=true },
+        ExpectedAxisInfluence{ .EntryPointName="IfftPermuteCS", .AxisName="IFFT_WAVE_SIZE", .IsInert=true }
     };
 
-    const ModulePolicy k_OceanFftPolicy{ 64u, k_OceanFftExpectedInfluence };
+    const ModulePolicy k_OceanFftPolicy{ .MaxVariants=64u, .ExpectedInfluence=k_OceanFftExpectedInfluence };
     const ModulePolicy k_EmptyPolicy{};
 
     struct ModuleSpaceEntry
@@ -47,7 +59,7 @@ namespace
     };
 
     const std::array<ModuleSpaceEntry, 1> k_ModuleSpaces{
-        ModuleSpaceEntry{ "OceanFft", &k_OceanFftSpace, &k_OceanFftPolicy }
+        ModuleSpaceEntry{ .ModuleName="OceanFft", .Space=&k_OceanFftSpace, .Policy=&k_OceanFftPolicy }
     };
 
     const PermutationBinding* FindBindingForAxis(const PermutationAssignment& assignment,
@@ -88,7 +100,7 @@ namespace
             const std::string_view line = source.substr(lineStart, lineEnd - lineStart);
             lineStart = lineEnd + 1u;
 
-            if (line.find(k_ExternKeyword) == std::string_view::npos)
+            if (!line.contains(k_ExternKeyword))
             {
                 continue;
             }
@@ -123,7 +135,7 @@ namespace
      * cooker is expected to drive; one without an axis silently keeps its default forever. */
     std::vector<std::string_view> CollectExternConstantNames(std::string_view source)
     {
-        constexpr std::string_view k_ExternKeyword{ "extern" };
+        constexpr static std::string_view k_ExternKeyword{ "extern" };
         std::vector<std::string_view> names;
 
         size_t lineStart = 0u;
@@ -138,7 +150,7 @@ namespace
             const std::string_view line = source.substr(lineStart, lineEnd - lineStart);
             lineStart = lineEnd + 1u;
 
-            if (line.find(k_ExternKeyword) == std::string_view::npos)
+            if (!line.contains(k_ExternKeyword)) 
             {
                 continue;
             }
@@ -174,7 +186,7 @@ namespace
     std::vector<std::pair<std::string_view, std::string_view>> CollectExternConstantDefinitions(
         std::string_view source)
     {
-        constexpr std::string_view k_ExternKeyword{ "extern" };
+        constexpr static std::string_view k_ExternKeyword{ "extern" };
         std::vector<std::pair<std::string_view, std::string_view>> definitions;
 
         size_t lineStart = 0u;
@@ -189,7 +201,7 @@ namespace
             const std::string_view line = source.substr(lineStart, lineEnd - lineStart);
             lineStart = lineEnd + 1u;
 
-            if (line.find(k_ExternKeyword) == std::string_view::npos)
+            if (!line.contains(k_ExternKeyword))
             {
                 continue;
             }
@@ -254,7 +266,7 @@ namespace
 
         for (const ExternConstantDefault& entry : defaults)
         {
-            symbols.push_back(SizeSymbol{ entry.Name, entry.Value });
+            symbols.push_back(SizeSymbol{ .Name=entry.Name, .Value=entry.Value });
         }
 
         return symbols;
@@ -262,15 +274,7 @@ namespace
 
     bool SpaceDrivesAxisNamed(const PermutationSpace& space, std::string_view name) noexcept
     {
-        for (const PermutationAxis* axis : space)
-        {
-            if (axis->Name == name)
-            {
-                return true;
-            }
-        }
-
-        return false;
+        return std::ranges::any_of(space, [name](const PermutationAxis* axis) { return axis->Name == name; });
     }
 
     CookResult<void> VerifyVariantIndicesAreUnique(const std::vector<VariantDescriptor>& variants)
@@ -389,7 +393,7 @@ CookResult<uint32_t> ComputeVariantIndex(const PermutationSpace& space,
             return std::unexpected(valueIndex.error());
         }
 
-        index = index * static_cast<uint32_t>(axis->Values.size()) + valueIndex.value();
+        index = (index * static_cast<uint32_t>(axis->Values.size())) + valueIndex.value();
     }
 
     return index;
@@ -447,10 +451,7 @@ CookResult<VariantSet> EnumerateVariants(const PermutationSpace& space)
         return std::unexpected(uniqueResult.error());
     }
 
-    std::sort(variantSet.Variants.begin(),
-              variantSet.Variants.end(),
-              [](const VariantDescriptor& lhs, const VariantDescriptor& rhs)
-              { return lhs.Index < rhs.Index; });
+    std::ranges::sort(variantSet.Variants, std::ranges::less{}, &VariantDescriptor::Index);
 
     return variantSet;
 }
