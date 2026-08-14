@@ -9,7 +9,7 @@
 
 /** Where cooked output goes. Kept behind an interface so a future watch-and-serve process can hand
  * sources to a running engine without going through the filesystem. */
-namespace velox::cooker
+namespace lodestone
 {
 
 class OutputSink
@@ -70,6 +70,6 @@ private:
     std::map<std::string, std::string> artifacts;
 };
 
-} // namespace velox::cooker
+} // namespace lodestone
 
 #endif // !VELOX_SHADER_COOKER_OUTPUT_SINK_HPP

@@ -16,7 +16,7 @@
  * The rendergraph includes shader/ShaderLibraryTypes.hpp, never this output. Only the code that names
  * a shader includes the generated header.
  */
-namespace velox::cooker
+namespace lodestone
 {
 
 /** MSVC rejects a string literal longer than 16380 bytes with C2026. The emitter splits a long source
@@ -32,6 +32,6 @@ std::string MakeModuleSourceFileName(std::string_view header_stem, std::string_v
 /** Converts a Slang axis name to a C++ field name: `IFFT_SIZE` becomes `IfftSize`. */
 std::string MakeFieldIdentifier(std::string_view axis_name);
 
-} // namespace velox::cooker
+} // namespace lodestone
 
 #endif // !VELOX_SHADER_COOKER_SHADER_LIBRARY_EMITTER_HPP

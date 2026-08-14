@@ -4,7 +4,7 @@
 #include <format>
 #include <optional>
 
-namespace velox::cooker
+namespace lodestone
 {
 
 namespace
@@ -375,4 +375,4 @@ BindingComparison CompareBindings(std::span<const WgslDeclaredBinding> declared,
     return comparison;
 }
 
-} // namespace velox::cooker
+} // namespace lodestone

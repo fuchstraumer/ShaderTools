@@ -15,7 +15,7 @@
 #include <vector>
 
 
-namespace velox::cooker
+namespace lodestone
 {
 
 namespace
@@ -515,4 +515,4 @@ CookResult<void> VerifyManifestRoundTrip(const CookedModule& module, const std::
     return {};
 }
 
-} // namespace velox::cooker
+} // namespace lodestone

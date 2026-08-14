@@ -12,7 +12,7 @@
 
 /** Owns every interaction with Slang. Nothing in this header names a Slang type, so the rest of the
  * cooker links against the data schema rather than against the compiler. */
-namespace velox::cooker
+namespace lodestone
 {
 
 struct SlangCompilerCreateInfo
@@ -49,6 +49,6 @@ private:
     std::unique_ptr<Impl> impl;
 };
 
-} // namespace velox::cooker
+} // namespace lodestone
 
 #endif // !VELOX_SHADER_COOKER_SLANG_COMPILER_HPP

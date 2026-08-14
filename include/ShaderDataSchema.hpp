@@ -1,7 +1,7 @@
 #pragma once
 #ifndef VELOX_SHADER_COOKER_DATA_SCHEMA_HPP
 #define VELOX_SHADER_COOKER_DATA_SCHEMA_HPP
-#include "shader/ShaderLibraryTypes.hpp"
+#include "ShaderLibraryTypes.hpp"
 #include <cstdint>
 #include <span>
 #include <string>
@@ -15,7 +15,7 @@
  * The enums live in shader/ShaderLibraryTypes.hpp, because the graph reads the same vocabulary. This
  * schema adds only the parts that the offline tool needs: owning strings, and the raw expression text
  * that a diagnostic must quote. */
-namespace velox::cooker
+namespace lodestone
 {
 
 std::string_view ToString(BindingKind kind) noexcept;
@@ -181,6 +181,6 @@ void SortBindingsByLocation(std::span<ReflectedBinding> bindings) noexcept;
 std::string DescribeBinding(const ReflectedBinding& binding);
 std::string DescribeUniformMembers(const ReflectedBinding& binding);
 
-} // namespace velox::cooker
+} // namespace lodestone
 
 #endif // !VELOX_SHADER_COOKER_DATA_SCHEMA_HPP

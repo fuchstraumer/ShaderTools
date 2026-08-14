@@ -2,7 +2,7 @@
 #include <cctype>
 #include <format>
 
-namespace velox::cooker
+namespace lodestone
 {
 
 namespace
@@ -670,4 +670,4 @@ std::string EmitShaderLibraryModuleSource(const CookedModule& module, std::strin
     return source;
 }
 
-} // namespace velox::cooker
+} // namespace lodestone

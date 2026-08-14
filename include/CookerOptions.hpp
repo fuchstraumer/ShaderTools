@@ -2,12 +2,13 @@
 #ifndef VELOX_SHADER_COOKER_OPTIONS_HPP
 #define VELOX_SHADER_COOKER_OPTIONS_HPP
 #include "CookerErrors.hpp"
+#include <cstdint>
 #include <filesystem>
 #include <span>
 #include <string_view>
 #include <vector>
 
-namespace velox::cooker
+namespace lodestone
 {
 
 struct CookerOptions
@@ -30,6 +31,6 @@ struct CookerOptions
 CookResult<CookerOptions> ParseCommandLine(std::span<const std::string_view> arguments);
 std::string_view GetUsageText() noexcept;
 
-} // namespace velox::cooker
+} // namespace lodestone
 
 #endif // !VELOX_SHADER_COOKER_OPTIONS_HPP

@@ -1,7 +1,7 @@
 #include "CookedLibrary.hpp"
 #include <print>
 
-namespace velox::cooker
+namespace lodestone
 {
 
 ContentHashValue HashSourcePayload(const std::string& source) noexcept
@@ -148,4 +148,4 @@ std::string_view ResolveSource(const CookedModule& module,
     return module.Sources[sourceIndex];
 }
 
-} // namespace velox::cooker
+} // namespace lodestone

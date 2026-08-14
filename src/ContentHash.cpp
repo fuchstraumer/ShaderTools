@@ -1,6 +1,6 @@
 #include "ContentHash.hpp"
 
-namespace velox::cooker
+namespace lodestone
 {
 
 namespace
@@ -40,4 +40,4 @@ ContentHashFunction DefaultContentHashFunction() noexcept
     return ContentHashFunction{ "fnv1a-64", &HashFnv1a64 };
 }
 
-} // namespace velox::cooker
+} // namespace lodestone

@@ -2,7 +2,7 @@
 #include <algorithm>
 #include <format>
 
-namespace velox::cooker
+namespace lodestone
 {
 
 std::string_view ToString(BindingKind kind) noexcept
@@ -228,4 +228,4 @@ std::string DescribeUniformMembers(const ReflectedBinding& binding)
     return description;
 }
 
-} // namespace velox::cooker
+} // namespace lodestone

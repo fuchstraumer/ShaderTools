@@ -16,7 +16,7 @@
  *
  * Nothing here knows about Slang or about the permutation types. It takes a string and a symbol
  * table, and it is therefore testable on its own. */
-namespace velox::cooker
+namespace lodestone
 {
 
 struct SizeSymbol
@@ -38,6 +38,6 @@ struct SizeSymbol
 CookResult<int64_t> EvaluateSizeExpression(std::string_view expression,
                                            std::span<const SizeSymbol> symbols);
 
-} // namespace velox::cooker
+} // namespace lodestone
 
 #endif // !VELOX_SHADER_COOKER_SIZE_EXPRESSION_HPP

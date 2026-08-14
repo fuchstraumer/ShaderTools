@@ -1,7 +1,7 @@
 #include "CookerOptions.hpp"
 #include <charconv>
 
-namespace velox::cooker
+namespace lodestone
 {
 
 namespace
@@ -130,4 +130,4 @@ std::string_view GetUsageText() noexcept
     return k_UsageText;
 }
 
-} // namespace velox::cooker
+} // namespace lodestone

@@ -11,8 +11,8 @@
 #include "SlangCompiler.hpp"
 #include "WgslBindingScanner.hpp"
 #include <chrono>
-#include <cstdio>
 #include <cstdint>
+#include <cstdio>
 #include <expected>
 #include <filesystem>
 #include <print>
@@ -22,13 +22,15 @@
 #include <system_error>
 #include <vector>
 
-namespace velox::cooker
+
+namespace lodestone
 {
 
 namespace
 {
 
-    std::expected<std::filesystem::path, std::error_code> EnsureModuleCacheDirectory(const std::filesystem::path& cache_directory)
+    std::expected<std::filesystem::path, std::error_code> EnsureModuleCacheDirectory(
+        const std::filesystem::path& cache_directory)
     {
         std::error_code filesystemError;
 
@@ -37,8 +39,10 @@ namespace
             std::filesystem::create_directories(cache_directory, filesystemError);
         }
 
-        // transform to canonical before returning (and since we know it exists), since it can be a little more robust
-        std::filesystem::path canonicalCacheDirectory = std::filesystem::canonical(cache_directory, filesystemError);
+        // transform to canonical before returning (and since we know it exists), since it can be a little
+        // more robust
+        std::filesystem::path canonicalCacheDirectory =
+            std::filesystem::canonical(cache_directory, filesystemError);
 
         if (filesystemError)
         {
@@ -106,20 +110,23 @@ namespace
         }
 
         // Every entry point holds the same set of bindings, so we can just check the first one.
-        // What varies is the EntryPointUsageMask, which is set for each binding the entry point actually uses.
-        // We will use the first bindings list to find the bindings, but check to see if any point actually uses it
+        // What varies is the EntryPointUsageMask, which is set for each binding the entry point actually
+        // uses. We will use the first bindings list to find the bindings, but check to see if any point
+        // actually uses it
         const std::vector<ReflectedBinding>& bindings = variant.EntryPoints.front().Reflection.Bindings;
         const size_t declaredBindingCount = bindings.size();
         for (size_t bindingIndex = 0u; bindingIndex < declaredBindingCount; ++bindingIndex)
         {
-            const bool referenced = std::ranges::any_of(variant.EntryPoints,
+            const bool referenced = std::ranges::any_of(
+                variant.EntryPoints,
                 [bindingIndex](const CompiledEntryPoint& entry_point)
                 {
-                return entry_point.Reflection.Bindings[bindingIndex].EntryPointUsageMask != 0u;
+                    return entry_point.Reflection.Bindings[bindingIndex].EntryPointUsageMask != 0u;
                 });
             if (!referenced)
             {
-                std::println(stderr,
+                std::println(
+                    stderr,
                     "[shader_cooker] unreferenced binding in [{}]: {} is declared but no entrypoint reads it",
                     variant.VariantDescription,
                     DescribeBinding(bindings[bindingIndex]));
@@ -134,8 +141,7 @@ namespace
         for (const CompiledEntryPoint& entryPoint : variant.EntryPoints)
         {
             const std::vector<WgslDeclaredBinding> declared = ScanWgslBindings(entryPoint.Code);
-            const std::vector<ReflectedBinding> used =
-                SelectBindingsUsedByEntryPoint(entryPoint.Reflection);
+            const std::vector<ReflectedBinding> used = SelectBindingsUsedByEntryPoint(entryPoint.Reflection);
             const BindingComparison comparison = CompareBindings(declared, used);
 
             if (!comparison.Matches)
@@ -244,7 +250,9 @@ namespace
                 return manifestCheck;
             }
 
-            if (CookResult<void> manifestResult = sink.WriteArtifact(MakeManifestFileName(module.Name), manifest); !manifestResult)
+            if (CookResult<void> manifestResult =
+                    sink.WriteArtifact(MakeManifestFileName(module.Name), manifest);
+                !manifestResult)
             {
                 return manifestResult;
             }
@@ -254,7 +262,10 @@ namespace
     }
 
     /** Writes the header and one source file for each module. The header name comes from the sink, so
-     * the generated source includes exactly the file the user asked for. */
+     * the generated source includes exactly the file the user asked for.
+     * todo: For writing files, we can accumulate output we want to write into a buffer, and only validate
+     * things once. Validate directory when opening the stream, validate write success of coalesced writes
+     * (cleans up control flow)*/
     CookResult<void> EmitLibraryArtifacts(const CookedLibrary& library,
                                           OutputSink& sink,
                                           CookStatistics& statistics)
@@ -269,7 +280,9 @@ namespace
             return headerResult;
         }
 
-        if (auto emitLibraryResult = EmitLibraryModules(headerStem, headerName, library.Modules, sink, statistics); !emitLibraryResult)
+        if (auto emitLibraryResult =
+                EmitLibraryModules(headerStem, headerName, library.Modules, sink, statistics);
+            !emitLibraryResult)
         {
             return emitLibraryResult;
         }
@@ -303,10 +316,8 @@ namespace
 
         const std::string_view moduleName = compiler.GetModuleName();
         const std::span<const std::string> entryPointNames = compiler.GetEntryPointNames();
-        std::println(stderr,
-                     "[shader_cooker] module {} declares {} entrypoints",
-                     moduleName,
-                     entryPointNames.size());
+        std::println(
+            stderr, "[shader_cooker] module {} declares {} entrypoints", moduleName, entryPointNames.size());
 
         const PermutationSpace* space = FindPermutationSpaceForModule(moduleName);
 
@@ -444,7 +455,7 @@ CookResult<CookStatistics> RunCookOnce(const CookerOptions& options, OutputSink&
     const std::chrono::steady_clock::time_point startTime = std::chrono::steady_clock::now();
     std::expected<std::filesystem::path, std::error_code> cacheDirectoryResult =
         EnsureModuleCacheDirectory(options.ModuleCacheDirectory);
-        
+
     if (!cacheDirectoryResult)
     {
         return std::unexpected(CookError::FilesystemError);
@@ -457,8 +468,7 @@ CookResult<CookStatistics> RunCookOnce(const CookerOptions& options, OutputSink&
     for (const std::filesystem::path& modulePath : options.ModulePaths)
     {
         std::println(stderr, "[shader_cooker] cooking {}", modulePath.string());
-        const CookResult<void> moduleResult =
-            CookModule(options, modulePath, variants, library, statistics);
+        const CookResult<void> moduleResult = CookModule(options, modulePath, variants, library, statistics);
         if (!moduleResult)
         {
             return std::unexpected(moduleResult.error());
@@ -567,4 +577,4 @@ CookResult<CookStatistics> RunCook(const CookerOptions& options, OutputSink& sin
     return RunCookOnce(options, sink);
 }
 
-} // namespace velox::cooker
+} // namespace lodestone

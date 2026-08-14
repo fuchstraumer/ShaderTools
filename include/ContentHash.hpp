@@ -24,7 +24,7 @@
  * `ContentHashFunction`, and give it a new `Name`. The name reaches the dedup report, so a stored
  * hash can never be read back by a build that used a different function.
  */
-namespace velox::cooker
+namespace lodestone
 {
 
 using ContentHashValue = uint64_t;
@@ -44,6 +44,6 @@ ContentHashValue CombineHash(ContentHashValue seed, uint64_t value) noexcept;
 
 ContentHashFunction DefaultContentHashFunction() noexcept;
 
-} // namespace velox::cooker
+} // namespace lodestone
 
 #endif // !VELOX_SHADER_COOKER_CONTENT_HASH_HPP

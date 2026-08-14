@@ -3,7 +3,7 @@
 #include <charconv>
 #include <print>
 
-namespace velox::cooker
+namespace lodestone
 {
 
 namespace
@@ -351,4 +351,4 @@ CookResult<int64_t> EvaluateSizeExpression(std::string_view expression,
     return parser.ParseComplete();
 }
 
-} // namespace velox::cooker
+} // namespace lodestone

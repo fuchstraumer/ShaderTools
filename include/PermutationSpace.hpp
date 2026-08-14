@@ -8,8 +8,9 @@
 #include <string_view>
 #include <variant>
 #include <vector>
+#include <utility>
 
-namespace velox::cooker
+namespace lodestone
 {
 
 using PermutationValue = std::variant<bool, uint32_t, int32_t>;
@@ -142,6 +143,6 @@ const ModulePolicy* FindPolicyForModule(std::string_view module_name) noexcept;
 
 const PermutationSpace* FindPermutationSpaceForModule(std::string_view module_name) noexcept;
 
-} // namespace velox::cooker
+} // namespace lodestone
 
 #endif // !VELOX_SHADER_COOKER_PERMUTATION_SPACE_HPP

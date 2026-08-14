@@ -17,7 +17,7 @@
  * with an index. The result turns combinatorial growth into a number you read before the space gets
  * large, instead of a build time you find afterwards.
  */
-namespace velox::cooker
+namespace lodestone
 {
 
 enum class AxisInfluence : uint8_t
@@ -58,6 +58,6 @@ std::string GenerateDedupeReport(const CookedLibrary& library);
 
 std::string_view ToString(AxisInfluence influence) noexcept;
 
-} // namespace velox::cooker
+} // namespace lodestone
 
 #endif // !VELOX_SHADER_COOKER_DEDUPE_REPORT_HPP

@@ -19,7 +19,7 @@
 #include <variant>
 #include <vector>
 
-namespace velox::cooker
+namespace lodestone
 {
 
 namespace
@@ -676,4 +676,4 @@ const PermutationSpace* FindPermutationSpaceForModule(std::string_view module_na
     return &k_EmptySpace;
 }
 
-} // namespace velox::cooker
+} // namespace lodestone

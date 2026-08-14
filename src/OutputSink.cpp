@@ -1,28 +1,34 @@
 #include "OutputSink.hpp"
+#include "CookerErrors.hpp"
+#include <expected>
+#include <filesystem>
 #include <fstream>
+#include <ios>
+#include <string>
+#include <string_view>
+#include <utility>
 
-namespace velox::cooker
+namespace lodestone
 {
 
 OutputSink::OutputSink() noexcept = default;
-OutputSink::~OutputSink() = default;
+OutputSink::~OutputSink() {};
 
-FileOutputSink::FileOutputSink(std::filesystem::path path) :
-    path{ std::move(path) },
-    description{},
-    primaryName{}
+FileOutputSink::FileOutputSink(std::filesystem::path _path) :
+    path{ std::move(_path) }
 {
-    description = this->path.string();
-    primaryName = this->path.filename().string();
+    description = path.string();
+    primaryName = path.filename().string();
 }
 
 FileOutputSink::~FileOutputSink() = default;
 
 CookResult<void> FileOutputSink::WriteArtifact(std::string_view artifact_name, std::string_view content)
 {
-    const std::filesystem::path artifactPath = path.parent_path() / std::filesystem::path{ artifact_name };
-    FileOutputSink companion{ artifactPath };
-    return companion.Write(content);
+    //const std::filesystem::path artifactPath = path.parent_path() / std::filesystem::path{ artifact_name };
+    //FileOutputSink companion{ artifactPath };
+    //return companion.Write(content);
+    return std::unexpected(CookError::FilesystemError);
 }
 
 std::string_view FileOutputSink::PrimaryName() const noexcept
@@ -98,4 +104,4 @@ std::string_view MemoryOutputSink::GetContent() const noexcept
     return content;
 }
 
-} // namespace velox::cooker
+} // namespace lodestone

@@ -10,7 +10,7 @@
 /** Reads `@group`/`@binding` attributes back out of emitted WGSL so reflection output can be checked
  * against the text WebGPU will actually consume. Deliberately not a WGSL parser and must never become
  * one: it exists to validate our use of Slang's reflection API, not to replace it. */
-namespace velox::cooker
+namespace lodestone
 {
 
 /** The address space and the access mode in a WGSL `var<...>` template list.
@@ -59,6 +59,6 @@ std::string_view ToString(WgslAddressSpace address_space) noexcept;
 BindingComparison CompareBindings(std::span<const WgslDeclaredBinding> declared,
                                   std::span<const ReflectedBinding> reflected);
 
-} // namespace velox::cooker
+} // namespace lodestone
 
 #endif // !VELOX_SHADER_COOKER_WGSL_BINDING_SCANNER_HPP

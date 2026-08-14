@@ -14,24 +14,24 @@ int main(int argc, char** argv)
         arguments.emplace_back(argv[i]);
     }
 
-    const velox::cooker::CookResult<velox::cooker::CookerOptions> options =
-        velox::cooker::ParseCommandLine(arguments);
+    const lodestone::CookResult<lodestone::CookerOptions> options =
+        lodestone::ParseCommandLine(arguments);
     if (!options)
     {
         std::println(stderr,
                      "[shader_cooker] {}\n{}",
-                     velox::cooker::ToString(options.error()),
-                     velox::cooker::GetUsageText());
+                     lodestone::ToString(options.error()),
+                     lodestone::GetUsageText());
         return 1;
     }
 
-    velox::cooker::FileOutputSink sink{ options.value().OutputPath };
-    const velox::cooker::CookResult<velox::cooker::CookStatistics> statistics =
-        velox::cooker::RunCook(options.value(), sink);
+    lodestone::FileOutputSink sink{ options.value().OutputPath };
+    const lodestone::CookResult<lodestone::CookStatistics> statistics =
+        lodestone::RunCook(options.value(), sink);
 
     if (!statistics)
     {
-        std::println(stderr, "[shader_cooker] cook failed: {}", velox::cooker::ToString(statistics.error()));
+        std::println(stderr, "[shader_cooker] cook failed: {}", lodestone::ToString(statistics.error()));
         return 1;
     }
 

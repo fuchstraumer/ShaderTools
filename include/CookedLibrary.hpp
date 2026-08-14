@@ -16,7 +16,7 @@
  * that table has one entry for each artifact, so the indices are an identity mapping. Dedup replaces
  * how the table gets filled, and nothing else changes: the emitters already read through the index.
  */
-namespace velox::cooker
+namespace lodestone
 {
 
 struct LibraryEntryPoint
@@ -90,6 +90,6 @@ std::string_view ResolveSource(const CookedModule& module,
                                const LibraryVariant& variant,
                                size_t entry_point_index) noexcept;
 
-} // namespace velox::cooker
+} // namespace lodestone
 
 #endif // !VELOX_SHADER_COOKER_COOKED_LIBRARY_HPP

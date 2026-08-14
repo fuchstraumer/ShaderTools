@@ -5,7 +5,7 @@
 #include <expected>
 #include <string_view>
 
-namespace velox::cooker
+namespace lodestone
 {
 
 enum class CookError : uint16_t
@@ -58,6 +58,6 @@ using CookResult = std::expected<T, CookError>;
 
 std::string_view ToString(CookError error) noexcept;
 
-} // namespace velox::cooker
+} // namespace lodestone
 
 #endif // !VELOX_SHADER_COOKER_ERRORS_HPP

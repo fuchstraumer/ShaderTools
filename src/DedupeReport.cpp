@@ -3,7 +3,7 @@
 #include <format>
 #include <print>
 
-namespace velox::cooker
+namespace lodestone
 {
 
 namespace
@@ -365,4 +365,4 @@ std::string GenerateDedupeReport(const CookedLibrary& library)
     return report;
 }
 
-} // namespace velox::cooker
+} // namespace lodestone

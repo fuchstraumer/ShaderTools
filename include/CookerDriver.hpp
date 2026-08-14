@@ -8,7 +8,7 @@
 
 /** The execution loop, separated from `main` so the cooker can also be driven in-process by a watcher
  * or by the engine itself. */
-namespace velox::cooker
+namespace lodestone
 {
 
 struct CookStatistics
@@ -24,6 +24,6 @@ struct CookStatistics
 
 CookResult<CookStatistics> RunCook(const CookerOptions& options, OutputSink& sink);
 
-} // namespace velox::cooker
+} // namespace lodestone
 
 #endif // !VELOX_SHADER_COOKER_DRIVER_HPP

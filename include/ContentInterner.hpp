@@ -28,7 +28,7 @@
  * 3. You can stop deduplication. The `Disable()` function gives every item 
  *    its own index. The build output must be correct and identical in both modes.
  */
-namespace velox::cooker
+namespace lodestone
 {
 
 /** @brief One artifact that mapped onto a unique entry. */
@@ -161,6 +161,6 @@ private:
     InternerStatistics statistics;
 };
 
-} // namespace velox::cooker
+} // namespace lodestone
 
 #endif // !VELOX_SHADER_COOKER_CONTENT_INTERNER_HPP

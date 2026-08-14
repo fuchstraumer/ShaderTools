@@ -1,4 +1,6 @@
 #include "SlangCompiler.hpp"
+#include "CookerErrors.hpp"
+#include "ShaderLibraryTypes.hpp"
 #include "SizeExpression.hpp"
 
 #include <slang-com-helper.h>
@@ -6,13 +8,19 @@
 #include <slang.h>
 
 #include <array>
+#include <cstddef>
+#include <cstdint>
+#include <cstdio>
+#include <expected>
 #include <fstream>
 #include <future>
 #include <iterator>
 #include <print>
+#include <string>
+#include <string_view>
 #include <vector>
 
-namespace velox::cooker
+namespace lodestone
 {
 
 namespace
@@ -539,7 +547,7 @@ namespace
         slang::CompilerOptionEntry optimization{};
         optimization.name = slang::CompilerOptionName::Optimization;
         optimization.value.kind = slang::CompilerOptionValueKind::Int;
-        optimization.value.intValue0 = ToSlangOptimizationLevel(optimization_level);
+        optimization.value.intValue0 = static_cast<int32_t>(ToSlangOptimizationLevel(optimization_level));
         options.push_back(optimization);
 
         return options;
@@ -549,20 +557,20 @@ namespace
 
 struct SlangCompiler::Impl
 {
-    Slang::ComPtr<slang::IGlobalSession> globalSession;
-    Slang::ComPtr<slang::ISession> session;
-    slang::IModule* rootModule{ nullptr };
-    std::vector<slang::IComponentType*> baseComponents;
-    std::vector<Slang::ComPtr<slang::IEntryPoint>> entryPointHandles;
-    std::vector<std::string> entryPointNames;
-    std::vector<slang::CompilerOptionEntry> compilerOptions;
-    std::vector<std::string> moduleSourceTexts;
+    Slang::ComPtr<slang::IGlobalSession> GlobalSession;
+    Slang::ComPtr<slang::ISession> Session;
+    slang::IModule* RootModule{ nullptr };
+    std::vector<slang::IComponentType*> BaseComponents;
+    std::vector<Slang::ComPtr<slang::IEntryPoint>> EntryPointHandles;
+    std::vector<std::string> EntryPointNames;
+    std::vector<slang::CompilerOptionEntry> CompilerOptions;
+    std::vector<std::string> ModuleSourceTexts;
     /** Rebuilt for each variant: what a `[vx_*]` size expression is allowed to name. */
-    std::vector<SizeSymbol> currentSymbols;
+    std::vector<SizeSymbol> CurrentSymbols;
     /** Module-wide and constant across variants; owns the strings `currentSymbols` points at. */
-    std::vector<ExternConstantDefault> externDefaults;
-    std::string moduleName;
-    bool multithreadEntryPointCodegen{ true };
+    std::vector<ExternConstantDefault> ExternDefaults;
+    std::string ModuleName;
+    bool MultithreadEntryPointCodegen{ true };
 
     CookResult<void> CreateSession(const SlangCompilerCreateInfo& create_info);
     CookResult<void> LoadRootModule();
@@ -598,12 +606,12 @@ struct SlangCompiler::Impl
 
 CookResult<void> SlangCompiler::Impl::CreateSession(const SlangCompilerCreateInfo& create_info)
 {
-    if (SLANG_FAILED(slang::createGlobalSession(globalSession.writeRef())) || !globalSession)
+    if (SLANG_FAILED(slang::createGlobalSession(GlobalSession.writeRef())) || !GlobalSession)
     {
         return std::unexpected(CookError::GlobalSessionCreationFailed);
     }
 
-    compilerOptions = MakeCompilerOptions(create_info.OptimizationLevel);
+    CompilerOptions = MakeCompilerOptions(create_info.OptimizationLevel);
 
     const std::filesystem::path canonicalModulePath = std::filesystem::canonical(create_info.ModulePath);
     const std::string sourceDirectory = canonicalModulePath.parent_path().string();
@@ -617,40 +625,40 @@ CookResult<void> SlangCompiler::Impl::CreateSession(const SlangCompilerCreateInf
 
     slang::TargetDesc target{};
     target.format = SLANG_WGSL;
-    target.profile = globalSession->findProfile("spirv_1_4");
+    target.profile = GlobalSession->findProfile("spirv_1_4");
 
     slang::SessionDesc sessionDesc{};
     sessionDesc.targets = &target;
     sessionDesc.targetCount = 1;
     sessionDesc.searchPaths = searchPaths.data();
     sessionDesc.searchPathCount = static_cast<SlangInt>(searchPaths.size());
-    sessionDesc.compilerOptionEntries = compilerOptions.data();
-    sessionDesc.compilerOptionEntryCount = static_cast<SlangInt>(compilerOptions.size());
+    sessionDesc.compilerOptionEntries = CompilerOptions.data();
+    sessionDesc.compilerOptionEntryCount = static_cast<SlangInt>(CompilerOptions.size());
 
-    if (SLANG_FAILED(globalSession->createSession(sessionDesc, session.writeRef())) || !session)
+    if (SLANG_FAILED(GlobalSession->createSession(sessionDesc, Session.writeRef())) || !Session)
     {
         return std::unexpected(CookError::SessionCreationFailed);
     }
 
-    moduleName = canonicalModulePath.stem().string();
-    multithreadEntryPointCodegen = create_info.MultithreadEntryPointCodegen;
+    ModuleName = canonicalModulePath.stem().string();
+    MultithreadEntryPointCodegen = create_info.MultithreadEntryPointCodegen;
     return {};
 }
 
 CookResult<void> SlangCompiler::Impl::LoadRootModule()
 {
     Slang::ComPtr<slang::IBlob> diagnostics;
-    rootModule = session->loadModule(moduleName.c_str(), diagnostics.writeRef());
+    RootModule = Session->loadModule(ModuleName.c_str(), diagnostics.writeRef());
     ReportDiagnostics("loadModule", diagnostics.get());
 
-    if (rootModule == nullptr)
+    if (RootModule == nullptr)
     {
         return std::unexpected(CookError::ModuleLoadFailed);
     }
 
-    baseComponents.clear();
-    baseComponents.reserve(4u + static_cast<size_t>(rootModule->getDefinedEntryPointCount()));
-    baseComponents.push_back(rootModule);
+    BaseComponents.clear();
+    BaseComponents.reserve(4u + static_cast<size_t>(RootModule->getDefinedEntryPointCount()));
+    BaseComponents.push_back(RootModule);
 
     ReadDependencySourceTexts();
     return {};
@@ -660,13 +668,13 @@ CookResult<void> SlangCompiler::Impl::LoadRootModule()
  * searches, and it is also the right input for a future content hash driving live reload. */
 void SlangCompiler::Impl::ReadDependencySourceTexts()
 {
-    const SlangInt32 dependencyCount = rootModule->getDependencyFileCount();
-    moduleSourceTexts.clear();
-    moduleSourceTexts.reserve(static_cast<size_t>(dependencyCount));
+    const SlangInt32 dependencyCount = RootModule->getDependencyFileCount();
+    ModuleSourceTexts.clear();
+    ModuleSourceTexts.reserve(static_cast<size_t>(dependencyCount));
 
     for (SlangInt32 i = 0; i < dependencyCount; ++i)
     {
-        const char* dependencyPath = rootModule->getDependencyFilePath(i);
+        const char* dependencyPath = RootModule->getDependencyFilePath(i);
         if (dependencyPath == nullptr)
         {
             continue;
@@ -679,30 +687,30 @@ void SlangCompiler::Impl::ReadDependencySourceTexts()
             continue;
         }
 
-        moduleSourceTexts.emplace_back(std::istreambuf_iterator<char>{ file },
+        ModuleSourceTexts.emplace_back(std::istreambuf_iterator<char>{ file },
                                        std::istreambuf_iterator<char>{});
     }
 }
 
 CookResult<void> SlangCompiler::Impl::CollectEntryPoints()
 {
-    const SlangInt entryPointCount = rootModule->getDefinedEntryPointCount();
-    entryPointNames.clear();
-    entryPointNames.reserve(static_cast<size_t>(entryPointCount));
-    entryPointHandles.clear();
-    entryPointHandles.reserve(static_cast<size_t>(entryPointCount));
+    const SlangInt entryPointCount = RootModule->getDefinedEntryPointCount();
+    EntryPointNames.clear();
+    EntryPointNames.reserve(static_cast<size_t>(entryPointCount));
+    EntryPointHandles.clear();
+    EntryPointHandles.reserve(static_cast<size_t>(entryPointCount));
 
     for (SlangInt i = 0; i < entryPointCount; ++i)
     {
         Slang::ComPtr<slang::IEntryPoint> entryPoint;
-        if (SLANG_FAILED(rootModule->getDefinedEntryPoint(i, entryPoint.writeRef())))
+        if (SLANG_FAILED(RootModule->getDefinedEntryPoint(i, entryPoint.writeRef())))
         {
             return std::unexpected(CookError::EntryPointEnumerationFailed);
         }
 
-        entryPointNames.emplace_back(entryPoint->getFunctionReflection()->getName());
-        baseComponents.push_back(entryPoint.get());
-        entryPointHandles.push_back(entryPoint);
+        EntryPointNames.emplace_back(entryPoint->getFunctionReflection()->getName());
+        BaseComponents.push_back(entryPoint.get());
+        EntryPointHandles.push_back(entryPoint);
     }
 
     return {};
@@ -711,8 +719,8 @@ CookResult<void> SlangCompiler::Impl::CollectEntryPoints()
 CookResult<Slang::ComPtr<slang::IComponentType>> SlangCompiler::Impl::LinkVariant(
     const PermutationAssignment& assignment)
 {
-    std::vector<slang::IComponentType*> components = baseComponents;
-    components.reserve(baseComponents.size() + assignment.size());
+    std::vector<slang::IComponentType*> components = BaseComponents;
+    components.reserve(BaseComponents.size() + assignment.size());
 
     for (const PermutationBinding& binding : assignment)
     {
@@ -721,7 +729,7 @@ CookResult<Slang::ComPtr<slang::IComponentType>> SlangCompiler::Impl::LinkVarian
         const std::string variantSource = MakeExportedConstantSource(binding.first->Name, binding.second);
 
         Slang::ComPtr<slang::IBlob> diagnostics;
-        slang::IModule* variantModule = session->loadModuleFromSourceString(variantModuleName.c_str(),
+        slang::IModule* variantModule = Session->loadModuleFromSourceString(variantModuleName.c_str(),
                                                                            variantModulePath.c_str(),
                                                                            variantSource.c_str(),
                                                                            diagnostics.writeRef());
@@ -737,7 +745,7 @@ CookResult<Slang::ComPtr<slang::IComponentType>> SlangCompiler::Impl::LinkVarian
 
     Slang::ComPtr<slang::IBlob> diagnostics;
     Slang::ComPtr<slang::IComponentType> composite;
-    session->createCompositeComponentType(components.data(),
+    Session->createCompositeComponentType(components.data(),
                                           static_cast<SlangInt>(components.size()),
                                           composite.writeRef(),
                                           diagnostics.writeRef());
@@ -760,10 +768,10 @@ CookResult<Slang::ComPtr<slang::IComponentType>> SlangCompiler::Impl::LinkVarian
 
 std::vector<std::string> SlangCompiler::Impl::GenerateEntryPointCode(slang::IComponentType* linked_program)
 {
-    const size_t entryPointCount = entryPointNames.size();
+    const size_t entryPointCount = EntryPointNames.size();
     std::vector<std::string> generated(entryPointCount);
 
-    if (multithreadEntryPointCodegen)
+    if (MultithreadEntryPointCodegen)
     {
         std::vector<std::future<std::string>> pending;
         pending.reserve(entryPointCount);
@@ -895,7 +903,7 @@ CookResult<uint32_t> SlangCompiler::Impl::EvaluateExtentArgument(slang::Attribut
         return std::unexpected(expression.error());
     }
 
-    const CookResult<int64_t> value = EvaluateSizeExpression(expression.value(), currentSymbols);
+    const CookResult<int64_t> value = EvaluateSizeExpression(expression.value(), CurrentSymbols);
     if (!value)
     {
         return std::unexpected(value.error());
@@ -920,9 +928,9 @@ CookResult<void> SlangCompiler::Impl::ExtractDerivedExtent(slang::VariableReflec
                                                            DerivedSize& derived)
 {
     slang::Attribute* extent2d =
-        leaf_variable->findAttributeByName(globalSession.get(), k_Extent2dAttribute);
+        leaf_variable->findAttributeByName(GlobalSession.get(), k_Extent2dAttribute);
     slang::Attribute* extent3d =
-        leaf_variable->findAttributeByName(globalSession.get(), k_Extent3dAttribute);
+        leaf_variable->findAttributeByName(GlobalSession.get(), k_Extent3dAttribute);
 
     if (extent2d != nullptr && extent3d != nullptr)
     {
@@ -974,7 +982,7 @@ CookResult<DerivedSize> SlangCompiler::Impl::ExtractDerivedSize(slang::VariableR
     }
 
     if (slang::Attribute* countAttribute =
-            leaf_variable->findAttributeByName(globalSession.get(), k_ElementCountAttribute))
+            leaf_variable->findAttributeByName(GlobalSession.get(), k_ElementCountAttribute))
     {
         const CookResult<std::string> expression = ReadStringArgument(countAttribute, 0u, binding_name);
         if (!expression)
@@ -982,7 +990,7 @@ CookResult<DerivedSize> SlangCompiler::Impl::ExtractDerivedSize(slang::VariableR
             return std::unexpected(expression.error());
         }
 
-        const CookResult<int64_t> value = EvaluateSizeExpression(expression.value(), currentSymbols);
+        const CookResult<int64_t> value = EvaluateSizeExpression(expression.value(), CurrentSymbols);
         if (!value)
         {
             std::println(stderr,
@@ -1125,7 +1133,7 @@ CookResult<EntryPointReflection> SlangCompiler::Impl::ExtractEntryPointReflectio
     SlangInt entry_point_index)
 {
     EntryPointReflection reflection;
-    reflection.Name = entryPointNames[static_cast<size_t>(entry_point_index)];
+    reflection.Name = EntryPointNames[static_cast<size_t>(entry_point_index)];
 
     CookResult<std::vector<ReflectedBinding>> bindings = ExtractGlobalBindings(program_layout);
     if (!bindings)
@@ -1214,13 +1222,13 @@ CookResult<void> SlangCompiler::ResolveExternConstantDefaults(const PermutationS
     }
 
     CookResult<std::vector<ExternConstantDefault>> defaults =
-        CollectUndrivenExternDefaults(space, impl->moduleSourceTexts);
+        CollectUndrivenExternDefaults(space, impl->ModuleSourceTexts);
     if (!defaults)
     {
         return std::unexpected(defaults.error());
     }
 
-    impl->externDefaults = std::move(defaults.value());
+    impl->ExternDefaults = std::move(defaults.value());
     return {};
 }
 
@@ -1235,16 +1243,16 @@ CookResult<CompiledVariant> SlangCompiler::CompileVariant(const VariantDescripto
     // a dependent one is off. A disabled axis contributes nothing to the shader, so any expression
     // that reads it was already independent of the value. Undriven externs come first, so an axis of
     // the same name would win -- though the two sets are disjoint by construction.
-    impl->currentSymbols.clear();
-    impl->currentSymbols.reserve(descriptor.Canonical.size() + impl->externDefaults.size());
-    for (const ExternConstantDefault& entry : impl->externDefaults)
+    impl->CurrentSymbols.clear();
+    impl->CurrentSymbols.reserve(descriptor.Canonical.size() + impl->ExternDefaults.size());
+    for (const ExternConstantDefault& entry : impl->ExternDefaults)
     {
-        impl->currentSymbols.push_back(SizeSymbol{ entry.Name, entry.Value });
+        impl->CurrentSymbols.push_back(SizeSymbol{ entry.Name, entry.Value });
     }
 
     for (const PermutationBinding& binding : descriptor.Canonical)
     {
-        impl->currentSymbols.push_back(
+        impl->CurrentSymbols.push_back(
             SizeSymbol{ binding.first->Name, PermutationValueToInt64(binding.second) });
     }
 
@@ -1267,9 +1275,9 @@ CookResult<CompiledVariant> SlangCompiler::CompileVariant(const VariantDescripto
     variant.VariantSuffix = MakeAssignmentSuffix(descriptor.Canonical);
     variant.VariantDescription = DescribeAssignment(descriptor.Canonical);
     variant.VariantIndex = descriptor.Index;
-    variant.EntryPoints.reserve(impl->entryPointNames.size());
+    variant.EntryPoints.reserve(impl->EntryPointNames.size());
 
-    for (size_t i = 0; i < impl->entryPointNames.size(); ++i)
+    for (size_t i = 0; i < impl->EntryPointNames.size(); ++i)
     {
         if (generatedCode[i].empty())
         {
@@ -1284,7 +1292,7 @@ CookResult<CompiledVariant> SlangCompiler::CompileVariant(const VariantDescripto
         }
 
         CompiledEntryPoint entryPoint;
-        entryPoint.Name = impl->entryPointNames[i];
+        entryPoint.Name = impl->EntryPointNames[i];
         entryPoint.VariantSuffix = variant.VariantSuffix;
         entryPoint.Code = generatedCode[i];
         entryPoint.Reflection = std::move(reflection.value());
@@ -1301,7 +1309,7 @@ std::string_view SlangCompiler::GetModuleName() const noexcept
         return {};
     }
 
-    return impl->moduleName;
+    return impl->ModuleName;
 }
 
 std::span<const std::string> SlangCompiler::GetEntryPointNames() const noexcept
@@ -1311,7 +1319,7 @@ std::span<const std::string> SlangCompiler::GetEntryPointNames() const noexcept
         return {};
     }
 
-    return impl->entryPointNames;
+    return impl->EntryPointNames;
 }
 
 std::span<const std::string> SlangCompiler::GetModuleSourceTexts() const noexcept
@@ -1321,7 +1329,7 @@ std::span<const std::string> SlangCompiler::GetModuleSourceTexts() const noexcep
         return {};
     }
 
-    return impl->moduleSourceTexts;
+    return impl->ModuleSourceTexts;
 }
 
-} // namespace velox::cooker
+} // namespace lodestone
