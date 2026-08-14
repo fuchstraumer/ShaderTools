@@ -1,9 +1,19 @@
 #include "ShaderManifestEmitter.hpp"
-#include "shader/ShaderManifest.hpp"
+#include "CookedLibrary.hpp"
+#include "PermutationSpace.hpp"
+#include "ShaderDataSchema.hpp"
+#include "ShaderManifest.hpp"
+
+#include <cstdint>
+#include <cstdio>
 #include <cstring>
 #include <format>
 #include <print>
+#include <string>
+#include <string_view>
 #include <unordered_map>
+#include <vector>
+
 
 namespace velox::cooker
 {
@@ -13,32 +23,39 @@ namespace
 
     /** Collects strings once and hands back the index of each. Two equal strings share one entry, so
      * the blob holds each binding name a single time however many layouts name it. */
-    class StringTableBuilder final
+    class StringTableBuilder
     {
     public:
+        StringTableBuilder()
+        {
+            lookup.reserve(512);
+            references.reserve(512);
+            blob.reserve(4096);
+        }
+        
         uint32_t Add(std::string_view text)
         {
-            const std::unordered_map<std::string, uint32_t>::iterator found =
-                lookup.find(std::string{ text });
+            // todo: having to build a string to search seems wasteful. must be a better way
+            const auto found = lookup.find(std::string{ text });
             if (found != lookup.end())
             {
                 return found->second;
             }
 
-            const uint32_t index = static_cast<uint32_t>(references.size());
+            const auto index = static_cast<uint32_t>(references.size());
             references.push_back(
-                ManifestStringRef{ static_cast<uint32_t>(blob.size()), static_cast<uint32_t>(text.size()) });
+                ManifestStringRef{ .Offset=static_cast<uint32_t>(blob.size()), .Length=static_cast<uint32_t>(text.size()) });
             blob.append(text);
             lookup.emplace(std::string{ text }, index);
             return index;
         }
 
-        const std::vector<ManifestStringRef>& References() const noexcept
+        [[nodiscard]] const std::vector<ManifestStringRef>& References() const noexcept
         {
             return references;
         }
 
-        const std::string& Blob() const noexcept
+        [[nodiscard]] const std::string& Blob() const noexcept
         {
             return blob;
         }
@@ -68,7 +85,7 @@ namespace
     uint32_t AppendTable(std::string& out, const std::vector<RecordType>& records)
     {
         AlignTo8(out);
-        const uint32_t offset = static_cast<uint32_t>(out.size());
+        const auto offset = static_cast<uint32_t>(out.size());
         if (!records.empty())
         {
             AppendBytes(out, records.data(), records.size() * sizeof(RecordType));
@@ -101,6 +118,7 @@ namespace
 
         record.FirstUniformMember = static_cast<uint32_t>(member_records.size());
         record.UniformMemberCount = static_cast<uint32_t>(binding.UniformMembers.size());
+        member_records.reserve(member_records.size() + binding.UniformMembers.size());
         for (const ReflectedUniformMember& member : binding.UniformMembers)
         {
             ManifestUniformMember memberRecord;
@@ -108,7 +126,7 @@ namespace
             memberRecord.Offset = member.Offset;
             memberRecord.Size = member.Size;
             memberRecord.ArrayCount = member.ArrayCount;
-            member_records.push_back(memberRecord);
+            member_records.emplace_back(memberRecord);
         }
 
         return record;
@@ -151,8 +169,8 @@ std::string EmitShaderManifest(const CookedModule& module)
     entryPointRecords.reserve(module.EntryPoints.size());
     for (const LibraryEntryPoint& entryPoint : module.EntryPoints)
     {
-        entryPointRecords.push_back(ManifestEntryPoint{ strings.Add(entryPoint.Name),
-                                                        static_cast<uint32_t>(entryPoint.Stage) });
+        entryPointRecords.push_back(
+            ManifestEntryPoint{ .NameString=strings.Add(entryPoint.Name), .Stage=static_cast<uint32_t>(entryPoint.Stage) });
     }
 
     std::vector<ManifestUniformMember> uniformMemberRecords;
@@ -161,8 +179,8 @@ std::string EmitShaderManifest(const CookedModule& module)
     layoutRecords.reserve(module.Layouts.size());
     for (const ShaderLayout& layout : module.Layouts)
     {
-        layoutRecords.push_back(ManifestLayout{ static_cast<uint32_t>(bindingRecords.size()),
-                                                static_cast<uint32_t>(layout.size()) });
+        layoutRecords.push_back(ManifestLayout{ .FirstBinding=static_cast<uint32_t>(bindingRecords.size()),
+                                                     .BindingCount=static_cast<uint32_t>(layout.size()) });
         for (const ReflectedBinding& binding : layout)
         {
             bindingRecords.push_back(MakeBindingRecord(binding, strings, uniformMemberRecords));
@@ -207,6 +225,8 @@ std::string EmitShaderManifest(const CookedModule& module)
     std::vector<ManifestSlot> slotRecords;
     std::vector<ManifestVariant> variantRecords;
     variantRecords.reserve(module.Variants.size());
+    // most modules will have 3-4 entrypoints: reserve for that
+    slotRecords.reserve(module.Variants.size() * 4u);
     for (const LibraryVariant& variant : module.Variants)
     {
         ManifestVariant record;
@@ -254,7 +274,7 @@ std::string EmitShaderManifest(const CookedModule& module)
 
             for (const PermutationValue& value : axis->Values)
             {
-                axisValueRecords.push_back(PermutationValueToInt64(value));
+                axisValueRecords.emplace_back(PermutationValueToInt64(value));
             }
         }
     }
@@ -407,8 +427,7 @@ CookResult<void> VerifyManifestRoundTrip(const CookedModule& module, const std::
 
                 const std::span<const ManifestUniformMember> readMembers = view.UniformMembers(read);
                 bool membersMatch = readMembers.size() == expected.UniformMembers.size();
-                for (size_t memberIndex = 0u; membersMatch && memberIndex < readMembers.size();
-                     ++memberIndex)
+                for (size_t memberIndex = 0u; membersMatch && memberIndex < readMembers.size(); ++memberIndex)
                 {
                     const ReflectedUniformMember& expectedMember = expected.UniformMembers[memberIndex];
                     const ManifestUniformMember& readMember = readMembers[memberIndex];
@@ -419,8 +438,8 @@ CookResult<void> VerifyManifestRoundTrip(const CookedModule& module, const std::
                                    readMember.ArrayCount == expectedMember.ArrayCount;
                 }
 
-                if (view.String(read.NameString) != expected.Name ||
-                    !RecordMatchesBinding(read, expected) || !membersMatch)
+                if (view.String(read.NameString) != expected.Name || !RecordMatchesBinding(read, expected) ||
+                    !membersMatch)
                 {
                     std::println(stderr,
                                  "[shader_cooker] manifest binding '{}' of layout {} does not match the "
