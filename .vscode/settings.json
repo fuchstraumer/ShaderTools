@@ -1,0 +1,9 @@
+{
+    "git.ignoreLimitWarning": true,
+    "cmake.buildDirectory": "${workspaceFolder}/build",
+    "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
+    "files.watcherExclude": {
+        "build/**": true,
+        "third_party/slang/**": true
+    }
+}
