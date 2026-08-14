@@ -9,12 +9,16 @@ namespace
 
     constexpr std::string_view k_UsageText =
         "Usage: OceanShaderCompiler --output <header.hpp> [--O<level>] [--no-validate] [--quiet]\n"
-        "                           [--cache-dir <path>] [--single-threaded] <module.slang>...\n"
+        "                           [--cache-dir <path>] [--single-threaded] [--no-dedupe]\n"
+        "                           [--verify-deterministic] <module.slang>...\n"
         "  --output, -o    destination header path (required)\n"
         "  --O<level>      slang optimization level: 0-3, defaults to 0\n"
         "  --no-validate   skip cross-checking reflection against emitted WGSL\n"
         "  --quiet         suppress the per-variant reflection report\n"
-        "  --cache-dir     directory for precompiled slang modules\n";
+        "  --cache-dir     directory for precompiled slang modules\n"
+        "  --single-threaded disable multi-threaded entry point codegen\n"
+        "  --no-dedupe     disable content deduplication\n"
+        "  --verify-deterministic cook twice and compare all artifacts\n";
 
     constexpr std::string_view k_OptimizationPrefix = "--O";
 
