@@ -1,5 +1,8 @@
 #include "ContentHash.hpp"
 
+#include <cstdint>
+#include <string_view>
+
 namespace lodestone
 {
 

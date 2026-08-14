@@ -1,5 +1,18 @@
 #include "CookedLibrary.hpp"
+#include "ContentHash.hpp"
+#include "ContentInterner.hpp"
+#include "CookerErrors.hpp"
+#include "PermutationSpace.hpp"
+#include "ShaderDataSchema.hpp"
+
+#include <cstdint>
+#include <cstdio>
+#include <expected>
 #include <print>
+#include <span>
+#include <string>
+#include <string_view>
+#include <vector>
 
 namespace lodestone
 {

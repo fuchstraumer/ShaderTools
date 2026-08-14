@@ -1,7 +1,20 @@
 #include "DedupeReport.hpp"
+#include "ContentInterner.hpp"
+#include "CookedLibrary.hpp"
+#include "CookerErrors.hpp"
+#include "PermutationSpace.hpp"
+
 #include <algorithm>
+#include <cstddef>
+#include <cstdint>
+#include <cstdio>
+#include <expected>
 #include <format>
 #include <print>
+#include <string>
+#include <string_view>
+#include <utility>
+#include <vector>
 
 namespace lodestone
 {
@@ -12,15 +25,11 @@ namespace
     const PermutationBinding* FindBinding(const PermutationAssignment& assignment,
                                           const PermutationAxis* axis) noexcept
     {
-        for (const PermutationBinding& binding : assignment)
+        auto foundIter = std::ranges::find_if(assignment, [axis](const PermutationBinding& binding)
         {
-            if (binding.first == axis)
-            {
-                return &binding;
-            }
-        }
-
-        return nullptr;
+            return binding.first == axis;
+        });
+        return foundIter != assignment.end() ? &(*foundIter) : nullptr;
     }
 
     /** True when two assignments agree on every axis except the one under test. */

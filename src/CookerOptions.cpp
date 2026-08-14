@@ -1,5 +1,14 @@
 #include "CookerOptions.hpp"
+#include "CookerErrors.hpp"
+
 #include <charconv>
+#include <cstddef>
+#include <cstdint>
+#include <expected>
+#include <filesystem>
+#include <span>
+#include <string_view>
+#include <system_error>
 
 namespace lodestone
 {
@@ -22,6 +31,10 @@ namespace
 
     constexpr std::string_view k_OptimizationPrefix = "--O";
 
+// ignore -Wunsafe-buffer-usage because from_chars with string_view is safe, and the warning is a little
+// paranoid (as it should be)
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunsafe-buffer-usage"
     CookResult<uint32_t> ParseOptimizationLevel(std::string_view argument)
     {
         const std::string_view levelText = argument.substr(k_OptimizationPrefix.size());
@@ -40,6 +53,7 @@ namespace
 
         return level;
     }
+#pragma clang diagnostic pop
 
     std::filesystem::path DefaultModuleCacheDirectory()
     {
@@ -52,7 +66,8 @@ CookResult<CookerOptions> ParseCommandLine(std::span<const std::string_view> arg
 {
     CookerOptions options;
     options.ModuleCacheDirectory = DefaultModuleCacheDirectory();
-
+    // good ol if/else config parsing, because the command line is at least simple for now
+    // quick future upgrade would be a declarative lambda table, along with limits for safety
     for (size_t i = 0; i < arguments.size(); ++i)
     {
         const std::string_view argument = arguments[i];

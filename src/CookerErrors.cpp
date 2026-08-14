@@ -1,5 +1,6 @@
 #include "CookerErrors.hpp"
 #include <magic_enum/magic_enum.hpp>
+#include <string_view>
 
 namespace lodestone
 {
