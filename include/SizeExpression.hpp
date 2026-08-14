@@ -35,8 +35,7 @@ struct SizeSymbol
  *
  * Integers are decimal or `0x` hexadecimal, with an optional `u` or `U` suffix so an expression can
  * be copied out of Slang source unchanged. */
-CookResult<int64_t> EvaluateSizeExpression(std::string_view expression,
-                                           std::span<const SizeSymbol> symbols);
+CookResult<int64_t> EvaluateSizeExpression(std::string_view expression, std::span<const SizeSymbol> symbols);
 
 } // namespace lodestone
 

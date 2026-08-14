@@ -1,7 +1,20 @@
 #include "SizeExpression.hpp"
+#include "CookerErrors.hpp"
 #include <cctype>
 #include <charconv>
+#include <cstddef>
+#include <cstdint>
+#include <cstdio>
+#include <expected>
 #include <print>
+#include <span>
+#include <string_view>
+#include <system_error>
+
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wnrvo"
+#endif
 
 namespace lodestone
 {
@@ -27,20 +40,19 @@ namespace
     public:
         ExpressionParser(std::string_view expression, std::span<const SizeSymbol> symbols) noexcept :
             text{ expression },
-            symbolTable{ symbols },
-            cursor{ 0u }
+            symbolTable{ symbols }
         {
         }
 
         CookResult<int64_t> ParseComplete()
         {
-            const CookResult<int64_t> value = ParseShift();
+            const CookResult<int64_t> value = parseShift();
             if (!value)
             {
                 return value;
             }
 
-            SkipWhitespace();
+            skipWhitespace();
             if (cursor != text.size())
             {
                 std::println(stderr,
@@ -54,7 +66,8 @@ namespace
         }
 
     private:
-        void SkipWhitespace() noexcept
+
+        void skipWhitespace() noexcept
         {
             while (cursor < text.size() && std::isspace(static_cast<unsigned char>(text[cursor])) != 0)
             {
@@ -62,43 +75,43 @@ namespace
             }
         }
 
-        bool ConsumeOperator(std::string_view op) noexcept
+        bool consumeOperator(std::string_view oper) noexcept
         {
-            SkipWhitespace();
-            if (text.compare(cursor, op.size(), op) != 0)
+            skipWhitespace();
+            if (text.compare(cursor, oper.size(), oper) != 0)
             {
                 return false;
             }
 
-            cursor += op.size();
+            cursor += oper.size();
             return true;
         }
 
         /** `<` and `>` only ever appear as part of a shift here, so a single character is enough to
          * tell the two shifts apart from anything else. */
-        bool PeekIsShift() noexcept
+        bool peekIsShift() noexcept
         {
-            SkipWhitespace();
+            skipWhitespace();
             return text.compare(cursor, 2u, "<<") == 0 || text.compare(cursor, 2u, ">>") == 0;
         }
 
-        CookResult<int64_t> ParseShift()
+        CookResult<int64_t> parseShift()
         {
-            CookResult<int64_t> left = ParseSum();
+            CookResult<int64_t> left = parseSum();
             if (!left)
             {
                 return left;
             }
 
-            while (PeekIsShift())
+            while (peekIsShift())
             {
-                const bool shiftLeft = ConsumeOperator("<<");
-                if (!shiftLeft && !ConsumeOperator(">>"))
+                const bool shiftLeft = consumeOperator("<<");
+                if (!shiftLeft && !consumeOperator(">>"))
                 {
                     break;
                 }
 
-                const CookResult<int64_t> right = ParseSum();
+                const CookResult<int64_t> right = parseSum();
                 if (!right)
                 {
                     return right;
@@ -120,9 +133,9 @@ namespace
             return left;
         }
 
-        CookResult<int64_t> ParseSum()
+        CookResult<int64_t> parseSum()
         {
-            CookResult<int64_t> left = ParseProduct();
+            CookResult<int64_t> left = parseProduct();
             if (!left)
             {
                 return left;
@@ -130,15 +143,15 @@ namespace
 
             while (true)
             {
-                SkipWhitespace();
-                const bool isAdd = ConsumeOperator("+");
-                const bool isSubtract = !isAdd && ConsumeOperator("-");
+                skipWhitespace();
+                const bool isAdd = consumeOperator("+");
+                const bool isSubtract = !isAdd && consumeOperator("-");
                 if (!isAdd && !isSubtract)
                 {
                     break;
                 }
 
-                const CookResult<int64_t> right = ParseProduct();
+                const CookResult<int64_t> right = parseProduct();
                 if (!right)
                 {
                     return right;
@@ -150,9 +163,9 @@ namespace
             return left;
         }
 
-        CookResult<int64_t> ParseProduct()
+        CookResult<int64_t> parseProduct()
         {
-            CookResult<int64_t> left = ParseUnary();
+            CookResult<int64_t> left = parseUnary();
             if (!left)
             {
                 return left;
@@ -160,16 +173,16 @@ namespace
 
             while (true)
             {
-                SkipWhitespace();
-                const bool isMultiply = ConsumeOperator("*");
-                const bool isDivide = !isMultiply && ConsumeOperator("/");
-                const bool isModulo = !isMultiply && !isDivide && ConsumeOperator("%");
+                skipWhitespace();
+                const bool isMultiply = consumeOperator("*");
+                const bool isDivide = !isMultiply && consumeOperator("/");
+                const bool isModulo = !isMultiply && !isDivide && consumeOperator("%");
                 if (!isMultiply && !isDivide && !isModulo)
                 {
                     break;
                 }
 
-                const CookResult<int64_t> right = ParseUnary();
+                const CookResult<int64_t> right = parseUnary();
                 if (!right)
                 {
                     return right;
@@ -198,12 +211,12 @@ namespace
             return left;
         }
 
-        CookResult<int64_t> ParseUnary()
+        CookResult<int64_t> parseUnary()
         {
-            SkipWhitespace();
-            if (ConsumeOperator("-"))
+            skipWhitespace();
+            if (consumeOperator("-"))
             {
-                const CookResult<int64_t> operand = ParseUnary();
+                const CookResult<int64_t> operand = parseUnary();
                 if (!operand)
                 {
                     return operand;
@@ -212,27 +225,27 @@ namespace
                 return -operand.value();
             }
 
-            return ParsePrimary();
+            return parsePrimary();
         }
 
-        CookResult<int64_t> ParsePrimary()
+        CookResult<int64_t> parsePrimary()
         {
-            SkipWhitespace();
+            skipWhitespace();
             if (cursor >= text.size())
             {
                 std::println(stderr, "[shader_cooker] size expression '{}' ends early", text);
                 return std::unexpected(CookError::SizeExpressionParseFailed);
             }
 
-            if (ConsumeOperator("("))
+            if (consumeOperator("("))
             {
-                const CookResult<int64_t> inner = ParseShift();
+                const CookResult<int64_t> inner = parseShift();
                 if (!inner)
                 {
                     return inner;
                 }
 
-                if (!ConsumeOperator(")"))
+                if (!consumeOperator(")"))
                 {
                     std::println(stderr,
                                  "[shader_cooker] size expression '{}' is missing a closing parenthesis",
@@ -245,12 +258,12 @@ namespace
 
             if (std::isdigit(static_cast<unsigned char>(text[cursor])) != 0)
             {
-                return ParseInteger();
+                return parseInteger();
             }
 
             if (IsIdentifierStart(text[cursor]))
             {
-                return ParseIdentifier();
+                return parseIdentifier();
             }
 
             std::println(stderr,
@@ -262,7 +275,7 @@ namespace
             return std::unexpected(CookError::SizeExpressionParseFailed);
         }
 
-        CookResult<int64_t> ParseInteger()
+        CookResult<int64_t> parseInteger()
         {
             int base = 10;
             size_t digitsBegin = cursor;
@@ -306,7 +319,7 @@ namespace
             return value;
         }
 
-        CookResult<int64_t> ParseIdentifier()
+        CookResult<int64_t> parseIdentifier()
         {
             const size_t nameBegin = cursor;
             while (cursor < text.size() && IsIdentifierCharacter(text[cursor]))
@@ -333,7 +346,7 @@ namespace
 
         std::string_view text;
         std::span<const SizeSymbol> symbolTable;
-        size_t cursor;
+        size_t cursor{};
     };
 
 } // namespace
@@ -350,5 +363,10 @@ CookResult<int64_t> EvaluateSizeExpression(std::string_view expression,
     ExpressionParser parser{ expression, symbols };
     return parser.ParseComplete();
 }
+
+
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
 
 } // namespace lodestone
