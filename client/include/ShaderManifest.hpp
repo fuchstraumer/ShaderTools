@@ -21,7 +21,7 @@
  * The byte span must outlive every view and every provider that reads it. Names and shader text point
  * into that span.
  */
-namespace velox
+namespace lodestone
 {
 
 inline constexpr uint32_t k_ShaderManifestMagic = 0x48535856u;

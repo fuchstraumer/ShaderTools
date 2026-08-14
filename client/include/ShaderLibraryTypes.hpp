@@ -4,13 +4,14 @@
 #include "ResourceFlags.hpp"
 #include <cstdint>
 #include <span>
+#include <string_view>
 /**
  * @brief The vocabulary the shader cooker writes and the rendergraph reads. This header is the contract
  * between the Cooker and clients that want to use the data the cooker produces. Texture formats and view
  * dimensions come from ResourceFlags.hpp. One definition serves both the resource layer and the cooker, so
  * the two cannot disagree.
  */
-namespace velox
+namespace lodestone
 {
 
 /** @brief The WebGPU binding type that one shader resource needs. */
@@ -224,6 +225,6 @@ public:
 [[nodiscard]] bool IsBufferBinding(BindingKind kind) noexcept;
 [[nodiscard]] bool IsTextureBinding(BindingKind kind) noexcept;
 
-} // namespace velox
+} // namespace lodestone
 
 #endif // !LODESTONE_SHADER_LIBRARY_TYPES_HPP

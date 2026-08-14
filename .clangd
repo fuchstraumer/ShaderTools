@@ -6,7 +6,8 @@ If:
 CompileFlags:
   Add: [ -std=c++23, -Wall, -Wpedantic, -Wextra, -Weverything,
          -Wno-c++98-compat, -Wno-c++98-compat-pedantic, -Wno-pre-c++17-compat,
-         -Wno-exit-time-destructors, -Wno-global-constructors ]
+         -Wno-exit-time-destructors, -Wno-global-constructors,
+         -Wno-padded ]
   Compiler: clang++
 
 Diagnostics:
