@@ -1,11 +1,9 @@
 #pragma once
 #ifndef VELOX_SHADER_LIBRARY_TYPES_HPP
 #define VELOX_SHADER_LIBRARY_TYPES_HPP
-#include "resource/ResourceFlags.hpp"
+#include "ResourceFlags.hpp"
 #include <cstdint>
 #include <span>
-#include <string_view>
-
 /**
  * @brief The vocabulary the shader cooker writes and the rendergraph reads. This header is the contract
  * between the Cooker and clients that want to use the data the cooker produces. Texture formats and view

@@ -1,7 +1,8 @@
 #pragma once
 #ifndef VELOX_SHADER_MANIFEST_HPP
 #define VELOX_SHADER_MANIFEST_HPP
-#include "shader/ShaderLibraryTypes.hpp"
+#include "ShaderLibraryTypes.hpp"
+#include <cstdint>
 #include <cstddef>
 #include <expected>
 #include <span>
@@ -28,7 +29,7 @@ inline constexpr uint32_t k_ShaderManifestVersion = 1u;
 /** A slot in the variant index table that no variant occupies. */
 inline constexpr uint32_t k_ShaderManifestNoIndex = 0xFFFFFFFFu;
 
-enum class ShaderManifestError : uint16_t
+enum class ShaderManifestError : uint8_t
 {
     Invalid = 0,
     Success = 1,
