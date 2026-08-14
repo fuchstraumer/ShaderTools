@@ -1,6 +1,6 @@
 #pragma once
-#ifndef VELOX_SHADER_COOKER_WGSL_BINDING_SCANNER_HPP
-#define VELOX_SHADER_COOKER_WGSL_BINDING_SCANNER_HPP
+#ifndef LODESTONE_SHADER_COOKER_WGSL_BINDING_SCANNER_HPP
+#define LODESTONE_SHADER_COOKER_WGSL_BINDING_SCANNER_HPP
 #include "ShaderDataSchema.hpp"
 #include <span>
 #include <string>
@@ -61,4 +61,4 @@ BindingComparison CompareBindings(std::span<const WgslDeclaredBinding> declared,
 
 } // namespace lodestone
 
-#endif // !VELOX_SHADER_COOKER_WGSL_BINDING_SCANNER_HPP
+#endif // !LODESTONE_SHADER_COOKER_WGSL_BINDING_SCANNER_HPP

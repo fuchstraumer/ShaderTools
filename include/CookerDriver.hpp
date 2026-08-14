@@ -1,6 +1,6 @@
 #pragma once
-#ifndef VELOX_SHADER_COOKER_DRIVER_HPP
-#define VELOX_SHADER_COOKER_DRIVER_HPP
+#ifndef LODESTONE_SHADER_COOKER_DRIVER_HPP
+#define LODESTONE_SHADER_COOKER_DRIVER_HPP
 #include "CookerErrors.hpp"
 #include "CookerOptions.hpp"
 #include "OutputSink.hpp"
@@ -26,4 +26,4 @@ CookResult<CookStatistics> RunCook(const CookerOptions& options, OutputSink& sin
 
 } // namespace lodestone
 
-#endif // !VELOX_SHADER_COOKER_DRIVER_HPP
+#endif // !LODESTONE_SHADER_COOKER_DRIVER_HPP

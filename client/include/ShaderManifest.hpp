@@ -1,6 +1,6 @@
 #pragma once
-#ifndef VELOX_SHADER_MANIFEST_HPP
-#define VELOX_SHADER_MANIFEST_HPP
+#ifndef LODESTONE_SHADER_MANIFEST_HPP
+#define LODESTONE_SHADER_MANIFEST_HPP
 #include "ShaderLibraryTypes.hpp"
 #include <cstdint>
 #include <cstddef>
@@ -315,4 +315,4 @@ private:
 
 } // namespace velox
 
-#endif // !VELOX_SHADER_MANIFEST_HPP
+#endif // !LODESTONE_SHADER_MANIFEST_HPP

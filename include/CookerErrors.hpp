@@ -1,6 +1,6 @@
 #pragma once
-#ifndef VELOX_SHADER_COOKER_ERRORS_HPP
-#define VELOX_SHADER_COOKER_ERRORS_HPP
+#ifndef LODESTONE_SHADER_COOKER_ERRORS_HPP
+#define LODESTONE_SHADER_COOKER_ERRORS_HPP
 #include <cstdint>
 #include <expected>
 #include <string_view>
@@ -60,4 +60,4 @@ std::string_view ToString(CookError error) noexcept;
 
 } // namespace lodestone
 
-#endif // !VELOX_SHADER_COOKER_ERRORS_HPP
+#endif // !LODESTONE_SHADER_COOKER_ERRORS_HPP

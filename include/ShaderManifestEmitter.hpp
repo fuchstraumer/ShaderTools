@@ -1,6 +1,6 @@
 #pragma once
-#ifndef VELOX_SHADER_COOKER_MANIFEST_EMITTER_HPP
-#define VELOX_SHADER_COOKER_MANIFEST_EMITTER_HPP
+#ifndef LODESTONE_SHADER_COOKER_MANIFEST_EMITTER_HPP
+#define LODESTONE_SHADER_COOKER_MANIFEST_EMITTER_HPP
 #include "CookedLibrary.hpp"
 #include <string>
 
@@ -30,4 +30,4 @@ CookResult<void> VerifyManifestRoundTrip(const CookedModule& module, const std::
 
 } // namespace lodestone
 
-#endif // !VELOX_SHADER_COOKER_MANIFEST_EMITTER_HPP
+#endif // !LODESTONE_SHADER_COOKER_MANIFEST_EMITTER_HPP

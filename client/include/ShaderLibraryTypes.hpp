@@ -1,6 +1,6 @@
 #pragma once
-#ifndef VELOX_SHADER_LIBRARY_TYPES_HPP
-#define VELOX_SHADER_LIBRARY_TYPES_HPP
+#ifndef LODESTONE_SHADER_LIBRARY_TYPES_HPP
+#define LODESTONE_SHADER_LIBRARY_TYPES_HPP
 #include "ResourceFlags.hpp"
 #include <cstdint>
 #include <span>
@@ -226,4 +226,4 @@ public:
 
 } // namespace velox
 
-#endif // !VELOX_SHADER_LIBRARY_TYPES_HPP
+#endif // !LODESTONE_SHADER_LIBRARY_TYPES_HPP

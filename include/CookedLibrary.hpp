@@ -1,6 +1,6 @@
 #pragma once
-#ifndef VELOX_SHADER_COOKER_COOKED_LIBRARY_HPP
-#define VELOX_SHADER_COOKER_COOKED_LIBRARY_HPP
+#ifndef LODESTONE_SHADER_COOKER_COOKED_LIBRARY_HPP
+#define LODESTONE_SHADER_COOKER_COOKED_LIBRARY_HPP
 #include "ContentInterner.hpp"
 #include "PermutationSpace.hpp"
 #include "ShaderDataSchema.hpp"
@@ -92,4 +92,4 @@ std::string_view ResolveSource(const CookedModule& module,
 
 } // namespace lodestone
 
-#endif // !VELOX_SHADER_COOKER_COOKED_LIBRARY_HPP
+#endif // !LODESTONE_SHADER_COOKER_COOKED_LIBRARY_HPP

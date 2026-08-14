@@ -1,6 +1,6 @@
 #pragma once
-#ifndef VELOX_GRAPH_RESOURCE_FLAGS_HPP
-#define VELOX_GRAPH_RESOURCE_FLAGS_HPP
+#ifndef LODESTONE_GRAPH_RESOURCE_FLAGS_HPP
+#define LODESTONE_GRAPH_RESOURCE_FLAGS_HPP
 #include "EnumClassUtils.hpp"
 #include <cstdint>
 
@@ -10,7 +10,7 @@
  * into every related TU. The conversion table is in ResourceFlagConversions.hpp, which is included
  * only by source files that actually manipulate resources.
  */
-namespace velox
+namespace lodestone
 {
 
 /** @brief How a buffer may be used over its lifetime, declared at creation. Distinct from BufferBinding
@@ -129,6 +129,6 @@ enum class TextureViewDimension : uint8_t
     View3D
 };
 
-} // namespace velox
+} // namespace lodestone
 
-#endif // !VELOX_RESOURCE_FLAGS_HPP
+#endif // !LODESTONE_RESOURCE_FLAGS_HPP

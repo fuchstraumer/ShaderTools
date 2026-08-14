@@ -1,6 +1,6 @@
 #pragma once
-#ifndef VELOX_SHADER_COOKER_DATA_SCHEMA_HPP
-#define VELOX_SHADER_COOKER_DATA_SCHEMA_HPP
+#ifndef LODESTONE_SHADER_COOKER_DATA_SCHEMA_HPP
+#define LODESTONE_SHADER_COOKER_DATA_SCHEMA_HPP
 #include "ShaderLibraryTypes.hpp"
 #include <cstdint>
 #include <span>
@@ -183,4 +183,4 @@ std::string DescribeUniformMembers(const ReflectedBinding& binding);
 
 } // namespace lodestone
 
-#endif // !VELOX_SHADER_COOKER_DATA_SCHEMA_HPP
+#endif // !LODESTONE_SHADER_COOKER_DATA_SCHEMA_HPP

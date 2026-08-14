@@ -1,6 +1,6 @@
 #pragma once
-#ifndef VELOX_UTILITY_ENUM_CLASS_UTILS_HPP
-#define VELOX_UTILITY_ENUM_CLASS_UTILS_HPP
+#ifndef LODESTONE_UTILITY_ENUM_CLASS_UTILS_HPP
+#define LODESTONE_UTILITY_ENUM_CLASS_UTILS_HPP
 #include <type_traits>
 #include <utility>
 
@@ -96,4 +96,4 @@ constexpr bool HasAnyFlag(T value, T flags) noexcept
     consteval bool enable_bitmask_operator_or_eq(EnumClass) { return true; } \
     consteval bool enable_bitmask_operator_not(EnumClass) { return true; }
 
-#endif // !VELOX_UTILITY_ENUM_CLASS_UTILS_HPP
+#endif // !LODESTONE_UTILITY_ENUM_CLASS_UTILS_HPP

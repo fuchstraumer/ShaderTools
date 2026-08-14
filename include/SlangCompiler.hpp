@@ -1,6 +1,6 @@
 #pragma once
-#ifndef VELOX_SHADER_COOKER_SLANG_COMPILER_HPP
-#define VELOX_SHADER_COOKER_SLANG_COMPILER_HPP
+#ifndef LODESTONE_SHADER_COOKER_SLANG_COMPILER_HPP
+#define LODESTONE_SHADER_COOKER_SLANG_COMPILER_HPP
 #include "CookerErrors.hpp"
 #include "PermutationSpace.hpp"
 #include "ShaderDataSchema.hpp"
@@ -51,4 +51,4 @@ private:
 
 } // namespace lodestone
 
-#endif // !VELOX_SHADER_COOKER_SLANG_COMPILER_HPP
+#endif // !LODESTONE_SHADER_COOKER_SLANG_COMPILER_HPP

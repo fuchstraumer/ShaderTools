@@ -1,6 +1,6 @@
 #pragma once
-#ifndef VELOX_SHADER_COOKER_CONTENT_HASH_HPP
-#define VELOX_SHADER_COOKER_CONTENT_HASH_HPP
+#ifndef LODESTONE_SHADER_COOKER_CONTENT_HASH_HPP
+#define LODESTONE_SHADER_COOKER_CONTENT_HASH_HPP
 #include <cstdint>
 #include <string_view>
 
@@ -46,4 +46,4 @@ ContentHashFunction DefaultContentHashFunction() noexcept;
 
 } // namespace lodestone
 
-#endif // !VELOX_SHADER_COOKER_CONTENT_HASH_HPP
+#endif // !LODESTONE_SHADER_COOKER_CONTENT_HASH_HPP
