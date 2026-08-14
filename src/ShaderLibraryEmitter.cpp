@@ -1,6 +1,17 @@
 #include "ShaderLibraryEmitter.hpp"
+#include "CookedLibrary.hpp"
+#include "PermutationSpace.hpp"
+#include "ShaderDataSchema.hpp"
+#include "ShaderLibraryTypes.hpp"
+
 #include <cctype>
+#include <cstddef>
+#include <cstdint>
 #include <format>
+#include <string>
+#include <string_view>
+#include <variant>
+#include <vector>
 
 namespace lodestone
 {

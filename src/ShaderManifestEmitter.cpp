@@ -1,14 +1,19 @@
 #include "ShaderManifestEmitter.hpp"
 #include "CookedLibrary.hpp"
+#include "CookerErrors.hpp"
 #include "PermutationSpace.hpp"
 #include "ShaderDataSchema.hpp"
+#include "ShaderLibraryTypes.hpp"
 #include "ShaderManifest.hpp"
 
+#include <cstddef>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
+#include <expected>
 #include <format>
 #include <print>
+#include <span>
 #include <string>
 #include <string_view>
 #include <unordered_map>

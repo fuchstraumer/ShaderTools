@@ -12,6 +12,7 @@
 #include <system_error>
 
 #ifdef __clang__
+// The warning about RVO failures are for std::unexpected value returns, which are fine
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wnrvo"
 #endif

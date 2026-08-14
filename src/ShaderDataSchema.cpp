@@ -1,6 +1,11 @@
 #include "ShaderDataSchema.hpp"
+#include "ShaderLibraryTypes.hpp"
+
 #include <algorithm>
 #include <format>
+#include <span>
+#include <string>
+#include <string_view>
 
 namespace lodestone
 {

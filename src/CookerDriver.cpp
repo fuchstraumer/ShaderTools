@@ -10,16 +10,20 @@
 #include "ShaderManifestEmitter.hpp"
 #include "SlangCompiler.hpp"
 #include "WgslBindingScanner.hpp"
+
+#include <algorithm>
 #include <chrono>
 #include <cstdint>
 #include <cstdio>
 #include <expected>
 #include <filesystem>
 #include <print>
+#include <ratio>
 #include <span>
 #include <string>
 #include <string_view>
 #include <system_error>
+#include <utility>
 #include <vector>
 
 
