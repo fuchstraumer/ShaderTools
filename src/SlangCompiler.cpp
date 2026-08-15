@@ -1,8 +1,14 @@
 #include "SlangCompiler.hpp"
 #include "CookerErrors.hpp"
+#include "PermutationSpace.hpp"
+#include "ResourceFlags.hpp"
+#include "ShaderDataSchema.hpp"
 #include "ShaderLibraryTypes.hpp"
 #include "SizeExpression.hpp"
 
+#include <filesystem>
+#include <ios>
+#include <memory>
 #include <slang-com-helper.h>
 #include <slang-com-ptr.h>
 #include <slang.h>
@@ -16,8 +22,10 @@
 #include <future>
 #include <iterator>
 #include <print>
+#include <span>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 namespace lodestone
@@ -612,16 +620,19 @@ CookResult<void> SlangCompiler::Impl::CreateSession(const SlangCompilerCreateInf
     }
 
     CompilerOptions = MakeCompilerOptions(create_info.OptimizationLevel);
-
+    // todo-asap: I am inserting the tests/assets/ rootdir here for the attributes file. This needs to be optionalized and standardized
+    const std::filesystem::path attributesPath = std::filesystem::canonical("D:/ShaderTools/tests/assets/");
+    const std::string attributesPathStr = attributesPath.string();
     const std::filesystem::path canonicalModulePath = std::filesystem::canonical(create_info.ModulePath);
     const std::string sourceDirectory = canonicalModulePath.parent_path().string();
     // The shared modules a shader imports -- VeloxAttributes among them -- sit one level above the
     // per-stage directory, so the asset root resolves without a command-line switch.
     const std::string sharedDirectory = canonicalModulePath.parent_path().parent_path().string();
     const std::string cacheDirectory = create_info.ModuleCacheDirectory.string();
-    const std::array<const char*, 3> searchPaths{ sourceDirectory.c_str(),
+    const std::array<const char*, 4> searchPaths{ sourceDirectory.c_str(),
                                                   sharedDirectory.c_str(),
-                                                  cacheDirectory.c_str() };
+                                                  cacheDirectory.c_str(),
+                                                  attributesPathStr.c_str() };
 
     slang::TargetDesc target{};
     target.format = SLANG_WGSL;
