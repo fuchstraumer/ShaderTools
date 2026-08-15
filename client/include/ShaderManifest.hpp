@@ -313,6 +313,6 @@ private:
     uint64_t generation{ 0u };
 };
 
-} // namespace velox
+} // namespace lodestone
 
 #endif // !LODESTONE_SHADER_MANIFEST_HPP
