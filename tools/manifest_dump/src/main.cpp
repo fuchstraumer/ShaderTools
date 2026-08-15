@@ -22,11 +22,11 @@ enum class DumpError : uint8_t
 {
     Invalid = 0,
     Success = 1,
-    UsageError,
-    FileOpenFailed,
-    FileReadFailed,
-    ManifestOpenFailed,
-    JsonUnbalanced,
+    UsageError = 2,
+    FileOpenFailed = 3,
+    FileReadFailed = 4,
+    ManifestOpenFailed = 5,
+    JsonUnbalanced = 6,
 };
 
 std::string_view ToString(DumpError error) noexcept
