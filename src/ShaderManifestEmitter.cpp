@@ -161,7 +161,7 @@ namespace
 
 std::string MakeManifestFileName(std::string_view module_name)
 {
-    return std::format("{}.vxshaders", module_name);
+    return std::format("{}.ldshaders", module_name);
 }
 
 std::string EmitShaderManifest(const CookedModule& module)
