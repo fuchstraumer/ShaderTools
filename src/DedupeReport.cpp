@@ -10,6 +10,7 @@
 #include <cstdio>
 #include <expected>
 #include <format>
+#include <optional>
 #include <print>
 #include <string>
 #include <string_view>
@@ -90,6 +91,21 @@ namespace
         return foundPair ? AxisInfluence::Inert : AxisInfluence::Undetermined;
     }
 
+    /** The single character the influence table prints for one axis. The heading above the table
+     * states what each one means, so the two must stay together. */
+    char InfluenceMarker(AxisInfluence influence) noexcept
+    {
+        switch (influence)
+        {
+        case AxisInfluence::Active:
+            return 'x';
+        case AxisInfluence::Inert:
+            return '.';
+        default:
+            return '?';
+        }
+    }
+
     std::string EmitInfluenceTable(const CookedModule& module, const ModuleInfluence& influence)
     {
         std::string table = "  axis influence (x = changes output, . = inert, ? = undetermined)\n\n";
@@ -112,10 +128,7 @@ namespace
             table += std::format("  {:<{}}", entry.EntryPointName, nameWidth);
             for (AxisInfluence value : entry.Axes)
             {
-                const char marker = value == AxisInfluence::Active  ? 'x'
-                                    : value == AxisInfluence::Inert ? '.'
-                                                                    : '?';
-                table += std::format("{:<24}", std::string(1u, marker));
+                table += std::format("{:<24}", std::string(1u, InfluenceMarker(value)));
             }
             table += "\n";
         }
@@ -123,58 +136,69 @@ namespace
         return table;
     }
 
+    /** How many variants mapped onto one interned source, and which one arrived first.
+     *
+     * The order of first arrival decides the report text, so this keeps the sources in that order
+     * rather than in index order. */
+    struct SourceCollapse
+    {
+        uint32_t SourceIndex{ 0u };
+        uint32_t MappedCount{ 0u };
+        std::string_view FirstDescription;
+    };
+
+    /** One pass over the variants. The earlier form searched the whole variant list again for each
+     * distinct source, which is quadratic and gives the same answer. */
+    std::vector<SourceCollapse> CollectSourceCollapses(const CookedModule& module,
+                                                       size_t entry_point_index)
+    {
+        std::vector<SourceCollapse> collapses;
+
+        for (const LibraryVariant& variant : module.Variants)
+        {
+            const uint32_t sourceIndex = variant.SourceIndices[entry_point_index];
+
+            const std::vector<SourceCollapse>::iterator found =
+                std::ranges::find(collapses, sourceIndex, &SourceCollapse::SourceIndex);
+
+            if (found != collapses.end())
+            {
+                ++found->MappedCount;
+                continue;
+            }
+
+            collapses.push_back(SourceCollapse{ .SourceIndex = sourceIndex,
+                                                .MappedCount = 1u,
+                                                .FirstDescription = variant.Description });
+        }
+
+        return collapses;
+    }
+
     std::string EmitProvenance(const CookedModule& module)
     {
         std::string emitted;
 
-        for (size_t entryPointIndex = 0u; entryPointIndex < module.EntryPoints.size();
-             ++entryPointIndex)
+        for (size_t entryPointIndex = 0u; entryPointIndex < module.EntryPoints.size(); ++entryPointIndex)
         {
             const std::string& name = module.EntryPoints[entryPointIndex].Name;
-
-            uint32_t artifactCount = 0u;
-            std::vector<uint32_t> distinctSources;
-            for (const LibraryVariant& variant : module.Variants)
-            {
-                ++artifactCount;
-                const uint32_t sourceIndex = variant.SourceIndices[entryPointIndex];
-                if (std::find(distinctSources.begin(), distinctSources.end(), sourceIndex) ==
-                    distinctSources.end())
-                {
-                    distinctSources.push_back(sourceIndex);
-                }
-            }
+            const std::vector<SourceCollapse> collapses = CollectSourceCollapses(module, entryPointIndex);
+            const size_t artifactCount = module.Variants.size();
 
             emitted += std::format("  {:<20} {} variants -> {} unique sources{}\n",
                                    name,
                                    artifactCount,
-                                   distinctSources.size(),
-                                   distinctSources.size() == artifactCount ? "   (no collapse)" : "");
+                                   collapses.size(),
+                                   collapses.size() == artifactCount ? "   (no collapse)" : "");
 
-            for (uint32_t sourceIndex : distinctSources)
+            for (const SourceCollapse& collapse : collapses)
             {
-                uint32_t mapped = 0u;
-                std::string firstDescription;
-                for (const LibraryVariant& variant : module.Variants)
-                {
-                    if (variant.SourceIndices[entryPointIndex] != sourceIndex)
-                    {
-                        continue;
-                    }
-
-                    if (mapped == 0u)
-                    {
-                        firstDescription = variant.Description;
-                    }
-                    ++mapped;
-                }
-
-                if (mapped > 1u)
+                if (collapse.MappedCount > 1u)
                 {
                     emitted += std::format("      source #{} <- {} assignments, first [{}]\n",
-                                           sourceIndex,
-                                           mapped,
-                                           firstDescription);
+                                           collapse.SourceIndex,
+                                           collapse.MappedCount,
+                                           collapse.FirstDescription);
                 }
             }
         }
@@ -235,39 +259,44 @@ bool AllVariantsShareOneLayout(const CookedModule& module) noexcept
     return module.Layouts.size() <= 1u;
 }
 
-CookResult<void> EnforceModulePolicy(const CookedModule& module, const ModuleInfluence& influence)
+namespace
 {
-    const ModulePolicy* policy = FindPolicyForModule(module.Name);
-    if (policy == nullptr)
-    {
-        return {};
-    }
 
-    uint32_t violations = 0u;
-
-    if (policy->MaxVariants != 0u && module.Variants.size() > policy->MaxVariants)
+    const EntryPointInfluence* FindEntryPointInfluence(const ModuleInfluence& influence,
+                                                       std::string_view entry_point_name) noexcept
     {
-        std::println(stderr,
-                     "[shader_cooker] module {} expands to {} variants, over its budget of {}. Raise "
-                     "the budget on purpose, or take an axis out.",
-                     module.Name,
-                     module.Variants.size(),
-                     policy->MaxVariants);
-        ++violations;
-    }
-
-    for (const ExpectedAxisInfluence& expected : policy->ExpectedInfluence)
-    {
-        const EntryPointInfluence* entry = nullptr;
         for (const EntryPointInfluence& candidate : influence.EntryPoints)
         {
-            if (candidate.EntryPointName == expected.EntryPointName)
+            if (candidate.EntryPointName == entry_point_name)
             {
-                entry = &candidate;
-                break;
+                return &candidate;
             }
         }
 
+        return nullptr;
+    }
+
+    /** Position of an axis in the space. The influence vector runs parallel to it. */
+    std::optional<size_t> FindAxisIndex(const PermutationSpace& space, std::string_view axis_name) noexcept
+    {
+        for (size_t i = 0u; i < space.size(); ++i)
+        {
+            if (space[i]->Name == axis_name)
+            {
+                return i;
+            }
+        }
+
+        return std::nullopt;
+    }
+
+    /** One declared expectation, checked against what the cook measured. Returns the violation count,
+     * which is zero or one. */
+    uint32_t CheckExpectedInfluence(const CookedModule& module,
+                                    const ModuleInfluence& influence,
+                                    const ExpectedAxisInfluence& expected)
+    {
+        const EntryPointInfluence* entry = FindEntryPointInfluence(influence, expected.EntryPointName);
         if (entry == nullptr)
         {
             std::println(stderr,
@@ -275,34 +304,21 @@ CookResult<void> EnforceModulePolicy(const CookedModule& module, const ModuleInf
                          "does not exist",
                          module.Name,
                          expected.EntryPointName);
-            ++violations;
-            continue;
+            return 1u;
         }
 
-        size_t axisIndex = 0u;
-        bool axisFound = false;
-        for (size_t i = 0u; i < module.Space->size(); ++i)
-        {
-            if ((*module.Space)[i]->Name == expected.AxisName)
-            {
-                axisIndex = i;
-                axisFound = true;
-                break;
-            }
-        }
-
-        if (!axisFound || axisIndex >= entry->Axes.size())
+        const std::optional<size_t> axisIndex = FindAxisIndex(*module.Space, expected.AxisName);
+        if (!axisIndex.has_value() || axisIndex.value() >= entry->Axes.size())
         {
             std::println(stderr,
                          "[shader_cooker] module {} declares an expectation for axis '{}', which is not "
                          "in its permutation space",
                          module.Name,
                          expected.AxisName);
-            ++violations;
-            continue;
+            return 1u;
         }
 
-        const AxisInfluence measured = entry->Axes[axisIndex];
+        const AxisInfluence measured = entry->Axes[axisIndex.value()];
         const bool measuredInert = measured == AxisInfluence::Inert;
 
         if (measured != AxisInfluence::Undetermined && measuredInert != expected.IsInert)
@@ -314,8 +330,43 @@ CookResult<void> EnforceModulePolicy(const CookedModule& module, const ModuleInf
                          ToString(measured),
                          expected.EntryPointName,
                          expected.IsInert ? "Inert" : "Active");
-            ++violations;
+            return 1u;
         }
+
+        return 0u;
+    }
+
+    uint32_t CheckVariantBudget(const CookedModule& module, const ModulePolicy& policy)
+    {
+        if (policy.MaxVariants == 0u || module.Variants.size() <= policy.MaxVariants)
+        {
+            return 0u;
+        }
+
+        std::println(stderr,
+                     "[shader_cooker] module {} expands to {} variants, over its budget of {}. Raise "
+                     "the budget on purpose, or take an axis out.",
+                     module.Name,
+                     module.Variants.size(),
+                     policy.MaxVariants);
+        return 1u;
+    }
+
+} // namespace
+
+CookResult<void> EnforceModulePolicy(const CookedModule& module, const ModuleInfluence& influence)
+{
+    const ModulePolicy* policy = FindPolicyForModule(module.Name);
+    if (policy == nullptr)
+    {
+        return {};
+    }
+
+    uint32_t violations = CheckVariantBudget(module, *policy);
+
+    for (const ExpectedAxisInfluence& expected : policy->ExpectedInfluence)
+    {
+        violations += CheckExpectedInfluence(module, influence, expected);
     }
 
     if (violations != 0u)
