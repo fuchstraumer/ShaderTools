@@ -53,6 +53,9 @@ add_subdirectory(third_party/xxHash/build/cmake EXCLUDE_FROM_ALL)
 add_slang_subdirectory(third_party/slang)
 set_target_properties(slang PROPERTIES CXX_STANDARD 23 CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF)
 
+# Add our various internal libraries first: the client library, and our
+# JSON writer that is used by some of the .exe tools and the cooker lib
+add_subdirectory(tools/json)
 add_subdirectory(client)
 
 set(LODESTONE_CLIENT_HEADERS
