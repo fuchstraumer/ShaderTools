@@ -7,8 +7,8 @@
 namespace lodestone
 {
 
-ShaderSourceProvider::ShaderSourceProvider() noexcept {};
-ShaderSourceProvider::~ShaderSourceProvider() noexcept {};
+ShaderSourceProvider::ShaderSourceProvider() noexcept = default;
+ShaderSourceProvider::~ShaderSourceProvider() noexcept = default;
 
 const BindingInfo* FindBindingByName(std::span<const BindingInfo> bindings,
                                      std::string_view name) noexcept
@@ -85,4 +85,4 @@ bool IsTextureBinding(BindingKind kind) noexcept
     return kind == BindingKind::SampledTexture || kind == BindingKind::StorageTexture;
 }
 
-} // namespace velox
+} // namespace lodestone
