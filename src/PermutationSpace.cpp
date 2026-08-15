@@ -559,17 +559,22 @@ CookResult<std::vector<ExternConstantDefault>> CollectUndrivenExternDefaults(
 
 int64_t PermutationValueToInt64(const PermutationValue& value) noexcept
 {
-    if (std::holds_alternative<bool>(value))
+    if (const bool* booleanValue = std::get_if<bool>(&value); booleanValue != nullptr)
     {
-        return std::get<bool>(value) ? 1 : 0;
+        return *booleanValue ? 1 : 0;
     }
 
-    if (std::holds_alternative<uint32_t>(value))
+    if (const uint32_t* unsignedValue = std::get_if<uint32_t>(&value); unsignedValue != nullptr)
     {
-        return static_cast<int64_t>(std::get<uint32_t>(value));
+        return static_cast<int64_t>(*unsignedValue);
     }
 
-    return static_cast<int64_t>(std::get<int32_t>(value));
+    if (const int32_t* signedValue = std::get_if<int32_t>(&value); signedValue != nullptr)
+    {
+        return static_cast<int64_t>(*signedValue);
+    }
+
+    return 0;
 }
 
 std::string ValueToSlangLiteral(const PermutationValue& value)
