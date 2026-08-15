@@ -83,6 +83,7 @@ set(LODESTONE_HEADERS
     "${CMAKE_CURRENT_SOURCE_DIR}/include/ShaderManifestEmitter.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/include/SizeExpression.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/include/SlangCompiler.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/StageDump.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/include/WgslBindingScanner.hpp")
 
 set(LODESTONE_SOURCES
@@ -99,6 +100,7 @@ set(LODESTONE_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/src/ShaderManifestEmitter.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/SizeExpression.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/SlangCompiler.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/StageDump.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/WgslBindingScanner.cpp")
 
 # Static on purpose. No header marks a symbol dllexport, so a Windows DLL build of this target exports
@@ -115,7 +117,7 @@ target_include_directories(lodestone PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/client/include"
     "${CMAKE_CURRENT_SOURCE_DIR}/third_party/slang/include"
     "${CMAKE_CURRENT_SOURCE_DIR}/third_party/magic_enum/include")
-target_link_libraries(lodestone PRIVATE slang lodestone::client_internal xxHash::xxhash)
+target_link_libraries(lodestone PRIVATE slang lodestone::client_internal xxHash::xxhash lodestone::json)
 if (NOT CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
     target_compile_definitions(lodestone PRIVATE "_HAS_CXX23=1")
     # No sanitizer here. AddressSanitizer on Windows does not support the debug CRT: it intercepts

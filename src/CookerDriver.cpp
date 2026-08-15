@@ -9,6 +9,7 @@
 #include "ShaderLibraryEmitter.hpp"
 #include "ShaderManifestEmitter.hpp"
 #include "SlangCompiler.hpp"
+#include "StageDump.hpp"
 #include "WgslBindingScanner.hpp"
 
 #include <algorithm>
@@ -25,7 +26,6 @@
 #include <system_error>
 #include <utility>
 #include <vector>
-
 
 namespace lodestone
 {
@@ -300,6 +300,24 @@ namespace
         return {};
     }
 
+    /** Builds the dump only when the flag asked for it, because a dump of a large module costs real
+     * work. The dump then goes out through the sink, so the determinism check compares it against
+     * the second cook exactly as it compares every other artifact. */
+    template<typename BuildDumpFn>
+    CookResult<void> WriteStageDumpIfRequested(const CookerOptions& options,
+                                               OutputSink& sink,
+                                               std::string_view module_name,
+                                               StageDumpKind kind,
+                                               BuildDumpFn build_dump)
+    {
+        if (!IsStageDumpRequested(options, kind))
+        {
+            return {};
+        }
+
+        return sink.WriteArtifact(MakeStageDumpFileName(module_name, kind), build_dump());
+    }
+
     /** Builds the compiler for one module, and checks everything that must hold before the first
      * variant compiles. */
     CookResult<void> PrepareModuleCompiler(const CookerOptions& options,
@@ -454,6 +472,7 @@ namespace
 
     CookResult<void> CookModule(const CookerOptions& options,
                                 const std::filesystem::path& module_path,
+                                OutputSink& sink,
                                 std::vector<CompiledVariant>& out_variants,
                                 CookedLibrary& out_library,
                                 CookStatistics& statistics)
@@ -479,6 +498,34 @@ namespace
                      moduleName,
                      variantSet.value().Variants.size(),
                      variantSet.value().SpaceSize);
+
+        if (CookResult<void> spaceDump = WriteStageDumpIfRequested(options,
+                                                                   sink,
+                                                                   moduleName,
+                                                                   StageDumpKind::Space,
+                                                                   [&]
+                                                                   {
+                                                                       return DumpPermutationSpace(moduleName,
+                                                                                                   *space);
+                                                                   });
+            !spaceDump)
+        {
+            return spaceDump;
+        }
+
+        if (CookResult<void> variantDump =
+                WriteStageDumpIfRequested(options,
+                                          sink,
+                                          moduleName,
+                                          StageDumpKind::Variants,
+                                          [&]
+                                          {
+                                              return DumpVariantSet(moduleName, variantSet.value());
+                                          });
+            !variantDump)
+        {
+            return variantDump;
+        }
 
         CookedModule cookedModule;
         if (!options.DedupeEnabled)
@@ -510,6 +557,19 @@ namespace
             return finalized;
         }
 
+        if (CookResult<void> cookedDump = WriteStageDumpIfRequested(options,
+                                                                    sink,
+                                                                    moduleName,
+                                                                    StageDumpKind::Cooked,
+                                                                    [&]
+                                                                    {
+                                                                        return DumpCookedModule(cookedModule);
+                                                                    });
+            !cookedDump)
+        {
+            return cookedDump;
+        }
+
         out_library.Modules.push_back(std::move(cookedModule));
         ++statistics.ModulesCooked;
         return {};
@@ -535,7 +595,8 @@ CookResult<CookStatistics> RunCookOnce(const CookerOptions& options, OutputSink&
     for (const std::filesystem::path& modulePath : options.ModulePaths)
     {
         std::println(stderr, "[shader_cooker] cooking {}", modulePath.string());
-        const CookResult<void> moduleResult = CookModule(options, modulePath, variants, library, statistics);
+        const CookResult<void> moduleResult =
+            CookModule(options, modulePath, sink, variants, library, statistics);
         if (!moduleResult)
         {
             return std::unexpected(moduleResult.error());

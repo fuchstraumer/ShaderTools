@@ -11,6 +11,36 @@
 namespace lodestone
 {
 
+/** One point between two stages that a cook can write out as JSON.
+ *
+ * A dump is a diagnostic, not a shipped format. It has no version field and nothing reads it back.
+ * Every check that uses one is a byte comparison: against a golden file, or against the second cook
+ * that `--verify-deterministic` runs.
+ *
+ * `Raw` and `Resolved` name the two halves of the stage 3 and stage 4 split, and `Interned` names the
+ * stage 6 and stage 7 split. Those three stages have no boundary type yet, so the names parse and the
+ * dumps do nothing. See `docs/phase-d-stage-separation-plan.md`. */
+enum class StageDumpKind : uint8_t
+{
+    Invalid = 0,
+    Space,
+    Variants,
+    Raw,
+    Resolved,
+    Interned,
+    Cooked,
+};
+
+std::string_view ToString(StageDumpKind kind) noexcept;
+
+/** Maps one `--dump-stage` name onto a kind. Returns `Invalid` for a name the cooker does not know. */
+StageDumpKind ParseStageDumpKind(std::string_view name) noexcept;
+
+uint32_t StageDumpBit(StageDumpKind kind) noexcept;
+
+/** Every kind at once, which is what `--dump-stage=all` sets. */
+uint32_t AllStageDumpBits() noexcept;
+
 struct CookerOptions
 {
     std::filesystem::path OutputPath;
@@ -26,7 +56,11 @@ struct CookerOptions
     /** Cooks twice into memory and compares. Catches an unordered container's iteration order when
      * it reaches the emitted output. */
     bool VerifyDeterministic{ false };
+    /** One bit for each `StageDumpKind` the cook must write. `--dump-stage` sets them. */
+    uint32_t DumpStageMask{ 0u };
 };
+
+bool IsStageDumpRequested(const CookerOptions& options, StageDumpKind kind) noexcept;
 
 CookResult<CookerOptions> ParseCommandLine(std::span<const std::string_view> arguments);
 std::string_view GetUsageText() noexcept;

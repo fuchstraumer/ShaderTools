@@ -20,7 +20,7 @@ namespace
     constexpr std::string_view k_UsageText =
         "Usage: lodestone --output <header.hpp> [--O<level>] [--no-validate] [--quiet]\n"
         "                 [--cache-dir <path>] [--single-threaded] [--no-dedupe]\n"
-        "                 [--verify-deterministic] <module.slang>...\n"
+        "                 [--verify-deterministic] [--dump-stage=<name>] <module.slang>...\n"
         "  --output, -o    destination header path (required)\n"
         "  --O<level>      slang optimization level: 0-3, defaults to 0\n"
         "  --no-validate   skip cross-checking reflection against emitted WGSL\n"
@@ -28,9 +28,49 @@ namespace
         "  --cache-dir     directory for precompiled slang modules\n"
         "  --single-threaded disable multi-threaded entry point codegen\n"
         "  --no-dedupe     disable content deduplication\n"
-        "  --verify-deterministic cook twice and compare all artifacts\n";
+        "  --verify-deterministic cook twice and compare all artifacts\n"
+        "  --dump-stage=<name> write one stage of the pipeline as JSON, beside the other artifacts.\n"
+        "                  Repeat the flag for more than one stage. Names: space, variants, raw,\n"
+        "                  resolved, interned, cooked, all. raw, resolved, and interned parse but\n"
+        "                  have no boundary type yet, so they write nothing.\n";
 
     constexpr std::string_view k_OptimizationPrefix = "--O";
+    constexpr std::string_view k_StageDumpPrefix = "--dump-stage=";
+    constexpr std::string_view k_AllStageDumpsName = "all";
+
+    /** The one table that decides both what `--dump-stage` accepts and what a dump artifact is
+     * called. A separate spelling for either job would let the flag and the file name drift. */
+    struct StageDumpName
+    {
+        StageDumpKind Kind;
+        std::string_view Name;
+    };
+
+    constexpr std::array<StageDumpName, 6u> k_StageDumpNames{
+        StageDumpName{ .Kind = StageDumpKind::Space, .Name = "space" },
+        StageDumpName{ .Kind = StageDumpKind::Variants, .Name = "variants" },
+        StageDumpName{ .Kind = StageDumpKind::Raw, .Name = "raw" },
+        StageDumpName{ .Kind = StageDumpKind::Resolved, .Name = "resolved" },
+        StageDumpName{ .Kind = StageDumpKind::Interned, .Name = "interned" },
+        StageDumpName{ .Kind = StageDumpKind::Cooked, .Name = "cooked" }
+    };
+
+    CookResult<uint32_t> ParseStageDumpArgument(std::string_view argument)
+    {
+        const std::string_view name = argument.substr(k_StageDumpPrefix.size());
+        if (name == k_AllStageDumpsName)
+        {
+            return AllStageDumpBits();
+        }
+
+        const StageDumpKind kind = ParseStageDumpKind(name);
+        if (kind == StageDumpKind::Invalid)
+        {
+            return std::unexpected(CookError::MalformedArgument);
+        }
+
+        return StageDumpBit(kind);
+    }
 
 // ignore -Wunsafe-buffer-usage because from_chars with string_view is safe, and the warning is a little
 // paranoid (as it should be)
@@ -73,16 +113,37 @@ namespace
         void (*Apply)(CookerOptions& options) noexcept;
     };
 
-    constexpr std::array<SwitchFlag, 5u> k_SwitchFlags{
-        SwitchFlag{ .Name="--no-dedupe", .Apply=[](CookerOptions& options) noexcept { options.DedupeEnabled = false; } },
-        SwitchFlag{ .Name="--verify-deterministic",
-                    .Apply=[](CookerOptions& options) noexcept { options.VerifyDeterministic = true; } },
-        SwitchFlag{ .Name="--no-validate",
-                    .Apply=[](CookerOptions& options) noexcept { options.ValidateReflectionAgainstWgsl = false; } },
-        SwitchFlag{ .Name="--quiet", .Apply=[](CookerOptions& options) noexcept { options.ReportReflection = false; } },
-        SwitchFlag{ .Name="--single-threaded",
-                    .Apply=[](CookerOptions& options) noexcept { options.MultithreadEntryPointCodegen = false; } }
-    };
+    constexpr std::array<SwitchFlag, 5u> k_SwitchFlags{ SwitchFlag{ .Name = "--no-dedupe",
+                                                                    .Apply =
+                                                                        [](CookerOptions& options) noexcept
+                                                                    {
+                                                                        options.DedupeEnabled = false;
+                                                                    } },
+                                                        SwitchFlag{ .Name = "--verify-deterministic",
+                                                                    .Apply =
+                                                                        [](CookerOptions& options) noexcept
+                                                                    {
+                                                                        options.VerifyDeterministic = true;
+                                                                    } },
+                                                        SwitchFlag{
+                                                            .Name = "--no-validate",
+                                                            .Apply =
+                                                                [](CookerOptions& options) noexcept
+                                                            {
+                                                                options.ValidateReflectionAgainstWgsl = false;
+                                                            } },
+                                                        SwitchFlag{ .Name = "--quiet",
+                                                                    .Apply =
+                                                                        [](CookerOptions& options) noexcept
+                                                                    {
+                                                                        options.ReportReflection = false;
+                                                                    } },
+                                                        SwitchFlag{
+                                                            .Name = "--single-threaded",
+                                                            .Apply = [](CookerOptions& options) noexcept
+                                                            {
+                                                                options.MultithreadEntryPointCodegen = false;
+                                                            } } };
 
     const SwitchFlag* FindSwitchFlag(std::string_view argument) noexcept
     {
@@ -112,6 +173,58 @@ namespace
     }
 
 } // namespace
+
+std::string_view ToString(StageDumpKind kind) noexcept
+{
+    for (const StageDumpName& entry : k_StageDumpNames)
+    {
+        if (entry.Kind == kind)
+        {
+            return entry.Name;
+        }
+    }
+
+    return "invalid";
+}
+
+StageDumpKind ParseStageDumpKind(std::string_view name) noexcept
+{
+    for (const StageDumpName& entry : k_StageDumpNames)
+    {
+        if (entry.Name == name)
+        {
+            return entry.Kind;
+        }
+    }
+
+    return StageDumpKind::Invalid;
+}
+
+uint32_t StageDumpBit(StageDumpKind kind) noexcept
+{
+    if (kind == StageDumpKind::Invalid)
+    {
+        return 0u;
+    }
+
+    return 1u << (static_cast<uint32_t>(kind) - 1u);
+}
+
+uint32_t AllStageDumpBits() noexcept
+{
+    uint32_t mask = 0u;
+    for (const StageDumpName& entry : k_StageDumpNames)
+    {
+        mask |= StageDumpBit(entry.Kind);
+    }
+
+    return mask;
+}
+
+bool IsStageDumpRequested(const CookerOptions& options, StageDumpKind kind) noexcept
+{
+    return (options.DumpStageMask & StageDumpBit(kind)) != 0u;
+}
 
 CookResult<CookerOptions> ParseCommandLine(std::span<const std::string_view> arguments)
 {
@@ -144,6 +257,15 @@ CookResult<CookerOptions> ParseCommandLine(std::span<const std::string_view> arg
         else if (const SwitchFlag* flag = FindSwitchFlag(argument); flag != nullptr)
         {
             flag->Apply(options);
+        }
+        else if (argument.starts_with(k_StageDumpPrefix))
+        {
+            const CookResult<uint32_t> stageBits = ParseStageDumpArgument(argument);
+            if (!stageBits)
+            {
+                return std::unexpected(stageBits.error());
+            }
+            options.DumpStageMask |= stageBits.value();
         }
         else if (argument.starts_with(k_OptimizationPrefix))
         {
