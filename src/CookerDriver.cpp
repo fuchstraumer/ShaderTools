@@ -300,11 +300,12 @@ namespace
         return {};
     }
 
-    CookResult<void> CookModule(const CookerOptions& options,
-                                const std::filesystem::path& module_path,
-                                std::vector<CompiledVariant>& out_variants,
-                                CookedLibrary& out_library,
-                                CookStatistics& statistics)
+    /** Builds the compiler for one module, and checks everything that must hold before the first
+     * variant compiles. */
+    CookResult<void> PrepareModuleCompiler(const CookerOptions& options,
+                                           const std::filesystem::path& module_path,
+                                           SlangCompiler& compiler,
+                                           const PermutationSpace*& out_space)
     {
         SlangCompilerCreateInfo createInfo;
         createInfo.ModulePath = module_path;
@@ -312,32 +313,158 @@ namespace
         createInfo.OptimizationLevel = options.OptimizationLevel;
         createInfo.MultithreadEntryPointCodegen = options.MultithreadEntryPointCodegen;
 
-        SlangCompiler compiler;
         if (auto initializeResult = compiler.Initialize(createInfo); !initializeResult)
         {
             return initializeResult;
         }
 
         const std::string_view moduleName = compiler.GetModuleName();
-        const std::span<const std::string> entryPointNames = compiler.GetEntryPointNames();
-        std::println(
-            stderr, "[shader_cooker] module {} declares {} entrypoints", moduleName, entryPointNames.size());
+        std::println(stderr,
+                     "[shader_cooker] module {} declares {} entrypoints",
+                     moduleName,
+                     compiler.GetEntryPointNames().size());
 
-        const PermutationSpace* space = FindPermutationSpaceForModule(moduleName);
+        out_space = FindPermutationSpaceForModule(moduleName);
 
-        const CookResult<void> axisResult =
-            VerifyAxisNamesAreDeclared(*space, compiler.GetModuleSourceTexts(), moduleName);
-        if (!axisResult)
+        if (CookResult<void> axisResult =
+                VerifyAxisNamesAreDeclared(*out_space, compiler.GetModuleSourceTexts(), moduleName);
+            !axisResult)
         {
-            return std::unexpected(axisResult.error());
+            return axisResult;
         }
 
-        ReportUndrivenExternConstants(*space, compiler.GetModuleSourceTexts(), moduleName);
+        ReportUndrivenExternConstants(*out_space, compiler.GetModuleSourceTexts(), moduleName);
 
-        const CookResult<void> defaultsResult = compiler.ResolveExternConstantDefaults(*space);
-        if (!defaultsResult)
+        return compiler.ResolveExternConstantDefaults(*out_space);
+    }
+
+    /** Everything the cook measures for one compiled variant, before it reaches the tables. */
+    void RecordVariantStatistics(const CompiledVariant& variant, CookStatistics& statistics)
+    {
+        ++statistics.VariantsCompiled;
+        statistics.EntryPointsCompiled += static_cast<uint32_t>(variant.EntryPoints.size());
+
+        for (const CompiledEntryPoint& entryPoint : variant.EntryPoints)
         {
-            return std::unexpected(defaultsResult.error());
+            statistics.TotalWgslBytes += entryPoint.Code.size();
+        }
+    }
+
+    void ReportVariantIfRequested(const CookerOptions& options, const CompiledVariant& variant)
+    {
+        if (!options.ReportReflection)
+        {
+            return;
+        }
+
+        std::println(stderr, "[shader_cooker] variant [{}]", variant.VariantDescription);
+        for (const CompiledEntryPoint& entryPoint : variant.EntryPoints)
+        {
+            ReportEntryPointReflection(entryPoint);
+        }
+    }
+
+    /** Names each entry point once, from the first variant. Every variant holds the same set. */
+    void CaptureEntryPointsOnce(CookedModule& cooked_module, const CompiledVariant& variant)
+    {
+        if (!cooked_module.EntryPoints.empty())
+        {
+            return;
+        }
+
+        cooked_module.EntryPoints.reserve(variant.EntryPoints.size());
+        for (const CompiledEntryPoint& entryPoint : variant.EntryPoints)
+        {
+            cooked_module.EntryPoints.push_back(
+                LibraryEntryPoint{ entryPoint.Name, entryPoint.Reflection.Stage });
+        }
+    }
+
+    CookResult<void> CompileModuleVariants(const CookerOptions& options,
+                                           SlangCompiler& compiler,
+                                           const VariantSet& variant_set,
+                                           CookedModule& cooked_module,
+                                           std::vector<CompiledVariant>& out_module_variants,
+                                           std::vector<CompiledVariant>& out_variants,
+                                           CookStatistics& statistics)
+    {
+        for (const VariantDescriptor& descriptor : variant_set.Variants)
+        {
+            CookResult<CompiledVariant> variantResult = compiler.CompileVariant(descriptor);
+            if (!variantResult)
+            {
+                std::println(stderr,
+                             "[shader_cooker] variant [{}] failed: {}",
+                             DescribeAssignment(descriptor.Canonical),
+                             ToString(variantResult.error()));
+                return std::unexpected(variantResult.error());
+            }
+
+            CompiledVariant& variant = variantResult.value();
+            RecordVariantStatistics(variant, statistics);
+            ReportVariantIfRequested(options, variant);
+
+            if (options.ValidateReflectionAgainstWgsl)
+            {
+                statistics.ReflectionMismatches += ValidateVariantReflection(variant);
+            }
+
+            if (options.ReportReflection)
+            {
+                ReportUnreferencedBindings(variant);
+            }
+
+            CaptureEntryPointsOnce(cooked_module, variant);
+
+            if (CookResult<void> appendResult =
+                    AppendVariantToModule(cooked_module, variant, descriptor.Canonical);
+                !appendResult)
+            {
+                return appendResult;
+            }
+
+            out_module_variants.push_back(variant);
+            out_variants.push_back(std::move(variant));
+        }
+
+        return {};
+    }
+
+    /** Freezes the tables, then runs every check that reads the finished model. */
+    CookResult<void> FinalizeModule(CookedModule& cooked_module,
+                                    std::span<const CompiledVariant> module_variants)
+    {
+        FreezeModuleTables(cooked_module);
+
+        if (CookResult<void> roundTripResult = VerifyLibraryRoundTrip(cooked_module, module_variants);
+            !roundTripResult)
+        {
+            return roundTripResult;
+        }
+
+        std::println(stderr,
+                     "[shader_cooker] module {} round trip verified: {} variants resolve to the text "
+                     "the compiler produced",
+                     cooked_module.Name,
+                     cooked_module.Variants.size());
+
+        const ModuleInfluence influence = ComputeAxisInfluence(cooked_module);
+        return EnforceModulePolicy(cooked_module, influence);
+    }
+
+    CookResult<void> CookModule(const CookerOptions& options,
+                                const std::filesystem::path& module_path,
+                                std::vector<CompiledVariant>& out_variants,
+                                CookedLibrary& out_library,
+                                CookStatistics& statistics)
+    {
+        SlangCompiler compiler;
+        const PermutationSpace* space = nullptr;
+
+        if (CookResult<void> prepared = PrepareModuleCompiler(options, module_path, compiler, space);
+            !prepared)
+        {
+            return prepared;
         }
 
         const CookResult<VariantSet> variantSet = EnumerateVariants(*space);
@@ -346,6 +473,7 @@ namespace
             return std::unexpected(variantSet.error());
         }
 
+        const std::string_view moduleName = compiler.GetModuleName();
         std::println(stderr,
                      "[shader_cooker] module {} expands to {} variants over an index space of {}",
                      moduleName,
@@ -365,86 +493,21 @@ namespace
         std::vector<CompiledVariant> moduleVariants;
         moduleVariants.reserve(variantSet.value().Variants.size());
 
-        for (const VariantDescriptor& descriptor : variantSet.value().Variants)
+        if (CookResult<void> compiled = CompileModuleVariants(options,
+                                                              compiler,
+                                                              variantSet.value(),
+                                                              cookedModule,
+                                                              moduleVariants,
+                                                              out_variants,
+                                                              statistics);
+            !compiled)
         {
-            CookResult<CompiledVariant> variantResult = compiler.CompileVariant(descriptor);
-            if (!variantResult)
-            {
-                std::println(stderr,
-                             "[shader_cooker] variant [{}] failed: {}",
-                             DescribeAssignment(descriptor.Canonical),
-                             ToString(variantResult.error()));
-                return std::unexpected(variantResult.error());
-            }
-
-            CompiledVariant& variant = variantResult.value();
-            ++statistics.VariantsCompiled;
-            statistics.EntryPointsCompiled += static_cast<uint32_t>(variant.EntryPoints.size());
-
-            for (const CompiledEntryPoint& entryPoint : variant.EntryPoints)
-            {
-                statistics.TotalWgslBytes += entryPoint.Code.size();
-            }
-
-            if (options.ReportReflection)
-            {
-                std::println(stderr, "[shader_cooker] variant [{}]", variant.VariantDescription);
-                for (const CompiledEntryPoint& entryPoint : variant.EntryPoints)
-                {
-                    ReportEntryPointReflection(entryPoint);
-                }
-            }
-
-            if (options.ValidateReflectionAgainstWgsl)
-            {
-                statistics.ReflectionMismatches += ValidateVariantReflection(variant);
-            }
-
-            if (options.ReportReflection)
-            {
-                ReportUnreferencedBindings(variant);
-            }
-
-            if (cookedModule.EntryPoints.empty())
-            {
-                cookedModule.EntryPoints.reserve(variant.EntryPoints.size());
-                for (const CompiledEntryPoint& entryPoint : variant.EntryPoints)
-                {
-                    cookedModule.EntryPoints.push_back(
-                        LibraryEntryPoint{ entryPoint.Name, entryPoint.Reflection.Stage });
-                }
-            }
-
-            const CookResult<void> appendResult =
-                AppendVariantToModule(cookedModule, variant, descriptor.Canonical);
-            if (!appendResult)
-            {
-                return std::unexpected(appendResult.error());
-            }
-
-            moduleVariants.push_back(variant);
-            out_variants.push_back(std::move(variant));
+            return compiled;
         }
 
-        FreezeModuleTables(cookedModule);
-
-        const CookResult<void> roundTripResult = VerifyLibraryRoundTrip(cookedModule, moduleVariants);
-        if (!roundTripResult)
+        if (CookResult<void> finalized = FinalizeModule(cookedModule, moduleVariants); !finalized)
         {
-            return std::unexpected(roundTripResult.error());
-        }
-
-        std::println(stderr,
-                     "[shader_cooker] module {} round trip verified: {} variants resolve to the text "
-                     "the compiler produced",
-                     moduleName,
-                     cookedModule.Variants.size());
-
-        const ModuleInfluence influence = ComputeAxisInfluence(cookedModule);
-        const CookResult<void> policyResult = EnforceModulePolicy(cookedModule, influence);
-        if (!policyResult)
-        {
-            return std::unexpected(policyResult.error());
+            return finalized;
         }
 
         out_library.Modules.push_back(std::move(cookedModule));
@@ -508,14 +571,17 @@ namespace
     {
         std::println(stderr, "[shader_cooker] determinism check: cooking twice into memory");
 
-        MemoryOutputSink first;
+        // Both memory sinks take the real sink's primary name. The emitter builds every companion
+        // artifact name from it, so a different name here would make the check compare a different
+        // set of file names than the cook it stands in for.
+        MemoryOutputSink first{ sink.PrimaryName() };
         const CookResult<CookStatistics> firstResult = RunCookOnce(options, first);
         if (!firstResult)
         {
             return firstResult;
         }
 
-        MemoryOutputSink second;
+        MemoryOutputSink second{ sink.PrimaryName() };
         const CookResult<CookStatistics> secondResult = RunCookOnce(options, second);
         if (!secondResult)
         {
