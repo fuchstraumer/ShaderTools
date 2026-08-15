@@ -8,7 +8,6 @@
 #include <filesystem>
 #include <print>
 #include <string_view>
-#include <thread>
 #include <vector>
 
 int main(int argc, char** argv)

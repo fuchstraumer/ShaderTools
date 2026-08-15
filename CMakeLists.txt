@@ -105,6 +105,7 @@ set(LODESTONE_SOURCES
 # nothing and every consumer fails to link. A SHARED build is a temporary measure for instrumented
 # performance analysis only, and it needs WINDOWS_EXPORT_ALL_SYMBOLS to link at all.
 add_library(lodestone STATIC ${LODESTONE_SOURCES} ${LODESTONE_HEADERS})
+add_library(lodestone::lodestone ALIAS lodestone)
 set_target_properties(lodestone PROPERTIES CXX_STANDARD 23 CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF)
 # The engine include path carries shader/ShaderLibraryTypes.hpp and resource/ResourceFlags.hpp. The
 # cooker and the rendergraph share that vocabulary, so neither can drift from the other. Neither
@@ -141,4 +142,5 @@ OPTION(LODESTONE_BUILD_TOOLS "Build the standalone tools" ON)
 
 if(LODESTONE_BUILD_TOOLS)
     add_subdirectory(tools/manifest_dump)
+    add_subdirectory(tools/cooker_console)
 endif()
