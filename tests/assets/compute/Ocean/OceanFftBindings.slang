@@ -1,5 +1,5 @@
 implementing OceanFft;
-import VeloxAttributes;
+import LodestoneAttributes;
 // Single source of truth for the binding locations for the IFFT compute shaders:
 // they can each refer to them by the same set of names, we can coordinate the locations
 // ourselves (which is somewhat important with WebGPU, since that's so much more manual
