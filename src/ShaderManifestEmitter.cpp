@@ -19,7 +19,8 @@
 #include <unordered_map>
 #include <vector>
 
-
+// todo-ship: in almost all places we are using std::string, we could just use std::vector<std::byte> and avoid the string encoding issues.
+// the manifest is a binary file, so we don't need to treat it as text anywhere
 namespace lodestone
 {
 
@@ -71,6 +72,7 @@ namespace
         std::string blob;
     };
 
+    /** @brief Writes the actual bytes to the given `out` string. */
     void AppendBytes(std::string& out, const void* data, size_t size)
     {
         out.append(static_cast<const char*>(data), size);
@@ -86,6 +88,8 @@ namespace
         }
     }
 
+    /** @brief Appends a table of records to the output string, aligned to 8 bytes. Returns the offset
+     *  of the first record in the output string where the new records are now located */
     template<typename RecordType>
     uint32_t AppendTable(std::string& out, const std::vector<RecordType>& records)
     {
@@ -157,6 +161,247 @@ namespace
                record.SamplerType == static_cast<uint8_t>(binding.SamplerType);
     }
 
+    CookResult<ShaderManifestView> OpenManifestForCheck(const CookedModule& module,
+                                                        std::span<const std::byte> raw)
+    {
+        const ManifestResult<ShaderManifestView> opened = ShaderManifestView::Open(raw);
+        if (!opened.has_value())
+        {
+            std::println(stderr,
+                         "[shader_cooker] module {} manifest does not open: {}",
+                         module.Name,
+                         ToString(opened.error()));
+            return std::unexpected(CookError::LibraryRoundTripFailed);
+        }
+
+        if (opened.value().ModuleName() != module.Name)
+        {
+            std::println(stderr,
+                         "[shader_cooker] manifest names module '{}', but the cook produced '{}'",
+                         opened.value().ModuleName(),
+                         module.Name);
+            return std::unexpected(CookError::LibraryRoundTripFailed);
+        }
+
+        return opened.value();
+    }
+
+    CookResult<void> CheckManifestSource(const CookedModule& module,
+                                         const ManifestShaderSourceProvider& provider,
+                                         const LibraryVariant& variant,
+                                         size_t entry_point_index,
+                                         uint16_t entry_point_id)
+    {
+        const std::string_view expectedSource = ResolveSource(module, variant, entry_point_index);
+        if (provider.Source(entry_point_id, variant.Index) == expectedSource)
+        {
+            return {};
+        }
+
+        std::println(stderr,
+                     "[shader_cooker] manifest returns different text for {} variant {} [{}]",
+                     module.EntryPoints[entry_point_index].Name,
+                     variant.Index,
+                     variant.Description);
+        return std::unexpected(CookError::LibraryRoundTripFailed);
+    }
+
+    CookResult<void> CheckManifestWorkgroup(const CookedModule& module,
+                                            const ManifestShaderSourceProvider& provider,
+                                            const LibraryVariant& variant,
+                                            size_t entry_point_index,
+                                            uint16_t entry_point_id)
+    {
+        const WorkgroupSize expected = variant.Workgroups[entry_point_index];
+        const WorkgroupSize read = provider.Workgroup(entry_point_id, variant.Index);
+
+        if (read.X == expected.X && read.Y == expected.Y && read.Z == expected.Z)
+        {
+            return {};
+        }
+
+        std::println(stderr,
+                     "[shader_cooker] manifest returns a different workgroup size for {} variant {}",
+                     module.EntryPoints[entry_point_index].Name,
+                     variant.Index);
+        return std::unexpected(CookError::LibraryRoundTripFailed);
+    }
+
+    bool ManifestUniformMembersMatch(const ShaderManifestView& view,
+                                     const ManifestBinding& read,
+                                     const ReflectedBinding& expected)
+    {
+        const std::span<const ManifestUniformMember> readMembers = view.UniformMembers(read);
+        if (readMembers.size() != expected.UniformMembers.size())
+        {
+            return false;
+        }
+
+        for (size_t memberIndex = 0u; memberIndex < readMembers.size(); ++memberIndex)
+        {
+            const ReflectedUniformMember& expectedMember = expected.UniformMembers[memberIndex];
+            const ManifestUniformMember& readMember = readMembers[memberIndex];
+
+            const bool matches = view.String(readMember.NameString) == expectedMember.Name &&
+                                 readMember.Offset == expectedMember.Offset &&
+                                 readMember.Size == expectedMember.Size &&
+                                 readMember.ArrayCount == expectedMember.ArrayCount;
+            if (!matches)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    CookResult<void> CheckManifestLayout(const CookedModule& module,
+                                         const ShaderManifestView& view,
+                                         const LibraryVariant& variant,
+                                         size_t entry_point_index)
+    {
+        const uint32_t layoutIndex = variant.LayoutIndices[entry_point_index];
+        const ShaderLayout& expectedLayout = module.Layouts[layoutIndex];
+        const std::span<const ManifestBinding> readBindings = view.LayoutBindings(layoutIndex);
+
+        if (readBindings.size() != expectedLayout.size())
+        {
+            std::println(stderr,
+                         "[shader_cooker] manifest layout {} holds {} bindings, the cook produced {}",
+                         layoutIndex,
+                         readBindings.size(),
+                         expectedLayout.size());
+            return std::unexpected(CookError::LibraryRoundTripFailed);
+        }
+
+        for (size_t bindingIndex = 0u; bindingIndex < expectedLayout.size(); ++bindingIndex)
+        {
+            const ReflectedBinding& expected = expectedLayout[bindingIndex];
+            const ManifestBinding& read = readBindings[bindingIndex];
+
+            if (view.String(read.NameString) != expected.Name || !RecordMatchesBinding(read, expected) ||
+                !ManifestUniformMembersMatch(view, read, expected))
+            {
+                std::println(stderr,
+                             "[shader_cooker] manifest binding '{}' of layout {} does not match the cook",
+                             expected.Name,
+                             layoutIndex);
+                return std::unexpected(CookError::LibraryRoundTripFailed);
+            }
+        }
+
+        return {};
+    }
+
+    CookResult<void> CheckManifestVertexInputs(std::span<const ManifestVertexInput> read_inputs,
+                                               const ReflectedRasterState& expected_raster,
+                                               const ShaderManifestView& view)
+    {
+        for (size_t inputIndex = 0u; inputIndex < read_inputs.size(); ++inputIndex)
+        {
+            const ReflectedVertexInput& expectedInput = expected_raster.VertexInputs[inputIndex];
+            const ManifestVertexInput& readInput = read_inputs[inputIndex];
+
+            if (view.String(readInput.SemanticNameString) != expectedInput.SemanticName ||
+                readInput.SemanticIndex != expectedInput.SemanticIndex ||
+                readInput.Location != expectedInput.Location ||
+                readInput.ScalarType != static_cast<uint32_t>(expectedInput.ScalarType) ||
+                readInput.ComponentCount != expectedInput.ComponentCount)
+            {
+                std::println(stderr,
+                             "[shader_cooker] manifest vertex input '{}' does not match the cook",
+                             expectedInput.SemanticName);
+                return std::unexpected(CookError::LibraryRoundTripFailed);
+            }
+        }
+
+        return {};
+    }
+
+    CookResult<void> CheckManifestColorTargets(std::span<const ManifestColorTarget> read_targets,
+                                               const ReflectedRasterState& expected_raster)
+    {
+        for (size_t targetIndex = 0u; targetIndex < read_targets.size(); ++targetIndex)
+        {
+            const ReflectedColorTarget& expectedTarget = expected_raster.ColorTargets[targetIndex];
+            const ManifestColorTarget& readTarget = read_targets[targetIndex];
+
+            if (readTarget.Location != expectedTarget.Location ||
+                readTarget.ScalarType != static_cast<uint32_t>(expectedTarget.ScalarType) ||
+                readTarget.ComponentCount != expectedTarget.ComponentCount)
+            {
+                std::println(stderr,
+                             "[shader_cooker] manifest color target {} does not match the cook",
+                             expectedTarget.Location);
+                return std::unexpected(CookError::LibraryRoundTripFailed);
+            }
+        }
+
+        return {};
+    }
+
+    CookResult<void> CheckManifestRaster(const CookedModule& module,
+                                         const ShaderManifestView& view,
+                                         const LibraryVariant& variant,
+                                         size_t entry_point_index)
+    {
+        const uint32_t rasterIndex = variant.RasterIndices[entry_point_index];
+        const ReflectedRasterState& expectedRaster = module.RasterStates[rasterIndex];
+
+        const std::span<const ManifestVertexInput> readInputs = view.VertexInputs(rasterIndex);
+        const std::span<const ManifestColorTarget> readTargets = view.ColorTargets(rasterIndex);
+
+        if (readInputs.size() != expectedRaster.VertexInputs.size() ||
+            readTargets.size() != expectedRaster.ColorTargets.size() ||
+            view.WritesFragDepth(rasterIndex) != expectedRaster.WritesFragDepth)
+        {
+            std::println(stderr,
+                         "[shader_cooker] manifest raster state {} does not match the cook for {}",
+                         rasterIndex,
+                         module.EntryPoints[entry_point_index].Name);
+            return std::unexpected(CookError::LibraryRoundTripFailed);
+        }
+
+        if (CookResult<void> inputs = CheckManifestVertexInputs(readInputs, expectedRaster, view); !inputs)
+        {
+            return inputs;
+        }
+
+        return CheckManifestColorTargets(readTargets, expectedRaster);
+    }
+
+    /** Every fact the manifest states about one entry point of one variant. */
+    CookResult<void> CheckManifestSlot(const CookedModule& module,
+                                       const ShaderManifestView& view,
+                                       const ManifestShaderSourceProvider& provider,
+                                       const LibraryVariant& variant,
+                                       size_t entry_point_index)
+    {
+        // The provider takes the EntryPointId value, which counts from one.
+        const auto entryPointId = static_cast<uint16_t>(entry_point_index + 1u);
+
+        if (CookResult<void> source =
+                CheckManifestSource(module, provider, variant, entry_point_index, entryPointId);
+            !source)
+        {
+            return source;
+        }
+
+        if (CookResult<void> workgroup =
+                CheckManifestWorkgroup(module, provider, variant, entry_point_index, entryPointId);
+            !workgroup)
+        {
+            return workgroup;
+        }
+
+        if (CookResult<void> layout = CheckManifestLayout(module, view, variant, entry_point_index); !layout)
+        {
+            return layout;
+        }
+
+        return CheckManifestRaster(module, view, variant, entry_point_index);
+    }
+
 } // namespace
 
 std::string MakeManifestFileName(std::string_view module_name)
@@ -164,143 +409,269 @@ std::string MakeManifestFileName(std::string_view module_name)
     return std::format("{}.ldshaders", module_name);
 }
 
-std::string EmitShaderManifest(const CookedModule& module)
+namespace
 {
-    StringTableBuilder strings;
 
-    const uint32_t moduleNameString = strings.Add(module.Name);
+    /** Each builder appends to the string table in call order, so the order of the calls in
+     * EmitShaderManifest decides every string index in the file. Do not reorder them. */
 
-    std::vector<ManifestEntryPoint> entryPointRecords;
-    entryPointRecords.reserve(module.EntryPoints.size());
-    for (const LibraryEntryPoint& entryPoint : module.EntryPoints)
+
+    std::vector<ManifestEntryPoint> BuildEntryPointRecords(const CookedModule& module,
+                                                           StringTableBuilder& strings)
     {
-        entryPointRecords.push_back(
-            ManifestEntryPoint{ .NameString=strings.Add(entryPoint.Name), .Stage=static_cast<uint32_t>(entryPoint.Stage) });
-    }
+        std::vector<ManifestEntryPoint> records;
+        records.reserve(module.EntryPoints.size());
 
-    std::vector<ManifestUniformMember> uniformMemberRecords;
-    std::vector<ManifestBinding> bindingRecords;
-    std::vector<ManifestLayout> layoutRecords;
-    layoutRecords.reserve(module.Layouts.size());
-    for (const ShaderLayout& layout : module.Layouts)
-    {
-        layoutRecords.push_back(ManifestLayout{ .FirstBinding=static_cast<uint32_t>(bindingRecords.size()),
-                                                     .BindingCount=static_cast<uint32_t>(layout.size()) });
-        for (const ReflectedBinding& binding : layout)
+        for (const LibraryEntryPoint& entryPoint : module.EntryPoints)
         {
-            bindingRecords.push_back(MakeBindingRecord(binding, strings, uniformMemberRecords));
-        }
-    }
-
-    std::vector<ManifestVertexInput> vertexInputRecords;
-    std::vector<ManifestColorTarget> colorTargetRecords;
-    std::vector<ManifestRaster> rasterRecords;
-    rasterRecords.reserve(module.RasterStates.size());
-    for (const ReflectedRasterState& raster : module.RasterStates)
-    {
-        ManifestRaster record;
-        record.FirstVertexInput = static_cast<uint32_t>(vertexInputRecords.size());
-        record.VertexInputCount = static_cast<uint32_t>(raster.VertexInputs.size());
-        record.FirstColorTarget = static_cast<uint32_t>(colorTargetRecords.size());
-        record.ColorTargetCount = static_cast<uint32_t>(raster.ColorTargets.size());
-        record.WritesFragDepth = raster.WritesFragDepth ? 1u : 0u;
-        rasterRecords.push_back(record);
-
-        for (const ReflectedVertexInput& input : raster.VertexInputs)
-        {
-            ManifestVertexInput inputRecord;
-            inputRecord.SemanticNameString = strings.Add(input.SemanticName);
-            inputRecord.SemanticIndex = input.SemanticIndex;
-            inputRecord.Location = input.Location;
-            inputRecord.ScalarType = static_cast<uint32_t>(input.ScalarType);
-            inputRecord.ComponentCount = input.ComponentCount;
-            vertexInputRecords.push_back(inputRecord);
+            records.push_back(ManifestEntryPoint{ .NameString = strings.Add(entryPoint.Name),
+                                                  .Stage = static_cast<uint32_t>(entryPoint.Stage) });
         }
 
-        for (const ReflectedColorTarget& target : raster.ColorTargets)
-        {
-            ManifestColorTarget targetRecord;
-            targetRecord.Location = target.Location;
-            targetRecord.ScalarType = static_cast<uint32_t>(target.ScalarType);
-            targetRecord.ComponentCount = target.ComponentCount;
-            colorTargetRecords.push_back(targetRecord);
-        }
+        return records;
     }
 
-    std::vector<ManifestSlot> slotRecords;
-    std::vector<ManifestVariant> variantRecords;
-    variantRecords.reserve(module.Variants.size());
-    // most modules will have 3-4 entrypoints: reserve for that
-    slotRecords.reserve(module.Variants.size() * 4u);
-    for (const LibraryVariant& variant : module.Variants)
+    struct LayoutTables
     {
-        ManifestVariant record;
-        record.Index = variant.Index;
-        record.FirstSlot = static_cast<uint32_t>(slotRecords.size());
-        record.SlotCount = static_cast<uint32_t>(module.EntryPoints.size());
-        record.SuffixString = strings.Add(variant.Suffix);
-        variantRecords.push_back(record);
+        std::vector<ManifestUniformMember> UniformMembers;
+        std::vector<ManifestBinding> Bindings;
+        std::vector<ManifestLayout> Layouts;
+    };
 
-        for (size_t i = 0u; i < module.EntryPoints.size(); ++i)
+    LayoutTables BuildLayoutTables(const CookedModule& module, StringTableBuilder& strings)
+    {
+        LayoutTables tables;
+        tables.Layouts.reserve(module.Layouts.size());
+
+        for (const ShaderLayout& layout : module.Layouts)
         {
-            ManifestSlot slot;
-            slot.SourceIndex = variant.SourceIndices[i];
-            slot.LayoutIndex = variant.LayoutIndices[i];
-            slot.WorkgroupX = variant.Workgroups[i].X;
-            slot.WorkgroupY = variant.Workgroups[i].Y;
-            slot.WorkgroupZ = variant.Workgroups[i].Z;
-            slot.RasterIndex = variant.RasterIndices[i];
-            slotRecords.push_back(slot);
+            tables.Layouts.push_back(
+                ManifestLayout{ .FirstBinding = static_cast<uint32_t>(tables.Bindings.size()),
+                                .BindingCount = static_cast<uint32_t>(layout.size()) });
+
+            for (const ReflectedBinding& binding : layout)
+            {
+                tables.Bindings.push_back(MakeBindingRecord(binding, strings, tables.UniformMembers));
+            }
         }
+
+        return tables;
     }
 
-    std::vector<uint32_t> variantIndexRecords(module.SpaceSize, k_ShaderManifestNoIndex);
-    for (size_t i = 0u; i < module.Variants.size(); ++i)
+    struct RasterTables
     {
-        const uint32_t denseIndex = module.Variants[i].Index;
-        if (denseIndex < variantIndexRecords.size())
-        {
-            variantIndexRecords[denseIndex] = static_cast<uint32_t>(i);
-        }
+        std::vector<ManifestVertexInput> VertexInputs;
+        std::vector<ManifestColorTarget> ColorTargets;
+        std::vector<ManifestRaster> Rasters;
+    };
+
+    ManifestVertexInput MakeVertexInputRecord(const ReflectedVertexInput& input,
+                                              StringTableBuilder& strings)
+    {
+        ManifestVertexInput record;
+        record.SemanticNameString = strings.Add(input.SemanticName);
+        record.SemanticIndex = input.SemanticIndex;
+        record.Location = input.Location;
+        record.ScalarType = static_cast<uint32_t>(input.ScalarType);
+        record.ComponentCount = input.ComponentCount;
+        return record;
     }
 
-    std::vector<ManifestAxis> axisRecords;
-    std::vector<int64_t> axisValueRecords;
-    if (module.Space != nullptr)
+    ManifestColorTarget MakeColorTargetRecord(const ReflectedColorTarget& target) noexcept
     {
-        axisRecords.reserve(module.Space->size());
+        ManifestColorTarget record;
+        record.Location = target.Location;
+        record.ScalarType = static_cast<uint32_t>(target.ScalarType);
+        record.ComponentCount = target.ComponentCount;
+        return record;
+    }
+
+    RasterTables BuildRasterTables(const CookedModule& module, StringTableBuilder& strings)
+    {
+        RasterTables tables;
+        tables.Rasters.reserve(module.RasterStates.size());
+
+        for (const ReflectedRasterState& raster : module.RasterStates)
+        {
+            ManifestRaster record;
+            record.FirstVertexInput = static_cast<uint32_t>(tables.VertexInputs.size());
+            record.VertexInputCount = static_cast<uint32_t>(raster.VertexInputs.size());
+            record.FirstColorTarget = static_cast<uint32_t>(tables.ColorTargets.size());
+            record.ColorTargetCount = static_cast<uint32_t>(raster.ColorTargets.size());
+            record.WritesFragDepth = raster.WritesFragDepth ? 1u : 0u;
+            tables.Rasters.push_back(record);
+
+            for (const ReflectedVertexInput& input : raster.VertexInputs)
+            {
+                tables.VertexInputs.push_back(MakeVertexInputRecord(input, strings));
+            }
+
+            for (const ReflectedColorTarget& target : raster.ColorTargets)
+            {
+                tables.ColorTargets.push_back(MakeColorTargetRecord(target));
+            }
+        }
+
+        return tables;
+    }
+
+    struct VariantTables
+    {
+        std::vector<ManifestSlot> Slots;
+        std::vector<ManifestVariant> Variants;
+    };
+
+    ManifestSlot MakeSlotRecord(const LibraryVariant& variant, size_t entry_point_index) noexcept
+    {
+        ManifestSlot slot;
+        slot.SourceIndex = variant.SourceIndices[entry_point_index];
+        slot.LayoutIndex = variant.LayoutIndices[entry_point_index];
+        slot.WorkgroupX = variant.Workgroups[entry_point_index].X;
+        slot.WorkgroupY = variant.Workgroups[entry_point_index].Y;
+        slot.WorkgroupZ = variant.Workgroups[entry_point_index].Z;
+        slot.RasterIndex = variant.RasterIndices[entry_point_index];
+        return slot;
+    }
+
+    VariantTables BuildVariantTables(const CookedModule& module, StringTableBuilder& strings)
+    {
+        VariantTables tables;
+        tables.Variants.reserve(module.Variants.size());
+        // most modules will have 3-4 entrypoints: reserve for that
+        tables.Slots.reserve(module.Variants.size() * 4u);
+
+        for (const LibraryVariant& variant : module.Variants)
+        {
+            ManifestVariant record;
+            record.Index = variant.Index;
+            record.FirstSlot = static_cast<uint32_t>(tables.Slots.size());
+            record.SlotCount = static_cast<uint32_t>(module.EntryPoints.size());
+            record.SuffixString = strings.Add(variant.Suffix);
+            tables.Variants.push_back(record);
+
+            for (size_t i = 0u; i < module.EntryPoints.size(); ++i)
+            {
+                tables.Slots.push_back(MakeSlotRecord(variant, i));
+            }
+        }
+
+        return tables;
+    }
+
+    /** Maps a dense variant index to a row of the variant table. A hole keeps k_ShaderManifestNoIndex. */
+    std::vector<uint32_t> BuildVariantIndexTable(const CookedModule& module)
+    {
+        std::vector<uint32_t> records(module.SpaceSize, k_ShaderManifestNoIndex);
+
+        for (size_t i = 0u; i < module.Variants.size(); ++i)
+        {
+            const uint32_t denseIndex = module.Variants[i].Index;
+            if (denseIndex < records.size())
+            {
+                records[denseIndex] = static_cast<uint32_t>(i);
+            }
+        }
+
+        return records;
+    }
+
+    struct AxisTables
+    {
+        std::vector<ManifestAxis> Axes;
+        std::vector<int64_t> Values;
+    };
+
+    AxisTables BuildAxisTables(const CookedModule& module, StringTableBuilder& strings)
+    {
+        AxisTables tables;
+        if (module.Space == nullptr)
+        {
+            return tables;
+        }
+
+        tables.Axes.reserve(module.Space->size());
+
         for (const PermutationAxis* axis : *module.Space)
         {
             ManifestAxis record;
             record.NameString = strings.Add(axis->Name);
-            record.FirstValue = static_cast<uint32_t>(axisValueRecords.size());
+            record.FirstValue = static_cast<uint32_t>(tables.Values.size());
             record.ValueCount = static_cast<uint32_t>(axis->Values.size());
-            axisRecords.push_back(record);
+            tables.Axes.push_back(record);
 
             for (const PermutationValue& value : axis->Values)
             {
-                axisValueRecords.emplace_back(PermutationValueToInt64(value));
+                tables.Values.emplace_back(PermutationValueToInt64(value));
             }
         }
+
+        return tables;
     }
 
-    std::string sourceBlob;
-    std::vector<ManifestSourceRef> sourceRecords;
-    sourceRecords.reserve(module.Sources.size());
-    for (const std::string& source : module.Sources)
+    struct SourceTables
     {
-        sourceRecords.push_back(ManifestSourceRef{ static_cast<uint32_t>(sourceBlob.size()),
-                                                   static_cast<uint32_t>(source.size()) });
-        sourceBlob.append(source);
+        std::string Blob;
+        std::vector<ManifestSourceRef> Refs;
+    };
+
+    SourceTables BuildSourceTables(const CookedModule& module)
+    {
+        SourceTables tables;
+        tables.Refs.reserve(module.Sources.size());
+
+        for (const std::string& source : module.Sources)
+        {
+            tables.Refs.push_back(ManifestSourceRef{ .Offset = static_cast<uint32_t>(tables.Blob.size()),
+                                                     .Length = static_cast<uint32_t>(source.size()) });
+            tables.Blob.append(source);
+        }
+
+        return tables;
     }
+
+} // namespace
+
+std::string EmitShaderManifest(const CookedModule& module)
+{
+    StringTableBuilder strings;
+    /** DO NOT REORDER THESE. The order of these calls currently decides the order of the strings
+      * in the resulting manifest file. We encode the offsets and lengths of these strings based 
+      * on the header of ShaderManifest, so changing the order changes data locations and result layout! 
+      * This is, of course, a fragile design, but doing more is a bit out of scope for this tool rn.
+      * And to be clear, this ordering *here* exactly is for the indices. Not the actual stored bytes.
+      */
+    const uint32_t moduleNameString = strings.Add(module.Name);
+    const std::vector<ManifestEntryPoint> entryPointRecords = BuildEntryPointRecords(module, strings);
+    const LayoutTables layouts = BuildLayoutTables(module, strings);
+    const RasterTables rasters = BuildRasterTables(module, strings);
+    const VariantTables variants = BuildVariantTables(module, strings);
+    const std::vector<uint32_t> variantIndexRecords = BuildVariantIndexTable(module);
+    const AxisTables axes = BuildAxisTables(module, strings);
+    const SourceTables sources = BuildSourceTables(module);
 
     ShaderManifestHeader header;
     header.Magic = k_ShaderManifestMagic;
     header.Version = k_ShaderManifestVersion;
     header.ModuleNameString = moduleNameString;
-
+    
     std::string bytes;
-    bytes.reserve(sourceBlob.size() + strings.Blob().size() + (1u << 16));
+
+    // fully reserve bytes: we know all of our sizes now!
+    // some of these use decltype, as I have a hunch we might change them in the future (namely, integral types)
+    const size_t totalSize = sizeof(ShaderManifestHeader) + strings.Blob().size() + sources.Blob.size() +
+                             (entryPointRecords.size() * sizeof(ManifestEntryPoint)) +
+                             (layouts.Bindings.size() * sizeof(ManifestBinding)) +
+                             (layouts.Layouts.size() * sizeof(ManifestLayout)) +
+                             (rasters.VertexInputs.size() * sizeof(ManifestVertexInput)) +
+                             (rasters.ColorTargets.size() * sizeof(ManifestColorTarget)) +
+                             (rasters.Rasters.size() * sizeof(ManifestRaster)) +
+                             (variants.Slots.size() * sizeof(ManifestSlot)) +
+                             (variants.Variants.size() * sizeof(ManifestVariant)) +
+                             (variantIndexRecords.size() * sizeof(decltype(variantIndexRecords)::value_type)) +
+                             (axes.Axes.size() * sizeof(ManifestAxis)) +
+                             (axes.Values.size() * sizeof(decltype(axes.Values)::value_type));
+
+    bytes.reserve(totalSize);
     bytes.resize(sizeof(ShaderManifestHeader), '\0');
 
     header.StringTableOffset = AppendTable(bytes, strings.References());
@@ -311,38 +682,42 @@ std::string EmitShaderManifest(const CookedModule& module)
     header.StringBlobSize = static_cast<uint32_t>(strings.Blob().size());
     bytes.append(strings.Blob());
 
-    header.SourceTableOffset = AppendTable(bytes, sourceRecords);
-    header.SourceCount = static_cast<uint32_t>(sourceRecords.size());
+    header.SourceTableOffset = AppendTable(bytes, sources.Refs);
+    header.SourceCount = static_cast<uint32_t>(sources.Refs.size());
 
     AlignTo8(bytes);
     header.SourceBlobOffset = static_cast<uint32_t>(bytes.size());
-    header.SourceBlobSize = static_cast<uint32_t>(sourceBlob.size());
-    bytes.append(sourceBlob);
+    header.SourceBlobSize = static_cast<uint32_t>(sources.Blob.size());
+    bytes.append(sources.Blob);
 
-    header.BindingTableOffset = AppendTable(bytes, bindingRecords);
-    header.BindingCount = static_cast<uint32_t>(bindingRecords.size());
-    header.LayoutTableOffset = AppendTable(bytes, layoutRecords);
-    header.LayoutCount = static_cast<uint32_t>(layoutRecords.size());
+    // DO NOT REORDER THESE. Above, the ordering sets how the indices for the string table are assigned.
+    // This ordering controls the actual order of the data the indices refer to. Changing either one
+    // will break the other. If you are going to change something, BOTH must be changed together
+    
+    header.BindingTableOffset = AppendTable(bytes, layouts.Bindings);
+    header.BindingCount = static_cast<uint32_t>(layouts.Bindings.size());
+    header.LayoutTableOffset = AppendTable(bytes, layouts.Layouts);
+    header.LayoutCount = static_cast<uint32_t>(layouts.Layouts.size());
     header.EntryPointTableOffset = AppendTable(bytes, entryPointRecords);
     header.EntryPointCount = static_cast<uint32_t>(entryPointRecords.size());
-    header.SlotTableOffset = AppendTable(bytes, slotRecords);
-    header.SlotCount = static_cast<uint32_t>(slotRecords.size());
-    header.VariantTableOffset = AppendTable(bytes, variantRecords);
-    header.VariantCount = static_cast<uint32_t>(variantRecords.size());
+    header.SlotTableOffset = AppendTable(bytes, variants.Slots);
+    header.SlotCount = static_cast<uint32_t>(variants.Slots.size());
+    header.VariantTableOffset = AppendTable(bytes, variants.Variants);
+    header.VariantCount = static_cast<uint32_t>(variants.Variants.size());
     header.VariantIndexTableOffset = AppendTable(bytes, variantIndexRecords);
     header.VariantIndexCount = static_cast<uint32_t>(variantIndexRecords.size());
-    header.AxisTableOffset = AppendTable(bytes, axisRecords);
-    header.AxisCount = static_cast<uint32_t>(axisRecords.size());
-    header.AxisValueTableOffset = AppendTable(bytes, axisValueRecords);
-    header.AxisValueCount = static_cast<uint32_t>(axisValueRecords.size());
-    header.RasterTableOffset = AppendTable(bytes, rasterRecords);
-    header.RasterCount = static_cast<uint32_t>(rasterRecords.size());
-    header.VertexInputTableOffset = AppendTable(bytes, vertexInputRecords);
-    header.VertexInputCount = static_cast<uint32_t>(vertexInputRecords.size());
-    header.ColorTargetTableOffset = AppendTable(bytes, colorTargetRecords);
-    header.ColorTargetCount = static_cast<uint32_t>(colorTargetRecords.size());
-    header.UniformMemberTableOffset = AppendTable(bytes, uniformMemberRecords);
-    header.UniformMemberCount = static_cast<uint32_t>(uniformMemberRecords.size());
+    header.AxisTableOffset = AppendTable(bytes, axes.Axes);
+    header.AxisCount = static_cast<uint32_t>(axes.Axes.size());
+    header.AxisValueTableOffset = AppendTable(bytes, axes.Values);
+    header.AxisValueCount = static_cast<uint32_t>(axes.Values.size());
+    header.RasterTableOffset = AppendTable(bytes, rasters.Rasters);
+    header.RasterCount = static_cast<uint32_t>(rasters.Rasters.size());
+    header.VertexInputTableOffset = AppendTable(bytes, rasters.VertexInputs);
+    header.VertexInputCount = static_cast<uint32_t>(rasters.VertexInputs.size());
+    header.ColorTargetTableOffset = AppendTable(bytes, rasters.ColorTargets);
+    header.ColorTargetCount = static_cast<uint32_t>(rasters.ColorTargets.size());
+    header.UniformMemberTableOffset = AppendTable(bytes, layouts.UniformMembers);
+    header.UniformMemberCount = static_cast<uint32_t>(layouts.UniformMembers.size());
 
     AlignTo8(bytes);
     header.FileSize = static_cast<uint32_t>(bytes.size());
@@ -357,27 +732,13 @@ CookResult<void> VerifyManifestRoundTrip(const CookedModule& module, const std::
     const std::span<const std::byte> raw{ reinterpret_cast<const std::byte*>(manifest_bytes.data()),
                                           manifest_bytes.size() };
 
-    const ManifestResult<ShaderManifestView> opened = ShaderManifestView::Open(raw);
-    if (!opened.has_value())
+    const CookResult<ShaderManifestView> opened = OpenManifestForCheck(module, raw);
+    if (!opened)
     {
-        std::println(stderr,
-                     "[shader_cooker] module {} manifest does not open: {}",
-                     module.Name,
-                     ToString(opened.error()));
-        return std::unexpected(CookError::LibraryRoundTripFailed);
+        return std::unexpected(opened.error());
     }
 
     const ShaderManifestView& view = opened.value();
-
-    if (view.ModuleName() != module.Name)
-    {
-        std::println(stderr,
-                     "[shader_cooker] manifest names module '{}', but the cook produced '{}'",
-                     view.ModuleName(),
-                     module.Name);
-        return std::unexpected(CookError::LibraryRoundTripFailed);
-    }
-
     const ManifestShaderSourceProvider provider{ view, 0u };
     uint32_t checked = 0u;
 
@@ -385,125 +746,9 @@ CookResult<void> VerifyManifestRoundTrip(const CookedModule& module, const std::
     {
         for (size_t i = 0u; i < module.EntryPoints.size(); ++i)
         {
-            // The provider takes the EntryPointId value, which counts from one.
-            const uint16_t entryPoint = static_cast<uint16_t>(i + 1u);
-
-            const std::string_view expectedSource = ResolveSource(module, variant, i);
-            if (provider.Source(entryPoint, variant.Index) != expectedSource)
+            if (CookResult<void> slot = CheckManifestSlot(module, view, provider, variant, i); !slot)
             {
-                std::println(stderr,
-                             "[shader_cooker] manifest returns different text for {} variant {} [{}]",
-                             module.EntryPoints[i].Name,
-                             variant.Index,
-                             variant.Description);
-                return std::unexpected(CookError::LibraryRoundTripFailed);
-            }
-
-            const WorkgroupSize expectedWorkgroup = variant.Workgroups[i];
-            const WorkgroupSize readWorkgroup = provider.Workgroup(entryPoint, variant.Index);
-            if (readWorkgroup.X != expectedWorkgroup.X || readWorkgroup.Y != expectedWorkgroup.Y ||
-                readWorkgroup.Z != expectedWorkgroup.Z)
-            {
-                std::println(stderr,
-                             "[shader_cooker] manifest returns a different workgroup size for {} variant {}",
-                             module.EntryPoints[i].Name,
-                             variant.Index);
-                return std::unexpected(CookError::LibraryRoundTripFailed);
-            }
-
-            const ShaderLayout& expectedLayout = module.Layouts[variant.LayoutIndices[i]];
-            const std::span<const ManifestBinding> readBindings =
-                view.LayoutBindings(variant.LayoutIndices[i]);
-
-            if (readBindings.size() != expectedLayout.size())
-            {
-                std::println(stderr,
-                             "[shader_cooker] manifest layout {} holds {} bindings, the cook produced {}",
-                             variant.LayoutIndices[i],
-                             readBindings.size(),
-                             expectedLayout.size());
-                return std::unexpected(CookError::LibraryRoundTripFailed);
-            }
-
-            for (size_t bindingIndex = 0u; bindingIndex < expectedLayout.size(); ++bindingIndex)
-            {
-                const ReflectedBinding& expected = expectedLayout[bindingIndex];
-                const ManifestBinding& read = readBindings[bindingIndex];
-
-                const std::span<const ManifestUniformMember> readMembers = view.UniformMembers(read);
-                bool membersMatch = readMembers.size() == expected.UniformMembers.size();
-                for (size_t memberIndex = 0u; membersMatch && memberIndex < readMembers.size(); ++memberIndex)
-                {
-                    const ReflectedUniformMember& expectedMember = expected.UniformMembers[memberIndex];
-                    const ManifestUniformMember& readMember = readMembers[memberIndex];
-
-                    membersMatch = view.String(readMember.NameString) == expectedMember.Name &&
-                                   readMember.Offset == expectedMember.Offset &&
-                                   readMember.Size == expectedMember.Size &&
-                                   readMember.ArrayCount == expectedMember.ArrayCount;
-                }
-
-                if (view.String(read.NameString) != expected.Name || !RecordMatchesBinding(read, expected) ||
-                    !membersMatch)
-                {
-                    std::println(stderr,
-                                 "[shader_cooker] manifest binding '{}' of layout {} does not match the "
-                                 "cook",
-                                 expected.Name,
-                                 variant.LayoutIndices[i]);
-                    return std::unexpected(CookError::LibraryRoundTripFailed);
-                }
-            }
-
-            const ReflectedRasterState& expectedRaster = module.RasterStates[variant.RasterIndices[i]];
-            const uint32_t rasterIndex = variant.RasterIndices[i];
-
-            const std::span<const ManifestVertexInput> readInputs = view.VertexInputs(rasterIndex);
-            const std::span<const ManifestColorTarget> readTargets = view.ColorTargets(rasterIndex);
-
-            if (readInputs.size() != expectedRaster.VertexInputs.size() ||
-                readTargets.size() != expectedRaster.ColorTargets.size() ||
-                view.WritesFragDepth(rasterIndex) != expectedRaster.WritesFragDepth)
-            {
-                std::println(stderr,
-                             "[shader_cooker] manifest raster state {} does not match the cook for {}",
-                             rasterIndex,
-                             module.EntryPoints[i].Name);
-                return std::unexpected(CookError::LibraryRoundTripFailed);
-            }
-
-            for (size_t inputIndex = 0u; inputIndex < readInputs.size(); ++inputIndex)
-            {
-                const ReflectedVertexInput& expectedInput = expectedRaster.VertexInputs[inputIndex];
-                const ManifestVertexInput& readInput = readInputs[inputIndex];
-
-                if (view.String(readInput.SemanticNameString) != expectedInput.SemanticName ||
-                    readInput.SemanticIndex != expectedInput.SemanticIndex ||
-                    readInput.Location != expectedInput.Location ||
-                    readInput.ScalarType != static_cast<uint32_t>(expectedInput.ScalarType) ||
-                    readInput.ComponentCount != expectedInput.ComponentCount)
-                {
-                    std::println(stderr,
-                                 "[shader_cooker] manifest vertex input '{}' does not match the cook",
-                                 expectedInput.SemanticName);
-                    return std::unexpected(CookError::LibraryRoundTripFailed);
-                }
-            }
-
-            for (size_t targetIndex = 0u; targetIndex < readTargets.size(); ++targetIndex)
-            {
-                const ReflectedColorTarget& expectedTarget = expectedRaster.ColorTargets[targetIndex];
-                const ManifestColorTarget& readTarget = readTargets[targetIndex];
-
-                if (readTarget.Location != expectedTarget.Location ||
-                    readTarget.ScalarType != static_cast<uint32_t>(expectedTarget.ScalarType) ||
-                    readTarget.ComponentCount != expectedTarget.ComponentCount)
-                {
-                    std::println(stderr,
-                                 "[shader_cooker] manifest color target {} does not match the cook",
-                                 expectedTarget.Location);
-                    return std::unexpected(CookError::LibraryRoundTripFailed);
-                }
+                return slot;
             }
 
             ++checked;
