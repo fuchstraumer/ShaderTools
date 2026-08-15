@@ -33,8 +33,10 @@ namespace
 
 // ignore -Wunsafe-buffer-usage because from_chars with string_view is safe, and the warning is a little
 // paranoid (as it should be)
+#ifdef __clang__
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunsafe-buffer-usage"
+#endif
     CookResult<uint32_t> ParseOptimizationLevel(std::string_view argument)
     {
         const std::string_view levelText = argument.substr(k_OptimizationPrefix.size());
@@ -53,7 +55,9 @@ namespace
 
         return level;
     }
+#ifdef __clang__
 #pragma clang diagnostic pop
+#endif
 
     std::filesystem::path DefaultModuleCacheDirectory()
     {
