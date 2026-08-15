@@ -9,12 +9,17 @@
 #include <csignal>
 #include <iostream>
 #include <print>
+#include <span>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <thread>
 #include <vector>
 
-static std::atomic<bool> k_WantsExit{false};
+static std::atomic<bool> k_WantsExit{ false };
+
+static constexpr int k_ExitSuccess = 0;
+static constexpr int k_ExitFailure = 1;
 
 void HandleSIGINT(int signum)
 {
@@ -23,7 +28,7 @@ void HandleSIGINT(int signum)
     std::println(stderr, "\n[Received Ctrl-C. Preparing to exit gracefully...]");
 }
 
-void RunCookingPipelineWithArgs(const lodestone::CookerOptions& options)
+bool RunCookingPipelineWithArgs(const lodestone::CookerOptions& options)
 {
     using namespace lodestone;
 
@@ -33,7 +38,7 @@ void RunCookingPipelineWithArgs(const lodestone::CookerOptions& options)
     if (!statistics)
     {
         std::println(stdout, "[shader_cooker] cook failed: {}", ToString(statistics.error()));
-        return;
+        return false;
     }
 
     std::println(stdout,
@@ -45,25 +50,70 @@ void RunCookingPipelineWithArgs(const lodestone::CookerOptions& options)
                  statistics.value().TotalWgslBytes / 1024u,
                  statistics.value().ElapsedMilliseconds,
                  sink.Describe());
+    return true;
+}
+
+/** Parses one command line and cooks it once. Both modes go through here, so an interactive cook and
+ * a scripted cook cannot take different paths. */
+int CookOnce(std::span<const std::string_view> arguments)
+{
+    using namespace lodestone;
+
+    const CookResult<CookerOptions> options = ParseCommandLine(arguments);
+    if (!options)
+    {
+        std::println(std::cout, "Error parsing arguments: {}", ToString(options.error()));
+        return k_ExitFailure;
+    }
+
+    return RunCookingPipelineWithArgs(options.value()) ? k_ExitSuccess : k_ExitFailure;
+}
+
+/** No arguments means the interactive session. Arguments mean one cook and a real exit code, which is
+ * what a script, a build step, or a golden file comparison needs. */
+int RunNonInteractive(int argc, char** argv)
+{
+    std::vector<std::string_view> arguments;
+    arguments.reserve(static_cast<size_t>(argc) - 1u);
+    for (int i = 1; i < argc; ++i)
+    {
+        arguments.emplace_back(argv[i]);
+    }
+
+    if (arguments.front() == "--help" || arguments.front() == "-h")
+    {
+        std::println(std::cout, "Usage: [options]\n{}", lodestone::GetUsageText());
+        return k_ExitSuccess;
+    }
+
+    return CookOnce(arguments);
 }
 
 void BusySleep()
 {
-    // sleep for a bit so we're not just pegging the CPU in a tight loop if the user just hits Enter repeatedly
+    // sleep for a bit so we're not just pegging the CPU in a tight loop if the user just hits Enter
+    // repeatedly
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
 }
 
 int main(int argc, char** argv)
 {
     using namespace lodestone;
     std::signal(SIGINT, HandleSIGINT);
-    std::println(std::cout, "Shader Cooker Live Tool initialized. Type arguments and press Enter to cook, or '--quit' to exit.");
+
+    if (argc > 1)
+    {
+        return RunNonInteractive(argc, argv);
+    }
+
+    std::println(
+        std::cout,
+        "Shader Cooker Live Tool initialized. Type arguments and press Enter to cook, or '--quit' to exit.");
 
     while (!k_WantsExit)
     {
         std::cout << "> ";
-        
+
         std::string line;
         // Wait for user input. If EOF (Ctrl-D) is reached, break.
         if (!std::getline(std::cin, line))
@@ -105,21 +155,13 @@ int main(int argc, char** argv)
 
         std::println(std::cout, "Parsing arguments: {}", line);
 
-        const CookResult<CookerOptions> options = ParseCommandLine(stringArgs);
-        
-        if (!options)
-        {
-            std::println(std::cout, "Error parsing arguments: {}", ToString(options.error()));
-            continue;
-        }
+        CookOnce(stringArgs);
 
-        RunCookingPipelineWithArgs(options.value());
-
-        std::println(std::cout, "Cooking complete. Type arguments and press Enter to cook again, or '--quit' to exit.");
+        std::println(std::cout,
+                     "Cooking complete. Type arguments and press Enter to cook again, or '--quit' to exit.");
     }
 
     std::println(std::cout, "Exiting Shader Cooker Live Tool. Goodbye!");
 
-    return 0;
+    return k_ExitSuccess;
 }
-
