@@ -1,6 +1,10 @@
-#include "shader/ShaderLibraryTypes.hpp"
+#include "ShaderLibraryTypes.hpp"
 
-namespace velox
+#include <cstdint>
+#include <span>
+#include <string_view>
+
+namespace lodestone
 {
 
 ShaderSourceProvider::ShaderSourceProvider() noexcept {};

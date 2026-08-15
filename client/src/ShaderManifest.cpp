@@ -1,8 +1,16 @@
-#include "shader/ShaderManifest.hpp"
-#include <cstring>
-#include <magic_enum/magic_enum.hpp>
+#include "ShaderManifest.hpp"
+#include "ResourceFlags.hpp"
+#include "ShaderLibraryTypes.hpp"
 
-namespace velox
+#include <cstddef>
+#include <cstdint>
+#include <cstring>
+#include <expected>
+#include <magic_enum/magic_enum.hpp>
+#include <span>
+#include <string_view>
+
+namespace lodestone
 {
 
 namespace
