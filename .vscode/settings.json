@@ -18,7 +18,7 @@
         "--clang-tidy",
         "--enable-config",
         "--fallback-style=none",
-        "-j=12"
+        "-j=6"
     ],
     "clangd.onConfigChanged": "restart",
     "clangd.checkUpdates": true,

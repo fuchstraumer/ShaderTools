@@ -16,8 +16,8 @@ set(SLANG_EXCLUDE_DAWN ON CACHE BOOL "Optionally exclude webgpu_dawn from the bu
 set(SLANG_EXCLUDE_TINT ON CACHE BOOL "Optionally exclude slang-tint from the build")
 set(SLANG_ENABLE_RELEASE_LTO ON CACHE BOOL "Enable LTO for release builds")
 set(SLANG_USE_SYSTEM_VULKAN_HEADERS ON)
-set(SLANG_ENABLE_MIMALLOC OFF)
-set(SLANG_ENABLE_SPIRV_TOOLS_MIMALLOC OFF)
+set(SLANG_ENABLE_MIMALLOC ON)
+set(SLANG_ENABLE_SPIRV_TOOLS_MIMALLOC ON)
 
 # Wraps add_subdirectory for Slang with warning suppression
 # This applies flags to ALL targets created within the Slang directory
@@ -27,13 +27,10 @@ function(add_slang_subdirectory SLANG_DIR)
     set(SAVED_C_FLAGS "${CMAKE_C_FLAGS}")
     
     # Determine warning suppression flags based on compiler
-    if(MSVC)
-        # Pure MSVC: /W0 disables all warnings
-        set(SUPPRESS_FLAGS " /W0")
-    elseif(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+    if(CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC" AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
         # Clang-cl (MSVC frontend): /W0 disables warnings
         set(SUPPRESS_FLAGS " /W0 -Wno-everything")
-    else()
+    elseif(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
         # Pure Clang/GCC: -w disables all warnings
         set(SUPPRESS_FLAGS " -w")
     endif()

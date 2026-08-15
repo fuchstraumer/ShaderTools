@@ -1,0 +1,62 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "[LLDB] Launch CMake Target",
+            "type": "lldb-dap",
+            "request": "launch",
+            "program": "${command:cmake.launchTargetPath}",
+            "args": [
+                "-o", "${workspaceFolder}/out/cooked.hpp",
+                "--O3",
+                "${workspaceFolder}/tests/assets/compute/Ocean/OceanFft.slang" ],
+            "cwd": "${command:cmake.getLaunchTargetDirectory}",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "[VSDBG] Launch Cooker Target",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${command:cmake.launchTargetPath}",
+            "args": [
+                "-o", "${workspaceFolder}/out/cooked.hpp",
+                "--O3",
+                "${workspaceFolder}/tests/assets/compute/Ocean/OceanFft.slang" ],
+            "cwd": "${command:cmake.getLaunchTargetDirectory}",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "[VSDBG] Launch Manifest Dump Target",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${command:cmake.launchTargetPath}",
+            "args": [
+                "D:\\ShaderTools\\out\\OceanFft.ls_shader_bin",
+                "-o", "${workspaceFolder}/out/OceanFftManifest.json",
+                "--with-sources" ],
+            "cwd": "${command:cmake.getLaunchTargetDirectory}",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Launch Triangle Demo [Native]",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${command:cmake.launchTargetPath}",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${command:cmake.getLaunchTargetDirectory}",
+            "environment": [],
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Python Debugger: Current File",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal"
+        }
+    ]
+}

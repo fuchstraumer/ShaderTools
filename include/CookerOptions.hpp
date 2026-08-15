@@ -18,7 +18,7 @@ struct CookerOptions
     std::vector<std::filesystem::path> ModulePaths;
     uint32_t OptimizationLevel{ 0u };
     bool ValidateReflectionAgainstWgsl{ true };
-    bool ReportReflection{ true };
+    bool ReportReflection{ false };
     bool MultithreadEntryPointCodegen{ true };
     /** Turns off content dedup. Output stays correct, and every artifact takes its own index. This
      * is the control arm of the A/B check, and the way out if dedup ever needs to be untangled. */

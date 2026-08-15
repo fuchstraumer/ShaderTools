@@ -16,15 +16,19 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" AND NOT EMSCRIPTEN)
     if (CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "Clang")
         message(FATAL_ERROR "Clang-CL in MSVC frontend variant is not supported. Please use a different compiler.")
     else()
+        message(STATUS "Using MSVC build flags and tools")
         add_msvc_exclusive_build_flags_all_targets()
         add_shared_msvc_style_build_flags_all_targets()
     endif()
 elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND NOT EMSCRIPTEN)
     if (CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
         # Running as clang, but with MSVC frontend (clang-cl as shim layer)
+        message(STATUS "Using clang-cl")
         add_shared_msvc_style_build_flags_all_targets()
         disable_msvc_frontend_clang_compiler_warnings_all_targets()
     else()
+        message(STATUS "Using Fully-Clang-Based build flags and tools")
+        add_shared_clang_style_build_flags_all_targets()
         add_clang_style_build_flags_all_targets()
     endif()
 else()
@@ -35,8 +39,13 @@ endif()
 
 include(cmake/ConfigureSlang.cmake)
 
+set(XXHASH_BUILD_XXHSUM OFF)
+add_subdirectory(third_party/xxHash/build/cmake EXCLUDE_FROM_ALL)
+
 add_slang_subdirectory(third_party/slang)
 set_target_properties(slang PROPERTIES CXX_STANDARD 23 CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF)
+
+add_subdirectory(client)
 
 set(LODESTONE_CLIENT_HEADERS
     "${CMAKE_CURRENT_SOURCE_DIR}/client/include/ResourceFlags.hpp"
@@ -81,7 +90,7 @@ set(LODESTONE_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/src/SlangCompiler.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/WgslBindingScanner.cpp")
 
-add_library(lodestone STATIC ${LODESTONE_SOURCES} ${LODESTONE_HEADERS})
+add_library(lodestone SHARED ${LODESTONE_SOURCES} ${LODESTONE_HEADERS})
 set_target_properties(lodestone PROPERTIES CXX_STANDARD 23 CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF)
 # The engine include path carries shader/ShaderLibraryTypes.hpp and resource/ResourceFlags.hpp. The
 # cooker and the rendergraph share that vocabulary, so neither can drift from the other. Neither
@@ -91,11 +100,28 @@ target_include_directories(lodestone PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/client/include"
     "${CMAKE_CURRENT_SOURCE_DIR}/third_party/slang/include"
     "${CMAKE_CURRENT_SOURCE_DIR}/third_party/magic_enum/include")
-target_link_libraries(lodestone PRIVATE slang)
-target_compile_definitions(lodestone PRIVATE "_HAS_CXX23=1")
+target_link_libraries(lodestone PRIVATE slang lodestone::client_internal xxHash::xxhash)
+if (NOT CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+    target_compile_definitions(lodestone PRIVATE "_HAS_CXX23=1")
+    target_compile_options(lodestone PRIVATE "$<$<CONFIG:Debug>:-fcolor-diagnostics;-fansi-escape-codes;-fstandalone-debug;-fno-limit-debug-info;-fno-omit-frame-pointer;-fsanitize=address,undefined>")
+    target_link_options(lodestone PRIVATE "$<$<CONFIG:Debug>:-fsanitize=address,undefined>")
+endif()
 
 source_group("include" FILES ${LODESTONE_HEADERS})
 source_group("src" FILES ${LODESTONE_SOURCES})
 source_group("client" FILES ${LODESTONE_CLIENT_HEADERS} ${LODESTONE_CLIENT_SOURCES})
 
-#copy_slang_dlls_to_target(lodestone)
+copy_slang_dlls_to_target(lodestone)
+
+option(LODESTONE_BUILD_TESTS "Build the standalone unit test executables" ON)
+
+if(LODESTONE_BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(tests)
+endif()
+
+OPTION(LODESTONE_BUILD_TOOLS "Build the standalone tools" ON)
+
+if(LODESTONE_BUILD_TOOLS)
+    add_subdirectory(tools/manifest_dump)
+endif()

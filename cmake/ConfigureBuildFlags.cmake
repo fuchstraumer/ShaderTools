@@ -17,12 +17,12 @@ function(add_shared_msvc_style_build_flags_all_targets)
     # that should help keep more debug info around despite the optimization level
     # rel is just /O2 with a few extras. Note /Ob3 for absolute max inlining
     add_compile_options(
-        "$<$<CONFIG:Debug>:/Od;/Zi;/EHsc;/arch:AVX2>"
-        "$<$<CONFIG:RelWithDebInfo>:/Ob1;/Oi;/Ot;/Gy;/Zo;/GL;/GR-;/arch:AVX2>"
-        "$<$<CONFIG:Release>:/O2;/Ob3;/Oi;/Ot;/Gy;/Oy;/GL;/Qpar;/GR-;/arch:AVX2>")
+        "$<$<CONFIG:Debug>:/Od;/Zi;/EHsc;/arch:AVX10.2>"
+        "$<$<CONFIG:RelWithDebInfo>:/Ob1;/Oi;/Ot;/Gy;/Zo;/arch:AVX10.2>"
+        "$<$<CONFIG:Release>:/arch:AVX10.2;>")
     add_link_options($<$<CONFIG:Debug>:/DEBUG>)
     # enable ltcg for relwithdebinfo, but ICF disabled to avoid weird debugger breakpoints
-    add_link_options("$<$<CONFIG:RelWithDebInfo>:/DEBUG;/LTCG;/OPT:NOICF>")
+    add_link_options("$<$<CONFIG:RelWithDebInfo>:/DEBUG;>")
     add_link_options("$<$<CONFIG:Release>:/LTCG;/OPT:REF;/OPT:ICF>")
 endfunction()
 
@@ -40,12 +40,13 @@ endfunction()
 # Makes list of different flags far more succinct
 function(add_shared_clang_style_build_flags_all_targets)
     add_compile_options(
-        "$<$<CONFIG:Debug>:-O0;-g>"
+        "$<$<CONFIG:Debug>:-O0;-glldb;>"
         "$<$<CONFIG:RelWithDebInfo>:-Og;-g;-flto>"
         "$<$<CONFIG:Release>:-O3;-flto;-fno-exceptions;-fno-rtti;-fno-threadsafe-statics>"
         "$<$<CONFIG:MinSizeRel>:-Oz;-flto;-fno-exceptions;-fno-rtti;-fno-threadsafe-statics>")
     add_link_options(
-        "$<$<CONFIG:Debug>:-O0;-g>"
+        "-fuse-ld=lld"
+        "$<$<CONFIG:Debug>:-O0;-glldb>"
         "$<$<CONFIG:RelWithDebInfo>:-Og;-g;-flto>"
         "$<$<CONFIG:Release>:-O3>"
         "$<$<CONFIG:MinSizeRel>:-Oz;-flto>")
