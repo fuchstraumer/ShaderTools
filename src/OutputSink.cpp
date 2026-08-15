@@ -12,7 +12,7 @@ namespace lodestone
 {
 
 OutputSink::OutputSink() noexcept = default;
-OutputSink::~OutputSink() {};
+OutputSink::~OutputSink() = default;
 
 FileOutputSink::FileOutputSink(std::filesystem::path _path) :
     path{ std::move(_path) }
@@ -68,7 +68,16 @@ std::string_view FileOutputSink::Describe() const noexcept
     return description;
 }
 
-MemoryOutputSink::MemoryOutputSink() noexcept = default;
+MemoryOutputSink::MemoryOutputSink() :
+    MemoryOutputSink{ "ShaderLibrary.hpp" }
+{
+}
+
+MemoryOutputSink::MemoryOutputSink(std::string_view primary_name) :
+    primaryName{ primary_name }
+{
+}
+
 MemoryOutputSink::~MemoryOutputSink() = default;
 
 CookResult<void> MemoryOutputSink::Write(std::string_view new_content)
@@ -90,7 +99,7 @@ std::string_view MemoryOutputSink::Describe() const noexcept
 
 std::string_view MemoryOutputSink::PrimaryName() const noexcept
 {
-    return "ShaderLibrary.hpp";
+    return primaryName;
 }
 
 const std::map<std::string, std::string>& MemoryOutputSink::GetArtifacts() const noexcept

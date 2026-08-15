@@ -54,7 +54,8 @@ private:
 class MemoryOutputSink final : public OutputSink
 {
 public:
-    MemoryOutputSink() noexcept;
+    MemoryOutputSink();
+    explicit MemoryOutputSink(std::string_view primary_name);
     ~MemoryOutputSink() override;
 
     [[nodiscard]] CookResult<void> Write(std::string_view content) override;
@@ -67,6 +68,7 @@ public:
 
 private:
     std::string content;
+    std::string primaryName;
     std::map<std::string, std::string> artifacts;
 };
 
