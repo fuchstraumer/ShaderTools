@@ -1,0 +1,157 @@
+#include "CookedLibrary.hpp"
+#include "ShaderDataSchema.hpp"
+#include "ShaderLibraryTypes.hpp"
+#include "ShaderManifest.hpp"
+#include "ShaderManifestEmitter.hpp"
+#include "TestHarness.hpp"
+
+#include <cstddef>
+#include <cstdint>
+#include <cstring>
+#include <span>
+#include <string>
+#include <vector>
+
+// The manifest is the one artifact that leaves this repository as bytes. A reader that accepts a
+// malformed file reads whatever follows it in memory, so every rejection path matters as much as the
+// happy path.
+//
+// The valid case comes from the real emitter rather than from a hand-written header. A hand-written
+// header can agree with a hand-written reader and still not match what the cooker writes.
+
+using lodestone::CookedModule;
+using lodestone::EmitShaderManifest;
+using lodestone::ShaderManifestError;
+using lodestone::ShaderManifestView;
+
+namespace
+{
+
+/** Byte offsets of the header fields this file damages. The file format pins them. */
+constexpr size_t k_MagicOffset = 0u;
+constexpr size_t k_VersionOffset = 4u;
+constexpr size_t k_FileSizeOffset = 8u;
+constexpr size_t k_StringTableOffsetOffset = 16u;
+
+CookedModule MakeSmallModule()
+{
+    CookedModule module;
+    module.Name = "TestModule";
+    module.Space = nullptr;
+    module.SpaceSize = 2u;
+
+    module.EntryPoints.push_back(
+        lodestone::LibraryEntryPoint{ "MainCS", lodestone::ShaderStageKind::Compute });
+
+    module.Sources.emplace_back("// wgsl for variant zero");
+    module.Sources.emplace_back("// wgsl for variant one");
+
+    lodestone::ReflectedBinding binding;
+    binding.Name = "IfftInput";
+    binding.Group = 0u;
+    binding.Binding = 1u;
+    binding.Kind = lodestone::BindingKind::StorageBuffer;
+    binding.ElementStride = 16u;
+    binding.Shape = lodestone::ResourceShape::Buffer;
+    binding.Derived.ElementCount = 256u;
+    binding.Derived.HasElementCount = true;
+
+    lodestone::ShaderLayout layout;
+    layout.push_back(binding);
+    module.Layouts.push_back(layout);
+
+    module.RasterStates.emplace_back();
+
+    for (uint32_t i = 0u; i < 2u; ++i)
+    {
+        lodestone::LibraryVariant variant;
+        variant.Index = i;
+        variant.Suffix = i == 0u ? "_A" : "_B";
+        variant.Description = i == 0u ? "first" : "second";
+        variant.SourceIndices.push_back(i);
+        variant.LayoutIndices.push_back(0u);
+        variant.RasterIndices.push_back(0u);
+        variant.Workgroups.push_back(lodestone::WorkgroupSize{ 64u, 1u, 1u });
+        module.Variants.push_back(std::move(variant));
+    }
+
+    return module;
+}
+
+std::vector<std::byte> ToBytes(const std::string& manifest)
+{
+    std::vector<std::byte> bytes(manifest.size());
+    std::memcpy(bytes.data(), manifest.data(), manifest.size());
+    return bytes;
+}
+
+void WriteUint32(std::vector<std::byte>& bytes, size_t offset, uint32_t value)
+{
+    std::memcpy(bytes.data() + offset, &value, sizeof(value));
+}
+
+ShaderManifestError ErrorFrom(std::span<const std::byte> bytes)
+{
+    const lodestone::ManifestResult<ShaderManifestView> opened = ShaderManifestView::Open(bytes);
+    if (opened.has_value())
+    {
+        return ShaderManifestError::Success;
+    }
+
+    return opened.error();
+}
+
+} // namespace
+
+int main()
+{
+    lodestone::tests::TestRunner runner{ "ShaderManifestRejectTests" };
+
+    const CookedModule module = MakeSmallModule();
+    const std::string manifest = EmitShaderManifest(module);
+    const std::vector<std::byte> valid = ToBytes(manifest);
+
+    runner.BeginSection("a manifest the cooker wrote opens");
+    const lodestone::ManifestResult<ShaderManifestView> opened = ShaderManifestView::Open(valid);
+    runner.Check(opened.has_value(), "the emitter produces a manifest the reader accepts");
+    if (opened.has_value())
+    {
+        runner.Check(opened.value().ModuleName() == "TestModule", "the reader returns the module name");
+        runner.Check(opened.value().EntryPoints().size() == 1u, "the reader returns the entry point");
+        runner.Check(opened.value().Variants().size() == 2u, "the reader returns both variants");
+    }
+
+    runner.BeginSection("a short file is rejected before any field is read");
+    const std::span<const std::byte> truncated{ valid.data(), sizeof(lodestone::ShaderManifestHeader) - 1u };
+    runner.Check(ErrorFrom(truncated) == ShaderManifestError::TooSmall,
+                 "a span smaller than the header is TooSmall");
+
+    runner.BeginSection("a misaligned span is rejected");
+    // The reader maps 64-bit fields in place, so it cannot accept a span that starts off an 8-byte
+    // boundary. The valid case above proves the buffer itself starts aligned.
+    const std::span<const std::byte> misaligned{ valid.data() + 1u, valid.size() - 1u };
+    runner.Check(ErrorFrom(misaligned) == ShaderManifestError::Misaligned,
+                 "a span that starts one byte in is Misaligned");
+
+    runner.BeginSection("a damaged header field is rejected by name");
+    std::vector<std::byte> badMagic = valid;
+    WriteUint32(badMagic, k_MagicOffset, 0xDEADBEEFu);
+    runner.Check(ErrorFrom(badMagic) == ShaderManifestError::BadMagic, "a wrong magic is BadMagic");
+
+    std::vector<std::byte> badVersion = valid;
+    WriteUint32(badVersion, k_VersionOffset, lodestone::k_ShaderManifestVersion + 1u);
+    runner.Check(ErrorFrom(badVersion) == ShaderManifestError::VersionMismatch,
+                 "a future version is VersionMismatch");
+
+    std::vector<std::byte> badSize = valid;
+    WriteUint32(badSize, k_FileSizeOffset, static_cast<uint32_t>(valid.size()) + 8u);
+    runner.Check(ErrorFrom(badSize) == ShaderManifestError::SizeMismatch,
+                 "a header that claims more bytes than it has is SizeMismatch");
+
+    std::vector<std::byte> badSection = valid;
+    WriteUint32(badSection, k_StringTableOffsetOffset, static_cast<uint32_t>(valid.size()) - 1u);
+    runner.Check(ErrorFrom(badSection) == ShaderManifestError::SectionOutOfBounds,
+                 "a section that reaches past the file is SectionOutOfBounds");
+
+    return runner.Report();
+}

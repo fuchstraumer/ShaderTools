@@ -7,9 +7,9 @@
 // parser the one place where a shader's declared size can drift from the buffer the graph creates,
 // so it is worth more test surface than its size suggests.
 
-using velox::cooker::CookError;
-using velox::cooker::EvaluateSizeExpression;
-using velox::cooker::SizeSymbol;
+using lodestone::CookError;
+using lodestone::EvaluateSizeExpression;
+using lodestone::SizeSymbol;
 
 namespace
 {
@@ -19,7 +19,7 @@ constexpr std::array<SizeSymbol, 4> k_Symbols{ SizeSymbol{ "IFFT_SIZE", 512 },
                                                SizeSymbol{ "IFFT_WAVE_SIZE", 32 },
                                                SizeSymbol{ "IFFT_USE_WAVE_OPS", 1 } };
 
-void CheckValue(velox::tests::TestRunner& runner,
+void CheckValue(lodestone::tests::TestRunner& runner,
                 std::string_view expression,
                 int64_t expected,
                 std::string_view description)
@@ -28,7 +28,7 @@ void CheckValue(velox::tests::TestRunner& runner,
     runner.Check(result.has_value() && result.value() == expected, description);
 }
 
-void CheckError(velox::tests::TestRunner& runner,
+void CheckError(lodestone::tests::TestRunner& runner,
                 std::string_view expression,
                 CookError expected,
                 std::string_view description)
@@ -41,7 +41,7 @@ void CheckError(velox::tests::TestRunner& runner,
 
 int main()
 {
-    velox::tests::TestRunner runner{ "SizeExpressionTests" };
+    lodestone::tests::TestRunner runner{ "SizeExpressionTests" };
 
     runner.BeginSection("literals");
     CheckValue(runner, "1", 1, "single digit");
