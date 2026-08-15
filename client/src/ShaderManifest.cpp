@@ -460,4 +460,4 @@ const ShaderManifestView& ManifestShaderSourceProvider::View() const noexcept
     return view;
 }
 
-} // namespace velox
+} // namespace lodestone
