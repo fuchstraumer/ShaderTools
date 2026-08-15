@@ -3,7 +3,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <expected>
-#include <magic_enum/magic_enum.hpp>
 #include <string>
 #include <string_view>
 
@@ -12,114 +11,23 @@ namespace lodestone
 
 std::string_view ToString(JsonWriterError error) noexcept
 {
-    return magic_enum::enum_name(error);
+    switch (error)
+    {
+    case JsonWriterError::Invalid:
+        return "Invalid";
+    case JsonWriterError::Success:
+        return "Success";
+    case JsonWriterError::UnbalancedContainers:
+        return "UnbalancedContainers";
+    default:
+        return "Invalid Error passed to JsonWriter::ToString()";
+    }
 }
 
 JsonWriter::JsonWriter(bool _pretty) noexcept : pretty{ _pretty }
 {
     buffer.reserve(4096);
     stack.reserve(16);
-}
-
-void JsonWriter::writeIndent(size_t depth) noexcept
-{
-    if (!pretty)
-    {
-        return;
-    }
-
-    buffer.append(depth * 4u, ' ');
-}
-
-void JsonWriter::writeEscaped(std::string_view text) noexcept
-{
-    for (const char character : text)
-    {
-        switch (character)
-        {
-        case '"':
-            buffer.append("\\\"");
-            break;
-        case '\\':
-            buffer.append("\\\\");
-            break;
-        case '\n':
-            buffer.append("\\n");
-            break;
-        case '\r':
-            buffer.append("\\r");
-            break;
-        case '\t':
-            buffer.append("\\t");
-            break;
-        case '\b':
-            buffer.append("\\b");
-            break;
-        case '\f':
-            buffer.append("\\f");
-            break;
-        default:
-            if (static_cast<unsigned char>(character) < 0x20u)
-            {
-                char hex[4]{ '0', '0', '0', '0' };
-                std::to_chars(hex + 2u, hex + 4u, static_cast<unsigned char>(character), 16);
-                buffer.append("\\u00");
-                buffer.append(hex + 2u, 2u);
-            }
-            else
-            {
-                buffer.push_back(character);
-            }
-            break;
-        }
-    }
-}
-
-void JsonWriter::beforeValue() noexcept
-{
-    if (stack.empty())
-    {
-        return;
-    }
-
-    Frame& top = stack.back();
-    if (top.Kind == ContainerKind::Array)
-    {
-        if (top.ElementCount > 0u)
-        {
-            buffer.push_back(',');
-        }
-        if (pretty)
-        {
-            buffer.push_back('\n');
-            writeIndent(stack.size());
-        }
-        top.ElementCount++;
-    }
-}
-
-void JsonWriter::beginContainer(ContainerKind kind, char opening) noexcept
-{
-    beforeValue();
-    buffer.push_back(opening);
-    stack.push_back(Frame{ .Kind = kind, .ElementCount = 0u });
-}
-
-void JsonWriter::endContainer(char closing) noexcept
-{
-    if (stack.empty())
-    {
-        return;
-    }
-
-    const Frame top = stack.back();
-    stack.pop_back();
-    if (pretty && top.ElementCount > 0u)
-    {
-        buffer.push_back('\n');
-        writeIndent(stack.size());
-    }
-    buffer.push_back(closing);
 }
 
 void JsonWriter::BeginObject() noexcept
@@ -254,6 +162,107 @@ JsonResult<std::string> JsonWriter::Finish() noexcept
     }
 
     return buffer;
+}
+
+void JsonWriter::beginContainer(ContainerKind kind, char opening) noexcept
+{
+    beforeValue();
+    buffer.push_back(opening);
+    stack.push_back(Frame{ .Kind = kind, .ElementCount = 0u });
+}
+
+void JsonWriter::endContainer(char closing) noexcept
+{
+    if (stack.empty())
+    {
+        return;
+    }
+
+    const Frame top = stack.back();
+    stack.pop_back();
+    if (pretty && top.ElementCount > 0u)
+    {
+        buffer.push_back('\n');
+        writeIndent(stack.size());
+    }
+    buffer.push_back(closing);
+}
+
+void JsonWriter::beforeValue() noexcept
+{
+    if (stack.empty())
+    {
+        return;
+    }
+
+    Frame& top = stack.back();
+    if (top.Kind == ContainerKind::Array)
+    {
+        if (top.ElementCount > 0u)
+        {
+            buffer.push_back(',');
+        }
+        if (pretty)
+        {
+            buffer.push_back('\n');
+            writeIndent(stack.size());
+        }
+        top.ElementCount++;
+    }
+}
+
+void JsonWriter::writeIndent(size_t depth) noexcept
+{
+    if (!pretty)
+    {
+        return;
+    }
+
+    buffer.append(depth * 4u, ' ');
+}
+
+void JsonWriter::writeEscaped(std::string_view text) noexcept
+{
+    for (const char character : text)
+    {
+        switch (character)
+        {
+        case '"':
+            buffer.append("\\\"");
+            break;
+        case '\\':
+            buffer.append("\\\\");
+            break;
+        case '\n':
+            buffer.append("\\n");
+            break;
+        case '\r':
+            buffer.append("\\r");
+            break;
+        case '\t':
+            buffer.append("\\t");
+            break;
+        case '\b':
+            buffer.append("\\b");
+            break;
+        case '\f':
+            buffer.append("\\f");
+            break;
+        default:
+            if (static_cast<unsigned char>(character) < 0x20u)
+            {
+                char hex[4]{ '0', '0', '0', '0' };
+                std::to_chars(hex + 2u, hex + 4u, static_cast<unsigned char>(character), 16);
+                buffer.append("\\u00");
+                buffer.append(hex + 2u, 2u);
+            }
+            else
+            {
+                buffer.push_back(character);
+            }
+            break;
+        }
+    }
 }
 
 } // namespace lodestone

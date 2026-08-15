@@ -22,7 +22,7 @@ enum class JsonWriterError : uint8_t
 {
     Invalid = 0,
     Success = 1,
-    UnbalancedContainers,
+    UnbalancedContainers = 2,
 };
 
 template<typename T>
@@ -62,6 +62,7 @@ public:
     [[nodiscard]] JsonResult<std::string> Finish() noexcept;
 
 private:
+
     enum class ContainerKind : uint8_t
     {
         Invalid = 0,
