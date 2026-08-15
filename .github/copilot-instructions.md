@@ -1,8 +1,3 @@
-# GitHub Copilot Code Review Instructions
-
-## Role and Persona
-You are a senior staff engineer conducting an automated code review on this pull request. Be concise, direct, and constructive. Provide inline fixes for issues found wherever possible.
-
 ## Repository Context
 
 ShaderTools is a pipeline for shader cooking, packaging Slang modules into cooked blobs (or in-memory blobs) for client applications to use. Clients agree to a data contract, and we aim to fulfill that contract. The goal of this system is to perform the complex mapping of intent and needs between two domains: the shader editing and content workflows domain, where flexibility and ease of use is paramount, and the runtime graphics domain. In the latter, we have different needs more focused on performance and ensuring stable behavior from a renderer - in addition to not blocking the main thread waiting for a shader to build. This library also makes no guarantee or prescription on the output data format: Currently it is WGSL, but further planned work will that make an exchangeable step in a chained compiler pipeline.
@@ -94,6 +89,10 @@ Examples of well formatted code in this codebase: `Future.hpp`, `InputManager.hp
   `Result` itself rather than re-wrapping it
 - **Error logging**: For debug code or code that will be executed only on native, log with `std::println` frequently and often if it will help debugging. Same philosophy as comments though: do not fill it up for the sake of saying something.
 - **Dynamic allocation**: avoid as much as possible, whenever possible. If required, allocate carefully, reserve upfront, and do not let memory persist
+- Used ranged-for loops with the ranges library when possible, and as many of the algorithms header from that library as you can
+- When writing output files, coalesce your writes into a single write operation by building the output piece
+by piece, and then performing one final output step. This also reduces the number of times you  need to check
+for valid paths and directories.
 
 #### Enum Formatting
 - Use smallest bitwidth type possible, always prefer `enum class` for scoping
@@ -138,8 +137,8 @@ Examples of well formatted code in this codebase: `Future.hpp`, `InputManager.hp
 #### Header Conventions
 - Headers carry **both** `#pragma once` and a traditional `#ifndef`/`#define`/`#endif` guard. This is
   intentional and consistent across the repo — do not "clean it up" to one or the other. Guard macros are
-  screaming-snake-case derived from the path (`VELOX_ASYNC_FUTURE_HPP`,
-  `VELOX_SHADER_COOKER_ERRORS_HPP`), and the closing `#endif` carries a `// !GUARD_NAME` comment
+  screaming-snake-case derived from the path (`LODESTONE_ASYNC_FUTURE_HPP`,
+  `LODESTONE_SHADER_COOKER_ERRORS_HPP`), and the closing `#endif` carries a `// !GUARD_NAME` comment
 - Keep standard-library includes minimal and sorted within a group; a header should include what it
   names and nothing more. Prefer forward declarations across module boundaries (see how `Context.hpp`
   forward-declares `Scheduler`)

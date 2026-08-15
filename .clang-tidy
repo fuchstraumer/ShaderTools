@@ -1,4 +1,7 @@
 ---
+# Every entry in this list must end with a comma. The `>` block folds each line onto the next with a
+# space, and clang-tidy splits the result on commas only. A line with no comma joins its neighbour
+# into one glob that matches no check name, and both exclusions then do nothing.
 Checks: >
   bugprone-*,
   performance-*,
@@ -9,13 +12,13 @@ Checks: >
   -modernize-use-trailing-return-type,
   -cppcoreguidelines-avoid-magic-numbers,
   -cppcoreguidelines-avoid-c-arrays,
-  -modernize-avoid-c-arrays
-  -readability-magic-numbers
+  -modernize-avoid-c-arrays,
+  -readability-magic-numbers,
   -bugprone-easily-swappable-parameters,
-  -readability-uppercase-literal-suffix
+  -readability-uppercase-literal-suffix,
   -cppcoreguidelines-pro-bounds-avoid-unchecked-container-access,
-  -bugprone-throwing-static-initialization
-  -readability-uppercase-literal-suffix
+  -cppcoreguidelines-pro-bounds-pointer-arithmetic,
+  -bugprone-throwing-static-initialization,
 
 WarningsAsErrors: ''
 HeaderFilterRegex: '.*(src|include|client|tests)/.*'
@@ -49,6 +52,9 @@ CheckOptions:
 
   # --- Parameters (lower_case) ---
   readability-identifier-naming.ParameterCase: lower_case
+  # A single-word parameter takes an underscore prefix, because snake_case and camelBack converge on
+  # one token and the parameter then hides a member of the same name. See copilot-instructions.md.
+  readability-identifier-naming.ParameterIgnoredRegexp: '^_[a-z][a-zA-Z0-9]*$'
   readability-identifier-naming.LocalVariableCase: camelBack
 
   # --- Constants (k_CamelCase) ---

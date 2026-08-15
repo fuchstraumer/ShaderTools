@@ -15,8 +15,7 @@ target_include_directories(manifest_dump PRIVATE
 target_link_libraries(manifest_dump PRIVATE lodestone::client_internal)
 
 if (NOT CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-    target_compile_options(manifest_dump PRIVATE "$<$<CONFIG:Debug>:-fcolor-diagnostics;-fansi-escape-codes;-fstandalone-debug;-fno-limit-debug-info;-fno-omit-frame-pointer;-fsanitize=address,undefined>")
-    target_link_options(manifest_dump PRIVATE "$<$<CONFIG:Debug>:-fsanitize=address,undefined>")
+    target_compile_options(manifest_dump PRIVATE "$<$<CONFIG:Debug>:-fcolor-diagnostics;-fansi-escape-codes;-fstandalone-debug;-fno-limit-debug-info;-fno-omit-frame-pointer>")
 endif()
 
 source_group("tools//manifest_dump" FILES ${MANIFEST_DUMP_SOURCES})

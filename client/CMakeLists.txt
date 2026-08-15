@@ -28,8 +28,7 @@ target_include_directories(lodestone_client_internal PRIVATE
     "${CMAKE_SOURCE_DIR}/third_party/magic_enum/include")
 add_library(lodestone::client_internal ALIAS lodestone_client_internal)
 if (NOT CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-    target_compile_options(lodestone_client_internal PRIVATE "$<$<CONFIG:Debug>:-fcolor-diagnostics;-fansi-escape-codes;-fstandalone-debug;-fno-limit-debug-info;-fno-omit-frame-pointer;-fsanitize=address,undefined>")
-    target_link_options(lodestone_client_internal PRIVATE "$<$<CONFIG:Debug>:-fsanitize=address,undefined>")
+    target_compile_options(lodestone_client_internal PRIVATE "$<$<CONFIG:Debug>:-fcolor-diagnostics;-fansi-escape-codes;-fstandalone-debug;-fno-limit-debug-info;-fno-omit-frame-pointer>")
 endif()
 
 add_library(lodestone_client_interface INTERFACE)

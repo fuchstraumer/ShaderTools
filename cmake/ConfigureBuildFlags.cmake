@@ -17,9 +17,8 @@ function(add_shared_msvc_style_build_flags_all_targets)
     # that should help keep more debug info around despite the optimization level
     # rel is just /O2 with a few extras. Note /Ob3 for absolute max inlining
     add_compile_options(
-        "$<$<CONFIG:Debug>:/Od;/Zi;/EHsc;/arch:AVX10.2>"
-        "$<$<CONFIG:RelWithDebInfo>:/Ob1;/Oi;/Ot;/Gy;/Zo;/arch:AVX10.2>"
-        "$<$<CONFIG:Release>:/arch:AVX10.2;>")
+        "$<$<CONFIG:Debug>:/Od;/Zi;/EHsc>"
+        "$<$<CONFIG:RelWithDebInfo>:/Ob1;/Oi;/Ot;/Gy;/Zo>")
     add_link_options($<$<CONFIG:Debug>:/DEBUG>)
     # enable ltcg for relwithdebinfo, but ICF disabled to avoid weird debugger breakpoints
     add_link_options("$<$<CONFIG:RelWithDebInfo>:/DEBUG;>")

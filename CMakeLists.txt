@@ -39,6 +39,14 @@ endif()
 
 include(cmake/ConfigureSlang.cmake)
 
+# xxHash runs a plain option(BUILD_SHARED_LIBS ... ON), which writes ON into the cache. Its own
+# CMAKE_DEPENDENT_OPTION then forces the value back to OFF for xxHash only, as a directory variable,
+# so the cache entry stays ON for every subdirectory added after this one. Slang reads that entry for
+# its bundled miniz, builds miniz as a DLL, and marks every miniz symbol dllimport. miniz is
+# EXCLUDE_FROM_ALL and no rule copies miniz.dll, so slang-bootstrap.exe then fails to load with
+# STATUS_DLL_NOT_FOUND and the core module never generates. Claim the cache entry first to stop this.
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "Build third party dependencies as static libraries" FORCE)
+
 set(XXHASH_BUILD_XXHSUM OFF)
 add_subdirectory(third_party/xxHash/build/cmake EXCLUDE_FROM_ALL)
 
@@ -90,7 +98,10 @@ set(LODESTONE_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/src/SlangCompiler.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/WgslBindingScanner.cpp")
 
-add_library(lodestone SHARED ${LODESTONE_SOURCES} ${LODESTONE_HEADERS})
+# Static on purpose. No header marks a symbol dllexport, so a Windows DLL build of this target exports
+# nothing and every consumer fails to link. A SHARED build is a temporary measure for instrumented
+# performance analysis only, and it needs WINDOWS_EXPORT_ALL_SYMBOLS to link at all.
+add_library(lodestone STATIC ${LODESTONE_SOURCES} ${LODESTONE_HEADERS})
 set_target_properties(lodestone PROPERTIES CXX_STANDARD 23 CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF)
 # The engine include path carries shader/ShaderLibraryTypes.hpp and resource/ResourceFlags.hpp. The
 # cooker and the rendergraph share that vocabulary, so neither can drift from the other. Neither
@@ -103,8 +114,11 @@ target_include_directories(lodestone PRIVATE
 target_link_libraries(lodestone PRIVATE slang lodestone::client_internal xxHash::xxhash)
 if (NOT CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
     target_compile_definitions(lodestone PRIVATE "_HAS_CXX23=1")
-    target_compile_options(lodestone PRIVATE "$<$<CONFIG:Debug>:-fcolor-diagnostics;-fansi-escape-codes;-fstandalone-debug;-fno-limit-debug-info;-fno-omit-frame-pointer;-fsanitize=address,undefined>")
-    target_link_options(lodestone PRIVATE "$<$<CONFIG:Debug>:-fsanitize=address,undefined>")
+    # No sanitizer here. AddressSanitizer on Windows does not support the debug CRT: it intercepts
+    # malloc and free, ucrtbased.dll allocates through _malloc_dbg, and ASan then reports the teardown
+    # free as a bad free and aborts before main. To turn the sanitizers on, every target in the
+    # process must first use the release CRT, slang included.
+    target_compile_options(lodestone PRIVATE "$<$<CONFIG:Debug>:-fcolor-diagnostics;-fansi-escape-codes;-fstandalone-debug;-fno-limit-debug-info;-fno-omit-frame-pointer>")
 endif()
 
 source_group("include" FILES ${LODESTONE_HEADERS})

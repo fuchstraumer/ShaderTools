@@ -151,6 +151,17 @@ Report these only if you find more. They are on the list.
 5. **Stage 3 and stage 4 are fused.** `SlangCompiler.cpp` both talks to Slang and resolves attributes,
    size expressions, and the WGSL cross-check. The separation pass is the next planned work, and it is
    what lets a target other than WGSL exist.
+6. **A stage gets bindings that it does not touch.** `GetBindings(entry_point, variant)` gives the
+   whole program-scope list, and `BindingInfo` holds no usage mask. `MainVS` therefore gets a layout
+   that holds `BaseColorTexture` and `BaseColorSampler`, which the vertex stage never reads. A caller
+   that builds a bind group layout from this over-declares, and WebGPU then demands resources that the
+   stage never touches. The fix moves `EntryPointUsageMask` and changes the interned layout key, so it
+   is a separate pass.
+7. **`ReportUnreferencedBindings` has three faults.** Commit `1bba390` added it, before this change
+   set. The call sits behind `options.ReportReflection`, so `--quiet` turns the check off. It costs
+   O(bindings squared x entry points) for each variant, because the inner search re-finds an index
+   that the outer loop already holds. It also repeats one answer for each variant that shares a layout
+   tuple.
 
 ---
 

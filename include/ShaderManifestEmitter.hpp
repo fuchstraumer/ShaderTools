@@ -17,6 +17,10 @@
 namespace lodestone
 {
 
+/** The returned bytes must start on an 8-byte boundary before a reader opens them.
+ * `ShaderManifestView::Open` rejects a span that does not, because it maps 64-bit fields in place. A
+ * heap allocated `std::string` satisfies this today, but the type does not promise it. Copy the bytes
+ * into an aligned buffer if you ever move them somewhere the alignment is not certain. */
 std::string EmitShaderManifest(const CookedModule& module);
 
 std::string MakeManifestFileName(std::string_view module_name);
