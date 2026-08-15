@@ -14,7 +14,7 @@ Diagnostics:
   UnusedIncludes: Strict
   MissingIncludes: Strict
   ClangTidy:
-    Add: [ bugprone-*, performance-*, modernize-*, readability-*, cppcoreguidelines-*. misc-* ]
+    Add: [ bugprone-*, performance-*, modernize-*, readability-*, cppcoreguidelines-*, misc-* ]
     Remove: [ modernize-use-trailing-return-type, cppcoreguidelines-avoid-magic-numbers,
               readability-magic-numbers, bugprone-easily-swappable-parameters,
               readability-uppercase-literal-suffix, modernize-avoid-c-arrays,
