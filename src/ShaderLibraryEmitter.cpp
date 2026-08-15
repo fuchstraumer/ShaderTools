@@ -42,7 +42,7 @@ namespace
 
     std::string EnumeratorFor(std::string_view enum_name, std::string_view value_name)
     {
-        return std::format("velox::{}::{}", enum_name, value_name);
+        return std::format("lodestone::{}::{}", enum_name, value_name);
     }
 
     std::string BindingKindEnumerator(BindingKind kind)
@@ -79,15 +79,15 @@ namespace
 
         if (raster.VertexInputs.empty())
         {
-            emitted += std::format("constexpr velox::VertexAttributeInfo k_VertexInputs{}[1]{{}};\n", index);
+            emitted += std::format("constexpr lodestone::VertexAttributeInfo k_VertexInputs{}[1]{{}};\n", index);
             emitted += std::format("constexpr uint32_t k_VertexInputCount{} = 0u;\n", index);
         }
         else
         {
-            emitted += std::format("constexpr velox::VertexAttributeInfo k_VertexInputs{}[]{{\n", index);
+            emitted += std::format("constexpr lodestone::VertexAttributeInfo k_VertexInputs{}[]{{\n", index);
             for (const ReflectedVertexInput& input : raster.VertexInputs)
             {
-                emitted += std::format("    velox::VertexAttributeInfo{{ \"{}\", {}u, {}u, {}, {}u }},\n",
+                emitted += std::format("    lodestone::VertexAttributeInfo{{ \"{}\", {}u, {}u, {}, {}u }},\n",
                                        input.SemanticName,
                                        input.SemanticIndex,
                                        input.Location,
@@ -103,15 +103,15 @@ namespace
 
         if (raster.ColorTargets.empty())
         {
-            emitted += std::format("constexpr velox::ColorTargetInfo k_ColorTargets{}[1]{{}};\n", index);
+            emitted += std::format("constexpr lodestone::ColorTargetInfo k_ColorTargets{}[1]{{}};\n", index);
             emitted += std::format("constexpr uint32_t k_ColorTargetCount{} = 0u;\n", index);
         }
         else
         {
-            emitted += std::format("constexpr velox::ColorTargetInfo k_ColorTargets{}[]{{\n", index);
+            emitted += std::format("constexpr lodestone::ColorTargetInfo k_ColorTargets{}[]{{\n", index);
             for (const ReflectedColorTarget& target : raster.ColorTargets)
             {
-                emitted += std::format("    velox::ColorTargetInfo{{ {}u, {}, {}u }},\n",
+                emitted += std::format("    lodestone::ColorTargetInfo{{ {}u, {}, {}u }},\n",
                                        target.Location,
                                        EnumeratorFor("VertexScalarType",
                                                      VertexScalarTypeEnumeratorName(target.ScalarType)),
@@ -145,7 +145,7 @@ namespace
     std::string EmitChunkedLiteral(std::string_view text)
     {
         std::string emitted;
-        emitted.reserve(text.size() + (text.size() / k_MaxStringLiteralBytes + 1u) * 24u);
+        emitted.reserve(text.size() + (((text.size() / k_MaxStringLiteralBytes) + 1u) * 24u));
 
         size_t offset = 0u;
         while (offset < text.size())
@@ -194,11 +194,11 @@ namespace
             return {};
         }
 
-        std::string emitted = std::format("constexpr velox::UniformMemberInfo {}[]{{\n",
+        std::string emitted = std::format("constexpr lodestone::UniformMemberInfo {}[]{{\n",
                                           MakeUniformMemberTableName(layout_index, binding_index));
         for (const ReflectedUniformMember& member : binding.UniformMembers)
         {
-            emitted += std::format("    velox::UniformMemberInfo{{ \"{}\", {}u, {}u, {}u }},\n",
+            emitted += std::format("    lodestone::UniformMemberInfo{{ \"{}\", {}u, {}u, {}u }},\n",
                                    member.Name,
                                    member.Offset,
                                    member.Size,
@@ -210,7 +210,7 @@ namespace
 
     std::string EmitBindingRow(const ReflectedBinding& binding, std::string_view member_table_name)
     {
-        std::string row = std::format("    velox::BindingInfo{{ \"{}\", {}u, {}u, {}",
+        std::string row = std::format("    lodestone::BindingInfo{{ \"{}\", {}u, {}u, {}",
                                       binding.Name,
                                       binding.Group,
                                       binding.Binding,
@@ -219,10 +219,10 @@ namespace
         row += std::format(", {}u, {}ull, {}u", binding.ElementStride, binding.ByteSize, binding.ArrayCount);
         row += std::format(", {}", EnumeratorFor("ResourceShape", ToString(binding.Shape)));
         row += std::format(", {}", EnumeratorFor("TextureSampleType", ToString(binding.SampleType)));
-        row += std::format(", velox::TextureFormat{{ {} }}", static_cast<uint32_t>(binding.StorageFormat));
-        row += std::format(", velox::StorageTextureAccess{{ {} }}",
+        row += std::format(", lodestone::TextureFormat{{ {} }}", static_cast<uint32_t>(binding.StorageFormat));
+        row += std::format(", lodestone::StorageTextureAccess{{ {} }}",
                            static_cast<uint32_t>(binding.StorageAccess));
-        row += std::format(", velox::SamplerBindingType{{ {} }}",
+        row += std::format(", lodestone::SamplerBindingType{{ {} }}",
                            static_cast<uint32_t>(binding.SamplerType));
         row += std::format(", {}ull", binding.Derived.ElementCount);
         row += std::format(", {}u, {}u, {}u",
@@ -434,7 +434,7 @@ std::string EmitShaderLibraryHeader(const CookedLibrary& library)
     header += k_GeneratedBanner;
     header += "#include \"shader/ShaderLibraryTypes.hpp\"\n";
     header += "#include <cstdint>\n#include <span>\n#include <string_view>\n\n";
-    header += "namespace velox::shaders\n{\n\n";
+    header += "namespace lodestone::shaders\n{\n\n";
 
     header += "enum class ModuleId : uint16_t\n{\n    Invalid = 0,\n";
     for (size_t i = 0u; i < library.Modules.size(); ++i)
@@ -471,18 +471,18 @@ std::string EmitShaderLibraryHeader(const CookedLibrary& library)
     header += "/** Returns the WGSL for one entry point of one variant. An unknown pair returns an\n"
               " * empty view, which createShaderModule rejects rather than silently accepting. */\n";
     header += "std::string_view GetSource(EntryPointId entry_point, uint32_t variant_index) noexcept;\n";
-    header += "std::span<const velox::BindingInfo> GetBindings(EntryPointId entry_point,\n"
+    header += "std::span<const lodestone::BindingInfo> GetBindings(EntryPointId entry_point,\n"
               "                                                uint32_t variant_index) noexcept;\n";
-    header += "velox::WorkgroupSize GetWorkgroupSize(EntryPointId entry_point,\n"
+    header += "lodestone::WorkgroupSize GetWorkgroupSize(EntryPointId entry_point,\n"
               "                                      uint32_t variant_index) noexcept;\n";
-    header += "velox::ShaderStageKind GetStage(EntryPointId entry_point) noexcept;\n\n";
+    header += "lodestone::ShaderStageKind GetStage(EntryPointId entry_point) noexcept;\n\n";
 
     header += "/** The vertex attributes this entry point reads. Empty for every stage except vertex.\n"
               " * The semantic name survives here and nowhere in the WGSL, so a vertex buffer layout\n"
               " * can be checked against the shader by name. */\n";
-    header += "std::span<const velox::VertexAttributeInfo> GetVertexInputs(EntryPointId entry_point,\n"
+    header += "std::span<const lodestone::VertexAttributeInfo> GetVertexInputs(EntryPointId entry_point,\n"
               "                                                            uint32_t variant_index) noexcept;\n";
-    header += "std::span<const velox::ColorTargetInfo> GetColorTargets(EntryPointId entry_point,\n"
+    header += "std::span<const lodestone::ColorTargetInfo> GetColorTargets(EntryPointId entry_point,\n"
               "                                                        uint32_t variant_index) noexcept;\n";
     header += "/** True when the fragment shader writes SV_Depth. This is not depthWrite in RenderState.\n"
               " * A pass that writes depth from the shader while depthWrite is off is a real error. */\n";
@@ -491,82 +491,98 @@ std::string EmitShaderLibraryHeader(const CookedLibrary& library)
     header += "/** Serves the baked tables through the provider seam. Sources live in the data segment\n"
               " * for the life of the process, so Generation() never changes. A watch-and-serve cooker\n"
               " * implements the same interface and increments it instead. */\n";
-    header += "class BakedShaderSourceProvider final : public velox::ShaderSourceProvider\n{\npublic:\n"
+    header += "class BakedShaderSourceProvider final : public lodestone::ShaderSourceProvider\n{\npublic:\n"
               "    BakedShaderSourceProvider() noexcept;\n"
               "    ~BakedShaderSourceProvider() override;\n\n"
               "    std::string_view Source(uint16_t entry_point, uint32_t variant_index) const noexcept override;\n"
-              "    std::span<const velox::BindingInfo> Bindings(uint16_t entry_point,\n"
+              "    std::span<const lodestone::BindingInfo> Bindings(uint16_t entry_point,\n"
               "                                                 uint32_t variant_index) const noexcept override;\n"
-              "    velox::WorkgroupSize Workgroup(uint16_t entry_point,\n"
+              "    lodestone::WorkgroupSize Workgroup(uint16_t entry_point,\n"
               "                                   uint32_t variant_index) const noexcept override;\n"
               "    uint64_t Generation() const noexcept override;\n};\n\n";
 
-    header += "} // namespace velox::shaders\n";
+    header += "} // namespace lodestone::shaders\n";
     return header;
 }
 
-std::string EmitShaderLibraryModuleSource(const CookedModule& module, std::string_view header_name)
+namespace
 {
-    std::string source;
-    source.reserve(1u << 20);
 
-    source += k_GeneratedBanner;
-    source += std::format("#include \"{}\"\n\n", header_name);
-    source += "namespace velox::shaders\n{\n\nnamespace\n{\n\n";
-
-    for (size_t i = 0u; i < module.Sources.size(); ++i)
+    std::string EmitSourceLiterals(const CookedModule& module)
     {
-        source += std::format("constexpr std::string_view k_Source{} ={};\n\n",
-                              i,
-                              EmitChunkedLiteral(module.Sources[i]));
+        std::string emitted;
+
+        for (size_t i = 0u; i < module.Sources.size(); ++i)
+        {
+            emitted += std::format("constexpr std::string_view k_Source{} ={};\n\n",
+                                   i,
+                                   EmitChunkedLiteral(module.Sources[i]));
+        }
+
+        return emitted;
     }
 
-    for (size_t i = 0u; i < module.Layouts.size(); ++i)
+    std::string EmitOneLayoutTable(const ShaderLayout& layout, size_t layout_index)
     {
-        if (module.Layouts[i].empty())
+        if (layout.empty())
         {
-            source += std::format("constexpr velox::BindingInfo k_Layout{}[1]{{}};\n", i);
-            source += std::format("constexpr uint32_t k_LayoutCount{} = 0u;\n\n", i);
-            continue;
+            return std::format("constexpr lodestone::BindingInfo k_Layout{}[1]{{}};\n"
+                               "constexpr uint32_t k_LayoutCount{} = 0u;\n\n",
+                               layout_index,
+                               layout_index);
         }
 
-        for (size_t bindingIndex = 0u; bindingIndex < module.Layouts[i].size(); ++bindingIndex)
+        std::string emitted;
+        for (size_t bindingIndex = 0u; bindingIndex < layout.size(); ++bindingIndex)
         {
-            source += EmitUniformMemberTable(module.Layouts[i][bindingIndex], i, bindingIndex);
+            emitted += EmitUniformMemberTable(layout[bindingIndex], layout_index, bindingIndex);
         }
 
-        source += std::format("constexpr velox::BindingInfo k_Layout{}[]{{\n", i);
-        for (size_t bindingIndex = 0u; bindingIndex < module.Layouts[i].size(); ++bindingIndex)
+        emitted += std::format("constexpr lodestone::BindingInfo k_Layout{}[]{{\n", layout_index);
+        for (size_t bindingIndex = 0u; bindingIndex < layout.size(); ++bindingIndex)
         {
-            const ReflectedBinding& binding = module.Layouts[i][bindingIndex];
+            const ReflectedBinding& binding = layout[bindingIndex];
             const std::string memberTableName =
                 binding.UniformMembers.empty() ? std::string{}
-                                               : MakeUniformMemberTableName(i, bindingIndex);
-            source += EmitBindingRow(binding, memberTableName);
+                                               : MakeUniformMemberTableName(layout_index, bindingIndex);
+            emitted += EmitBindingRow(binding, memberTableName);
         }
-        source += "};\n";
-        source += std::format("constexpr uint32_t k_LayoutCount{} = {}u;\n\n",
-                              i,
-                              module.Layouts[i].size());
+
+        emitted += "};\n";
+        emitted += std::format("constexpr uint32_t k_LayoutCount{} = {}u;\n\n", layout_index, layout.size());
+        return emitted;
     }
 
-    for (size_t i = 0u; i < module.RasterStates.size(); ++i)
+    std::string EmitLayoutTables(const CookedModule& module)
     {
-        source += EmitRasterState(module.RasterStates[i], i);
+        std::string emitted;
+
+        for (size_t i = 0u; i < module.Layouts.size(); ++i)
+        {
+            emitted += EmitOneLayoutTable(module.Layouts[i], i);
+        }
+
+        return emitted;
     }
 
-    source += "struct VariantRecord\n{\n    std::string_view Source;\n"
-              "    const velox::BindingInfo* Bindings;\n    uint32_t BindingCount;\n"
-              "    velox::WorkgroupSize Workgroup;\n"
-              "    const velox::VertexAttributeInfo* VertexInputs;\n    uint32_t VertexInputCount;\n"
-              "    const velox::ColorTargetInfo* ColorTargets;\n    uint32_t ColorTargetCount;\n"
-              "    bool WritesFragDepth;\n};\n\n";
+    std::string EmitRasterTables(const CookedModule& module)
+    {
+        std::string emitted;
 
-    // One table for each entry point, indexed by the dense variant index. A dependent axis leaves
-    // holes; those rows stay empty and every accessor reports them as unknown.
-    for (size_t entryPointIndex = 0u; entryPointIndex < module.EntryPoints.size(); ++entryPointIndex)
+        for (size_t i = 0u; i < module.RasterStates.size(); ++i)
+        {
+            emitted += EmitRasterState(module.RasterStates[i], i);
+        }
+
+        return emitted;
+    }
+
+    /** Places each variant at its dense index and leaves a hole where no variant exists. The result
+     * does not depend on the entry point, so it is built once and read by every entry point table. */
+    std::vector<const LibraryVariant*> BuildVariantSlotTable(const CookedModule& module)
     {
         std::vector<const LibraryVariant*> slots(module.SpaceSize, nullptr);
+
         for (const LibraryVariant& variant : module.Variants)
         {
             if (variant.Index < module.SpaceSize)
@@ -575,35 +591,79 @@ std::string EmitShaderLibraryModuleSource(const CookedModule& module, std::strin
             }
         }
 
-        source += std::format("constexpr VariantRecord k_{}_Variants[{}]{{\n",
-                              MakeTypeIdentifier(module.EntryPoints[entryPointIndex].Name),
-                              module.SpaceSize);
+        return slots;
+    }
 
-        for (const LibraryVariant* variant : slots)
+    std::string EmitVariantRow(const LibraryVariant& variant, size_t entry_point_index)
+    {
+        const uint32_t sourceIndex = variant.SourceIndices[entry_point_index];
+        const uint32_t layoutIndex = variant.LayoutIndices[entry_point_index];
+        const WorkgroupSize workgroup = variant.Workgroups[entry_point_index];
+
+        return std::format("    VariantRecord{{ k_Source{}, k_Layout{}, k_LayoutCount{}, "
+                           "lodestone::WorkgroupSize{{ {}u, {}u, {}u }}, {} }},\n",
+                           sourceIndex,
+                           layoutIndex,
+                           layoutIndex,
+                           workgroup.X,
+                           workgroup.Y,
+                           workgroup.Z,
+                           EmitRasterRecordFields(variant.RasterIndices[entry_point_index]));
+    }
+
+    /** One table for each entry point, indexed by the dense variant index. A dependent axis leaves
+     * holes; those rows stay empty and every accessor reports them as unknown. */
+    std::string EmitVariantTables(const CookedModule& module)
+    {
+        const std::vector<const LibraryVariant*> slots = BuildVariantSlotTable(module);
+        std::string emitted;
+
+        for (size_t entryPointIndex = 0u; entryPointIndex < module.EntryPoints.size(); ++entryPointIndex)
         {
-            if (variant == nullptr)
+            emitted += std::format("constexpr VariantRecord k_{}_Variants[{}]{{\n",
+                                   MakeTypeIdentifier(module.EntryPoints[entryPointIndex].Name),
+                                   module.SpaceSize);
+
+            for (const LibraryVariant* variant : slots)
             {
-                source += "    VariantRecord{},\n";
-                continue;
+                if (variant == nullptr)
+                {
+                    emitted += "    VariantRecord{},\n";
+                    continue;
+                }
+
+                emitted += EmitVariantRow(*variant, entryPointIndex);
             }
 
-            const uint32_t sourceIndex = variant->SourceIndices[entryPointIndex];
-            const uint32_t layoutIndex = variant->LayoutIndices[entryPointIndex];
-            const WorkgroupSize workgroup = variant->Workgroups[entryPointIndex];
-
-            source += std::format("    VariantRecord{{ k_Source{}, k_Layout{}, k_LayoutCount{}, "
-                                  "velox::WorkgroupSize{{ {}u, {}u, {}u }}, {} }},\n",
-                                  sourceIndex,
-                                  layoutIndex,
-                                  layoutIndex,
-                                  workgroup.X,
-                                  workgroup.Y,
-                                  workgroup.Z,
-                                  EmitRasterRecordFields(variant->RasterIndices[entryPointIndex]));
+            emitted += "};\n\n";
         }
 
-        source += "};\n\n";
+        return emitted;
     }
+
+} // namespace
+
+std::string EmitShaderLibraryModuleSource(const CookedModule& module, std::string_view header_name)
+{
+    std::string source;
+    source.reserve(1u << 20);
+
+    source += k_GeneratedBanner;
+    source += std::format("#include \"{}\"\n\n", header_name);
+    source += "namespace lodestone::shaders\n{\n\nnamespace\n{\n\n";
+
+    source += EmitSourceLiterals(module);
+    source += EmitLayoutTables(module);
+    source += EmitRasterTables(module);
+
+    source += "struct VariantRecord\n{\n    std::string_view Source;\n"
+              "    const lodestone::BindingInfo* Bindings;\n    uint32_t BindingCount;\n"
+              "    lodestone::WorkgroupSize Workgroup;\n"
+              "    const lodestone::VertexAttributeInfo* VertexInputs;\n    uint32_t VertexInputCount;\n"
+              "    const lodestone::ColorTargetInfo* ColorTargets;\n    uint32_t ColorTargetCount;\n"
+              "    bool WritesFragDepth;\n};\n\n";
+
+    source += EmitVariantTables(module);
 
     source += std::format("constexpr uint32_t k_VariantSpaceSize = {}u;\n\n", module.SpaceSize);
 
@@ -625,36 +685,36 @@ std::string EmitShaderLibraryModuleSource(const CookedModule& module, std::strin
               "{\n    const VariantRecord* record = FindRecord(entry_point, variant_index);\n"
               "    return record != nullptr ? record->Source : std::string_view{};\n}\n\n";
 
-    source += "std::span<const velox::BindingInfo> GetBindings(EntryPointId entry_point,\n"
+    source += "std::span<const lodestone::BindingInfo> GetBindings(EntryPointId entry_point,\n"
               "                                                uint32_t variant_index) noexcept\n"
               "{\n    const VariantRecord* record = FindRecord(entry_point, variant_index);\n"
               "    if (record == nullptr || record->BindingCount == 0u)\n    {\n        return {};\n    }\n\n"
-              "    return std::span<const velox::BindingInfo>{ record->Bindings, record->BindingCount };\n}\n\n";
+              "    return std::span<const lodestone::BindingInfo>{ record->Bindings, record->BindingCount };\n}\n\n";
 
-    source += "velox::WorkgroupSize GetWorkgroupSize(EntryPointId entry_point,\n"
+    source += "lodestone::WorkgroupSize GetWorkgroupSize(EntryPointId entry_point,\n"
               "                                      uint32_t variant_index) noexcept\n"
               "{\n    const VariantRecord* record = FindRecord(entry_point, variant_index);\n"
-              "    return record != nullptr ? record->Workgroup : velox::WorkgroupSize{};\n}\n\n";
+              "    return record != nullptr ? record->Workgroup : lodestone::WorkgroupSize{};\n}\n\n";
 
-    source += "std::span<const velox::VertexAttributeInfo> GetVertexInputs(EntryPointId entry_point,\n"
+    source += "std::span<const lodestone::VertexAttributeInfo> GetVertexInputs(EntryPointId entry_point,\n"
               "                                                            uint32_t variant_index) noexcept\n"
               "{\n    const VariantRecord* record = FindRecord(entry_point, variant_index);\n"
               "    if (record == nullptr || record->VertexInputCount == 0u)\n    {\n        return {};\n    }\n\n"
-              "    return std::span<const velox::VertexAttributeInfo>{ record->VertexInputs,\n"
+              "    return std::span<const lodestone::VertexAttributeInfo>{ record->VertexInputs,\n"
               "                                                        record->VertexInputCount };\n}\n\n";
 
-    source += "std::span<const velox::ColorTargetInfo> GetColorTargets(EntryPointId entry_point,\n"
+    source += "std::span<const lodestone::ColorTargetInfo> GetColorTargets(EntryPointId entry_point,\n"
               "                                                        uint32_t variant_index) noexcept\n"
               "{\n    const VariantRecord* record = FindRecord(entry_point, variant_index);\n"
               "    if (record == nullptr || record->ColorTargetCount == 0u)\n    {\n        return {};\n    }\n\n"
-              "    return std::span<const velox::ColorTargetInfo>{ record->ColorTargets,\n"
+              "    return std::span<const lodestone::ColorTargetInfo>{ record->ColorTargets,\n"
               "                                                    record->ColorTargetCount };\n}\n\n";
 
     source += "bool GetWritesFragDepth(EntryPointId entry_point, uint32_t variant_index) noexcept\n"
               "{\n    const VariantRecord* record = FindRecord(entry_point, variant_index);\n"
               "    return record != nullptr ? record->WritesFragDepth : false;\n}\n\n";
 
-    source += "velox::ShaderStageKind GetStage(EntryPointId entry_point) noexcept\n{\n    switch "
+    source += "lodestone::ShaderStageKind GetStage(EntryPointId entry_point) noexcept\n{\n    switch "
               "(entry_point)\n    {\n";
     for (const LibraryEntryPoint& entryPoint : module.EntryPoints)
     {
@@ -662,22 +722,22 @@ std::string EmitShaderLibraryModuleSource(const CookedModule& module, std::strin
                               MakeTypeIdentifier(entryPoint.Name),
                               EnumeratorFor("ShaderStageKind", ToString(entryPoint.Stage)));
     }
-    source += "    default:\n        return velox::ShaderStageKind::Invalid;\n    }\n}\n\n";
+    source += "    default:\n        return lodestone::ShaderStageKind::Invalid;\n    }\n}\n\n";
 
     source += "BakedShaderSourceProvider::BakedShaderSourceProvider() noexcept = default;\n"
               "BakedShaderSourceProvider::~BakedShaderSourceProvider() = default;\n\n"
               "std::string_view BakedShaderSourceProvider::Source(uint16_t entry_point,\n"
               "                                                  uint32_t variant_index) const noexcept\n"
               "{\n    return GetSource(static_cast<EntryPointId>(entry_point), variant_index);\n}\n\n"
-              "std::span<const velox::BindingInfo> BakedShaderSourceProvider::Bindings(\n"
+              "std::span<const lodestone::BindingInfo> BakedShaderSourceProvider::Bindings(\n"
               "    uint16_t entry_point,\n    uint32_t variant_index) const noexcept\n"
               "{\n    return GetBindings(static_cast<EntryPointId>(entry_point), variant_index);\n}\n\n"
-              "velox::WorkgroupSize BakedShaderSourceProvider::Workgroup(uint16_t entry_point,\n"
+              "lodestone::WorkgroupSize BakedShaderSourceProvider::Workgroup(uint16_t entry_point,\n"
               "                                                         uint32_t variant_index) const noexcept\n"
               "{\n    return GetWorkgroupSize(static_cast<EntryPointId>(entry_point), variant_index);\n}\n\n"
               "uint64_t BakedShaderSourceProvider::Generation() const noexcept\n{\n    return 1u;\n}\n\n";
 
-    source += "} // namespace velox::shaders\n";
+    source += "} // namespace lodestone::shaders\n";
     return source;
 }
 
