@@ -1,6 +1,7 @@
 #include "CookerOptions.hpp"
 #include "CookerErrors.hpp"
 
+#include <array>
 #include <charconv>
 #include <cstddef>
 #include <cstdint>
@@ -17,9 +18,9 @@ namespace
 {
 
     constexpr std::string_view k_UsageText =
-        "Usage: OceanShaderCompiler --output <header.hpp> [--O<level>] [--no-validate] [--quiet]\n"
-        "                           [--cache-dir <path>] [--single-threaded] [--no-dedupe]\n"
-        "                           [--verify-deterministic] <module.slang>...\n"
+        "Usage: lodestone --output <header.hpp> [--O<level>] [--no-validate] [--quiet]\n"
+        "                 [--cache-dir <path>] [--single-threaded] [--no-dedupe]\n"
+        "                 [--verify-deterministic] <module.slang>...\n"
         "  --output, -o    destination header path (required)\n"
         "  --O<level>      slang optimization level: 0-3, defaults to 0\n"
         "  --no-validate   skip cross-checking reflection against emitted WGSL\n"
@@ -61,7 +62,53 @@ namespace
 
     std::filesystem::path DefaultModuleCacheDirectory()
     {
-        return std::filesystem::temp_directory_path() / "VeloxShaderCooker";
+        return std::filesystem::temp_directory_path() / "LodestoneShaderCooker";
+    }
+
+    /** A flag that takes no argument. The table keeps the parser flat: one row for each switch, and
+     * the loop below stays a lookup rather than a chain of comparisons. */
+    struct SwitchFlag
+    {
+        std::string_view Name;
+        void (*Apply)(CookerOptions& options) noexcept;
+    };
+
+    constexpr std::array<SwitchFlag, 5u> k_SwitchFlags{
+        SwitchFlag{ .Name="--no-dedupe", .Apply=[](CookerOptions& options) noexcept { options.DedupeEnabled = false; } },
+        SwitchFlag{ .Name="--verify-deterministic",
+                    .Apply=[](CookerOptions& options) noexcept { options.VerifyDeterministic = true; } },
+        SwitchFlag{ .Name="--no-validate",
+                    .Apply=[](CookerOptions& options) noexcept { options.ValidateReflectionAgainstWgsl = false; } },
+        SwitchFlag{ .Name="--quiet", .Apply=[](CookerOptions& options) noexcept { options.ReportReflection = false; } },
+        SwitchFlag{ .Name="--single-threaded",
+                    .Apply=[](CookerOptions& options) noexcept { options.MultithreadEntryPointCodegen = false; } }
+    };
+
+    const SwitchFlag* FindSwitchFlag(std::string_view argument) noexcept
+    {
+        for (const SwitchFlag& flag : k_SwitchFlags)
+        {
+            if (flag.Name == argument)
+            {
+                return &flag;
+            }
+        }
+
+        return nullptr;
+    }
+
+    /** A flag that consumes the next argument. It cannot join the switch table, because it moves the
+     * loop index. */
+    CookResult<std::filesystem::path> ReadPathArgument(std::span<const std::string_view> arguments,
+                                                       size_t& index)
+    {
+        if (index + 1u >= arguments.size())
+        {
+            return std::unexpected(CookError::MalformedArgument);
+        }
+
+        ++index;
+        return std::filesystem::path{ arguments[index] };
     }
 
 } // namespace
@@ -78,39 +125,25 @@ CookResult<CookerOptions> ParseCommandLine(std::span<const std::string_view> arg
 
         if (argument == "--output" || argument == "-o")
         {
-            if (i + 1u >= arguments.size())
+            const CookResult<std::filesystem::path> outputPath = ReadPathArgument(arguments, i);
+            if (!outputPath)
             {
-                return std::unexpected(CookError::MalformedArgument);
+                return std::unexpected(outputPath.error());
             }
-            options.OutputPath = arguments[++i];
+            options.OutputPath = outputPath.value();
         }
         else if (argument == "--cache-dir")
         {
-            if (i + 1u >= arguments.size())
+            const CookResult<std::filesystem::path> cacheDirectory = ReadPathArgument(arguments, i);
+            if (!cacheDirectory)
             {
-                return std::unexpected(CookError::MalformedArgument);
+                return std::unexpected(cacheDirectory.error());
             }
-            options.ModuleCacheDirectory = arguments[++i];
+            options.ModuleCacheDirectory = cacheDirectory.value();
         }
-        else if (argument == "--no-dedupe")
+        else if (const SwitchFlag* flag = FindSwitchFlag(argument); flag != nullptr)
         {
-            options.DedupeEnabled = false;
-        }
-        else if (argument == "--verify-deterministic")
-        {
-            options.VerifyDeterministic = true;
-        }
-        else if (argument == "--no-validate")
-        {
-            options.ValidateReflectionAgainstWgsl = false;
-        }
-        else if (argument == "--quiet")
-        {
-            options.ReportReflection = false;
-        }
-        else if (argument == "--single-threaded")
-        {
-            options.MultithreadEntryPointCodegen = false;
+            flag->Apply(options);
         }
         else if (argument.starts_with(k_OptimizationPrefix))
         {
