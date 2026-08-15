@@ -25,10 +25,9 @@ FileOutputSink::~FileOutputSink() = default;
 
 CookResult<void> FileOutputSink::WriteArtifact(std::string_view artifact_name, std::string_view content)
 {
-    //const std::filesystem::path artifactPath = path.parent_path() / std::filesystem::path{ artifact_name };
-    //FileOutputSink companion{ artifactPath };
-    //return companion.Write(content);
-    return std::unexpected(CookError::FilesystemError);
+    const std::filesystem::path artifactPath = path.parent_path() / std::filesystem::path{ artifact_name };
+    FileOutputSink companion{ artifactPath };
+    return companion.Write(content);
 }
 
 std::string_view FileOutputSink::PrimaryName() const noexcept
