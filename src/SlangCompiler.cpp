@@ -259,8 +259,7 @@ namespace
      * attribute, so they must not reach the vertex input list. */
     bool IsSystemSemantic(std::string_view semantic_name) noexcept
     {
-        return semantic_name.size() >= 3u && (semantic_name.substr(0u, 3u) == "SV_" ||
-                                              semantic_name.substr(0u, 3u) == "sv_");
+        return semantic_name.starts_with("SV_") || semantic_name.starts_with("sv_");
     }
 
     bool IsDepthSemantic(std::string_view semantic_name) noexcept
@@ -585,14 +584,14 @@ struct SlangCompiler::Impl
     void ReadDependencySourceTexts();
     CookResult<void> CollectEntryPoints();
     CookResult<Slang::ComPtr<slang::IComponentType>> LinkVariant(
-        const PermutationAssignment& assignment);
-    std::vector<std::string> GenerateEntryPointCode(slang::IComponentType* linked_program);
+        const PermutationAssignment& assignment) const;
+    std::vector<std::string> GenerateEntryPointCode(slang::IComponentType* linked_program) const;
     CookResult<EntryPointReflection> ExtractEntryPointReflection(slang::IComponentType* linked_program,
                                                                  slang::ProgramLayout* program_layout,
                                                                  SlangInt entry_point_index);
     CookResult<std::vector<ReflectedBinding>> ExtractGlobalBindings(
         slang::ProgramLayout* program_layout);
-    void ApplyLeafTypeLayout(slang::TypeLayoutReflection* global_layout,
+    static void ApplyLeafTypeLayout(slang::TypeLayoutReflection* global_layout,
                              SlangInt range_index,
                              slang::BindingType binding_type,
                              ReflectedBinding& binding);
@@ -604,17 +603,17 @@ struct SlangCompiler::Impl
     CookResult<uint32_t> EvaluateExtentArgument(slang::Attribute* attribute,
                                                 uint32_t argument_index,
                                                 std::string_view binding_name);
-    void ApplyEntryPointUsage(slang::IComponentType* linked_program,
+    static void ApplyEntryPointUsage(slang::IComponentType* linked_program,
                               SlangInt entry_point_index,
                               std::vector<ReflectedBinding>& bindings);
-    void ExtractRasterState(slang::EntryPointReflection* entry_point_layout,
+    static void ExtractRasterState(slang::EntryPointReflection* entry_point_layout,
                             ShaderStageKind stage,
                             ReflectedRasterState& raster);
 };
 
 CookResult<void> SlangCompiler::Impl::CreateSession(const SlangCompilerCreateInfo& create_info)
 {
-    if (SLANG_FAILED(slang::createGlobalSession(GlobalSession.writeRef())) || !GlobalSession)
+    if (SLANG_FAILED(slang::createGlobalSession(GlobalSession.writeRef())) || GlobalSession == nullptr)
     {
         return std::unexpected(CookError::GlobalSessionCreationFailed);
     }
@@ -646,7 +645,7 @@ CookResult<void> SlangCompiler::Impl::CreateSession(const SlangCompilerCreateInf
     sessionDesc.compilerOptionEntries = CompilerOptions.data();
     sessionDesc.compilerOptionEntryCount = static_cast<SlangInt>(CompilerOptions.size());
 
-    if (SLANG_FAILED(GlobalSession->createSession(sessionDesc, Session.writeRef())) || !Session)
+    if (SLANG_FAILED(GlobalSession->createSession(sessionDesc, Session.writeRef())) || Session == nullptr)
     {
         return std::unexpected(CookError::SessionCreationFailed);
     }
@@ -728,7 +727,7 @@ CookResult<void> SlangCompiler::Impl::CollectEntryPoints()
 }
 
 CookResult<Slang::ComPtr<slang::IComponentType>> SlangCompiler::Impl::LinkVariant(
-    const PermutationAssignment& assignment)
+    const PermutationAssignment& assignment) const
 {
     std::vector<slang::IComponentType*> components = BaseComponents;
     components.reserve(BaseComponents.size() + assignment.size());
@@ -762,7 +761,7 @@ CookResult<Slang::ComPtr<slang::IComponentType>> SlangCompiler::Impl::LinkVarian
                                           diagnostics.writeRef());
     ReportDiagnostics("createCompositeComponentType", diagnostics.get());
 
-    if (!composite)
+    if (composite == nullptr)
     {
         return std::unexpected(CookError::CompositeCreationFailed);
     }
@@ -777,7 +776,8 @@ CookResult<Slang::ComPtr<slang::IComponentType>> SlangCompiler::Impl::LinkVarian
     return linked;
 }
 
-std::vector<std::string> SlangCompiler::Impl::GenerateEntryPointCode(slang::IComponentType* linked_program)
+std::vector<std::string> SlangCompiler::Impl::GenerateEntryPointCode(
+    slang::IComponentType* linked_program) const
 {
     const size_t entryPointCount = EntryPointNames.size();
     std::vector<std::string> generated(entryPointCount);
@@ -970,7 +970,8 @@ CookResult<void> SlangCompiler::Impl::ExtractDerivedExtent(slang::VariableReflec
             return std::unexpected(value.error());
         }
 
-        axes[i] = value.value();
+        // argumentCount is 2 or 3, so the index always names one of the three axes.
+        axes.at(i) = value.value();
     }
 
     derived.ExtentX = axes[0];
@@ -1118,7 +1119,7 @@ void SlangCompiler::Impl::ApplyEntryPointUsage(slang::IComponentType* linked_pro
                                                            k_WgslTargetIndex,
                                                            metadata.writeRef(),
                                                            diagnostics.writeRef())) ||
-        !metadata)
+        metadata == nullptr)
     {
         ReportDiagnostics("getEntryPointMetadata", diagnostics.get());
         return;
