@@ -4,6 +4,7 @@
 #include "CookedLibrary.hpp"
 #include "CookerOptions.hpp"
 #include "PermutationSpace.hpp"
+#include "RawLibrary.hpp"
 #include <string>
 #include <string_view>
 
@@ -32,6 +33,10 @@ std::string DumpPermutationSpace(std::string_view module_name, const Permutation
 
 /** Stage 2. Every variant identity, with both the active and the canonical assignment. */
 std::string DumpVariantSet(std::string_view module_name, const VariantSet& variant_set);
+
+/** Stage 3. Everything Slang said, with every `[vx_*]` argument still a string. A reader can see here
+ * whether a wrong size came out of the compiler or out of the arithmetic that follows it. */
+std::string DumpRawModule(const RawModule& module);
 
 /** Stage 7. The frozen tables, the indices each variant keys into them with, and what each interner
  * measured while it filled them. */

@@ -319,6 +319,123 @@ namespace
         writer.EndObject();
     }
 
+    void WriteRawPlacement(JsonWriter& writer, const RawPlacement& placement)
+    {
+        writer.Key("placement");
+        const BoundPlacement* bound = GetBoundPlacement(placement);
+        if (bound == nullptr)
+        {
+            writer.Null();
+            return;
+        }
+
+        writer.BeginObject();
+        writer.KeyString("model", "Bound");
+        writer.KeyUInt("group", bound->Group);
+        writer.KeyUInt("binding", bound->Binding);
+        writer.EndObject();
+    }
+
+    void WriteRawBindings(JsonWriter& writer, const RawVariant& variant)
+    {
+        writer.Key("globalBindings");
+        writer.BeginArray();
+        for (size_t i = 0u; i < variant.GlobalBindings.size(); ++i)
+        {
+            const RawBinding& binding = variant.GlobalBindings[i];
+            writer.BeginObject();
+            writer.KeyUInt("index", i);
+            writer.KeyString("name", binding.Name);
+            WriteRawPlacement(writer, binding.Placement);
+            writer.KeyString("kind", magic_enum::enum_name(binding.Kind));
+            writer.KeyUInt("elementStride", binding.ElementStride);
+            writer.KeyUInt("byteSize", binding.ByteSize);
+            writer.KeyUInt("arrayCount", binding.ArrayCount);
+            writer.KeyString("shape", magic_enum::enum_name(binding.Shape));
+            writer.KeyString("sampleType", magic_enum::enum_name(binding.SampleType));
+            writer.KeyString("storageFormat", magic_enum::enum_name(binding.StorageFormat));
+            writer.KeyString("storageAccess", magic_enum::enum_name(binding.StorageAccess));
+            writer.KeyString("samplerType", magic_enum::enum_name(binding.SamplerType));
+
+            writer.Key("uniformMembers");
+            writer.BeginArray();
+            for (const ReflectedUniformMember& member : binding.UniformMembers)
+            {
+                writer.BeginObject();
+                writer.KeyString("name", member.Name);
+                writer.KeyUInt("offset", member.Offset);
+                writer.KeyUInt("size", member.Size);
+                writer.KeyUInt("arrayCount", member.ArrayCount);
+                writer.EndObject();
+            }
+            writer.EndArray();
+
+            writer.EndObject();
+        }
+        writer.EndArray();
+    }
+
+    void WriteRawSizeAttributes(JsonWriter& writer, const RawVariant& variant)
+    {
+        writer.Key("sizeAttributes");
+        writer.BeginArray();
+        for (const RawSizeAttribute& attribute : variant.SizeAttributes)
+        {
+            writer.BeginObject();
+            writer.KeyUInt("bindingIndex", attribute.BindingIndex);
+            writer.KeyString("attribute", ToString(attribute.Kind));
+            writer.Key("arguments");
+            writer.BeginArray();
+            for (const std::string& argument : attribute.Arguments)
+            {
+                writer.String(argument);
+            }
+            writer.EndArray();
+            writer.EndObject();
+        }
+        writer.EndArray();
+    }
+
+    void WriteRawEntryPoints(JsonWriter& writer, const RawVariant& variant)
+    {
+        writer.Key("entryPoints");
+        writer.BeginArray();
+        for (const RawEntryPoint& entryPoint : variant.EntryPoints)
+        {
+            writer.BeginObject();
+            writer.KeyString("name", entryPoint.Name);
+            writer.KeyString("stage", magic_enum::enum_name(entryPoint.Stage));
+            writer.Key("workgroup");
+            writer.BeginObject();
+            writer.KeyUInt("x", entryPoint.Workgroup.X);
+            writer.KeyUInt("y", entryPoint.Workgroup.Y);
+            writer.KeyUInt("z", entryPoint.Workgroup.Z);
+            writer.EndObject();
+            writer.KeyUInt("targetTextByteLength", entryPoint.TargetText.size());
+            writer.KeyUInt("targetTextHash", HashSourcePayload(entryPoint.TargetText));
+            WriteIndexArray(writer, "usedBindingIndices", entryPoint.UsedBindingIndices);
+            WriteVertexInputs(writer, entryPoint.Raster);
+            WriteColorTargets(writer, entryPoint.Raster);
+            writer.KeyBool("writesFragDepth", entryPoint.Raster.WritesFragDepth);
+            writer.EndObject();
+        }
+        writer.EndArray();
+    }
+
+    void WriteExternDefaults(JsonWriter& writer, const RawModule& module)
+    {
+        writer.Key("externDefaults");
+        writer.BeginArray();
+        for (const ExternConstantDefault& entry : module.ExternDefaults)
+        {
+            writer.BeginObject();
+            writer.KeyString("name", entry.Name);
+            writer.KeyInt("value", entry.Value);
+            writer.EndObject();
+        }
+        writer.EndArray();
+    }
+
 } // namespace
 
 std::string MakeStageDumpFileName(std::string_view module_name, StageDumpKind kind)
@@ -379,6 +496,43 @@ std::string DumpVariantSet(std::string_view module_name, const VariantSet& varia
         WriteAssignment(writer, descriptor.Active);
         writer.Key("canonical");
         WriteAssignment(writer, descriptor.Canonical);
+        writer.EndObject();
+    }
+    writer.EndArray();
+
+    writer.EndObject();
+    return FinishDocument(writer);
+}
+
+std::string DumpRawModule(const RawModule& module)
+{
+    JsonWriter writer{ true };
+    writer.BeginObject();
+    writer.KeyString("stage", "raw");
+    writer.KeyString("module", module.Name);
+    writer.KeyUInt("variantCount", module.Variants.size());
+
+    writer.Key("entryPointNames");
+    writer.BeginArray();
+    for (const std::string& name : module.EntryPointNames)
+    {
+        writer.String(name);
+    }
+    writer.EndArray();
+
+    WriteExternDefaults(writer, module);
+
+    writer.Key("variants");
+    writer.BeginArray();
+    for (const RawVariant& variant : module.Variants)
+    {
+        writer.BeginObject();
+        writer.KeyUInt("index", variant.VariantIndex);
+        writer.KeyString("suffix", variant.VariantSuffix);
+        writer.KeyString("description", variant.VariantDescription);
+        WriteRawBindings(writer, variant);
+        WriteRawSizeAttributes(writer, variant);
+        WriteRawEntryPoints(writer, variant);
         writer.EndObject();
     }
     writer.EndArray();
