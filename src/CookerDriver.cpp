@@ -343,11 +343,10 @@ namespace
 
         out_space = FindPermutationSpaceForModule(moduleName);
 
-        if (CookResult<void> axisResult =
-                VerifyAxisNamesAreDeclared(*out_space, compiler.GetModuleSourceTexts(), moduleName);
-            !axisResult)
+        if (CookError axisResult = VerifyAxisNamesAreDeclared(*out_space, compiler.GetModuleSourceTexts(), moduleName);
+            axisResult != CookError::Success)
         {
-            return axisResult;
+            return std::unexpected(axisResult);
         }
 
         ReportUndrivenExternConstants(*out_space, compiler.GetModuleSourceTexts(), moduleName);

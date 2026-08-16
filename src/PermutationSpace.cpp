@@ -277,48 +277,64 @@ namespace
         return std::ranges::any_of(space, [name](const PermutationAxis* axis) { return axis->Name == name; });
     }
 
-    CookResult<void> VerifyVariantIndicesAreUnique(const std::vector<VariantDescriptor>& variants)
+    [[nodiscard]] CookError VerifyVariantIndicesAreUnique(const std::vector<VariantDescriptor>& variants)
     {
         std::unordered_set<uint32_t> seen;
         seen.reserve(variants.size());
 
         for (const VariantDescriptor& variant : variants)
         {
-            if (!seen.insert(variant.Index).second)
+            auto curr = seen.insert(variant.Index);
+            if (!curr.second)
             {
                 std::println(stderr,
                              "[shader_cooker] two variants share index {}: [{}] collides. The mixed-radix "
                              "encoding and the enumerated set disagree.",
                              variant.Index,
                              DescribeAssignment(variant.Canonical));
-                return std::unexpected(CookError::PermutationVariantIndexCollision);
+                return CookError::PermutationVariantIndexCollision;
             }
         }
 
-        return {};
+        return CookError::Success;
     }
 
 } // namespace
 
+// perform CCSP with classic backtracking, but skip any axis whose parent is not active
+// this is a somewhat embarassing amount of commenting for me, but I have not done constraint satisfaction formally
+// *ever* before, and I want to make sure I understand it. these are notes for me. i am not a learned woman
 CookResult<std::vector<PermutationAssignment>> EnumerateActiveCombinations(const PermutationSpace& space)
 {
     std::vector<PermutationAssignment> partials{ PermutationAssignment{} };
+    partials.reserve(space.front()->Values.size());
 
     for (const PermutationAxis* axis : space)
     {
+        // Despite having to do recursive work here, we can at least reserve the right amount of space. I guess.
         std::vector<PermutationAssignment> expanded;
         expanded.reserve(partials.size() * axis->Values.size());
-
+        // For the current axis, we need to traverse every partial assignment (incomplete combination) we have
+        // thus far and expand/evaluate it for the current axis. This is a breadth-first search of the combination space, and we will
+        // continue to expand the partials until we have a complete assignment for every axis in the space.
         for (const PermutationAssignment& partial : partials)
         {
+            // If an axis has a parent, we must check that parent to know whether to expand this current axis
+            // If there is no parent, we proceed to just expand the axis as normal
             if (axis->Parent != nullptr)
             {
+                // Read the current list of active axes to see if the parent is active, and retrieve
+                // it if it is. If the parent is not active (present), there is an axis declaration 
+                // order error.
                 const PermutationBinding* parentBinding = FindBindingForAxis(partial, axis->Parent);
                 if (parentBinding == nullptr)
                 {
+                    // todo-ship: This is a user error, and should be evaluated during initial load when we're
+                    // already traversing permutations to check for undriven values, etc. Flatten this calltree to use less Results
                     return std::unexpected(CookError::PermutationParentAxisMissing);
                 }
-
+                // If the parent is active, but not set to the required value, close partial off
+                // for this current partial (where parent axis was evaluated to the wrong value)
                 if (parentBinding->second != axis->RequiredParentValue)
                 {
                     expanded.push_back(partial);
@@ -326,86 +342,78 @@ CookResult<std::vector<PermutationAssignment>> EnumerateActiveCombinations(const
                 }
             }
 
+            // Expand the current axis, evaluating/instantiating it for each of it's values
+            // We store the axis (the abstract half) and the *value* (the concrete half). This
+            // defines a *Binding* or unique instantiation of the axis for this current partial.
+            // (thus a binding is just {abstract [axis*], concrete [value]})
             for (const PermutationValue& value : axis->Values)
             {
+                // at each depth, we take the current partial as our starting point (as that's how
+                // breadth-first constraint satisfaction like this works best for our data)
                 PermutationAssignment next = partial;
                 next.emplace_back(axis, value);
+                // note: we need expanded separate as we are using partials as the source of truth for
+                // the current depth, and we don't want to modify it while iterating. the overwrite
+                // has to come at the end
                 expanded.push_back(std::move(next));
             }
         }
 
+        // now that we're done reading partials, we can overwrite it with the expanded set of partials at the 
+        // current depth... to use at the next depth.
         partials = std::move(expanded);
     }
 
     return partials;
 }
 
-CookResult<PermutationAssignment> CanonicalizeAssignment(const PermutationSpace& space,
-                                                         const PermutationAssignment& assignment)
+// Canonicalization is another expansion: for every axis in the space, we need to find the concrete
+// value of it bound in *this* assignment. If the axis is not present in the assignment, we will 
+// retrieve the default value (the first value) of the axis. This equalizes each assignment to the
+// same length, and allows us to compute a unique index for each assignment.
+PermutationAssignment CanonicalizeAssignment(const PermutationSpace& space,
+                                             const PermutationAssignment& assignment)
 {
     PermutationAssignment canonical;
     canonical.reserve(space.size());
-
+    // So, as mentioned above: step through each axis.
     for (const PermutationAxis* axis : space)
     {
-        if (axis->Values.empty())
-        {
-            return std::unexpected(CookError::PermutationValueNotInAxis);
-        }
-
+        // Get the binding (concrete instantiation) of the current axis for *this* assignment.
         const PermutationBinding* binding = FindBindingForAxis(assignment, axis);
+        // Now check: did we fail to find the binding? That means it was folded out of the assignment,
+        // because one of it's dependent axes values was not set as needed. Thus, default value assigned.
         const PermutationValue& value = binding != nullptr ? binding->second : axis->Values.front();
         canonical.emplace_back(axis, value);
     }
-
+    // And bam, the canonical assignment is just a fully "concrete" instance of the *actual* active assignment
     return canonical;
 }
 
-CookResult<uint32_t> IndexOfAxisValue(const PermutationAxis& axis, const PermutationValue& value) noexcept
+int32_t ComputeVariantIndex(const PermutationSpace& space,
+                            const PermutationAssignment& canonical)
 {
-    for (size_t i = 0u; i < axis.Values.size(); ++i)
-    {
-        if (axis.Values[i] == value)
-        {
-            return static_cast<uint32_t>(i);
-        }
-    }
-
-    return std::unexpected(CookError::PermutationValueNotInAxis);
-}
-
-CookResult<uint32_t> ComputeVariantIndex(const PermutationSpace& space,
-                                         const PermutationAssignment& canonical)
-{
-    uint32_t index = 0u;
+    std::ptrdiff_t index = 0;
 
     for (const PermutationAxis* axis : space)
     {
         const PermutationBinding* binding = FindBindingForAxis(canonical, axis);
-        if (binding == nullptr)
-        {
-            return std::unexpected(CookError::PermutationParentAxisMissing);
-        }
-
-        const CookResult<uint32_t> valueIndex = IndexOfAxisValue(*axis, binding->second);
-        if (!valueIndex)
-        {
-            return std::unexpected(valueIndex.error());
-        }
-
-        index = (index * static_cast<uint32_t>(axis->Values.size())) + valueIndex.value();
+        const auto found = std::ranges::find(axis->Values, binding->second);
+        const std::ptrdiff_t valueIndex = std::distance(axis->Values.begin(), found);
+        // TIL std::ssize. man. C++ is a mess. this is embarassing.
+        index = (index * std::ssize(axis->Values)) + valueIndex;
     }
 
-    return index;
+    return static_cast<int32_t>(index);
 }
 
-uint32_t ComputeVariantSpaceSize(const PermutationSpace& space) noexcept
+int32_t ComputeVariantSpaceSize(const PermutationSpace& space) noexcept
 {
-    uint32_t size = 1u;
+    int32_t size = 1;
 
     for (const PermutationAxis* axis : space)
     {
-        size *= static_cast<uint32_t>(axis->Values.size());
+        size *= static_cast<int32_t>(std::ssize(axis->Values));
     }
 
     return size;
@@ -413,42 +421,35 @@ uint32_t ComputeVariantSpaceSize(const PermutationSpace& space) noexcept
 
 CookResult<VariantSet> EnumerateVariants(const PermutationSpace& space)
 {
-    const CookResult<std::vector<PermutationAssignment>> active = EnumerateActiveCombinations(space);
-    if (!active)
+    const CookResult<std::vector<PermutationAssignment>> enumerateActiveResult = EnumerateActiveCombinations(space);
+    if (!enumerateActiveResult)
     {
-        return std::unexpected(active.error());
+        return std::unexpected(enumerateActiveResult.error());
     }
+
+    const std::vector<PermutationAssignment>& active = enumerateActiveResult.value();
 
     VariantSet variantSet;
     variantSet.Space = &space;
     variantSet.SpaceSize = ComputeVariantSpaceSize(space);
-    variantSet.Variants.reserve(active.value().size());
+    variantSet.Variants.reserve(active.size());
 
-    for (const PermutationAssignment& assignment : active.value())
+    for (const PermutationAssignment& assignment : active)
     {
-        const CookResult<PermutationAssignment> canonical = CanonicalizeAssignment(space, assignment);
-        if (!canonical)
-        {
-            return std::unexpected(canonical.error());
-        }
-
-        const CookResult<uint32_t> index = ComputeVariantIndex(space, canonical.value());
-        if (!index)
-        {
-            return std::unexpected(index.error());
-        }
+        PermutationAssignment canonical = CanonicalizeAssignment(space, assignment);
+        const int32_t index = ComputeVariantIndex(space, canonical);
 
         VariantDescriptor descriptor;
         descriptor.Active = assignment;
-        descriptor.Canonical = canonical.value();
-        descriptor.Index = index.value();
+        descriptor.Canonical = canonical;
+        descriptor.Index = index;
         variantSet.Variants.push_back(std::move(descriptor));
     }
 
-    const CookResult<void> uniqueResult = VerifyVariantIndicesAreUnique(variantSet.Variants);
-    if (!uniqueResult)
+    const CookError verifyUnique = VerifyVariantIndicesAreUnique(variantSet.Variants);
+    if (verifyUnique != CookError::Success)
     {
-        return std::unexpected(uniqueResult.error());
+        return std::unexpected(verifyUnique);
     }
 
     std::ranges::sort(variantSet.Variants, std::ranges::less{}, &VariantDescriptor::Index);
@@ -456,11 +457,11 @@ CookResult<VariantSet> EnumerateVariants(const PermutationSpace& space)
     return variantSet;
 }
 
-CookResult<void> VerifyAxisNamesAreDeclared(const PermutationSpace& space,
-                                            std::span<const std::string> source_texts,
-                                            std::string_view module_name)
+CookError VerifyAxisNamesAreDeclared(const PermutationSpace& space,
+                                     std::span<const std::string> source_texts,
+                                     std::string_view module_name)
 {
-    uint32_t undeclaredCount = 0u;
+    int32_t undeclaredCount = -1;
 
     for (const PermutationAxis* axis : space)
     {
@@ -486,12 +487,12 @@ CookResult<void> VerifyAxisNamesAreDeclared(const PermutationSpace& space,
         }
     }
 
-    if (undeclaredCount != 0u)
+    if (undeclaredCount > 0)
     {
-        return std::unexpected(CookError::PermutationAxisNotDeclared);
+        return CookError::PermutationAxisNotDeclared;
     }
 
-    return {};
+    return CookError::Success;
 }
 
 void ReportUndrivenExternConstants(const PermutationSpace& space,

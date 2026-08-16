@@ -79,3 +79,63 @@ Lastly, we don't need to make an entire shader library compile fail on a bad var
 
 Currently, we still fail on a bad variant - mostly because for me internally it provides useful debugging guarantees, and wasn't a feature I needed to get this code usable for one of my projects. This feature is one of my top 3 priorities, however.
 
+## How It Works
+
+This library performs a set of passes in a pipeline - much like a compiler - to transform your sets of slang modules into target source code that is portable across RHIs, binding models, and device featuresets.
+
+I'm going to explain and diagram this dataflow now, omitting some simple steps - namely the common OS operations like initial loads from file, creating a cache directory, output, etc. The diagram below will serve as a high-level view of the whole process.
+
+In it, square blocks are actual steps that generate an output or mutate the data as it flows through the pipeline: hexagons are *validators* that ensure the data moving between stages is sanitized and able to be processed in the next step.
+
+### <p align="center">Compiler Flowchart</p>
+
+<div align="center">
+
+```mermaid
+flowchart TD
+    Entry["RunCook / RunCookOnce<br/>CookerDriver.cpp<br/>CookerOptions, OutputSink"]
+
+    subgraph Preamble["Preamble - no shader content yet"]
+        S1["STAGE 1 Declare<br/>PermutationSpace.cpp<br/>FindPermutationSpaceForModule<br/>PermutationAxis, PermutationSpace"]
+        V1{{"VerifyAxisNamesAreDeclared<br/>ReportUndrivenExternConstants"}}
+        S2["STAGE 2 Enumerate<br/>PermutationSpace.cpp<br/>EnumerateVariants<br/>VariantSet, VariantDescriptor"]
+    end
+
+    subgraph PerVariant["CompileModuleVariants - once for each VariantDescriptor"]
+        S3["STAGE 3 Compile<br/>SlangCompiler.cpp<br/>CompileVariantRaw<br/>RawVariant, RawBinding, RawSizeAttribute<br/>ONLY file that talks to Slang"]
+        S4["STAGE 4 Resolve<br/>ResolveStage.cpp<br/>MakeResolveContext, ResolveVariant<br/>CompiledVariant, DerivedSize<br/>names no Slang type"]
+        V2{{"ValidateVariantReflection<br/>WgslBindingScanner.cpp"}}
+        S5["STAGE 5 Normalize<br/>empty on purpose"]
+        S6["STAGE 6 Intern<br/>CookedLibrary.cpp<br/>AppendVariantToModule<br/>ContentInterner, LibraryVariant"]
+    end
+
+    S7["STAGE 7 Key<br/>CookedLibrary.cpp<br/>FreezeModuleTables<br/>CookedModule"]
+    V3{{"VerifyLibraryRoundTrip"}}
+    V4{{"ComputeAxisInfluence + EnforceModulePolicy<br/>DedupeReport.cpp"}}
+    S8["STAGE 8 Emit<br/>ShaderLibraryEmitter.cpp<br/>ShaderManifestEmitter.cpp<br/>DedupeReport.cpp"]
+    V5{{"VerifyManifestRoundTrip"}}
+    Out["Artifacts, through OutputSink"]
+
+    Entry --> S1 --> V1 --> S2 --> S3 --> S4 --> V2 --> S5 --> S6
+    S6 -.->|next descriptor| S3
+    S6 --> S7 --> V3 --> V4 --> S8 --> V5 --> Out
+```
+
+</div>
+
+#### Step 1. Create a Slang Compiler session
+
+##### Actions
+- First, we initialize the slang compiler backend: this creates our root global session that future compiles of variants will actually use. At this point, we know if the module path exists and that our input configuration for Slang (at the least) is valid
+- Second, we will load the permutation space for the current module being built
+##### Validations
+- We will verify that the axis names stated in the permutation space can actually be found in the source code
+- We will identify values declared as permutable, but not actually bound to any axis: we call these "undriven"
+- *One validation action*: We will set default values for these undriven defaults using `compiler.ResolveExternConstantDefaults`
+
+In the future, I plan to remove this default-resolve and make it a harder requirement to actually permute variables declared as intended permutation axes. 
+
+#### Step 2. Enumerate and expand the active permutation space
+
+##### Actions
+- Call `EnumerateActiveCombinations` to perform a 

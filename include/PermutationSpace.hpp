@@ -6,9 +6,10 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <variant>
 #include <vector>
-#include <utility>
+
 
 namespace lodestone
 {
@@ -37,27 +38,27 @@ using PermutationAssignment = std::vector<PermutationBinding>;
  * `Active`: Contains only the axes this variant actually uses. The linker uses this to export the final
  * values (i.e., what shows up in source)
  *
- * `Canonical`: A complete list of EVERY axis in the permutation space, in declaration order. This is 
+ * `Canonical`: A complete list of EVERY axis in the permutation space, in declaration order. This is
  * *not* what the shader will actually use.
  *
  * If an axis is disabled, it will not appear in Active but it will appear in Canonical. This happens with
  * an axis (or axes) whose parent does not match the value required to enable it. The permutation evaluator
  * will fill in the first value of that axis as the value in Canonical.
- * 
+ *
  * Why? Because this then provides a truly stable index for the variant, which several properties/values we
  * associate with a variant are computed. This also makes it simpler for further retrieval: we don't need to
  * know the fully evaluated "correct" value of each axis to retrieve it, we can just use our unique values
- * and the canonicalized values to retrieve the variant. Think how trivial that is: if you know just the 
+ * and the canonicalized values to retrieve the variant. Think how trivial that is: if you know just the
  * set of values you want to use, you can get your variant.
- * 
- * And fwiw, this is just compiler canonicalization of the values, which is to say flattening a multidimensional
- * space into a single dimension.
-*/
+ *
+ * And fwiw, this is just compiler canonicalization of the values, which is to say flattening a
+ * multidimensional space into a single dimension.
+ */
 struct VariantDescriptor
 {
     PermutationAssignment Active;
     PermutationAssignment Canonical;
-    uint32_t Index{ 0u };
+    int32_t Index{ 0 };
 };
 
 /** Everything one permutation space expands to. `SpaceSize` counts the dense index range, holes
@@ -67,25 +68,22 @@ struct VariantSet
 {
     const PermutationSpace* Space{ nullptr };
     std::vector<VariantDescriptor> Variants;
-    uint32_t SpaceSize{ 0u };
+    int32_t SpaceSize{ 0u };
 };
 
 CookResult<std::vector<PermutationAssignment>> EnumerateActiveCombinations(const PermutationSpace& space);
 CookResult<VariantSet> EnumerateVariants(const PermutationSpace& space);
 
-CookResult<PermutationAssignment> CanonicalizeAssignment(const PermutationSpace& space,
-                                                         const PermutationAssignment& assignment);
-CookResult<uint32_t> IndexOfAxisValue(const PermutationAxis& axis, const PermutationValue& value) noexcept;
-CookResult<uint32_t> ComputeVariantIndex(const PermutationSpace& space,
-                                         const PermutationAssignment& canonical);
-uint32_t ComputeVariantSpaceSize(const PermutationSpace& space) noexcept;
+PermutationAssignment CanonicalizeAssignment(const PermutationSpace& space, const PermutationAssignment& assignment);
+int32_t ComputeVariantIndex(const PermutationSpace& space, const PermutationAssignment& canonical);
+int32_t ComputeVariantSpaceSize(const PermutationSpace& space) noexcept;
 
 /**Every axis name must match an `extern const static` declaration in the shader. A mismatch links a
- * symbol nobody references, leaves the shader on its default, and errors nowhere -- this will result in 
+ * symbol nobody references, leaves the shader on its default, and errors nowhere -- this will result in
  * a set of variants with duplicate source code and behavior, when we explicitly don't want that. */
-CookResult<void> VerifyAxisNamesAreDeclared(const PermutationSpace& space,
-                                            std::span<const std::string> source_texts,
-                                            std::string_view module_name);
+[[nodiscard]] CookError VerifyAxisNamesAreDeclared(const PermutationSpace& space,
+                                                   std::span<const std::string> source_texts,
+                                                   std::string_view module_name);
 
 /**The other direction: an `extern` constant that no axis drives keeps its default in every variant.
  * This is what our resource sizing annotations rely on, in the Slang compiler machinery (though they

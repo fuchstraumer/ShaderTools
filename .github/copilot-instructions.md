@@ -73,6 +73,27 @@ Struct::Struct(int _val0, int _val1, int _val2) :
 
 Examples of well formatted code in this codebase: `Future.hpp`, `InputManager.hpp` + `InputManager.cpp`, `Context.hpp` + `Context.cpp`. 
 
+#### Integer Types
+- **Signed by default.** Use `int32_t` for an index, a count, a loop counter, an offset, or anything
+  that takes part in arithmetic. `int64_t` when the range needs it. This reverses the older habit in
+  this codebase, and the older habit was wrong
+- **Why.** Unsigned subtraction wraps silently, so `i - 1` at `i == 0` gives a huge number instead of a
+  negative one. A mixed signed and unsigned comparison converts in a way few people predict: `-1 < 1u`
+  is false. `ptrdiff_t` is signed, so every iterator distance forces a cast. A sentinel wants to be
+  `-1`, not `UINT32_MAX`. Signed overflow is undefined, which reads like a drawback and is not: the
+  compiler may assume it never happens, so it can strength-reduce and unroll a loop that an unsigned
+  counter blocks
+- **Four things stay unsigned**, and each one is load bearing:
+  - A hash. `ContentHashValue` is `uint64_t`, and defined wraparound is the arithmetic FNV-1a asks for
+  - A bitmask. A shift into the sign bit of a signed type is undefined
+  - A serialized record. The manifest uses `uint32` cross-references, and `static_assert` pins each
+    record size, because those bytes are a file format and not arithmetic
+  - A byte size, where the value is a measurement of storage and never an index
+- **The line to remember:** unsigned describes bytes and bit patterns. Signed describes arithmetic and
+  indices
+- Use `std::ssize` rather than `.size()` where a signed length is wanted. Cast a `size_t` from the
+  standard library at the boundary, once, rather than letting it spread inward
+
 #### C++ Language Preferences
 - **Functions**: No implementations in headers; mark `constexpr` and `noexcept` when possible
 - **Constructors**: Should be `noexcept` when possible
@@ -84,9 +105,16 @@ Examples of well formatted code in this codebase: `Future.hpp`, `InputManager.hp
   and never borrows `RhiError`. `tools/shader_cooker` is the reference: `CookError` +
   `template<typename T> using CookResult = std::expected<T, CookError>;` in `CookerErrors.hpp`, with a
   `ToString(CookError)` declared there and defined in the matching source file
-- **`Result<void>`**: `std::expected<void, E>` is the return type for "can fail, yields nothing." Return a
-  braced `{}` for success and `std::unexpected(Error::Whatever)` for failure. Propagate by returning the
-  `Result` itself rather than re-wrapping it
+- **A function that yields nothing returns the error enum itself**, not `Result<void>`. `CookResult<void>`
+  says only "this succeeds or it fails", and `CookError` already carries `Success` for that. Propagate
+  between two such functions with a plain `return error;`, and wrap only at the boundary into a
+  `Result<T>`, with `std::unexpected(error)`
+- **Every such function must be `[[nodiscard]]`. No exceptions.** A bare enum return reads like a C
+  status code, and a C status code gets ignored. The attribute is the only thing that stops it
+- **Better than either: return nothing.** Before you pick a return type, ask whether the function can
+  actually fail. A function whose inputs were validated at the boundary cannot, and it should return
+  `void` or the value. Most of the friction that looks like "too many `Result` types" is really
+  functions declaring an error they can never produce
 - **Error logging**: For debug code or code that will be executed only on native, log with `std::println` frequently and often if it will help debugging. Same philosophy as comments though: do not fill it up for the sake of saying something.
 - **Dynamic allocation**: avoid as much as possible, whenever possible. If required, allocate carefully, reserve upfront, and do not let memory persist
 - Used ranged-for loops with the ranges library when possible, and as many of the algorithms header from that library as you can
@@ -123,8 +151,23 @@ for valid paths and directories.
 - **Error Handling**: Use `Result` types for function return status within RHI code; avoid exceptions. For code outside core Rhi, create a new enum class and use it with `std::expected` for error handling. Bubble up errors to the caller instead of logging and returning a default value.
 
 #### Error Handling
+- **Validate at the ingestion surface. Trust inside.** Treat every input that arrives from outside --
+  a command line, a file, a socket, a compiler API -- as untrusted, and check it once, there. Sanitize
+  it where sanitizing cannot break another promise. After that boundary the data is known good, and a
+  function that re-tests it adds a code path nobody can reach and nobody tests
+- **Keep every validator. Delete every defensive check.** These look alike and are not the same thing:
+  - A **validator** compares two answers that were derived independently. `VerifyLibraryRoundTrip`,
+    `ValidateVariantReflection`, `VerifyManifestRoundTrip`, and `--verify-deterministic` are the whole
+    correctness argument of this repository. They are internal, they look redundant, and they stay
+  - A **defensive check** re-tests an invariant the code already established. An index that this code
+    put in a table does not need a bounds test before this code reads it back. If it is out of range,
+    the answer is a defect, not a `false`
+- **An error message is user feedback first.** Write the record for the person who has to fix the
+  shader, and name the file, the entry point, and the value. A stage builds the record; a sink decides
+  what it looks like. Compilation must never format a string
 - **Result<T>**: Use a rust-like Result<T> bubbled up through functions to return a value or an error
-  code to users
+  code to users when the function actually returns a *discrete result type* `T`. As mentioned above, return
+  an error code itself and enforce `[[nodiscard]]` at all times when doing this to ensure it is not ignored.
 - **Error Values**: Use an enum class of the minimum width required to convey the systems range of errors.
   Use 0 as an invalid initial value, 1 as success, and pin all further error codes to be > 1
 - **Error Messages**: For `enum class` error values, provide an enum-to-stringview conversion function in
