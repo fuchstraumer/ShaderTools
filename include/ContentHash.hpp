@@ -30,6 +30,7 @@ struct ContentHashFunction
 };
 
 ContentHashValue HashFnv1a64(std::string_view bytes) noexcept;
+ContentHashValue HashXXHash3(std::string_view bytes) noexcept;
 
 /**@brief Mixes one more value into a running hash. A layout hashes field by field, so it needs this. */
 ContentHashValue CombineHash(ContentHashValue seed, uint64_t value) noexcept;

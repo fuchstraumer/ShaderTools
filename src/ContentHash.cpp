@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <string_view>
+#include <xxhash.h>
 
 namespace lodestone
 {
@@ -13,6 +14,8 @@ namespace
     constexpr ContentHashValue k_Fnv1aPrime = 1099511628211ull;
 
 } // namespace
+
+constexpr bool k_UseXXHash3 = true;
 
 ContentHashValue HashFnv1a64(std::string_view bytes) noexcept
 {
@@ -27,20 +30,33 @@ ContentHashValue HashFnv1a64(std::string_view bytes) noexcept
     return hash;
 }
 
+ContentHashValue HashXXHash3(std::string_view bytes) noexcept
+{
+    return XXH3_64bits(bytes.data(), bytes.size());
+}
+
 ContentHashValue CombineHash(ContentHashValue seed, uint64_t value) noexcept
 {
-    for (uint32_t byteIndex = 0u; byteIndex < 8u; ++byteIndex)
+    if (!k_UseXXHash3)
     {
-        seed ^= (value >> (byteIndex * 8u)) & 0xFFull;
-        seed *= k_Fnv1aPrime;
+        for (uint32_t byteIndex = 0u; byteIndex < 8u; ++byteIndex)
+        {
+            seed ^= (value >> (byteIndex * 8u)) & 0xFFull;
+            seed *= k_Fnv1aPrime;
+        }
+
+        return seed;
+    }
+    else
+    {
+        return XXH3_64bits_withSeed(&value, sizeof(value), seed);
     }
 
-    return seed;
 }
 
 ContentHashFunction DefaultContentHashFunction() noexcept
 {
-    return ContentHashFunction{ "fnv1a-64", &HashFnv1a64 };
+    return ContentHashFunction{ "xxhash3_64", &HashXXHash3 };
 }
 
 } // namespace lodestone
