@@ -5,6 +5,8 @@
 #include "CookerOptions.hpp"
 #include "PermutationSpace.hpp"
 #include "RawLibrary.hpp"
+#include "ShaderDataSchema.hpp"
+#include <span>
 #include <string>
 #include <string_view>
 
@@ -37,6 +39,11 @@ std::string DumpVariantSet(std::string_view module_name, const VariantSet& varia
 /** Stage 3. Everything Slang said, with every `[vx_*]` argument still a string. A reader can see here
  * whether a wrong size came out of the compiler or out of the arithmetic that follows it. */
 std::string DumpRawModule(const RawModule& module);
+
+/** Stage 4. The same model as stage 3, with every `[vx_*]` argument evaluated for this variant. This
+ * is the last dump that shows a size still attached to one variant's bindings, before interning
+ * collapses them into shared tables. */
+std::string DumpResolvedModule(std::string_view module_name, std::span<const CompiledVariant> variants);
 
 /** Stage 7. The frozen tables, the indices each variant keys into them with, and what each interner
  * measured while it filled them. */

@@ -541,6 +541,62 @@ std::string DumpRawModule(const RawModule& module)
     return FinishDocument(writer);
 }
 
+std::string DumpResolvedModule(std::string_view module_name, std::span<const CompiledVariant> variants)
+{
+    JsonWriter writer{ true };
+    writer.BeginObject();
+    writer.KeyString("stage", "resolved");
+    writer.KeyString("module", module_name);
+    writer.KeyUInt("variantCount", variants.size());
+
+    writer.Key("variants");
+    writer.BeginArray();
+    for (const CompiledVariant& variant : variants)
+    {
+        writer.BeginObject();
+        writer.KeyUInt("index", variant.VariantIndex);
+        writer.KeyString("suffix", variant.VariantSuffix);
+        writer.KeyString("description", variant.VariantDescription);
+
+        writer.Key("globalBindings");
+        writer.BeginArray();
+        for (const ReflectedBinding& binding : variant.GlobalBindings)
+        {
+            WriteBinding(writer, binding);
+        }
+        writer.EndArray();
+
+        writer.Key("entryPoints");
+        writer.BeginArray();
+        for (const CompiledEntryPoint& entryPoint : variant.EntryPoints)
+        {
+            writer.BeginObject();
+            writer.KeyString("name", entryPoint.Name);
+            writer.KeyString("stage", magic_enum::enum_name(entryPoint.Reflection.Stage));
+            writer.Key("workgroup");
+            writer.BeginObject();
+            writer.KeyUInt("x", entryPoint.Reflection.Workgroup.X);
+            writer.KeyUInt("y", entryPoint.Reflection.Workgroup.Y);
+            writer.KeyUInt("z", entryPoint.Reflection.Workgroup.Z);
+            writer.EndObject();
+            writer.KeyUInt("targetTextByteLength", entryPoint.Code.size());
+            writer.KeyUInt("targetTextHash", HashSourcePayload(entryPoint.Code));
+            WriteIndexArray(writer, "usedBindingIndices", entryPoint.Reflection.UsedBindingIndices);
+            WriteVertexInputs(writer, entryPoint.Reflection.Raster);
+            WriteColorTargets(writer, entryPoint.Reflection.Raster);
+            writer.KeyBool("writesFragDepth", entryPoint.Reflection.Raster.WritesFragDepth);
+            writer.EndObject();
+        }
+        writer.EndArray();
+
+        writer.EndObject();
+    }
+    writer.EndArray();
+
+    writer.EndObject();
+    return FinishDocument(writer);
+}
+
 std::string DumpCookedModule(const CookedModule& module)
 {
     JsonWriter writer{ true };

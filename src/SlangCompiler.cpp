@@ -4,7 +4,6 @@
 #include "ResourceFlags.hpp"
 #include "ShaderDataSchema.hpp"
 #include "ShaderLibraryTypes.hpp"
-#include "SizeExpression.hpp"
 
 #include <filesystem>
 #include <ios>
@@ -39,11 +38,12 @@ namespace
     constexpr const char* k_DisabledWarnings = "31010";
     constexpr SlangUInt k_WorkgroupAxisCount = 3u;
 
-    // Slang drops the `Attribute` suffix from the struct name, so these match the declarations in
-    // assets/shaders/VeloxAttributes.slang.
-    constexpr const char* k_ElementCountAttribute = "vx_element_count";
-    constexpr const char* k_Extent2dAttribute = "vx_extent_2d";
-    constexpr const char* k_Extent3dAttribute = "vx_extent_3d";
+    // The shader-side attribute names live on RawSizeAttributeKind, so one table states the contract
+    // and this file asks it for the spelling. Slang drops the `Attribute` suffix from the struct name,
+    // so those strings match the declarations in tests/assets/LodestoneAttributes.slang.
+    constexpr std::array<RawSizeAttributeKind, 3u> k_SizeAttributeKinds{ RawSizeAttributeKind::ElementCount,
+                                                                         RawSizeAttributeKind::Extent2d,
+                                                                         RawSizeAttributeKind::Extent3d };
 
     /** Attribute string arguments reflect as a pointer plus a length, and a null return means the
      * argument was not a string literal after all. That is a cook error rather than a skip: the
@@ -572,9 +572,8 @@ struct SlangCompiler::Impl
     std::vector<std::string> EntryPointNames;
     std::vector<slang::CompilerOptionEntry> CompilerOptions;
     std::vector<std::string> ModuleSourceTexts;
-    /** Rebuilt for each variant: what a `[vx_*]` size expression is allowed to name. */
-    std::vector<SizeSymbol> CurrentSymbols;
-    /** Module-wide and constant across variants; owns the strings `currentSymbols` points at. */
+    /** The declared default of every `extern const static` constant no axis drives. Only Slang knows
+     * these, and stage 4 may not call Slang, so they leave this file on `RawModule::ExternDefaults`. */
     std::vector<ExternConstantDefault> ExternDefaults;
     std::string ModuleName;
     bool MultithreadEntryPointCodegen{ true };
@@ -595,22 +594,11 @@ struct SlangCompiler::Impl
                                         std::vector<RawSizeAttribute>& out_attributes);
     CookResult<void> CollectRawSizeAttributes(slang::VariableReflection* leaf_variable,
                                               std::string_view binding_name,
-                                              std::vector<RawSizeAttribute>& out_attributes);
+                                              std::vector<RawSizeAttribute>& out_attributes) const;
     static void ApplyLeafTypeLayout(slang::TypeLayoutReflection* global_layout,
                                     SlangInt range_index,
                                     slang::BindingType binding_type,
                                     RawBinding& binding);
-    CookResult<DerivedSize> ResolveDerivedSize(std::span<const RawSizeAttribute> attributes,
-                                               std::string_view binding_name);
-    CookResult<DerivedSize> ResolveElementCount(const RawSizeAttribute& attribute,
-                                                std::string_view binding_name,
-                                                DerivedSize& derived);
-    CookResult<void> ResolveDerivedExtent(const RawSizeAttribute& attribute,
-                                          std::string_view binding_name,
-                                          DerivedSize& derived);
-    CookResult<uint32_t> EvaluateExtentArgument(const RawSizeAttribute& attribute,
-                                                uint32_t argument_index,
-                                                std::string_view binding_name);
     static void CollectUsedBindingIndices(slang::IComponentType* linked_program,
                                           SlangInt entry_point_index,
                                           const std::vector<RawBinding>& global_bindings,
@@ -910,177 +898,23 @@ void SlangCompiler::Impl::ApplyLeafTypeLayout(slang::TypeLayoutReflection* globa
     }
 }
 
-CookResult<uint32_t> SlangCompiler::Impl::EvaluateExtentArgument(const RawSizeAttribute& attribute,
-                                                                 uint32_t argument_index,
-                                                                 std::string_view binding_name)
-{
-    if (argument_index >= attribute.Arguments.size())
-    {
-        std::println(stderr,
-                     "[shader_cooker] [{}] on '{}' is missing argument {}",
-                     ToString(attribute.Kind),
-                     binding_name,
-                     argument_index);
-        return std::unexpected(CookError::SizeExpressionParseFailed);
-    }
-
-    const CookResult<int64_t> value =
-        EvaluateSizeExpression(attribute.Arguments[argument_index], CurrentSymbols);
-    if (!value)
-    {
-        return std::unexpected(value.error());
-    }
-
-    if (value.value() <= 0)
-    {
-        std::println(stderr,
-                     "[shader_cooker] extent argument {} on '{}' evaluated to {}, which is not a valid "
-                     "texture dimension",
-                     argument_index,
-                     binding_name,
-                     value.value());
-        return std::unexpected(CookError::SizeExpressionOutOfRange);
-    }
-
-    return static_cast<uint32_t>(value.value());
-}
-
-CookResult<void> SlangCompiler::Impl::ResolveDerivedExtent(const RawSizeAttribute& attribute,
-                                                           std::string_view binding_name,
-                                                           DerivedSize& derived)
-{
-    const uint32_t argumentCount = ArgumentCountOf(attribute.Kind);
-    std::array<uint32_t, 3u> axes{ 1u, 1u, 1u };
-
-    for (uint32_t i = 0u; i < argumentCount && i < axes.size(); ++i)
-    {
-        const CookResult<uint32_t> value = EvaluateExtentArgument(attribute, i, binding_name);
-        if (!value)
-        {
-            return std::unexpected(value.error());
-        }
-
-        axes.at(i) = value.value();
-    }
-
-    derived.ExtentX = axes[0];
-    derived.ExtentY = axes[1];
-    derived.ExtentZ = axes[2];
-    derived.HasExtent = true;
-    return {};
-}
-
-CookResult<DerivedSize> SlangCompiler::Impl::ResolveElementCount(const RawSizeAttribute& attribute,
-                                                                 std::string_view binding_name,
-                                                                 DerivedSize& derived)
-{
-    if (attribute.Arguments.empty())
-    {
-        std::println(
-            stderr, "[shader_cooker] [{}] on '{}' has no argument", ToString(attribute.Kind), binding_name);
-        return std::unexpected(CookError::SizeExpressionParseFailed);
-    }
-
-    const CookResult<int64_t> value = EvaluateSizeExpression(attribute.Arguments.front(), CurrentSymbols);
-    if (!value)
-    {
-        std::println(
-            stderr, "[shader_cooker] [{}] on '{}' did not evaluate", ToString(attribute.Kind), binding_name);
-        return std::unexpected(value.error());
-    }
-
-    if (value.value() <= 0)
-    {
-        std::println(stderr,
-                     "[shader_cooker] [{}] on '{}' evaluated to {}, which cannot size a buffer",
-                     ToString(attribute.Kind),
-                     binding_name,
-                     value.value());
-        return std::unexpected(CookError::SizeExpressionOutOfRange);
-    }
-
-    derived.Expression = attribute.Arguments.front();
-    derived.ElementCount = static_cast<uint64_t>(value.value());
-    derived.HasElementCount = true;
-    return derived;
-}
-
-/** Stage 4 for one resource. Every input is a string stage 3 carried across without reading it, and
- * every symbol comes from the variant's axis values plus the extern defaults. Nothing here names a
- * Slang type, which is the property that lets step D5 move this file. */
-CookResult<DerivedSize> SlangCompiler::Impl::ResolveDerivedSize(std::span<const RawSizeAttribute> attributes,
-                                                                std::string_view binding_name)
-{
-    DerivedSize derived;
-
-    const RawSizeAttribute* extent2d = nullptr;
-    const RawSizeAttribute* extent3d = nullptr;
-
-    for (const RawSizeAttribute& attribute : attributes)
-    {
-        if (attribute.Kind == RawSizeAttributeKind::ElementCount)
-        {
-            const CookResult<DerivedSize> counted = ResolveElementCount(attribute, binding_name, derived);
-            if (!counted)
-            {
-                return std::unexpected(counted.error());
-            }
-        }
-        else if (attribute.Kind == RawSizeAttributeKind::Extent2d)
-        {
-            extent2d = &attribute;
-        }
-        else if (attribute.Kind == RawSizeAttributeKind::Extent3d)
-        {
-            extent3d = &attribute;
-        }
-    }
-
-    if (extent2d != nullptr && extent3d != nullptr)
-    {
-        std::println(stderr,
-                     "[shader_cooker] '{}' carries both [{}] and [{}]; only one may size a texture",
-                     binding_name,
-                     k_Extent2dAttribute,
-                     k_Extent3dAttribute);
-        return std::unexpected(CookError::ReflectionSizeUnresolved);
-    }
-
-    const RawSizeAttribute* extent = extent2d != nullptr ? extent2d : extent3d;
-    if (extent == nullptr)
-    {
-        return derived;
-    }
-
-    const CookResult<void> extentResult = ResolveDerivedExtent(*extent, binding_name, derived);
-    if (!extentResult)
-    {
-        return std::unexpected(extentResult.error());
-    }
-
-    return derived;
-}
-
 /** Reads one `[vx_*]` annotation into its argument strings. Stage 3 never evaluates one, so a
  * malformed argument is caught here only when it is not a string at all. */
-CookResult<void> SlangCompiler::Impl::CollectRawSizeAttributes(slang::VariableReflection* leaf_variable,
-                                                               std::string_view binding_name,
-                                                               std::vector<RawSizeAttribute>& out_attributes)
+CookResult<void> SlangCompiler::Impl::CollectRawSizeAttributes(
+    slang::VariableReflection* leaf_variable,
+    std::string_view binding_name,
+    std::vector<RawSizeAttribute>& out_attributes) const
 {
     if (leaf_variable == nullptr)
     {
         return {};
     }
 
-    constexpr std::array<std::pair<RawSizeAttributeKind, const char*>, 3u> k_Attributes{
-        std::pair{ RawSizeAttributeKind::ElementCount, k_ElementCountAttribute },
-        std::pair{ RawSizeAttributeKind::Extent2d, k_Extent2dAttribute },
-        std::pair{ RawSizeAttributeKind::Extent3d, k_Extent3dAttribute }
-    };
-
-    for (const auto& [kind, name] : k_Attributes)
+    for (const RawSizeAttributeKind kind : k_SizeAttributeKinds)
     {
-        slang::Attribute* found = leaf_variable->findAttributeByName(GlobalSession.get(), name);
+        const std::string attributeName{ ToString(kind) };
+        slang::Attribute* found =
+            leaf_variable->findAttributeByName(GlobalSession.get(), attributeName.c_str());
         if (found == nullptr)
         {
             continue;
@@ -1398,108 +1232,6 @@ CookResult<RawVariant> SlangCompiler::CompileVariantRaw(const VariantDescriptor&
     }
 
     return variant;
-}
-
-CookResult<CompiledVariant> SlangCompiler::ResolveVariant(const RawVariant& raw,
-                                                          const VariantDescriptor& descriptor)
-{
-    if (impl == nullptr)
-    {
-        return std::unexpected(CookError::CompilerNotInitialized);
-    }
-
-    // Size expressions resolve against the canonical assignment, so every axis is nameable even when
-    // a dependent one is off. A disabled axis contributes nothing to the shader, so any expression
-    // that reads it was already independent of the value. Undriven externs come first, so an axis of
-    // the same name would win -- though the two sets are disjoint by construction.
-    impl->CurrentSymbols.clear();
-    impl->CurrentSymbols.reserve(descriptor.Canonical.size() + impl->ExternDefaults.size());
-    for (const ExternConstantDefault& entry : impl->ExternDefaults)
-    {
-        impl->CurrentSymbols.push_back(SizeSymbol{ entry.Name, entry.Value });
-    }
-
-    for (const PermutationBinding& binding : descriptor.Canonical)
-    {
-        impl->CurrentSymbols.push_back(
-            SizeSymbol{ binding.first->Name, PermutationValueToInt64(binding.second) });
-    }
-
-    CompiledVariant variant;
-    variant.VariantSuffix = raw.VariantSuffix;
-    variant.VariantDescription = raw.VariantDescription;
-    variant.VariantIndex = raw.VariantIndex;
-    variant.GlobalBindings.reserve(raw.GlobalBindings.size());
-
-    for (size_t i = 0u; i < raw.GlobalBindings.size(); ++i)
-    {
-        const RawBinding& rawBinding = raw.GlobalBindings[i];
-
-        ReflectedBinding binding;
-        binding.Name = rawBinding.Name;
-        binding.Kind = rawBinding.Kind;
-        binding.ElementStride = rawBinding.ElementStride;
-        binding.ByteSize = rawBinding.ByteSize;
-        binding.ArrayCount = rawBinding.ArrayCount;
-        binding.Shape = rawBinding.Shape;
-        binding.SampleType = rawBinding.SampleType;
-        binding.StorageFormat = rawBinding.StorageFormat;
-        binding.StorageAccess = rawBinding.StorageAccess;
-        binding.SamplerType = rawBinding.SamplerType;
-        binding.UniformMembers = rawBinding.UniformMembers;
-
-        if (const BoundPlacement* placement = GetBoundPlacement(rawBinding.Placement))
-        {
-            binding.Group = placement->Group;
-            binding.Binding = placement->Binding;
-        }
-
-        std::vector<RawSizeAttribute> attributes;
-        for (const RawSizeAttribute& attribute : raw.SizeAttributes)
-        {
-            if (attribute.BindingIndex == i)
-            {
-                attributes.push_back(attribute);
-            }
-        }
-
-        CookResult<DerivedSize> derived = impl->ResolveDerivedSize(attributes, binding.Name);
-        if (!derived)
-        {
-            return std::unexpected(derived.error());
-        }
-
-        binding.Derived = std::move(derived.value());
-        variant.GlobalBindings.push_back(std::move(binding));
-    }
-
-    variant.EntryPoints.reserve(raw.EntryPoints.size());
-    for (const RawEntryPoint& rawEntryPoint : raw.EntryPoints)
-    {
-        CompiledEntryPoint entryPoint;
-        entryPoint.Name = rawEntryPoint.Name;
-        entryPoint.VariantSuffix = rawEntryPoint.VariantSuffix;
-        entryPoint.Code = rawEntryPoint.TargetText;
-        entryPoint.Reflection.Name = rawEntryPoint.Name;
-        entryPoint.Reflection.Stage = rawEntryPoint.Stage;
-        entryPoint.Reflection.Workgroup = rawEntryPoint.Workgroup;
-        entryPoint.Reflection.UsedBindingIndices = rawEntryPoint.UsedBindingIndices;
-        entryPoint.Reflection.Raster = rawEntryPoint.Raster;
-        variant.EntryPoints.push_back(std::move(entryPoint));
-    }
-
-    return variant;
-}
-
-CookResult<CompiledVariant> SlangCompiler::CompileVariant(const VariantDescriptor& descriptor)
-{
-    const CookResult<RawVariant> raw = CompileVariantRaw(descriptor);
-    if (!raw)
-    {
-        return std::unexpected(raw.error());
-    }
-
-    return ResolveVariant(raw.value(), descriptor);
 }
 
 std::span<const ExternConstantDefault> SlangCompiler::GetExternConstantDefaults() const noexcept

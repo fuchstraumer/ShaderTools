@@ -15,7 +15,7 @@ namespace
 
 } // namespace
 
-constexpr bool k_UseXXHash3 = true;
+constexpr bool k_UseXXHash3 = false;
 
 ContentHashValue HashFnv1a64(std::string_view bytes) noexcept
 {

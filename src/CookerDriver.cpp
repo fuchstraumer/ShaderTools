@@ -5,6 +5,7 @@
 #include "DedupeReport.hpp"
 #include "OutputSink.hpp"
 #include "PermutationSpace.hpp"
+#include "ResolveStage.hpp"
 #include "ShaderDataSchema.hpp"
 #include "ShaderLibraryEmitter.hpp"
 #include "ShaderManifestEmitter.hpp"
@@ -421,8 +422,9 @@ namespace
                 return std::unexpected(rawResult.error());
             }
 
-            CookResult<CompiledVariant> variantResult =
-                compiler.ResolveVariant(rawResult.value(), descriptor);
+            const ResolveContext context =
+                MakeResolveContext(descriptor.Canonical, compiler.GetExternConstantDefaults());
+            CookResult<CompiledVariant> variantResult = ResolveVariant(rawResult.value(), context);
             if (!variantResult)
             {
                 std::println(stderr,
@@ -590,6 +592,20 @@ namespace
             !rawDump)
         {
             return rawDump;
+        }
+
+        if (CookResult<void> resolvedDump =
+                WriteStageDumpIfRequested(options,
+                                          sink,
+                                          moduleName,
+                                          StageDumpKind::Resolved,
+                                          [&]
+                                          {
+                                              return DumpResolvedModule(moduleName, moduleVariants);
+                                          });
+            !resolvedDump)
+        {
+            return resolvedDump;
         }
 
         if (CookResult<void> finalized = FinalizeModule(cookedModule, moduleVariants); !finalized)
