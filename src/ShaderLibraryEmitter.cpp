@@ -79,12 +79,12 @@ namespace
 
         if (raster.VertexInputs.empty())
         {
-            emitted += std::format("constexpr lodestone::VertexAttributeInfo k_VertexInputs{}[1]{{}};\n", index);
+            emitted += std::format("constexpr lodestone::VertexAttributeInfo k_VertexInputs{}[1]\n{{}};\n", index);
             emitted += std::format("constexpr uint32_t k_VertexInputCount{} = 0u;\n", index);
         }
         else
         {
-            emitted += std::format("constexpr lodestone::VertexAttributeInfo k_VertexInputs{}[]{{\n", index);
+            emitted += std::format("constexpr lodestone::VertexAttributeInfo k_VertexInputs{}[]\n{{\n", index);
             for (const ReflectedVertexInput& input : raster.VertexInputs)
             {
                 emitted += std::format("    lodestone::VertexAttributeInfo{{ \"{}\", {}u, {}u, {}, {}u }},\n",
@@ -103,12 +103,12 @@ namespace
 
         if (raster.ColorTargets.empty())
         {
-            emitted += std::format("constexpr lodestone::ColorTargetInfo k_ColorTargets{}[1]{{}};\n", index);
+            emitted += std::format("constexpr lodestone::ColorTargetInfo k_ColorTargets{}[1]\n{{}};\n", index);
             emitted += std::format("constexpr uint32_t k_ColorTargetCount{} = 0u;\n", index);
         }
         else
         {
-            emitted += std::format("constexpr lodestone::ColorTargetInfo k_ColorTargets{}[]{{\n", index);
+            emitted += std::format("constexpr lodestone::ColorTargetInfo k_ColorTargets{}[]\n{{\n", index);
             for (const ReflectedColorTarget& target : raster.ColorTargets)
             {
                 emitted += std::format("    lodestone::ColorTargetInfo{{ {}u, {}, {}u }},\n",
@@ -194,7 +194,7 @@ namespace
             return {};
         }
 
-        std::string emitted = std::format("constexpr lodestone::UniformMemberInfo {}[]{{\n",
+        std::string emitted = std::format("constexpr lodestone::UniformMemberInfo {}[]\n{{\n",
                                           MakeUniformMemberTableName(layout_index, binding_index));
         for (const ReflectedUniformMember& member : binding.UniformMembers)
         {
@@ -204,7 +204,7 @@ namespace
                                    member.Size,
                                    member.ArrayCount);
         }
-        emitted += "};\n";
+        emitted += "};\n\n";
         return emitted;
     }
 
@@ -538,7 +538,7 @@ namespace
             emitted += EmitUniformMemberTable(layout[bindingIndex], layout_index, bindingIndex);
         }
 
-        emitted += std::format("constexpr lodestone::BindingInfo k_Layout{}[]{{\n", layout_index);
+        emitted += std::format("constexpr lodestone::BindingInfo k_Layout{}[]\n{{\n", layout_index);
         for (size_t bindingIndex = 0u; bindingIndex < layout.size(); ++bindingIndex)
         {
             const ReflectedBinding& binding = layout[bindingIndex];
@@ -548,7 +548,7 @@ namespace
             emitted += EmitBindingRow(binding, memberTableName);
         }
 
-        emitted += "};\n";
+        emitted += "};\n\n";
         emitted += std::format("constexpr uint32_t k_LayoutCount{} = {}u;\n\n", layout_index, layout.size());
         return emitted;
     }
@@ -620,7 +620,7 @@ namespace
 
         for (size_t entryPointIndex = 0u; entryPointIndex < module.EntryPoints.size(); ++entryPointIndex)
         {
-            emitted += std::format("constexpr VariantRecord k_{}_Variants[{}]{{\n",
+            emitted += std::format("constexpr VariantRecord k_{}_Variants[{}]\n{{\n",
                                    MakeTypeIdentifier(module.EntryPoints[entryPointIndex].Name),
                                    module.SpaceSize);
 
