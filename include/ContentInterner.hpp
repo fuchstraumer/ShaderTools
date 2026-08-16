@@ -11,21 +11,23 @@
 /**
  * Collapses equal artifacts onto one entry, and records who mapped where. The name Interner
  * comes from the compiler world, where it is used to collapse equal strings onto one copy. This
- * is just a generalized interner of sorts, a kind of "hash table with provenance". 
+ * is just a generalized interner of sorts, a kind of "hash table with provenance".
+ *
+ * The provenance is important because there are many ways to get the same artifact. We
+ * want to know what those inputs were, so that if we have issues with a specific instance
+ * of an artifact, we can trace it back to it's source
  * 
- * and to be clear, provenance (literally) is the record of where something came from... so the
- * provenance of a shader variant is the set of entry points and parameters that produced it.
  *
  * Three rules control this class:
- * 
- * 1. Hashes only find buckets. A hash does not identify the data. 
- *    If hashes match, the class compares the bytes. If bytes are different, 
+ *
+ * 1. Hashes only find buckets. A hash does not identify the data.
+ *    If hashes match, the class compares the bytes. If bytes are different,
  *    the class keeps both items and records the collision.
- * 
- * 2. The class records all sources. A unique item keeps a list of its 
+ *
+ * 2. The class records all sources. A unique item keeps a list of its
  *    original inputs. You can always trace an output back to its inputs.
- * 
- * 3. You can stop deduplication. The `Disable()` function gives every item 
+ *
+ * 3. You can stop deduplication. The `Disable()` function gives every item
  *    its own index. The build output must be correct and identical in both modes.
  */
 namespace lodestone
@@ -57,20 +59,20 @@ struct InternerStatistics
     uint32_t ByteComparisons{ 0u };
 };
 
-/**@brief Note that this is templated on the payload type: that affects how equality and hashing can be performed,
- * and is another way we give ourselves flexibilty with output formats. This could be changed to be SPIR-V, or GLSL,
- * or DXIL, or any other format we want to support. The interner doesn't care, it just needs to be able to hash and compare
- * the payload type. */
+/**@brief Note that this is templated on the payload type: that affects how equality and hashing can be
+ * performed, and is another way we give ourselves flexibilty with output formats. This could be changed to be
+ * SPIR-V, or GLSL, or DXIL, or any other format we want to support. The interner doesn't care, it just needs
+ * to be able to hash and compare the payload type. */
 template<typename PayloadType>
 class ContentInterner final
 {
 public:
     using HashFunction = ContentHashValue (*)(const PayloadType&) noexcept;
 
-    ContentInterner(HashFunction hash_function, std::string_view hash_name) noexcept :
-        hashFunction{ hash_function },
-        hashName{ hash_name },
-        dedupeEnabled{ true }
+    ContentInterner(HashFunction hash_function, std::string_view hash_name) noexcept
+        : hashFunction{ hash_function },
+          hashName{ hash_name },
+          dedupeEnabled{ true }
     {
     }
 

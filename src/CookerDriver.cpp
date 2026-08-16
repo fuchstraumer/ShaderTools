@@ -396,17 +396,33 @@ namespace
         }
     }
 
+    /** Stage 3 then stage 4, one variant at a time. The raw output is kept only when a dump asked for
+     * it, because it holds the target text a second time and a 35-variant module is not small. */
     CookResult<void> CompileModuleVariants(const CookerOptions& options,
                                            SlangCompiler& compiler,
                                            const VariantSet& variant_set,
                                            CookedModule& cooked_module,
+                                           RawModule& raw_module,
                                            std::vector<CompiledVariant>& out_module_variants,
                                            std::vector<CompiledVariant>& out_variants,
                                            CookStatistics& statistics)
     {
+        const bool keepRawVariants = IsStageDumpRequested(options, StageDumpKind::Raw);
+
         for (const VariantDescriptor& descriptor : variant_set.Variants)
         {
-            CookResult<CompiledVariant> variantResult = compiler.CompileVariant(descriptor);
+            CookResult<RawVariant> rawResult = compiler.CompileVariantRaw(descriptor);
+            if (!rawResult)
+            {
+                std::println(stderr,
+                             "[shader_cooker] variant [{}] failed: {}",
+                             DescribeAssignment(descriptor.Canonical),
+                             ToString(rawResult.error()));
+                return std::unexpected(rawResult.error());
+            }
+
+            CookResult<CompiledVariant> variantResult =
+                compiler.ResolveVariant(rawResult.value(), descriptor);
             if (!variantResult)
             {
                 std::println(stderr,
@@ -414,6 +430,11 @@ namespace
                              DescribeAssignment(descriptor.Canonical),
                              ToString(variantResult.error()));
                 return std::unexpected(variantResult.error());
+            }
+
+            if (keepRawVariants)
+            {
+                raw_module.Variants.push_back(std::move(rawResult.value()));
             }
 
             CompiledVariant& variant = variantResult.value();
@@ -538,16 +559,37 @@ namespace
         std::vector<CompiledVariant> moduleVariants;
         moduleVariants.reserve(variantSet.value().Variants.size());
 
+        RawModule rawModule;
+        rawModule.Name = moduleName;
+        rawModule.EntryPointNames.assign(compiler.GetEntryPointNames().begin(),
+                                         compiler.GetEntryPointNames().end());
+        rawModule.ExternDefaults.assign(compiler.GetExternConstantDefaults().begin(),
+                                        compiler.GetExternConstantDefaults().end());
+
         if (CookResult<void> compiled = CompileModuleVariants(options,
                                                               compiler,
                                                               variantSet.value(),
                                                               cookedModule,
+                                                              rawModule,
                                                               moduleVariants,
                                                               out_variants,
                                                               statistics);
             !compiled)
         {
             return compiled;
+        }
+
+        if (CookResult<void> rawDump = WriteStageDumpIfRequested(options,
+                                                                 sink,
+                                                                 moduleName,
+                                                                 StageDumpKind::Raw,
+                                                                 [&]
+                                                                 {
+                                                                     return DumpRawModule(rawModule);
+                                                                 });
+            !rawDump)
+        {
+            return rawDump;
         }
 
         if (CookResult<void> finalized = FinalizeModule(cookedModule, moduleVariants); !finalized)

@@ -3,6 +3,7 @@
 #include "CookedLibrary.hpp"
 #include "CookerOptions.hpp"
 #include "PermutationSpace.hpp"
+#include "RawLibrary.hpp"
 #include "ShaderDataSchema.hpp"
 #include "ShaderLibraryTypes.hpp"
 #include "StageDump.hpp"
@@ -92,6 +93,57 @@ CookedModule BuildTinyModule()
 bool Contains(std::string_view text, std::string_view needle) noexcept
 {
     return text.contains(needle);
+}
+
+/** Two variants of one module. Stage 3 must give both the same bindings and the same attribute
+ * strings, because an attribute argument does not depend on the axis values. Only stage 4 does. */
+RawModule BuildRawModule()
+{
+    RawBinding buffer;
+    buffer.Name = "Waves";
+    buffer.Placement = BoundPlacement{ .Group = 0u, .Binding = 1u };
+    buffer.Kind = BindingKind::StorageBuffer;
+    buffer.ElementStride = 16u;
+    buffer.Shape = ResourceShape::Buffer;
+
+    RawBinding sampler;
+    sampler.Name = "LinearSampler";
+    sampler.Placement = BoundPlacement{ .Group = 0u, .Binding = 0u };
+    sampler.Kind = BindingKind::Sampler;
+    sampler.SamplerType = SamplerBindingType::Filtering;
+
+    RawSizeAttribute attribute;
+    attribute.BindingIndex = 1u;
+    attribute.Kind = RawSizeAttributeKind::ElementCount;
+    attribute.Arguments.emplace_back("IFFT_SIZE * 4");
+
+    RawEntryPoint entryPoint;
+    entryPoint.Name = "MainCS";
+    entryPoint.Stage = ShaderStageKind::Compute;
+    entryPoint.Workgroup = WorkgroupSize{ .X = 64u, .Y = 1u, .Z = 1u };
+    entryPoint.TargetText = "// the target text never reaches a dump\n";
+    entryPoint.UsedBindingIndices.push_back(1u);
+
+    RawModule module;
+    module.Name = "TinyModule";
+    module.EntryPointNames.emplace_back("MainCS");
+    module.ExternDefaults.push_back(ExternConstantDefault{ .Name = "IFFT_SIZE", .Value = 256 });
+
+    for (uint32_t index = 0u; index < 2u; ++index)
+    {
+        RawVariant variant;
+        variant.VariantIndex = index;
+        variant.VariantSuffix = index == 0u ? "_A" : "_B";
+        variant.VariantDescription = index == 0u ? "USE_FOO=false" : "USE_FOO=true";
+        // Deliberately out of placement order, so the sort has something to do.
+        variant.GlobalBindings.push_back(sampler);
+        variant.GlobalBindings.push_back(buffer);
+        variant.SizeAttributes.push_back(attribute);
+        variant.EntryPoints.push_back(entryPoint);
+        module.Variants.push_back(std::move(variant));
+    }
+
+    return module;
 }
 
 void CheckStageNames(lodestone::tests::TestRunner& runner)
@@ -254,6 +306,63 @@ void CheckVariantDump(lodestone::tests::TestRunner& runner)
     runner.Check(dump == second, "two dumps of one input agree byte for byte");
 }
 
+void CheckRawPrimitives(lodestone::tests::TestRunner& runner)
+{
+    runner.BeginSection("raw placement and attributes");
+
+    const RawPlacement unplaced{};
+    const RawPlacement first{ BoundPlacement{ .Group = 0u, .Binding = 1u } };
+    const RawPlacement second{ BoundPlacement{ .Group = 1u, .Binding = 0u } };
+
+    runner.Check(GetBoundPlacement(unplaced) == nullptr,
+                 "a default placement is not group 0 binding 0, it is no placement at all");
+    runner.Check(GetBoundPlacement(first) != nullptr, "a bound placement reports itself");
+
+    runner.Check(RawPlacementLess(first, second), "group orders before binding");
+    runner.Check(!RawPlacementLess(second, first), "and the order is not symmetric");
+    runner.Check(RawPlacementLess(first, unplaced) && !RawPlacementLess(unplaced, first),
+                 "an unplaced resource sorts after every placed one");
+
+    runner.Check(ArgumentCountOf(RawSizeAttributeKind::ElementCount) == 1u, "element count takes one");
+    runner.Check(ArgumentCountOf(RawSizeAttributeKind::Extent2d) == 2u, "a 2d extent takes two");
+    runner.Check(ArgumentCountOf(RawSizeAttributeKind::Extent3d) == 3u, "a 3d extent takes three");
+    runner.Check(ArgumentCountOf(RawSizeAttributeKind::Invalid) == 0u, "the invalid kind takes none");
+
+    runner.Check(ToString(RawSizeAttributeKind::ElementCount) == "vx_element_count",
+                 "a kind names the attribute the shader author writes");
+}
+
+void CheckRawDump(lodestone::tests::TestRunner& runner)
+{
+    runner.BeginSection("raw dump");
+
+    const RawModule module = BuildRawModule();
+    const std::string dump = DumpRawModule(module);
+
+    runner.Check(Contains(dump, R"("stage": "raw")"), "the dump names its stage");
+    runner.Check(Contains(dump, R"("variantCount": 2)"), "both variants reach the dump");
+
+    runner.Check(Contains(dump, R"("model": "Bound")"),
+                 "placement states which access model it belongs to, so another model can join it");
+    runner.Check(Contains(dump, R"("attribute": "vx_element_count")"), "an attribute names itself");
+    runner.Check(Contains(dump, R"("IFFT_SIZE * 4")"),
+                 "the attribute argument is still the string the author wrote. Stage 3 carries it and "
+                 "does not understand it");
+    runner.Check(!Contains(dump, R"("elementCount")"),
+                 "stage 3 holds no evaluated size, so a reader cannot confuse not-yet-resolved with "
+                 "the shader declaring nothing");
+
+    runner.Check(Contains(dump, R"("name": "IFFT_SIZE")") && Contains(dump, R"("value": 256)"),
+                 "the extern defaults travel with the module, because stage 4 needs them and must not "
+                 "call Slang to get them");
+
+    runner.Check(!Contains(dump, "the target text never reaches a dump"), "no target text reaches the dump");
+    runner.Check(Contains(dump, R"("targetTextByteLength": 40)"), "the text appears as a length");
+
+    const std::string second = DumpRawModule(module);
+    runner.Check(dump == second, "two dumps of one module agree byte for byte");
+}
+
 void CheckCookedDump(lodestone::tests::TestRunner& runner)
 {
     runner.BeginSection("cooked dump");
@@ -330,6 +439,8 @@ int main()
     CheckSpaceDump(runner);
     CheckDependentAxisDump(runner);
     CheckVariantDump(runner);
+    CheckRawPrimitives(runner);
+    CheckRawDump(runner);
     CheckCookedDump(runner);
     CheckCookedDumpDetectsChange(runner);
 
