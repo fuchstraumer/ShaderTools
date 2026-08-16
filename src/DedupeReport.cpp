@@ -26,10 +26,11 @@ namespace
     const PermutationBinding* FindBinding(const PermutationAssignment& assignment,
                                           const PermutationAxis* axis) noexcept
     {
-        auto foundIter = std::ranges::find_if(assignment, [axis](const PermutationBinding& binding)
-        {
-            return binding.first == axis;
-        });
+        auto foundIter = std::ranges::find_if(assignment,
+                                              [axis](const PermutationBinding& binding)
+                                              {
+                                                  return binding.first == axis;
+                                              });
         return foundIter != assignment.end() ? &(*foundIter) : nullptr;
     }
 
@@ -62,6 +63,24 @@ namespace
         return leftValue->second != rightValue->second;
     }
 
+    /** Compares the text, never the index.
+     *
+     * An index is what the interner assigned, not what the shader says. `--no-dedupe` gives every
+     * artifact its own index, so an index comparison then reports every axis Active and every module
+     * with a declared inert axis fails its policy. The escape hatch is the A/B control arm, so a
+     * measurement that only works in one arm is not a measurement.
+     *
+     * With dedup on the two comparisons agree by construction: equal text takes one entry, so equal
+     * text and equal index are the same fact. */
+    bool EntryPointTextIsEqual(const CookedModule& module,
+                               const LibraryVariant& left,
+                               const LibraryVariant& right,
+                               size_t entry_point_index) noexcept
+    {
+        return ResolveSource(module, left, entry_point_index) ==
+               ResolveSource(module, right, entry_point_index);
+    }
+
     AxisInfluence InfluenceOfAxis(const CookedModule& module,
                                   size_t entry_point_index,
                                   const PermutationAxis* axis)
@@ -81,7 +100,7 @@ namespace
                 }
 
                 foundPair = true;
-                if (left.SourceIndices[entry_point_index] != right.SourceIndices[entry_point_index])
+                if (!EntryPointTextIsEqual(module, left, right, entry_point_index))
                 {
                     return AxisInfluence::Active;
                 }
@@ -149,8 +168,7 @@ namespace
 
     /** One pass over the variants. The earlier form searched the whole variant list again for each
      * distinct source, which is quadratic and gives the same answer. */
-    std::vector<SourceCollapse> CollectSourceCollapses(const CookedModule& module,
-                                                       size_t entry_point_index)
+    std::vector<SourceCollapse> CollectSourceCollapses(const CookedModule& module, size_t entry_point_index)
     {
         std::vector<SourceCollapse> collapses;
 
@@ -167,9 +185,8 @@ namespace
                 continue;
             }
 
-            collapses.push_back(SourceCollapse{ .SourceIndex = sourceIndex,
-                                                .MappedCount = 1u,
-                                                .FirstDescription = variant.Description });
+            collapses.push_back(SourceCollapse{
+                .SourceIndex = sourceIndex, .MappedCount = 1u, .FirstDescription = variant.Description });
         }
 
         return collapses;
@@ -256,7 +273,29 @@ ModuleInfluence ComputeAxisInfluence(const CookedModule& module)
 
 bool AllVariantsShareOneLayout(const CookedModule& module) noexcept
 {
-    return module.Layouts.size() <= 1u;
+    const ShaderLayout* first = nullptr;
+
+    for (const LibraryVariant& variant : module.Variants)
+    {
+        for (const uint32_t layoutIndex : variant.LayoutIndices)
+        {
+            if (layoutIndex >= module.Layouts.size())
+            {
+                return false;
+            }
+
+            if (first == nullptr)
+            {
+                first = &module.Layouts[layoutIndex];
+            }
+            else if (module.Layouts[layoutIndex] != *first)
+            {
+                return false;
+            }
+        }
+    }
+
+    return true;
 }
 
 namespace
@@ -399,17 +438,14 @@ std::string GenerateDedupeReport(const CookedLibrary& library)
         report += EmitProvenance(module);
         report += "\n";
 
-        report += std::format("  sources: {} -> {} unique\n",
-                              sourceStatistics.ArtifactsSeen,
-                              sourceStatistics.UniqueEntries);
-        report += std::format("  layouts: {} -> {} unique{}\n",
-                              layoutStatistics.ArtifactsSeen,
-                              layoutStatistics.UniqueEntries,
-                              AllVariantsShareOneLayout(module)
-                                  ? "   (every permutation shares one layout)"
-                                  : "");
-        report += std::format("  dedup enabled: {}\n",
-                              module.SourceInterner.IsEnabled() ? "yes" : "no");
+        report += std::format(
+            "  sources: {} -> {} unique\n", sourceStatistics.ArtifactsSeen, sourceStatistics.UniqueEntries);
+        report +=
+            std::format("  layouts: {} -> {} unique{}\n",
+                        layoutStatistics.ArtifactsSeen,
+                        layoutStatistics.UniqueEntries,
+                        AllVariantsShareOneLayout(module) ? "   (every permutation shares one layout)" : "");
+        report += std::format("  dedup enabled: {}\n", module.SourceInterner.IsEnabled() ? "yes" : "no");
         report += std::format("  hash function: {}\n", module.SourceInterner.HashName());
         report += std::format("  hash collisions resolved by byte compare: {}\n",
                               sourceStatistics.HashCollisions + layoutStatistics.HashCollisions);

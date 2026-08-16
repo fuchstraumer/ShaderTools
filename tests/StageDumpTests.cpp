@@ -49,7 +49,7 @@ CompiledVariant MakeVariant(uint32_t index, std::string suffix, std::string code
     entryPoint.Code = std::move(code);
     entryPoint.Reflection.Name = "MainCS";
     entryPoint.Reflection.Stage = ShaderStageKind::Compute;
-    entryPoint.Reflection.Workgroup = WorkgroupSize{ 64u, 1u, 1u };
+    entryPoint.Reflection.Workgroup = WorkgroupSize{ .X = 64u, .Y = 1u, .Z = 1u };
     entryPoint.Reflection.Bindings.push_back(binding);
 
     CompiledVariant variant;
@@ -67,7 +67,7 @@ CookedModule BuildTinyModule()
     CookedModule module;
     module.Name = "TinyModule";
     module.SpaceSize = 2u;
-    module.EntryPoints.push_back(LibraryEntryPoint{ "MainCS", ShaderStageKind::Compute });
+    module.EntryPoints.push_back(LibraryEntryPoint{ .Name = "MainCS", .Stage = ShaderStageKind::Compute });
 
     const std::array<CompiledVariant, 2u> variants{ MakeVariant(0u, "_USE_FOO_false", "// variant zero\n"),
                                                     MakeVariant(1u, "_USE_FOO_true", "// variant one\n") };
