@@ -56,18 +56,19 @@ namespace
         return canonicalCacheDirectory;
     }
 
-    void ReportEntryPointReflection(const CompiledEntryPoint& entry_point)
+    void ReportEntryPointReflection(const CompiledVariant& variant, size_t entry_point_index)
     {
+        const CompiledEntryPoint& entryPoint = variant.EntryPoints[entry_point_index];
         std::println(stderr,
                      "[shader_cooker]   {}{} [{}] workgroup {}x{}x{}",
-                     entry_point.Name,
-                     entry_point.VariantSuffix,
-                     ToString(entry_point.Reflection.Stage),
-                     entry_point.Reflection.Workgroup.X,
-                     entry_point.Reflection.Workgroup.Y,
-                     entry_point.Reflection.Workgroup.Z);
+                     entryPoint.Name,
+                     entryPoint.VariantSuffix,
+                     ToString(entryPoint.Reflection.Stage),
+                     entryPoint.Reflection.Workgroup.X,
+                     entryPoint.Reflection.Workgroup.Y,
+                     entryPoint.Reflection.Workgroup.Z);
 
-        for (const ReflectedBinding& binding : entry_point.Reflection.Bindings)
+        for (const ReflectedBinding& binding : BuildEntryPointLayout(variant, entry_point_index))
         {
             std::println(stderr,
                          "[shader_cooker]     {} usedBy=0x{:x}",
@@ -81,7 +82,7 @@ namespace
             }
         }
 
-        const std::string raster = DescribeRasterState(entry_point.Reflection.Raster);
+        const std::string raster = DescribeRasterState(entryPoint.Reflection.Raster);
         if (!raster.empty())
         {
             std::print(stderr, "{}", raster);
@@ -90,51 +91,47 @@ namespace
 
     /** Slang emits only the bindings an entry point actually references, so the WGSL for one entry
      * point is compared against the subset of program-scope bindings that entry point uses. */
-    std::vector<ReflectedBinding> SelectBindingsUsedByEntryPoint(const EntryPointReflection& reflection)
+    std::vector<ReflectedBinding> SelectBindingsUsedByEntryPoint(const CompiledVariant& variant,
+                                                                 size_t entry_point_index)
     {
-        std::vector<ReflectedBinding> used;
-        used.reserve(reflection.Bindings.size());
+        const std::vector<uint32_t>& usedIndices =
+            variant.EntryPoints[entry_point_index].Reflection.UsedBindingIndices;
 
-        for (const ReflectedBinding& binding : reflection.Bindings)
+        std::vector<ReflectedBinding> used;
+        used.reserve(usedIndices.size());
+
+        for (const uint32_t bindingIndex : usedIndices)
         {
-            if (binding.EntryPointUsageMask != 0u)
-            {
-                used.push_back(binding);
-            }
+            used.push_back(variant.GlobalBindings[bindingIndex]);
         }
 
         return used;
     }
 
+    bool AnyEntryPointReadsBinding(const CompiledVariant& variant, uint32_t binding_index) noexcept
+    {
+        return std::ranges::any_of(variant.EntryPoints,
+                                   [binding_index](const CompiledEntryPoint& entry_point)
+                                   {
+                                       return std::ranges::contains(entry_point.Reflection.UsedBindingIndices,
+                                                                    binding_index);
+                                   });
+    }
+
     void ReportUnreferencedBindings(const CompiledVariant& variant)
     {
-        if (variant.EntryPoints.empty())
+        for (size_t bindingIndex = 0u; bindingIndex < variant.GlobalBindings.size(); ++bindingIndex)
         {
-            return;
-        }
-
-        // Every entry point holds the same set of bindings, so we can just check the first one.
-        // What varies is the EntryPointUsageMask, which is set for each binding the entry point actually
-        // uses. We will use the first bindings list to find the bindings, but check to see if any point
-        // actually uses it
-        const std::vector<ReflectedBinding>& bindings = variant.EntryPoints.front().Reflection.Bindings;
-        const size_t declaredBindingCount = bindings.size();
-        for (size_t bindingIndex = 0u; bindingIndex < declaredBindingCount; ++bindingIndex)
-        {
-            const bool referenced = std::ranges::any_of(
-                variant.EntryPoints,
-                [bindingIndex](const CompiledEntryPoint& entry_point)
-                {
-                    return entry_point.Reflection.Bindings[bindingIndex].EntryPointUsageMask != 0u;
-                });
-            if (!referenced)
+            if (AnyEntryPointReadsBinding(variant, static_cast<uint32_t>(bindingIndex)))
             {
-                std::println(
-                    stderr,
-                    "[shader_cooker] unreferenced binding in [{}]: {} is declared but no entrypoint reads it",
-                    variant.VariantDescription,
-                    DescribeBinding(bindings[bindingIndex]));
+                continue;
             }
+
+            std::println(
+                stderr,
+                "[shader_cooker] unreferenced binding in [{}]: {} is declared but no entrypoint reads it",
+                variant.VariantDescription,
+                DescribeBinding(variant.GlobalBindings[bindingIndex]));
         }
     }
 
@@ -142,10 +139,11 @@ namespace
     {
         uint32_t mismatchCount = 0u;
 
-        for (const CompiledEntryPoint& entryPoint : variant.EntryPoints)
+        for (size_t i = 0u; i < variant.EntryPoints.size(); ++i)
         {
+            const CompiledEntryPoint& entryPoint = variant.EntryPoints[i];
             const std::vector<WgslDeclaredBinding> declared = ScanWgslBindings(entryPoint.Code);
-            const std::vector<ReflectedBinding> used = SelectBindingsUsedByEntryPoint(entryPoint.Reflection);
+            const std::vector<ReflectedBinding> used = SelectBindingsUsedByEntryPoint(variant, i);
             const BindingComparison comparison = CompareBindings(declared, used);
 
             if (!comparison.Matches)
@@ -376,9 +374,9 @@ namespace
         }
 
         std::println(stderr, "[shader_cooker] variant [{}]", variant.VariantDescription);
-        for (const CompiledEntryPoint& entryPoint : variant.EntryPoints)
+        for (size_t i = 0u; i < variant.EntryPoints.size(); ++i)
         {
-            ReportEntryPointReflection(entryPoint);
+            ReportEntryPointReflection(variant, i);
         }
     }
 

@@ -147,12 +147,23 @@ struct ReflectedRasterState
     friend bool operator==(const ReflectedRasterState&, const ReflectedRasterState&) = default;
 };
 
+/** What the compiler says about one entry point.
+ *
+ * The binding list is not here. Slang reports the program-scope bindings, so every entry point of one
+ * variant sees the same set, and a copy for each entry point states the same fact three times. The set
+ * lives once on `CompiledVariant::GlobalBindings`, and this record says only which of those bindings
+ * this entry point reads.
+ *
+ * `UsedBindingIndices` holds indices into that shared list, in ascending order. It is a list rather
+ * than a bit mask on purpose: a mask over bindings would cap a module at the width of the mask, and it
+ * would read like the `ReflectedBinding::EntryPointUsageMask` field, which is a mask over entry
+ * points and a different question. */
 struct EntryPointReflection
 {
     std::string Name;
     ShaderStageKind Stage{ ShaderStageKind::Invalid };
     WorkgroupSize Workgroup;
-    std::vector<ReflectedBinding> Bindings;
+    std::vector<uint32_t> UsedBindingIndices;
     ReflectedRasterState Raster;
 };
 
@@ -173,8 +184,24 @@ struct CompiledVariant
     /** Dense mixed-radix index over the canonical assignment. Stable across cooks, and the key the
      * rendergraph resolves a variant with. */
     uint32_t VariantIndex{ 0u };
+    /** Every program-scope binding of this variant, once. Slang reports one set for the whole program,
+     * so this is the set every entry point draws from.
+     *
+     * `EntryPointUsageMask` is zero on every entry here. The shared list states what a resource is and
+     * where it lives, and it makes no claim about who reads it. Each entry point answers that with
+     * `EntryPointReflection::UsedBindingIndices`. */
+    std::vector<ReflectedBinding> GlobalBindings;
     std::vector<CompiledEntryPoint> EntryPoints;
 };
+
+/** Rebuilds the binding list one entry point sees: every global binding, with `EntryPointUsageMask`
+ * set for the bindings this entry point reads and clear for the rest.
+ *
+ * This is the layout the interner keys on, so the result must stay exactly what the compiler used to
+ * hand over directly. Phase D step D8b takes the usage mask out of that key. Until then it is part of
+ * the key, and the layout count states it: `OceanFft` interns 21 layouts, which is one placement times
+ * three usage masks times seven derived sizes. */
+std::vector<ReflectedBinding> BuildEntryPointLayout(const CompiledVariant& variant, size_t entry_point_index);
 
 bool SameBindingLocation(const ReflectedBinding& lhs, const ReflectedBinding& rhs) noexcept;
 void SortBindingsByLocation(std::span<ReflectedBinding> bindings) noexcept;

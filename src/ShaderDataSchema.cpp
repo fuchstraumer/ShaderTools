@@ -152,6 +152,27 @@ bool SameBindingLocation(const ReflectedBinding& lhs, const ReflectedBinding& rh
     return lhs.Group == rhs.Group && lhs.Binding == rhs.Binding;
 }
 
+std::vector<ReflectedBinding> BuildEntryPointLayout(const CompiledVariant& variant, size_t entry_point_index)
+{
+    if (entry_point_index >= variant.EntryPoints.size())
+    {
+        return {};
+    }
+
+    std::vector<ReflectedBinding> layout = variant.GlobalBindings;
+    const uint32_t entryPointBit = 1u << static_cast<uint32_t>(entry_point_index);
+
+    for (const uint32_t bindingIndex : variant.EntryPoints[entry_point_index].Reflection.UsedBindingIndices)
+    {
+        if (bindingIndex < layout.size())
+        {
+            layout[bindingIndex].EntryPointUsageMask = entryPointBit;
+        }
+    }
+
+    return layout;
+}
+
 void SortBindingsByLocation(std::span<ReflectedBinding> bindings) noexcept
 {
     std::ranges::sort(bindings,
@@ -200,17 +221,14 @@ std::string DescribeBinding(const ReflectedBinding& binding)
 
     if (binding.Derived.HasElementCount)
     {
-        description += std::format(" count={} [{}]",
-                                   binding.Derived.ElementCount,
-                                   binding.Derived.Expression);
+        description +=
+            std::format(" count={} [{}]", binding.Derived.ElementCount, binding.Derived.Expression);
     }
 
     if (binding.Derived.HasExtent)
     {
-        description += std::format(" extent={}x{}x{}",
-                                   binding.Derived.ExtentX,
-                                   binding.Derived.ExtentY,
-                                   binding.Derived.ExtentZ);
+        description += std::format(
+            " extent={}x{}x{}", binding.Derived.ExtentX, binding.Derived.ExtentY, binding.Derived.ExtentZ);
     }
 
     return description;

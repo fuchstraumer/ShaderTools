@@ -9,6 +9,8 @@
 
 #include <array>
 #include <cstdint>
+#include <cstdio>
+#include <print>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -28,14 +30,14 @@ PermutationAxis MakeBoolAxis(std::string name)
     return axis;
 }
 
-CompiledVariant MakeVariant(uint32_t index, std::string suffix, std::string code)
+CompiledVariant MakeVariant(uint32_t index, const std::string& suffix, std::string code)
 {
     ReflectedBinding binding;
     binding.Name = "Waves";
     binding.Group = 0u;
     binding.Binding = 1u;
     binding.Kind = BindingKind::StorageBuffer;
-    binding.EntryPointUsageMask = 1u;
+    binding.EntryPointUsageMask = 0u;
     binding.ElementStride = 16u;
     binding.ArrayCount = 1u;
     binding.Shape = ResourceShape::Buffer;
@@ -50,12 +52,13 @@ CompiledVariant MakeVariant(uint32_t index, std::string suffix, std::string code
     entryPoint.Reflection.Name = "MainCS";
     entryPoint.Reflection.Stage = ShaderStageKind::Compute;
     entryPoint.Reflection.Workgroup = WorkgroupSize{ .X = 64u, .Y = 1u, .Z = 1u };
-    entryPoint.Reflection.Bindings.push_back(binding);
+    entryPoint.Reflection.UsedBindingIndices.push_back(0u);
 
     CompiledVariant variant;
     variant.VariantIndex = index;
     variant.VariantSuffix = suffix;
     variant.VariantDescription = "USE_FOO=" + std::string{ index == 0u ? "false" : "true" };
+    variant.GlobalBindings.push_back(binding);
     variant.EntryPoints.push_back(std::move(entryPoint));
     return variant;
 }
@@ -88,7 +91,7 @@ CookedModule BuildTinyModule()
 
 bool Contains(std::string_view text, std::string_view needle) noexcept
 {
-    return text.find(needle) != std::string_view::npos;
+    return text.contains(needle);
 }
 
 void CheckStageNames(lodestone::tests::TestRunner& runner)
@@ -203,7 +206,7 @@ void CheckSpaceDump(lodestone::tests::TestRunner& runner)
     runner.Check(dump == expected, "the space dump matches the golden text");
     if (dump != expected)
     {
-        std::printf("--- expected ---\n%s\n--- actual ---\n%s\n", expected.c_str(), dump.c_str());
+        std::println(stdout, "--- expected ---\n{}\n--- actual ---\n{}", expected, dump);
     }
 }
 

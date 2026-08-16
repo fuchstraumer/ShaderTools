@@ -106,17 +106,16 @@ CookResult<void> AppendVariantToModule(CookedModule& module,
     record.RasterIndices.reserve(variant.EntryPoints.size());
     record.Workgroups.reserve(variant.EntryPoints.size());
 
-    for (const CompiledEntryPoint& entryPoint : variant.EntryPoints)
+    for (size_t entryPointIndex = 0u; entryPointIndex < variant.EntryPoints.size(); ++entryPointIndex)
     {
-        const ProvenanceRecord origin{ entryPoint.Name,
-                                       variant.VariantDescription,
-                                       variant.VariantIndex };
+        const CompiledEntryPoint& entryPoint = variant.EntryPoints[entryPointIndex];
+        const ProvenanceRecord origin{ entryPoint.Name, variant.VariantDescription, variant.VariantIndex };
 
         const InternResult source = module.SourceInterner.Intern(entryPoint.Code, origin);
         record.SourceIndices.push_back(source.Index);
 
         const InternResult layout =
-            module.LayoutInterner.Intern(entryPoint.Reflection.Bindings, origin);
+            module.LayoutInterner.Intern(BuildEntryPointLayout(variant, entryPointIndex), origin);
         record.LayoutIndices.push_back(layout.Index);
 
         const InternResult raster = module.RasterInterner.Intern(entryPoint.Reflection.Raster, origin);

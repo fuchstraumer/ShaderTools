@@ -586,15 +586,16 @@ struct SlangCompiler::Impl
     CookResult<Slang::ComPtr<slang::IComponentType>> LinkVariant(
         const PermutationAssignment& assignment) const;
     std::vector<std::string> GenerateEntryPointCode(slang::IComponentType* linked_program) const;
-    CookResult<EntryPointReflection> ExtractEntryPointReflection(slang::IComponentType* linked_program,
-                                                                 slang::ProgramLayout* program_layout,
-                                                                 SlangInt entry_point_index);
-    CookResult<std::vector<ReflectedBinding>> ExtractGlobalBindings(
-        slang::ProgramLayout* program_layout);
+    CookResult<EntryPointReflection> ExtractEntryPointReflection(
+        slang::IComponentType* linked_program,
+        slang::ProgramLayout* program_layout,
+        SlangInt entry_point_index,
+        const std::vector<ReflectedBinding>& global_bindings);
+    CookResult<std::vector<ReflectedBinding>> ExtractGlobalBindings(slang::ProgramLayout* program_layout);
     static void ApplyLeafTypeLayout(slang::TypeLayoutReflection* global_layout,
-                             SlangInt range_index,
-                             slang::BindingType binding_type,
-                             ReflectedBinding& binding);
+                                    SlangInt range_index,
+                                    slang::BindingType binding_type,
+                                    ReflectedBinding& binding);
     CookResult<DerivedSize> ExtractDerivedSize(slang::VariableReflection* leaf_variable,
                                                std::string_view binding_name);
     CookResult<void> ExtractDerivedExtent(slang::VariableReflection* leaf_variable,
@@ -603,12 +604,13 @@ struct SlangCompiler::Impl
     CookResult<uint32_t> EvaluateExtentArgument(slang::Attribute* attribute,
                                                 uint32_t argument_index,
                                                 std::string_view binding_name);
-    static void ApplyEntryPointUsage(slang::IComponentType* linked_program,
-                              SlangInt entry_point_index,
-                              std::vector<ReflectedBinding>& bindings);
+    static void CollectUsedBindingIndices(slang::IComponentType* linked_program,
+                                          SlangInt entry_point_index,
+                                          const std::vector<ReflectedBinding>& global_bindings,
+                                          std::vector<uint32_t>& out_used_indices);
     static void ExtractRasterState(slang::EntryPointReflection* entry_point_layout,
-                            ShaderStageKind stage,
-                            ReflectedRasterState& raster);
+                                   ShaderStageKind stage,
+                                   ReflectedRasterState& raster);
 };
 
 CookResult<void> SlangCompiler::Impl::CreateSession(const SlangCompilerCreateInfo& create_info)
@@ -619,7 +621,8 @@ CookResult<void> SlangCompiler::Impl::CreateSession(const SlangCompilerCreateInf
     }
 
     CompilerOptions = MakeCompilerOptions(create_info.OptimizationLevel);
-    // todo-asap: I am inserting the tests/assets/ rootdir here for the attributes file. This needs to be optionalized and standardized
+    // todo-asap: I am inserting the tests/assets/ rootdir here for the attributes file. This needs to be
+    // optionalized and standardized
     const std::filesystem::path attributesPath = std::filesystem::canonical("D:/ShaderTools/tests/assets/");
     const std::string attributesPathStr = attributesPath.string();
     const std::filesystem::path canonicalModulePath = std::filesystem::canonical(create_info.ModulePath);
@@ -628,10 +631,9 @@ CookResult<void> SlangCompiler::Impl::CreateSession(const SlangCompilerCreateInf
     // per-stage directory, so the asset root resolves without a command-line switch.
     const std::string sharedDirectory = canonicalModulePath.parent_path().parent_path().string();
     const std::string cacheDirectory = create_info.ModuleCacheDirectory.string();
-    const std::array<const char*, 4> searchPaths{ sourceDirectory.c_str(),
-                                                  sharedDirectory.c_str(),
-                                                  cacheDirectory.c_str(),
-                                                  attributesPathStr.c_str() };
+    const std::array<const char*, 4> searchPaths{
+        sourceDirectory.c_str(), sharedDirectory.c_str(), cacheDirectory.c_str(), attributesPathStr.c_str()
+    };
 
     slang::TargetDesc target{};
     target.format = SLANG_WGSL;
@@ -740,9 +742,9 @@ CookResult<Slang::ComPtr<slang::IComponentType>> SlangCompiler::Impl::LinkVarian
 
         Slang::ComPtr<slang::IBlob> diagnostics;
         slang::IModule* variantModule = Session->loadModuleFromSourceString(variantModuleName.c_str(),
-                                                                           variantModulePath.c_str(),
-                                                                           variantSource.c_str(),
-                                                                           diagnostics.writeRef());
+                                                                            variantModulePath.c_str(),
+                                                                            variantSource.c_str(),
+                                                                            diagnostics.writeRef());
         ReportDiagnostics("loadModuleFromSourceString", diagnostics.get());
 
         if (variantModule == nullptr)
@@ -789,23 +791,22 @@ std::vector<std::string> SlangCompiler::Impl::GenerateEntryPointCode(
 
         for (size_t i = 0; i < entryPointCount; ++i)
         {
-            pending.push_back(std::async(std::launch::async,
-                                         [linked_program, i]()
-                                         {
-                                             Slang::ComPtr<slang::IBlob> code;
-                                             Slang::ComPtr<slang::IBlob> diagnostics;
-                                             if (SLANG_FAILED(linked_program->getEntryPointCode(
-                                                     static_cast<SlangInt>(i),
-                                                     k_WgslTargetIndex,
-                                                     code.writeRef(),
-                                                     diagnostics.writeRef())))
-                                             {
-                                                 ReportDiagnostics("getEntryPointCode",
-                                                                   diagnostics.get());
-                                                 return std::string{};
-                                             }
-                                             return BlobToString(code.get());
-                                         }));
+            pending.push_back(
+                std::async(std::launch::async,
+                           [linked_program, i]()
+                           {
+                               Slang::ComPtr<slang::IBlob> code;
+                               Slang::ComPtr<slang::IBlob> diagnostics;
+                               if (SLANG_FAILED(linked_program->getEntryPointCode(static_cast<SlangInt>(i),
+                                                                                  k_WgslTargetIndex,
+                                                                                  code.writeRef(),
+                                                                                  diagnostics.writeRef())))
+                               {
+                                   ReportDiagnostics("getEntryPointCode", diagnostics.get());
+                                   return std::string{};
+                               }
+                               return BlobToString(code.get());
+                           }));
         }
 
         for (size_t i = 0; i < entryPointCount; ++i)
@@ -820,10 +821,8 @@ std::vector<std::string> SlangCompiler::Impl::GenerateEntryPointCode(
     {
         Slang::ComPtr<slang::IBlob> code;
         Slang::ComPtr<slang::IBlob> diagnostics;
-        if (SLANG_FAILED(linked_program->getEntryPointCode(static_cast<SlangInt>(i),
-                                                           k_WgslTargetIndex,
-                                                           code.writeRef(),
-                                                           diagnostics.writeRef())))
+        if (SLANG_FAILED(linked_program->getEntryPointCode(
+                static_cast<SlangInt>(i), k_WgslTargetIndex, code.writeRef(), diagnostics.writeRef())))
         {
             ReportDiagnostics("getEntryPointCode", diagnostics.get());
             continue;
@@ -938,10 +937,8 @@ CookResult<void> SlangCompiler::Impl::ExtractDerivedExtent(slang::VariableReflec
                                                            std::string_view binding_name,
                                                            DerivedSize& derived)
 {
-    slang::Attribute* extent2d =
-        leaf_variable->findAttributeByName(GlobalSession.get(), k_Extent2dAttribute);
-    slang::Attribute* extent3d =
-        leaf_variable->findAttributeByName(GlobalSession.get(), k_Extent3dAttribute);
+    slang::Attribute* extent2d = leaf_variable->findAttributeByName(GlobalSession.get(), k_Extent2dAttribute);
+    slang::Attribute* extent3d = leaf_variable->findAttributeByName(GlobalSession.get(), k_Extent3dAttribute);
 
     if (extent2d != nullptr && extent3d != nullptr)
     {
@@ -1053,8 +1050,7 @@ CookResult<std::vector<ReflectedBinding>> SlangCompiler::Impl::ExtractGlobalBind
     for (SlangInt rangeIndex = 0; rangeIndex < bindingRangeCount; ++rangeIndex)
     {
         const slang::BindingType bindingType = globalLayout->getBindingRangeType(rangeIndex);
-        if (bindingType == slang::BindingType::Unknown ||
-            bindingType == slang::BindingType::VaryingInput ||
+        if (bindingType == slang::BindingType::Unknown || bindingType == slang::BindingType::VaryingInput ||
             bindingType == slang::BindingType::VaryingOutput)
         {
             continue;
@@ -1069,9 +1065,8 @@ CookResult<std::vector<ReflectedBinding>> SlangCompiler::Impl::ExtractGlobalBind
         }
 
         const SlangInt spaceOffset = globalLayout->getDescriptorSetSpaceOffset(descriptorSetIndex);
-        const SlangInt indexOffset =
-            globalLayout->getDescriptorSetDescriptorRangeIndexOffset(descriptorSetIndex,
-                                                                     descriptorRangeIndex);
+        const SlangInt indexOffset = globalLayout->getDescriptorSetDescriptorRangeIndexOffset(
+            descriptorSetIndex, descriptorRangeIndex);
 
         if (static_cast<size_t>(indexOffset) == SLANG_UNKNOWN_SIZE ||
             static_cast<size_t>(spaceOffset) == SLANG_UNKNOWN_SIZE)
@@ -1109,32 +1104,33 @@ CookResult<std::vector<ReflectedBinding>> SlangCompiler::Impl::ExtractGlobalBind
     return bindings;
 }
 
-void SlangCompiler::Impl::ApplyEntryPointUsage(slang::IComponentType* linked_program,
-                                               SlangInt entry_point_index,
-                                               std::vector<ReflectedBinding>& bindings)
+void SlangCompiler::Impl::CollectUsedBindingIndices(slang::IComponentType* linked_program,
+                                                    SlangInt entry_point_index,
+                                                    const std::vector<ReflectedBinding>& global_bindings,
+                                                    std::vector<uint32_t>& out_used_indices)
 {
     Slang::ComPtr<slang::IMetadata> metadata;
     Slang::ComPtr<slang::IBlob> diagnostics;
-    if (SLANG_FAILED(linked_program->getEntryPointMetadata(entry_point_index,
-                                                           k_WgslTargetIndex,
-                                                           metadata.writeRef(),
-                                                           diagnostics.writeRef())) ||
+    if (SLANG_FAILED(linked_program->getEntryPointMetadata(
+            entry_point_index, k_WgslTargetIndex, metadata.writeRef(), diagnostics.writeRef())) ||
         metadata == nullptr)
     {
         ReportDiagnostics("getEntryPointMetadata", diagnostics.get());
         return;
     }
 
-    for (ReflectedBinding& binding : bindings)
+    out_used_indices.reserve(global_bindings.size());
+
+    for (size_t i = 0u; i < global_bindings.size(); ++i)
     {
         bool isUsed = false;
         metadata->isParameterLocationUsed(SLANG_PARAMETER_CATEGORY_DESCRIPTOR_TABLE_SLOT,
-                                          binding.Group,
-                                          binding.Binding,
+                                          global_bindings[i].Group,
+                                          global_bindings[i].Binding,
                                           isUsed);
         if (isUsed)
         {
-            binding.EntryPointUsageMask |= (1u << static_cast<uint32_t>(entry_point_index));
+            out_used_indices.push_back(static_cast<uint32_t>(i));
         }
     }
 }
@@ -1142,18 +1138,11 @@ void SlangCompiler::Impl::ApplyEntryPointUsage(slang::IComponentType* linked_pro
 CookResult<EntryPointReflection> SlangCompiler::Impl::ExtractEntryPointReflection(
     slang::IComponentType* linked_program,
     slang::ProgramLayout* program_layout,
-    SlangInt entry_point_index)
+    SlangInt entry_point_index,
+    const std::vector<ReflectedBinding>& global_bindings)
 {
     EntryPointReflection reflection;
     reflection.Name = EntryPointNames[static_cast<size_t>(entry_point_index)];
-
-    CookResult<std::vector<ReflectedBinding>> bindings = ExtractGlobalBindings(program_layout);
-    if (!bindings)
-    {
-        return std::unexpected(bindings.error());
-    }
-
-    reflection.Bindings = std::move(bindings.value());
 
     slang::EntryPointReflection* entryPointLayout =
         program_layout->getEntryPointByIndex(static_cast<SlangUInt>(entry_point_index));
@@ -1175,7 +1164,8 @@ CookResult<EntryPointReflection> SlangCompiler::Impl::ExtractEntryPointReflectio
 
     ExtractRasterState(entryPointLayout, reflection.Stage, reflection.Raster);
 
-    ApplyEntryPointUsage(linked_program, entry_point_index, reflection.Bindings);
+    CollectUsedBindingIndices(
+        linked_program, entry_point_index, global_bindings, reflection.UsedBindingIndices);
     return reflection;
 }
 
@@ -1198,8 +1188,8 @@ void SlangCompiler::Impl::ExtractRasterState(slang::EntryPointReflection* entry_
     CollectDepthWrites(entry_point_layout->getVarLayout(), raster);
 }
 
-SlangCompiler::SlangCompiler() noexcept :
-    impl{ nullptr }
+SlangCompiler::SlangCompiler() noexcept
+    : impl{ nullptr }
 {
 }
 
@@ -1283,10 +1273,19 @@ CookResult<CompiledVariant> SlangCompiler::CompileVariant(const VariantDescripto
 
     const std::vector<std::string> generatedCode = impl->GenerateEntryPointCode(linkedProgram);
 
+    // Slang reports the bindings for the whole program, so this set is the same for every entry point
+    // of this variant. Extract it once, and let each entry point say which of them it reads.
+    CookResult<std::vector<ReflectedBinding>> globalBindings = impl->ExtractGlobalBindings(programLayout);
+    if (!globalBindings)
+    {
+        return std::unexpected(globalBindings.error());
+    }
+
     CompiledVariant variant;
     variant.VariantSuffix = MakeAssignmentSuffix(descriptor.Canonical);
     variant.VariantDescription = DescribeAssignment(descriptor.Canonical);
     variant.VariantIndex = descriptor.Index;
+    variant.GlobalBindings = std::move(globalBindings.value());
     variant.EntryPoints.reserve(impl->EntryPointNames.size());
 
     for (size_t i = 0; i < impl->EntryPointNames.size(); ++i)
@@ -1296,8 +1295,8 @@ CookResult<CompiledVariant> SlangCompiler::CompileVariant(const VariantDescripto
             return std::unexpected(CookError::CodeGenerationFailed);
         }
 
-        CookResult<EntryPointReflection> reflection =
-            impl->ExtractEntryPointReflection(linkedProgram, programLayout, static_cast<SlangInt>(i));
+        CookResult<EntryPointReflection> reflection = impl->ExtractEntryPointReflection(
+            linkedProgram, programLayout, static_cast<SlangInt>(i), variant.GlobalBindings);
         if (!reflection)
         {
             return std::unexpected(reflection.error());

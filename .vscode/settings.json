@@ -2,7 +2,7 @@
     "git.ignoreLimitWarning": true,
     "cmake.buildDirectory": "${workspaceFolder}/build",
     "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
-    "C_Cpp.intelliSenseEngine": "disabled",
+    "C_Cpp.intelliSenseEngine": "Default",
     "files.watcherExclude": {
         "build/**": true,
         "third_party/slang/**": true

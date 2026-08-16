@@ -17,6 +17,15 @@
             "console": "integratedTerminal"
         },
         {
+            "name": "[VSDBG] Launch Live Cooker Target",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${command:cmake.launchTargetPath}",
+            "args": [ ],
+            "cwd": "${command:cmake.getLaunchTargetDirectory}",
+            "console": "newExternalWindow"
+        },
+        {
             "name": "[VSDBG] Launch Cooker Target",
             "type": "cppvsdbg",
             "request": "launch",
