@@ -88,6 +88,7 @@ set(LODESTONE_HEADERS
     "${CMAKE_CURRENT_SOURCE_DIR}/include/SlangCompiler.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/include/SlangDiagnosticParser.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/include/StageDump.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/TargetProfile.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/include/WgslBindingScanner.hpp")
 
 set(LODESTONE_SOURCES
@@ -109,6 +110,7 @@ set(LODESTONE_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/src/SlangCompiler.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/SlangDiagnosticParser.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/StageDump.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/TargetProfile.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/WgslBindingScanner.cpp")
 
 # Static on purpose. No header marks a symbol dllexport, so a Windows DLL build of this target exports

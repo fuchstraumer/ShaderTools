@@ -1,13 +1,17 @@
 #include "CookerOptions.hpp"
 #include "CookerErrors.hpp"
+#include "TargetProfile.hpp"
 
 #include <array>
 #include <charconv>
 #include <cstddef>
 #include <cstdint>
+#include <cstdio>
 #include <expected>
 #include <filesystem>
+#include <print>
 #include <span>
+#include <string>
 #include <string_view>
 #include <system_error>
 
@@ -20,10 +24,12 @@ namespace
     constexpr std::string_view k_UsageText =
         "Usage: lodestone --output <header.hpp> [--O<level>] [--no-validate] [--quiet]\n"
         "                 [--cache-dir <path>] [--single-threaded] [--no-dedupe]\n"
-        "                 [--verify-deterministic] [--dump-stage=<name>] <module.slang>...\n"
+        "                 [--target=<name>] [--verify-deterministic] [--dump-stage=<name>]\n"
+        "                 <module.slang>...\n"
         "  --output, -o    destination header path (required)\n"
         "  --O<level>      slang optimization level: 0-3, defaults to 0\n"
-        "  --no-validate   skip cross-checking reflection against emitted WGSL\n"
+        "  --target=<name> output target profile, defaults to wgsl. Names: wgsl\n"
+        "  --no-validate   skip cross-checking reflection against the emitted text\n"
         "  --quiet         suppress the per-variant reflection report\n"
         "  --cache-dir     directory for precompiled slang modules\n"
         "  --single-threaded disable multi-threaded entry point codegen\n"
@@ -35,6 +41,7 @@ namespace
         "                  have no boundary type yet, so they write nothing.\n";
 
     constexpr std::string_view k_OptimizationPrefix = "--O";
+    constexpr std::string_view k_TargetPrefix = "--target=";
     constexpr std::string_view k_StageDumpPrefix = "--dump-stage=";
     constexpr std::string_view k_AllStageDumpsName = "all";
 
@@ -55,9 +62,8 @@ namespace
         StageDumpName{ .Kind = StageDumpKind::Cooked, .Name = "cooked" }
     };
 
-    CookResult<uint32_t> ParseStageDumpArgument(std::string_view argument)
+    CookResult<uint32_t> ParseStageDumpArgument(std::string_view name)
     {
-        const std::string_view name = argument.substr(k_StageDumpPrefix.size());
         if (name == k_AllStageDumpsName)
         {
             return AllStageDumpBits();
@@ -78,17 +84,16 @@ namespace
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunsafe-buffer-usage"
 #endif
-    CookResult<uint32_t> ParseOptimizationLevel(std::string_view argument)
+    CookResult<uint32_t> ParseOptimizationLevel(std::string_view level_text)
     {
-        const std::string_view levelText = argument.substr(k_OptimizationPrefix.size());
-        if (levelText.empty())
+        if (level_text.empty())
         {
             return std::unexpected(CookError::MalformedArgument);
         }
 
         uint32_t level = 0u;
         const std::from_chars_result result =
-            std::from_chars(levelText.data(), levelText.data() + levelText.size(), level);
+            std::from_chars(level_text.data(), level_text.data() + level_text.size(), level);
         if (result.ec != std::errc{} || level > 3u)
         {
             return std::unexpected(CookError::MalformedArgument);
@@ -113,52 +118,128 @@ namespace
         void (*Apply)(CookerOptions& options) noexcept;
     };
 
-    constexpr std::array<SwitchFlag, 5u> k_SwitchFlags{ SwitchFlag{ .Name = "--no-dedupe",
-                                                                    .Apply =
-                                                                        [](CookerOptions& options) noexcept
-                                                                    {
-                                                                        options.DedupeEnabled = false;
-                                                                    } },
-                                                        SwitchFlag{ .Name = "--verify-deterministic",
-                                                                    .Apply =
-                                                                        [](CookerOptions& options) noexcept
-                                                                    {
-                                                                        options.VerifyDeterministic = true;
-                                                                    } },
-                                                        SwitchFlag{
-                                                            .Name = "--no-validate",
-                                                            .Apply =
-                                                                [](CookerOptions& options) noexcept
-                                                            {
-                                                                options.ValidateReflectionAgainstWgsl = false;
-                                                            } },
-                                                        SwitchFlag{ .Name = "--quiet",
-                                                                    .Apply =
-                                                                        [](CookerOptions& options) noexcept
-                                                                    {
-                                                                        options.ReportReflection = false;
-                                                                    } },
-                                                        SwitchFlag{
-                                                            .Name = "--single-threaded",
-                                                            .Apply = [](CookerOptions& options) noexcept
-                                                            {
-                                                                options.MultithreadEntryPointCodegen = false;
-                                                            } } };
+    // moved these toggles out of lambdas, because the lambdas were ugly as sin
+    void DisableDedupe(CookerOptions& options) noexcept
+    {
+        options.DedupeEnabled = false;
+    }
+
+    void EnableVerifyDeterminism(CookerOptions& options) noexcept
+    {
+        options.VerifyDeterministic = true;
+    }
+
+    void DisableValidateAgainstEmittedText(CookerOptions& options) noexcept
+    {
+        options.ValidateAgainstEmittedText = false;
+    }
+
+    void DisableReflectionReports(CookerOptions& options) noexcept
+    {
+        options.ReportReflection = false;
+    }
+
+    void DisableMultithreadedCompile(CookerOptions& options) noexcept
+    {
+        options.MultithreadEntryPointCodegen = false;
+    }
+
+    constexpr std::array<SwitchFlag, 5u> k_SwitchFlags
+    {
+        SwitchFlag{ .Name = "--no-dedupe", .Apply = &DisableDedupe },
+        SwitchFlag{ .Name = "--verify-deterministic", .Apply = &EnableVerifyDeterminism },
+        SwitchFlag{ .Name = "--no-validate", .Apply = &DisableValidateAgainstEmittedText },
+        SwitchFlag{ .Name = "--quiet", .Apply = &DisableReflectionReports },
+        SwitchFlag{ .Name = "--single-threaded", .Apply = &DisableMultithreadedCompile }
+    };
 
     const SwitchFlag* FindSwitchFlag(std::string_view argument) noexcept
     {
-        for (const SwitchFlag& flag : k_SwitchFlags)
+        auto switchFlag = std::ranges::find_if(k_SwitchFlags,
+            [&argument](const SwitchFlag& flag) { return flag.Name == argument; });
+        if (switchFlag != std::end(k_SwitchFlags))
         {
-            if (flag.Name == argument)
-            {
-                return &flag;
-            }
+            return std::to_address(switchFlag);
         }
-
         return nullptr;
     }
 
-    /** A flag that consumes the next argument. It cannot join the switch table, because it moves the
+    /** A flag written as one argument with its value attached, such as `--target=wgsl` or `--O2`.
+     *
+     * These three had the same shape as three separate branches of `ParseCommandLine`, and adding
+     * `--target` put that function over the complexity threshold. One table instead, the way
+     * `k_SwitchFlags` already does for switches, so a fourth value flag costs a row rather than a
+     * branch. `Apply` gets only the tail, so no handler repeats the prefix length. */
+    struct ValueFlag
+    {
+        std::string_view Prefix;
+        CookError (*Apply)(CookerOptions& options, std::string_view value);
+    };
+
+    CookError ApplyDumpStageArgument(CookerOptions& options, std::string_view value)
+    {
+        const CookResult<uint32_t> bits = ParseStageDumpArgument(value);
+        if (!bits)
+        {
+            return bits.error();
+        }
+        options.DumpStageMask |= bits.value();
+        return CookError::Success;
+    }
+
+    CookError ApplyTargetOption(CookerOptions& options, std::string_view value)
+    {
+        if (FindTargetProfile(value) == nullptr) [[unlikely]]
+        {
+            std::string validTargetNames;
+            for (const std::string_view name : GetTargetProfileNames())
+            {
+                validTargetNames += std::string(" ") + std::string(name);
+            }
+            std::println(stderr,
+                "[shader_cooker][cooker_options] No target profile named {}. Valid options: {}",
+                value, validTargetNames);
+            return CookError::UnknownTargetProfile;
+        }
+        else
+        {
+            options.TargetName = std::string{ value };
+            return CookError::Success;
+        }
+    }
+
+    CookError ApplyDesiredOptimizationLevel(CookerOptions& options, std::string_view value)
+    {
+        const CookResult<uint32_t> level = ParseOptimizationLevel(value);
+        if (!level)
+        {
+            return level.error();
+        }
+        options.OptimizationLevel = level.value();
+        return CookError::Success;
+    }
+
+    const std::array<ValueFlag, 3u> k_ValueFlags
+    {
+        ValueFlag{ .Prefix = k_StageDumpPrefix, .Apply = &ApplyDumpStageArgument },
+        // Rejected here rather than in the driver. A name that reaches CookerOptions is a name
+        // FindTargetProfile accepts, so no later stage has to ask again.
+        ValueFlag{ .Prefix = k_TargetPrefix, .Apply = &ApplyTargetOption },
+        ValueFlag{ .Prefix = k_OptimizationPrefix, .Apply = &ApplyDesiredOptimizationLevel }
+    };
+
+    const ValueFlag* FindValueFlag(std::string_view argument) noexcept
+    {
+        auto valueFlagIter = std::ranges::find_if(k_ValueFlags,
+            [&argument](const ValueFlag& flag){ return argument.starts_with(flag.Prefix); });
+        if (valueFlagIter != std::end(k_ValueFlags))
+        {
+            return std::to_address(valueFlagIter);
+        }
+        return nullptr;
+    }
+
+    /** A flag that consumes the next argument. It cannot join either table, because it moves the
      * loop index. */
     CookResult<std::filesystem::path> ReadPathArgument(std::span<const std::string_view> arguments,
                                                        size_t& index)
@@ -258,23 +339,13 @@ CookResult<CookerOptions> ParseCommandLine(std::span<const std::string_view> arg
         {
             flag->Apply(options);
         }
-        else if (argument.starts_with(k_StageDumpPrefix))
+        else if (const ValueFlag* valueFlag = FindValueFlag(argument); valueFlag != nullptr)
         {
-            const CookResult<uint32_t> stageBits = ParseStageDumpArgument(argument);
-            if (!stageBits)
+            const CookError error = valueFlag->Apply(options, argument.substr(valueFlag->Prefix.size()));
+            if (error != CookError::Success)
             {
-                return std::unexpected(stageBits.error());
+                return std::unexpected(error);
             }
-            options.DumpStageMask |= stageBits.value();
-        }
-        else if (argument.starts_with(k_OptimizationPrefix))
-        {
-            const CookResult<uint32_t> level = ParseOptimizationLevel(argument);
-            if (!level)
-            {
-                return std::unexpected(level.error());
-            }
-            options.OptimizationLevel = level.value();
         }
         else if (argument.starts_with('-'))
         {

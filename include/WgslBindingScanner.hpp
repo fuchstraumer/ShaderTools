@@ -2,6 +2,7 @@
 #ifndef LODESTONE_SHADER_COOKER_WGSL_BINDING_SCANNER_HPP
 #define LODESTONE_SHADER_COOKER_WGSL_BINDING_SCANNER_HPP
 #include "ShaderDataSchema.hpp"
+#include "TargetProfile.hpp"
 #include <span>
 #include <string>
 #include <string_view>
@@ -34,12 +35,6 @@ struct WgslDeclaredBinding
     uint32_t Group{ 0u };
     uint32_t Binding{ 0u };
     WgslAddressSpace AddressSpace{ WgslAddressSpace::Invalid };
-};
-
-struct BindingComparison
-{
-    bool Matches{ false };
-    std::string Report;
 };
 
 std::vector<WgslDeclaredBinding> ScanWgslBindings(std::string_view wgsl);

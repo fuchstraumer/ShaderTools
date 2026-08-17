@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <span>
+#include <string>
 #include <string_view>
 #include <vector>
 
@@ -47,11 +48,14 @@ struct CookerOptions
     std::filesystem::path ModuleCacheDirectory;
     std::vector<std::filesystem::path> ModulePaths;
     uint32_t OptimizationLevel{ 0u };
-    bool ValidateReflectionAgainstWgsl{ true };
+    /** Which `TargetProfile` this cook emits for. `--target` sets it */
+    std::string TargetName{ "wgsl" };
+    /** Runs the target's validator, making sure that emitted data matches target binding schema and access
+     * model */
+    bool ValidateAgainstEmittedText{ true };
     bool ReportReflection{ false };
     bool MultithreadEntryPointCodegen{ true };
-    /** Turns off content dedup. Output stays correct, and every artifact takes its own index. This
-     * is the control arm of the A/B check, and the way out if dedup ever needs to be untangled. */
+    /**Turns off content dedup. Output stays correct, and every artifact takes its own index */
     bool DedupeEnabled{ true };
     /** Cooks twice into memory and compares. Catches an unordered container's iteration order when
      * it reaches the emitted output. */

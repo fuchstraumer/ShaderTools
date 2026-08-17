@@ -1,5 +1,6 @@
 #include "ShaderDataSchema.hpp"
 #include "ShaderLibraryTypes.hpp"
+#include "TargetProfile.hpp"
 #include "TestHarness.hpp"
 #include "WgslBindingScanner.hpp"
 
@@ -16,8 +17,8 @@
 // reflection decides the size and the type. A test that fed the same source to both sides would
 // prove nothing, so the WGSL text here is fixed and the reflection records are written by hand.
 
-using lodestone::BindingKind;
 using lodestone::BindingComparison;
+using lodestone::BindingKind;
 using lodestone::CompareBindings;
 using lodestone::ReflectedBinding;
 using lodestone::ScanWgslBindings;
@@ -160,6 +161,36 @@ int main()
     extra.push_back(MakeReflected("GhostBuffer", 3u, 0u, BindingKind::StorageBuffer));
     const BindingComparison extraBinding = CompareBindings(declared, extra);
     runner.Check(!extraBinding.Matches, "a reflection record the WGSL never declares fails");
+
+    // D7 moved the cross-check behind `ResolvedLibraryValidator` so a second target can supply its
+    // own. Moving a seam must not change the thing behind it, so the validator reached through the
+    // interface has to give the same answer as the two functions called directly. If these ever
+    // disagree, the adapter grew an opinion it is not allowed to have.
+    runner.BeginSection("the target profile reaches the same scanner");
+    const lodestone::TargetProfile* wgslProfile = lodestone::FindTargetProfile("wgsl");
+    runner.Check(wgslProfile != nullptr, "the build has a wgsl profile");
+    runner.Check(wgslProfile != nullptr && wgslProfile->Access == lodestone::AccessModel::Bound,
+                 "wgsl places a resource by group and binding");
+    runner.Check(wgslProfile != nullptr && wgslProfile->Validator != nullptr,
+                 "wgsl can read its own output, so it supplies a validator");
+    runner.Check(lodestone::FindTargetProfile("hlsl") == nullptr,
+                 "a target this build does not have resolves to nothing");
+
+    if (wgslProfile != nullptr && wgslProfile->Validator != nullptr)
+    {
+        const std::vector<ReflectedBinding> agreeing = MakeAgreeingReflection();
+        const BindingComparison throughInterface =
+            wgslProfile->Validator->ValidateEntryPoint(k_Wgsl, agreeing);
+        const BindingComparison direct = CompareBindings(ScanWgslBindings(k_Wgsl), agreeing);
+        runner.Check(throughInterface.Matches == direct.Matches,
+                     "the validator agrees with the scanner on output that matches");
+
+        const BindingComparison mismatchThroughInterface =
+            wgslProfile->Validator->ValidateEntryPoint(k_Wgsl, extra);
+        runner.Check(mismatchThroughInterface.Matches == extraBinding.Matches &&
+                         mismatchThroughInterface.Report == extraBinding.Report,
+                     "the validator agrees with the scanner on output that does not, report included");
+    }
 
     return runner.Report();
 }

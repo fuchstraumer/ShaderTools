@@ -996,6 +996,7 @@ CookResult<void> SlangCompiler::Impl::ExtractRawBindings(slang::ProgramLayout* p
     for (SlangInt rangeIndex = 0; rangeIndex < bindingRangeCount; ++rangeIndex)
     {
         const slang::BindingType bindingType = globalLayout->getBindingRangeType(rangeIndex);
+        // Skip input/output attributes, which slang considers to be part of the global params
         if (bindingType == slang::BindingType::Unknown || bindingType == slang::BindingType::VaryingInput ||
             bindingType == slang::BindingType::VaryingOutput)
         {

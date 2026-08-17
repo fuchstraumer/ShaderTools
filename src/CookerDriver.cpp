@@ -11,7 +11,7 @@
 #include "ShaderManifestEmitter.hpp"
 #include "SlangCompiler.hpp"
 #include "StageDump.hpp"
-#include "WgslBindingScanner.hpp"
+#include "TargetProfile.hpp"
 
 #include <algorithm>
 #include <chrono>
@@ -136,25 +136,37 @@ namespace
         }
     }
 
-    uint32_t ValidateVariantReflection(const CompiledVariant& variant)
+    /** The reflection cross-check, after stage 4. It reads the emitted text back and compares it
+     * against what reflection claims, so a disagreement is found by two opinions rather than by one
+     * opinion trusted twice.
+     *
+     * The target decides how to read its own output. A target with no validator returns no
+     * mismatches, and that is honest only because `PrepareModuleCompiler` already said the target
+     * supplies none. */
+    uint32_t ValidateResolvedLibrary(const TargetProfile& target, const CompiledVariant& variant)
     {
+        if (target.Validator == nullptr)
+        {
+            return 0u;
+        }
+
         uint32_t mismatchCount = 0u;
 
         for (size_t i = 0u; i < variant.EntryPoints.size(); ++i)
         {
             const CompiledEntryPoint& entryPoint = variant.EntryPoints[i];
-            const std::vector<WgslDeclaredBinding> declared = ScanWgslBindings(entryPoint.Code);
             const std::vector<ReflectedBinding> used = SelectBindingsUsedByEntryPoint(variant, i);
-            const BindingComparison comparison = CompareBindings(declared, used);
+            const BindingComparison comparison = target.Validator->ValidateEntryPoint(entryPoint.Code, used);
 
             if (!comparison.Matches)
             {
                 ++mismatchCount;
                 std::println(stderr,
-                             "[shader_cooker] REFLECTION MISMATCH in {}{} ({}):\n{}",
+                             "[shader_cooker] REFLECTION MISMATCH in {}{} ({}) for target {}:\n{}",
                              entryPoint.Name,
                              entryPoint.VariantSuffix,
                              variant.VariantDescription,
+                             target.Name,
                              comparison.Report);
             }
         }
@@ -401,6 +413,7 @@ namespace
     /** Stage 3 then stage 4, one variant at a time. The raw output is kept only when a dump asked for
      * it, because it holds the target text a second time and a 35-variant module is not small. */
     CookResult<void> CompileModuleVariants(const CookerOptions& options,
+                                           const TargetProfile& target,
                                            SlangCompiler& compiler,
                                            const VariantSet& variant_set,
                                            CookedModule& cooked_module,
@@ -444,9 +457,9 @@ namespace
             RecordVariantStatistics(variant, statistics);
             ReportVariantIfRequested(options, variant);
 
-            if (options.ValidateReflectionAgainstWgsl)
+            if (options.ValidateAgainstEmittedText)
             {
-                statistics.ReflectionMismatches += ValidateVariantReflection(variant);
+                statistics.ReflectionMismatches += ValidateResolvedLibrary(target, variant);
             }
 
             if (options.ReportReflection)
@@ -500,6 +513,13 @@ namespace
                                 CookedLibrary& out_library,
                                 CookStatistics& statistics)
     {
+        // `ParseCommandLine` already rejected a name no profile answers to, so this cannot be null.
+        const TargetProfile* target = FindTargetProfile(options.TargetName);
+        if (target == nullptr)
+        {
+            return std::unexpected(CookError::UnknownTargetProfile);
+        }
+
         SlangCompiler compiler;
         const PermutationSpace* space = nullptr;
 
@@ -509,6 +529,16 @@ namespace
         {
             return prepared;
         }
+
+        // Said once for each module, because a cook that checked nothing must not look like a cook
+        // that checked and agreed.
+        std::println(stderr,
+                     "[shader_cooker] target {} ({} access), cross-check {}",
+                     target->Name,
+                     ToString(target->Access),
+                     target->Validator == nullptr         ? "unavailable for this target"
+                     : options.ValidateAgainstEmittedText ? "on"
+                                                          : "off by --no-validate");
 
         const CookResult<VariantSet> variantSet = EnumerateVariants(*space);
         if (!variantSet)
@@ -572,6 +602,7 @@ namespace
                                         compiler.GetExternConstantDefaults().end());
 
         if (CookResult<void> compiled = CompileModuleVariants(options,
+                                                              *target,
                                                               compiler,
                                                               variantSet.value(),
                                                               cookedModule,
