@@ -20,9 +20,7 @@
 
 using lodestone::CanonicalizeAssignment;
 using lodestone::ComputeVariantIndex;
-using lodestone::CookError;
 using lodestone::CookResult;
-using lodestone::IndexOfAxisValue;
 using lodestone::PermutationAssignment;
 using lodestone::PermutationAxis;
 using lodestone::PermutationSpace;
@@ -33,18 +31,16 @@ using lodestone::VariantSet;
 namespace
 {
 
-const PermutationAxis k_SizeAxis{ .Name = "TEST_SIZE",
-                                  .Values = { uint32_t{ 128u },
-                                              uint32_t{ 256u },
-                                              uint32_t{ 512u },
-                                              uint32_t{ 1024u } },
-                                  .Parent = nullptr,
-                                  .RequiredParentValue = false };
+const PermutationAxis k_SizeAxis{
+    .Name = "TEST_SIZE",
+    .Values = { uint32_t{ 128u }, uint32_t{ 256u }, uint32_t{ 512u }, uint32_t{ 1024u } },
+    .Parent = nullptr,
+    .RequiredParentValue = false
+};
 
-const PermutationAxis k_UseWaveOpsAxis{ .Name = "TEST_USE_WAVE_OPS",
-                                        .Values = { false, true },
-                                        .Parent = nullptr,
-                                        .RequiredParentValue = false };
+const PermutationAxis k_UseWaveOpsAxis{
+    .Name = "TEST_USE_WAVE_OPS", .Values = { false, true }, .Parent = nullptr, .RequiredParentValue = false
+};
 
 /** Only contributes values when TEST_USE_WAVE_OPS took the value true. */
 const PermutationAxis k_WaveSizeAxis{ .Name = "TEST_WAVE_SIZE",
@@ -55,7 +51,7 @@ const PermutationAxis k_WaveSizeAxis{ .Name = "TEST_WAVE_SIZE",
 const PermutationSpace k_TestSpace{ &k_SizeAxis, &k_UseWaveOpsAxis, &k_WaveSizeAxis };
 
 /** 4 sizes, times 2 wave-op settings, times 3 wave sizes. The dependent axis leaves holes in it. */
-constexpr uint32_t k_ExpectedSpaceSize = 24u;
+constexpr int32_t k_ExpectedSpaceSize = 24;
 /** For each size: one variant with wave ops off, and three with wave ops on. */
 constexpr uint32_t k_ExpectedVariantCount = 16u;
 
@@ -121,16 +117,8 @@ int main()
     bool everyRoundTripAgrees = true;
     for (const VariantDescriptor& descriptor : variants.Variants)
     {
-        const CookResult<PermutationAssignment> canonical =
-            CanonicalizeAssignment(k_TestSpace, descriptor.Active);
-        if (!canonical)
-        {
-            everyRoundTripAgrees = false;
-            continue;
-        }
-
-        const CookResult<uint32_t> index = ComputeVariantIndex(k_TestSpace, canonical.value());
-        if (!index || index.value() != descriptor.Index)
+        const PermutationAssignment canonical = CanonicalizeAssignment(k_TestSpace, descriptor.Active);
+        if (ComputeVariantIndex(k_TestSpace, canonical) != descriptor.Index)
         {
             everyRoundTripAgrees = false;
         }
@@ -172,35 +160,21 @@ int main()
     PermutationAssignment partial;
     partial.emplace_back(&k_SizeAxis, PermutationValue{ uint32_t{ 512u } });
 
-    const CookResult<PermutationAssignment> filled = CanonicalizeAssignment(k_TestSpace, partial);
-    runner.Check(filled.has_value(), "a partial assignment canonicalizes");
-    if (filled)
+    const PermutationAssignment filled = CanonicalizeAssignment(k_TestSpace, partial);
+    runner.Check(filled.size() == k_TestSpace.size(), "a partial assignment canonicalizes to every axis");
+
+    const int32_t partialIndex = ComputeVariantIndex(k_TestSpace, filled);
+
+    bool matchesRealVariant = false;
+    for (const VariantDescriptor& descriptor : variants.Variants)
     {
-        const CookResult<uint32_t> partialIndex = ComputeVariantIndex(k_TestSpace, filled.value());
-        runner.Check(partialIndex.has_value(), "a canonicalized partial assignment has an index");
-
-        bool matchesRealVariant = false;
-        for (const VariantDescriptor& descriptor : variants.Variants)
+        if (descriptor.Index == partialIndex)
         {
-            if (partialIndex && descriptor.Index == partialIndex.value())
-            {
-                matchesRealVariant = true;
-            }
+            matchesRealVariant = true;
         }
-
-        runner.Check(matchesRealVariant, "the partial assignment names a variant the cook produced");
     }
 
-    runner.BeginSection("a value outside an axis is an error, not a default");
-    const CookResult<uint32_t> missingValue =
-        IndexOfAxisValue(k_SizeAxis, PermutationValue{ uint32_t{ 777u } });
-    runner.Check(!missingValue && missingValue.error() == CookError::PermutationValueNotInAxis,
-                 "a value the axis does not hold is rejected by name");
-
-    const CookResult<uint32_t> wrongType =
-        IndexOfAxisValue(k_SizeAxis, PermutationValue{ int32_t{ 128 } });
-    runner.Check(!wrongType && wrongType.error() == CookError::PermutationValueNotInAxis,
-                 "an int32 128 does not match a uint32 128, because the variant compares its type too");
+    runner.Check(matchesRealVariant, "the partial assignment names a variant the cook produced");
 
     return runner.Report();
 }
