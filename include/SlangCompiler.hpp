@@ -2,6 +2,7 @@
 #ifndef LODESTONE_SHADER_COOKER_SLANG_COMPILER_HPP
 #define LODESTONE_SHADER_COOKER_SLANG_COMPILER_HPP
 #include "CookerErrors.hpp"
+#include "Diagnostics.hpp"
 #include "PermutationSpace.hpp"
 #include "RawLibrary.hpp"
 #include <filesystem>
@@ -33,7 +34,10 @@ public:
     SlangCompiler(SlangCompiler&&) noexcept;
     SlangCompiler& operator=(SlangCompiler&&) noexcept;
 
-    CookResult<void> Initialize(const SlangCompilerCreateInfo& create_info);
+    /** The sink takes every compiler message, and it must outlive this object. It is a parameter
+     * rather than a field of the create info because a sink cannot be absent: a compiler that has
+     * nowhere to report is a compiler that fails in silence. */
+    CookResult<void> Initialize(const SlangCompilerCreateInfo& create_info, DiagnosticSink& sink);
     /** Defaults of the extern constants no axis drives. A size expression may name them, so they must
      * be resolved before the first CompileVariant call. */
     CookResult<void> ResolveExternConstantDefaults(const PermutationSpace& space);

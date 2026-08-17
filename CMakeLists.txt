@@ -80,11 +80,13 @@ set(LODESTONE_HEADERS
     "${CMAKE_CURRENT_SOURCE_DIR}/include/ContentInterner.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/include/CookedLibrary.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/include/DedupeReport.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/Diagnostics.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/include/ShaderDataSchema.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/include/ShaderLibraryEmitter.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/include/ShaderManifestEmitter.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/include/SizeExpression.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/include/SlangCompiler.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/SlangDiagnosticParser.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/include/StageDump.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/include/WgslBindingScanner.hpp")
 
@@ -93,6 +95,7 @@ set(LODESTONE_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/src/CookedLibrary.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/CookerDriver.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/DedupeReport.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/Diagnostics.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/CookerErrors.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/CookerOptions.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/OutputSink.cpp"
@@ -104,6 +107,7 @@ set(LODESTONE_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/src/ShaderManifestEmitter.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/SizeExpression.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/SlangCompiler.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/SlangDiagnosticParser.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/StageDump.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/WgslBindingScanner.cpp")
 

@@ -321,6 +321,7 @@ namespace
      * variant compiles. */
     CookResult<void> PrepareModuleCompiler(const CookerOptions& options,
                                            const std::filesystem::path& module_path,
+                                           DiagnosticSink& diagnostics,
                                            SlangCompiler& compiler,
                                            const PermutationSpace*& out_space)
     {
@@ -330,7 +331,7 @@ namespace
         createInfo.OptimizationLevel = options.OptimizationLevel;
         createInfo.MultithreadEntryPointCodegen = options.MultithreadEntryPointCodegen;
 
-        if (auto initializeResult = compiler.Initialize(createInfo); !initializeResult)
+        if (auto initializeResult = compiler.Initialize(createInfo, diagnostics); !initializeResult)
         {
             return initializeResult;
         }
@@ -343,7 +344,8 @@ namespace
 
         out_space = FindPermutationSpaceForModule(moduleName);
 
-        if (CookError axisResult = VerifyAxisNamesAreDeclared(*out_space, compiler.GetModuleSourceTexts(), moduleName);
+        if (CookError axisResult =
+                VerifyAxisNamesAreDeclared(*out_space, compiler.GetModuleSourceTexts(), moduleName);
             axisResult != CookError::Success)
         {
             return std::unexpected(axisResult);
@@ -493,6 +495,7 @@ namespace
     CookResult<void> CookModule(const CookerOptions& options,
                                 const std::filesystem::path& module_path,
                                 OutputSink& sink,
+                                DiagnosticSink& diagnostics,
                                 std::vector<CompiledVariant>& out_variants,
                                 CookedLibrary& out_library,
                                 CookStatistics& statistics)
@@ -500,7 +503,8 @@ namespace
         SlangCompiler compiler;
         const PermutationSpace* space = nullptr;
 
-        if (CookResult<void> prepared = PrepareModuleCompiler(options, module_path, compiler, space);
+        if (CookResult<void> prepared =
+                PrepareModuleCompiler(options, module_path, diagnostics, compiler, space);
             !prepared)
         {
             return prepared;
@@ -646,12 +650,15 @@ CookResult<CookStatistics> RunCookOnce(const CookerOptions& options, OutputSink&
     CookStatistics statistics;
     std::vector<CompiledVariant> variants;
     CookedLibrary library;
+    // One sink for the whole cook, so a failure count spans every module rather than resetting at
+    // each one.
+    StderrDiagnosticSink diagnostics;
 
     for (const std::filesystem::path& modulePath : options.ModulePaths)
     {
         std::println(stderr, "[shader_cooker] cooking {}", modulePath.string());
         const CookResult<void> moduleResult =
-            CookModule(options, modulePath, sink, variants, library, statistics);
+            CookModule(options, modulePath, sink, diagnostics, variants, library, statistics);
         if (!moduleResult)
         {
             return std::unexpected(moduleResult.error());

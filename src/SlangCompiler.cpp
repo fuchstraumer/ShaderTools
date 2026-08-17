@@ -1,9 +1,11 @@
 #include "SlangCompiler.hpp"
 #include "CookerErrors.hpp"
+#include "Diagnostics.hpp"
 #include "PermutationSpace.hpp"
 #include "ResourceFlags.hpp"
 #include "ShaderDataSchema.hpp"
 #include "ShaderLibraryTypes.hpp"
+#include "SlangDiagnosticParser.hpp"
 
 #include <filesystem>
 #include <ios>
@@ -84,14 +86,43 @@ namespace
         return std::string{ static_cast<const char*>(blob->getBufferPointer()), blob->getBufferSize() };
     }
 
-    void ReportDiagnostics(std::string_view context, slang::IBlob* blob)
+    void ReportDiagnosticText(DiagnosticSink& sink, std::string_view context, std::string_view text)
+    {
+        if (text.empty())
+        {
+            return;
+        }
+
+        ParseSlangDiagnostics(text, context, sink);
+    }
+
+    void ReportDiagnostics(DiagnosticSink& sink, std::string_view context, slang::IBlob* blob)
     {
         if (blob == nullptr || blob->getBufferSize() == 0u)
         {
             return;
         }
 
-        std::println(stderr, "[shader_cooker] {}: {}", context, BlobToString(blob));
+        ReportDiagnosticText(sink, context, BlobToString(blob));
+    }
+
+    /** What one entry point's codegen produced. The diagnostic text travels with the code so that a
+     * worker thread never touches a sink. coalesced after threads join */
+    struct GeneratedEntryPoint
+    {
+        std::string Code;
+        std::string Diagnostics;
+    };
+
+    GeneratedEntryPoint GenerateOneEntryPoint(slang::IComponentType* linked_program, size_t index)
+    {
+        Slang::ComPtr<slang::IBlob> code;
+        Slang::ComPtr<slang::IBlob> diagnostics;
+        const bool failed = SLANG_FAILED(linked_program->getEntryPointCode(
+            static_cast<SlangInt>(index), k_WgslTargetIndex, code.writeRef(), diagnostics.writeRef()));
+
+        return GeneratedEntryPoint{ .Code = failed ? std::string{} : BlobToString(code.get()),
+                                    .Diagnostics = BlobToString(diagnostics.get()) };
     }
 
     SlangOptimizationLevel ToSlangOptimizationLevel(uint32_t level) noexcept
@@ -551,6 +582,12 @@ namespace
         debugInformation.value.intValue0 = SLANG_DEBUG_INFO_LEVEL_NONE;
         options.push_back(debugInformation);
 
+        slang::CompilerOptionEntry machineReadable{};
+        machineReadable.name = slang::CompilerOptionName::EnableMachineReadableDiagnostics;
+        machineReadable.value.kind = slang::CompilerOptionValueKind::Int;
+        machineReadable.value.intValue0 = 1;
+        options.push_back(machineReadable);
+
         slang::CompilerOptionEntry optimization{};
         optimization.name = slang::CompilerOptionName::Optimization;
         optimization.value.kind = slang::CompilerOptionValueKind::Int;
@@ -577,6 +614,9 @@ struct SlangCompiler::Impl
     std::vector<ExternConstantDefault> ExternDefaults;
     std::string ModuleName;
     bool MultithreadEntryPointCodegen{ true };
+    /** Set once, by `Initialize`, and never null after that. A pointer rather than a reference only
+     * because this object moves. */
+    DiagnosticSink* Sink{ nullptr };
 
     CookResult<void> CreateSession(const SlangCompilerCreateInfo& create_info);
     CookResult<void> LoadRootModule();
@@ -599,10 +639,11 @@ struct SlangCompiler::Impl
                                     SlangInt range_index,
                                     slang::BindingType binding_type,
                                     RawBinding& binding);
-    static void CollectUsedBindingIndices(slang::IComponentType* linked_program,
-                                          SlangInt entry_point_index,
-                                          const std::vector<RawBinding>& global_bindings,
-                                          std::vector<uint32_t>& out_used_indices);
+    // Not static: it reports through the sink, which is a member.
+    void CollectUsedBindingIndices(slang::IComponentType* linked_program,
+                                   SlangInt entry_point_index,
+                                   const std::vector<RawBinding>& global_bindings,
+                                   std::vector<uint32_t>& out_used_indices);
     static void ExtractRasterState(slang::EntryPointReflection* entry_point_layout,
                                    ShaderStageKind stage,
                                    ReflectedRasterState& raster);
@@ -656,7 +697,7 @@ CookResult<void> SlangCompiler::Impl::LoadRootModule()
 {
     Slang::ComPtr<slang::IBlob> diagnostics;
     RootModule = Session->loadModule(ModuleName.c_str(), diagnostics.writeRef());
-    ReportDiagnostics("loadModule", diagnostics.get());
+    ReportDiagnostics(*Sink, "loadModule", diagnostics.get());
 
     if (RootModule == nullptr)
     {
@@ -740,7 +781,7 @@ CookResult<Slang::ComPtr<slang::IComponentType>> SlangCompiler::Impl::LinkVarian
                                                                             variantModulePath.c_str(),
                                                                             variantSource.c_str(),
                                                                             diagnostics.writeRef());
-        ReportDiagnostics("loadModuleFromSourceString", diagnostics.get());
+        ReportDiagnostics(*Sink, "loadModuleFromSourceString", diagnostics.get());
 
         if (variantModule == nullptr)
         {
@@ -756,7 +797,7 @@ CookResult<Slang::ComPtr<slang::IComponentType>> SlangCompiler::Impl::LinkVarian
                                           static_cast<SlangInt>(components.size()),
                                           composite.writeRef(),
                                           diagnostics.writeRef());
-    ReportDiagnostics("createCompositeComponentType", diagnostics.get());
+    ReportDiagnostics(*Sink, "createCompositeComponentType", diagnostics.get());
 
     if (composite == nullptr)
     {
@@ -766,7 +807,7 @@ CookResult<Slang::ComPtr<slang::IComponentType>> SlangCompiler::Impl::LinkVarian
     Slang::ComPtr<slang::IComponentType> linked;
     if (SLANG_FAILED(composite->link(linked.writeRef(), diagnostics.writeRef())))
     {
-        ReportDiagnostics("link", diagnostics.get());
+        ReportDiagnostics(*Sink, "link", diagnostics.get());
         return std::unexpected(CookError::LinkFailed);
     }
 
@@ -781,32 +822,27 @@ std::vector<std::string> SlangCompiler::Impl::GenerateEntryPointCode(
 
     if (MultithreadEntryPointCodegen)
     {
-        std::vector<std::future<std::string>> pending;
+        // A worker carries its diagnostic text back rather than reporting it. Two reasons: a sink has
+        // no lock, and a message reported from a worker would arrive in whatever order the threads
+        // finished. Reporting on the joining thread puts every message in entry point order, so two
+        // runs of one cook say the same thing in the same sequence.
+        std::vector<std::future<GeneratedEntryPoint>> pending;
         pending.reserve(entryPointCount);
 
         for (size_t i = 0; i < entryPointCount; ++i)
         {
-            pending.push_back(
-                std::async(std::launch::async,
-                           [linked_program, i]()
-                           {
-                               Slang::ComPtr<slang::IBlob> code;
-                               Slang::ComPtr<slang::IBlob> diagnostics;
-                               if (SLANG_FAILED(linked_program->getEntryPointCode(static_cast<SlangInt>(i),
-                                                                                  k_WgslTargetIndex,
-                                                                                  code.writeRef(),
-                                                                                  diagnostics.writeRef())))
-                               {
-                                   ReportDiagnostics("getEntryPointCode", diagnostics.get());
-                                   return std::string{};
-                               }
-                               return BlobToString(code.get());
-                           }));
+            pending.push_back(std::async(std::launch::async,
+                                         [linked_program, i]()
+                                         {
+                                             return GenerateOneEntryPoint(linked_program, i);
+                                         }));
         }
 
         for (size_t i = 0; i < entryPointCount; ++i)
         {
-            generated[i] = pending[i].get();
+            GeneratedEntryPoint result = pending[i].get();
+            ReportDiagnosticText(*Sink, "getEntryPointCode", result.Diagnostics);
+            generated[i] = std::move(result.Code);
         }
 
         return generated;
@@ -814,16 +850,9 @@ std::vector<std::string> SlangCompiler::Impl::GenerateEntryPointCode(
 
     for (size_t i = 0; i < entryPointCount; ++i)
     {
-        Slang::ComPtr<slang::IBlob> code;
-        Slang::ComPtr<slang::IBlob> diagnostics;
-        if (SLANG_FAILED(linked_program->getEntryPointCode(
-                static_cast<SlangInt>(i), k_WgslTargetIndex, code.writeRef(), diagnostics.writeRef())))
-        {
-            ReportDiagnostics("getEntryPointCode", diagnostics.get());
-            continue;
-        }
-
-        generated[i] = BlobToString(code.get());
+        GeneratedEntryPoint result = GenerateOneEntryPoint(linked_program, i);
+        ReportDiagnosticText(*Sink, "getEntryPointCode", result.Diagnostics);
+        generated[i] = std::move(result.Code);
     }
 
     return generated;
@@ -1051,7 +1080,7 @@ void SlangCompiler::Impl::CollectUsedBindingIndices(slang::IComponentType* linke
             entry_point_index, k_WgslTargetIndex, metadata.writeRef(), diagnostics.writeRef())) ||
         metadata == nullptr)
     {
-        ReportDiagnostics("getEntryPointMetadata", diagnostics.get());
+        ReportDiagnostics(*Sink, "getEntryPointMetadata", diagnostics.get());
         return;
     }
 
@@ -1137,9 +1166,10 @@ SlangCompiler::~SlangCompiler() = default;
 SlangCompiler::SlangCompiler(SlangCompiler&&) noexcept = default;
 SlangCompiler& SlangCompiler::operator=(SlangCompiler&&) noexcept = default;
 
-CookResult<void> SlangCompiler::Initialize(const SlangCompilerCreateInfo& create_info)
+CookResult<void> SlangCompiler::Initialize(const SlangCompilerCreateInfo& create_info, DiagnosticSink& sink)
 {
     impl = std::make_unique<Impl>();
+    impl->Sink = &sink;
 
     const CookResult<void> sessionResult = impl->CreateSession(create_info);
     if (!sessionResult)

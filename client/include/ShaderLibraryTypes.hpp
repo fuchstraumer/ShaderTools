@@ -6,15 +6,15 @@
 #include <span>
 #include <string_view>
 /**
- * @brief The vocabulary the shader cooker writes and the rendergraph reads. This header is the contract
- * between the Cooker and clients that want to use the data the cooker produces. Texture formats and view
- * dimensions come from ResourceFlags.hpp. One definition serves both the resource layer and the cooker, so
- * the two cannot disagree.
+ * @brief The vocabulary the shader cooker writes and clients read. This header is the contract between
+ * Lodestone and clients that want to use the data the cooker produces. Texture formats and view dimensions
+ * come from ResourceFlags.hpp. One definition serves both the resource layer and the cooker, so the two
+ * cannot disagree.
  */
 namespace lodestone
 {
 
-/** @brief The WebGPU binding type that one shader resource needs. */
+/** @brief The Graphics API binding type that one shader resource needs. */
 enum class BindingKind : uint8_t
 {
     Invalid = 0,
