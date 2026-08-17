@@ -1,0 +1,3911 @@
+{
+    "stage": "interned",
+    "module": "OceanFft",
+    "spaceSize": 56,
+    "variantCount": 35,
+    "entryPoints": [
+        {
+            "name": "IfftRadix2CS",
+            "stage": "Compute"
+        },
+        {
+            "name": "IfftRadix4CS",
+            "stage": "Compute"
+        },
+        {
+            "name": "IfftPermuteCS",
+            "stage": "Compute"
+        }
+    ],
+    "variants": [
+        {
+            "index": 0,
+            "suffix": "_128_false_16",
+            "description": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+            "canonical": [
+                {
+                    "axis": "IFFT_SIZE",
+                    "value": "128"
+                },
+                {
+                    "axis": "IFFT_USE_WAVE_OPS",
+                    "value": "false"
+                },
+                {
+                    "axis": "IFFT_WAVE_SIZE",
+                    "value": "16"
+                }
+            ],
+            "sourceIndices": [
+                0,
+                1,
+                2
+            ],
+            "layoutIndices": [
+                0,
+                1,
+                2
+            ],
+            "rasterIndices": [
+                0,
+                0,
+                0
+            ],
+            "workgroups": [
+                {
+                    "x": 128,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 128,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 32,
+                    "y": 32,
+                    "z": 1
+                }
+            ]
+        },
+        {
+            "index": 4,
+            "suffix": "_128_true_16",
+            "description": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+            "canonical": [
+                {
+                    "axis": "IFFT_SIZE",
+                    "value": "128"
+                },
+                {
+                    "axis": "IFFT_USE_WAVE_OPS",
+                    "value": "true"
+                },
+                {
+                    "axis": "IFFT_WAVE_SIZE",
+                    "value": "16"
+                }
+            ],
+            "sourceIndices": [
+                3,
+                4,
+                2
+            ],
+            "layoutIndices": [
+                0,
+                1,
+                2
+            ],
+            "rasterIndices": [
+                0,
+                0,
+                0
+            ],
+            "workgroups": [
+                {
+                    "x": 128,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 128,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 32,
+                    "y": 32,
+                    "z": 1
+                }
+            ]
+        },
+        {
+            "index": 5,
+            "suffix": "_128_true_32",
+            "description": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+            "canonical": [
+                {
+                    "axis": "IFFT_SIZE",
+                    "value": "128"
+                },
+                {
+                    "axis": "IFFT_USE_WAVE_OPS",
+                    "value": "true"
+                },
+                {
+                    "axis": "IFFT_WAVE_SIZE",
+                    "value": "32"
+                }
+            ],
+            "sourceIndices": [
+                5,
+                6,
+                2
+            ],
+            "layoutIndices": [
+                0,
+                1,
+                2
+            ],
+            "rasterIndices": [
+                0,
+                0,
+                0
+            ],
+            "workgroups": [
+                {
+                    "x": 128,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 128,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 32,
+                    "y": 32,
+                    "z": 1
+                }
+            ]
+        },
+        {
+            "index": 6,
+            "suffix": "_128_true_64",
+            "description": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+            "canonical": [
+                {
+                    "axis": "IFFT_SIZE",
+                    "value": "128"
+                },
+                {
+                    "axis": "IFFT_USE_WAVE_OPS",
+                    "value": "true"
+                },
+                {
+                    "axis": "IFFT_WAVE_SIZE",
+                    "value": "64"
+                }
+            ],
+            "sourceIndices": [
+                7,
+                8,
+                2
+            ],
+            "layoutIndices": [
+                0,
+                1,
+                2
+            ],
+            "rasterIndices": [
+                0,
+                0,
+                0
+            ],
+            "workgroups": [
+                {
+                    "x": 128,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 128,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 32,
+                    "y": 32,
+                    "z": 1
+                }
+            ]
+        },
+        {
+            "index": 7,
+            "suffix": "_128_true_128",
+            "description": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+            "canonical": [
+                {
+                    "axis": "IFFT_SIZE",
+                    "value": "128"
+                },
+                {
+                    "axis": "IFFT_USE_WAVE_OPS",
+                    "value": "true"
+                },
+                {
+                    "axis": "IFFT_WAVE_SIZE",
+                    "value": "128"
+                }
+            ],
+            "sourceIndices": [
+                9,
+                10,
+                2
+            ],
+            "layoutIndices": [
+                0,
+                1,
+                2
+            ],
+            "rasterIndices": [
+                0,
+                0,
+                0
+            ],
+            "workgroups": [
+                {
+                    "x": 128,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 128,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 32,
+                    "y": 32,
+                    "z": 1
+                }
+            ]
+        },
+        {
+            "index": 8,
+            "suffix": "_256_false_16",
+            "description": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+            "canonical": [
+                {
+                    "axis": "IFFT_SIZE",
+                    "value": "256"
+                },
+                {
+                    "axis": "IFFT_USE_WAVE_OPS",
+                    "value": "false"
+                },
+                {
+                    "axis": "IFFT_WAVE_SIZE",
+                    "value": "16"
+                }
+            ],
+            "sourceIndices": [
+                11,
+                12,
+                13
+            ],
+            "layoutIndices": [
+                3,
+                4,
+                5
+            ],
+            "rasterIndices": [
+                0,
+                0,
+                0
+            ],
+            "workgroups": [
+                {
+                    "x": 256,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 256,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 32,
+                    "y": 32,
+                    "z": 1
+                }
+            ]
+        },
+        {
+            "index": 12,
+            "suffix": "_256_true_16",
+            "description": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+            "canonical": [
+                {
+                    "axis": "IFFT_SIZE",
+                    "value": "256"
+                },
+                {
+                    "axis": "IFFT_USE_WAVE_OPS",
+                    "value": "true"
+                },
+                {
+                    "axis": "IFFT_WAVE_SIZE",
+                    "value": "16"
+                }
+            ],
+            "sourceIndices": [
+                14,
+                15,
+                13
+            ],
+            "layoutIndices": [
+                3,
+                4,
+                5
+            ],
+            "rasterIndices": [
+                0,
+                0,
+                0
+            ],
+            "workgroups": [
+                {
+                    "x": 256,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 256,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 32,
+                    "y": 32,
+                    "z": 1
+                }
+            ]
+        },
+        {
+            "index": 13,
+            "suffix": "_256_true_32",
+            "description": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+            "canonical": [
+                {
+                    "axis": "IFFT_SIZE",
+                    "value": "256"
+                },
+                {
+                    "axis": "IFFT_USE_WAVE_OPS",
+                    "value": "true"
+                },
+                {
+                    "axis": "IFFT_WAVE_SIZE",
+                    "value": "32"
+                }
+            ],
+            "sourceIndices": [
+                16,
+                17,
+                13
+            ],
+            "layoutIndices": [
+                3,
+                4,
+                5
+            ],
+            "rasterIndices": [
+                0,
+                0,
+                0
+            ],
+            "workgroups": [
+                {
+                    "x": 256,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 256,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 32,
+                    "y": 32,
+                    "z": 1
+                }
+            ]
+        },
+        {
+            "index": 14,
+            "suffix": "_256_true_64",
+            "description": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+            "canonical": [
+                {
+                    "axis": "IFFT_SIZE",
+                    "value": "256"
+                },
+                {
+                    "axis": "IFFT_USE_WAVE_OPS",
+                    "value": "true"
+                },
+                {
+                    "axis": "IFFT_WAVE_SIZE",
+                    "value": "64"
+                }
+            ],
+            "sourceIndices": [
+                18,
+                19,
+                13
+            ],
+            "layoutIndices": [
+                3,
+                4,
+                5
+            ],
+            "rasterIndices": [
+                0,
+                0,
+                0
+            ],
+            "workgroups": [
+                {
+                    "x": 256,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 256,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 32,
+                    "y": 32,
+                    "z": 1
+                }
+            ]
+        },
+        {
+            "index": 15,
+            "suffix": "_256_true_128",
+            "description": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+            "canonical": [
+                {
+                    "axis": "IFFT_SIZE",
+                    "value": "256"
+                },
+                {
+                    "axis": "IFFT_USE_WAVE_OPS",
+                    "value": "true"
+                },
+                {
+                    "axis": "IFFT_WAVE_SIZE",
+                    "value": "128"
+                }
+            ],
+            "sourceIndices": [
+                20,
+                21,
+                13
+            ],
+            "layoutIndices": [
+                3,
+                4,
+                5
+            ],
+            "rasterIndices": [
+                0,
+                0,
+                0
+            ],
+            "workgroups": [
+                {
+                    "x": 256,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 256,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 32,
+                    "y": 32,
+                    "z": 1
+                }
+            ]
+        },
+        {
+            "index": 16,
+            "suffix": "_512_false_16",
+            "description": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+            "canonical": [
+                {
+                    "axis": "IFFT_SIZE",
+                    "value": "512"
+                },
+                {
+                    "axis": "IFFT_USE_WAVE_OPS",
+                    "value": "false"
+                },
+                {
+                    "axis": "IFFT_WAVE_SIZE",
+                    "value": "16"
+                }
+            ],
+            "sourceIndices": [
+                22,
+                23,
+                24
+            ],
+            "layoutIndices": [
+                6,
+                7,
+                8
+            ],
+            "rasterIndices": [
+                0,
+                0,
+                0
+            ],
+            "workgroups": [
+                {
+                    "x": 512,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 512,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 32,
+                    "y": 32,
+                    "z": 1
+                }
+            ]
+        },
+        {
+            "index": 20,
+            "suffix": "_512_true_16",
+            "description": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+            "canonical": [
+                {
+                    "axis": "IFFT_SIZE",
+                    "value": "512"
+                },
+                {
+                    "axis": "IFFT_USE_WAVE_OPS",
+                    "value": "true"
+                },
+                {
+                    "axis": "IFFT_WAVE_SIZE",
+                    "value": "16"
+                }
+            ],
+            "sourceIndices": [
+                25,
+                26,
+                24
+            ],
+            "layoutIndices": [
+                6,
+                7,
+                8
+            ],
+            "rasterIndices": [
+                0,
+                0,
+                0
+            ],
+            "workgroups": [
+                {
+                    "x": 512,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 512,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 32,
+                    "y": 32,
+                    "z": 1
+                }
+            ]
+        },
+        {
+            "index": 21,
+            "suffix": "_512_true_32",
+            "description": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+            "canonical": [
+                {
+                    "axis": "IFFT_SIZE",
+                    "value": "512"
+                },
+                {
+                    "axis": "IFFT_USE_WAVE_OPS",
+                    "value": "true"
+                },
+                {
+                    "axis": "IFFT_WAVE_SIZE",
+                    "value": "32"
+                }
+            ],
+            "sourceIndices": [
+                27,
+                28,
+                24
+            ],
+            "layoutIndices": [
+                6,
+                7,
+                8
+            ],
+            "rasterIndices": [
+                0,
+                0,
+                0
+            ],
+            "workgroups": [
+                {
+                    "x": 512,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 512,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 32,
+                    "y": 32,
+                    "z": 1
+                }
+            ]
+        },
+        {
+            "index": 22,
+            "suffix": "_512_true_64",
+            "description": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+            "canonical": [
+                {
+                    "axis": "IFFT_SIZE",
+                    "value": "512"
+                },
+                {
+                    "axis": "IFFT_USE_WAVE_OPS",
+                    "value": "true"
+                },
+                {
+                    "axis": "IFFT_WAVE_SIZE",
+                    "value": "64"
+                }
+            ],
+            "sourceIndices": [
+                29,
+                30,
+                24
+            ],
+            "layoutIndices": [
+                6,
+                7,
+                8
+            ],
+            "rasterIndices": [
+                0,
+                0,
+                0
+            ],
+            "workgroups": [
+                {
+                    "x": 512,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 512,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 32,
+                    "y": 32,
+                    "z": 1
+                }
+            ]
+        },
+        {
+            "index": 23,
+            "suffix": "_512_true_128",
+            "description": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+            "canonical": [
+                {
+                    "axis": "IFFT_SIZE",
+                    "value": "512"
+                },
+                {
+                    "axis": "IFFT_USE_WAVE_OPS",
+                    "value": "true"
+                },
+                {
+                    "axis": "IFFT_WAVE_SIZE",
+                    "value": "128"
+                }
+            ],
+            "sourceIndices": [
+                31,
+                32,
+                24
+            ],
+            "layoutIndices": [
+                6,
+                7,
+                8
+            ],
+            "rasterIndices": [
+                0,
+                0,
+                0
+            ],
+            "workgroups": [
+                {
+                    "x": 512,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 512,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 32,
+                    "y": 32,
+                    "z": 1
+                }
+            ]
+        },
+        {
+            "index": 24,
+            "suffix": "_1024_false_16",
+            "description": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+            "canonical": [
+                {
+                    "axis": "IFFT_SIZE",
+                    "value": "1024"
+                },
+                {
+                    "axis": "IFFT_USE_WAVE_OPS",
+                    "value": "false"
+                },
+                {
+                    "axis": "IFFT_WAVE_SIZE",
+                    "value": "16"
+                }
+            ],
+            "sourceIndices": [
+                33,
+                34,
+                35
+            ],
+            "layoutIndices": [
+                9,
+                10,
+                11
+            ],
+            "rasterIndices": [
+                0,
+                0,
+                0
+            ],
+            "workgroups": [
+                {
+                    "x": 1024,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 1024,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 32,
+                    "y": 32,
+                    "z": 1
+                }
+            ]
+        },
+        {
+            "index": 28,
+            "suffix": "_1024_true_16",
+            "description": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+            "canonical": [
+                {
+                    "axis": "IFFT_SIZE",
+                    "value": "1024"
+                },
+                {
+                    "axis": "IFFT_USE_WAVE_OPS",
+                    "value": "true"
+                },
+                {
+                    "axis": "IFFT_WAVE_SIZE",
+                    "value": "16"
+                }
+            ],
+            "sourceIndices": [
+                36,
+                37,
+                35
+            ],
+            "layoutIndices": [
+                9,
+                10,
+                11
+            ],
+            "rasterIndices": [
+                0,
+                0,
+                0
+            ],
+            "workgroups": [
+                {
+                    "x": 1024,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 1024,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 32,
+                    "y": 32,
+                    "z": 1
+                }
+            ]
+        },
+        {
+            "index": 29,
+            "suffix": "_1024_true_32",
+            "description": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+            "canonical": [
+                {
+                    "axis": "IFFT_SIZE",
+                    "value": "1024"
+                },
+                {
+                    "axis": "IFFT_USE_WAVE_OPS",
+                    "value": "true"
+                },
+                {
+                    "axis": "IFFT_WAVE_SIZE",
+                    "value": "32"
+                }
+            ],
+            "sourceIndices": [
+                38,
+                39,
+                35
+            ],
+            "layoutIndices": [
+                9,
+                10,
+                11
+            ],
+            "rasterIndices": [
+                0,
+                0,
+                0
+            ],
+            "workgroups": [
+                {
+                    "x": 1024,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 1024,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 32,
+                    "y": 32,
+                    "z": 1
+                }
+            ]
+        },
+        {
+            "index": 30,
+            "suffix": "_1024_true_64",
+            "description": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+            "canonical": [
+                {
+                    "axis": "IFFT_SIZE",
+                    "value": "1024"
+                },
+                {
+                    "axis": "IFFT_USE_WAVE_OPS",
+                    "value": "true"
+                },
+                {
+                    "axis": "IFFT_WAVE_SIZE",
+                    "value": "64"
+                }
+            ],
+            "sourceIndices": [
+                40,
+                41,
+                35
+            ],
+            "layoutIndices": [
+                9,
+                10,
+                11
+            ],
+            "rasterIndices": [
+                0,
+                0,
+                0
+            ],
+            "workgroups": [
+                {
+                    "x": 1024,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 1024,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 32,
+                    "y": 32,
+                    "z": 1
+                }
+            ]
+        },
+        {
+            "index": 31,
+            "suffix": "_1024_true_128",
+            "description": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+            "canonical": [
+                {
+                    "axis": "IFFT_SIZE",
+                    "value": "1024"
+                },
+                {
+                    "axis": "IFFT_USE_WAVE_OPS",
+                    "value": "true"
+                },
+                {
+                    "axis": "IFFT_WAVE_SIZE",
+                    "value": "128"
+                }
+            ],
+            "sourceIndices": [
+                42,
+                43,
+                35
+            ],
+            "layoutIndices": [
+                9,
+                10,
+                11
+            ],
+            "rasterIndices": [
+                0,
+                0,
+                0
+            ],
+            "workgroups": [
+                {
+                    "x": 1024,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 1024,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 32,
+                    "y": 32,
+                    "z": 1
+                }
+            ]
+        },
+        {
+            "index": 32,
+            "suffix": "_2048_false_16",
+            "description": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+            "canonical": [
+                {
+                    "axis": "IFFT_SIZE",
+                    "value": "2048"
+                },
+                {
+                    "axis": "IFFT_USE_WAVE_OPS",
+                    "value": "false"
+                },
+                {
+                    "axis": "IFFT_WAVE_SIZE",
+                    "value": "16"
+                }
+            ],
+            "sourceIndices": [
+                44,
+                45,
+                46
+            ],
+            "layoutIndices": [
+                12,
+                13,
+                14
+            ],
+            "rasterIndices": [
+                0,
+                0,
+                0
+            ],
+            "workgroups": [
+                {
+                    "x": 2048,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 2048,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 32,
+                    "y": 32,
+                    "z": 1
+                }
+            ]
+        },
+        {
+            "index": 36,
+            "suffix": "_2048_true_16",
+            "description": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+            "canonical": [
+                {
+                    "axis": "IFFT_SIZE",
+                    "value": "2048"
+                },
+                {
+                    "axis": "IFFT_USE_WAVE_OPS",
+                    "value": "true"
+                },
+                {
+                    "axis": "IFFT_WAVE_SIZE",
+                    "value": "16"
+                }
+            ],
+            "sourceIndices": [
+                47,
+                48,
+                46
+            ],
+            "layoutIndices": [
+                12,
+                13,
+                14
+            ],
+            "rasterIndices": [
+                0,
+                0,
+                0
+            ],
+            "workgroups": [
+                {
+                    "x": 2048,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 2048,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 32,
+                    "y": 32,
+                    "z": 1
+                }
+            ]
+        },
+        {
+            "index": 37,
+            "suffix": "_2048_true_32",
+            "description": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+            "canonical": [
+                {
+                    "axis": "IFFT_SIZE",
+                    "value": "2048"
+                },
+                {
+                    "axis": "IFFT_USE_WAVE_OPS",
+                    "value": "true"
+                },
+                {
+                    "axis": "IFFT_WAVE_SIZE",
+                    "value": "32"
+                }
+            ],
+            "sourceIndices": [
+                49,
+                50,
+                46
+            ],
+            "layoutIndices": [
+                12,
+                13,
+                14
+            ],
+            "rasterIndices": [
+                0,
+                0,
+                0
+            ],
+            "workgroups": [
+                {
+                    "x": 2048,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 2048,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 32,
+                    "y": 32,
+                    "z": 1
+                }
+            ]
+        },
+        {
+            "index": 38,
+            "suffix": "_2048_true_64",
+            "description": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+            "canonical": [
+                {
+                    "axis": "IFFT_SIZE",
+                    "value": "2048"
+                },
+                {
+                    "axis": "IFFT_USE_WAVE_OPS",
+                    "value": "true"
+                },
+                {
+                    "axis": "IFFT_WAVE_SIZE",
+                    "value": "64"
+                }
+            ],
+            "sourceIndices": [
+                51,
+                52,
+                46
+            ],
+            "layoutIndices": [
+                12,
+                13,
+                14
+            ],
+            "rasterIndices": [
+                0,
+                0,
+                0
+            ],
+            "workgroups": [
+                {
+                    "x": 2048,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 2048,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 32,
+                    "y": 32,
+                    "z": 1
+                }
+            ]
+        },
+        {
+            "index": 39,
+            "suffix": "_2048_true_128",
+            "description": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+            "canonical": [
+                {
+                    "axis": "IFFT_SIZE",
+                    "value": "2048"
+                },
+                {
+                    "axis": "IFFT_USE_WAVE_OPS",
+                    "value": "true"
+                },
+                {
+                    "axis": "IFFT_WAVE_SIZE",
+                    "value": "128"
+                }
+            ],
+            "sourceIndices": [
+                53,
+                54,
+                46
+            ],
+            "layoutIndices": [
+                12,
+                13,
+                14
+            ],
+            "rasterIndices": [
+                0,
+                0,
+                0
+            ],
+            "workgroups": [
+                {
+                    "x": 2048,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 2048,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 32,
+                    "y": 32,
+                    "z": 1
+                }
+            ]
+        },
+        {
+            "index": 40,
+            "suffix": "_4096_false_16",
+            "description": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+            "canonical": [
+                {
+                    "axis": "IFFT_SIZE",
+                    "value": "4096"
+                },
+                {
+                    "axis": "IFFT_USE_WAVE_OPS",
+                    "value": "false"
+                },
+                {
+                    "axis": "IFFT_WAVE_SIZE",
+                    "value": "16"
+                }
+            ],
+            "sourceIndices": [
+                55,
+                56,
+                57
+            ],
+            "layoutIndices": [
+                15,
+                16,
+                17
+            ],
+            "rasterIndices": [
+                0,
+                0,
+                0
+            ],
+            "workgroups": [
+                {
+                    "x": 4096,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 4096,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 32,
+                    "y": 32,
+                    "z": 1
+                }
+            ]
+        },
+        {
+            "index": 44,
+            "suffix": "_4096_true_16",
+            "description": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+            "canonical": [
+                {
+                    "axis": "IFFT_SIZE",
+                    "value": "4096"
+                },
+                {
+                    "axis": "IFFT_USE_WAVE_OPS",
+                    "value": "true"
+                },
+                {
+                    "axis": "IFFT_WAVE_SIZE",
+                    "value": "16"
+                }
+            ],
+            "sourceIndices": [
+                58,
+                59,
+                57
+            ],
+            "layoutIndices": [
+                15,
+                16,
+                17
+            ],
+            "rasterIndices": [
+                0,
+                0,
+                0
+            ],
+            "workgroups": [
+                {
+                    "x": 4096,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 4096,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 32,
+                    "y": 32,
+                    "z": 1
+                }
+            ]
+        },
+        {
+            "index": 45,
+            "suffix": "_4096_true_32",
+            "description": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+            "canonical": [
+                {
+                    "axis": "IFFT_SIZE",
+                    "value": "4096"
+                },
+                {
+                    "axis": "IFFT_USE_WAVE_OPS",
+                    "value": "true"
+                },
+                {
+                    "axis": "IFFT_WAVE_SIZE",
+                    "value": "32"
+                }
+            ],
+            "sourceIndices": [
+                60,
+                61,
+                57
+            ],
+            "layoutIndices": [
+                15,
+                16,
+                17
+            ],
+            "rasterIndices": [
+                0,
+                0,
+                0
+            ],
+            "workgroups": [
+                {
+                    "x": 4096,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 4096,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 32,
+                    "y": 32,
+                    "z": 1
+                }
+            ]
+        },
+        {
+            "index": 46,
+            "suffix": "_4096_true_64",
+            "description": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+            "canonical": [
+                {
+                    "axis": "IFFT_SIZE",
+                    "value": "4096"
+                },
+                {
+                    "axis": "IFFT_USE_WAVE_OPS",
+                    "value": "true"
+                },
+                {
+                    "axis": "IFFT_WAVE_SIZE",
+                    "value": "64"
+                }
+            ],
+            "sourceIndices": [
+                62,
+                63,
+                57
+            ],
+            "layoutIndices": [
+                15,
+                16,
+                17
+            ],
+            "rasterIndices": [
+                0,
+                0,
+                0
+            ],
+            "workgroups": [
+                {
+                    "x": 4096,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 4096,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 32,
+                    "y": 32,
+                    "z": 1
+                }
+            ]
+        },
+        {
+            "index": 47,
+            "suffix": "_4096_true_128",
+            "description": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+            "canonical": [
+                {
+                    "axis": "IFFT_SIZE",
+                    "value": "4096"
+                },
+                {
+                    "axis": "IFFT_USE_WAVE_OPS",
+                    "value": "true"
+                },
+                {
+                    "axis": "IFFT_WAVE_SIZE",
+                    "value": "128"
+                }
+            ],
+            "sourceIndices": [
+                64,
+                65,
+                57
+            ],
+            "layoutIndices": [
+                15,
+                16,
+                17
+            ],
+            "rasterIndices": [
+                0,
+                0,
+                0
+            ],
+            "workgroups": [
+                {
+                    "x": 4096,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 4096,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 32,
+                    "y": 32,
+                    "z": 1
+                }
+            ]
+        },
+        {
+            "index": 48,
+            "suffix": "_8192_false_16",
+            "description": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+            "canonical": [
+                {
+                    "axis": "IFFT_SIZE",
+                    "value": "8192"
+                },
+                {
+                    "axis": "IFFT_USE_WAVE_OPS",
+                    "value": "false"
+                },
+                {
+                    "axis": "IFFT_WAVE_SIZE",
+                    "value": "16"
+                }
+            ],
+            "sourceIndices": [
+                66,
+                67,
+                68
+            ],
+            "layoutIndices": [
+                18,
+                19,
+                20
+            ],
+            "rasterIndices": [
+                0,
+                0,
+                0
+            ],
+            "workgroups": [
+                {
+                    "x": 8192,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 8192,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 32,
+                    "y": 32,
+                    "z": 1
+                }
+            ]
+        },
+        {
+            "index": 52,
+            "suffix": "_8192_true_16",
+            "description": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+            "canonical": [
+                {
+                    "axis": "IFFT_SIZE",
+                    "value": "8192"
+                },
+                {
+                    "axis": "IFFT_USE_WAVE_OPS",
+                    "value": "true"
+                },
+                {
+                    "axis": "IFFT_WAVE_SIZE",
+                    "value": "16"
+                }
+            ],
+            "sourceIndices": [
+                69,
+                70,
+                68
+            ],
+            "layoutIndices": [
+                18,
+                19,
+                20
+            ],
+            "rasterIndices": [
+                0,
+                0,
+                0
+            ],
+            "workgroups": [
+                {
+                    "x": 8192,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 8192,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 32,
+                    "y": 32,
+                    "z": 1
+                }
+            ]
+        },
+        {
+            "index": 53,
+            "suffix": "_8192_true_32",
+            "description": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+            "canonical": [
+                {
+                    "axis": "IFFT_SIZE",
+                    "value": "8192"
+                },
+                {
+                    "axis": "IFFT_USE_WAVE_OPS",
+                    "value": "true"
+                },
+                {
+                    "axis": "IFFT_WAVE_SIZE",
+                    "value": "32"
+                }
+            ],
+            "sourceIndices": [
+                71,
+                72,
+                68
+            ],
+            "layoutIndices": [
+                18,
+                19,
+                20
+            ],
+            "rasterIndices": [
+                0,
+                0,
+                0
+            ],
+            "workgroups": [
+                {
+                    "x": 8192,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 8192,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 32,
+                    "y": 32,
+                    "z": 1
+                }
+            ]
+        },
+        {
+            "index": 54,
+            "suffix": "_8192_true_64",
+            "description": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+            "canonical": [
+                {
+                    "axis": "IFFT_SIZE",
+                    "value": "8192"
+                },
+                {
+                    "axis": "IFFT_USE_WAVE_OPS",
+                    "value": "true"
+                },
+                {
+                    "axis": "IFFT_WAVE_SIZE",
+                    "value": "64"
+                }
+            ],
+            "sourceIndices": [
+                73,
+                74,
+                68
+            ],
+            "layoutIndices": [
+                18,
+                19,
+                20
+            ],
+            "rasterIndices": [
+                0,
+                0,
+                0
+            ],
+            "workgroups": [
+                {
+                    "x": 8192,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 8192,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 32,
+                    "y": 32,
+                    "z": 1
+                }
+            ]
+        },
+        {
+            "index": 55,
+            "suffix": "_8192_true_128",
+            "description": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+            "canonical": [
+                {
+                    "axis": "IFFT_SIZE",
+                    "value": "8192"
+                },
+                {
+                    "axis": "IFFT_USE_WAVE_OPS",
+                    "value": "true"
+                },
+                {
+                    "axis": "IFFT_WAVE_SIZE",
+                    "value": "128"
+                }
+            ],
+            "sourceIndices": [
+                75,
+                76,
+                68
+            ],
+            "layoutIndices": [
+                18,
+                19,
+                20
+            ],
+            "rasterIndices": [
+                0,
+                0,
+                0
+            ],
+            "workgroups": [
+                {
+                    "x": 8192,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 8192,
+                    "y": 1,
+                    "z": 1
+                },
+                {
+                    "x": 32,
+                    "y": 32,
+                    "z": 1
+                }
+            ]
+        }
+    ],
+    "interners": {
+        "sources": {
+            "hashName": "fnv1a-64",
+            "dedupeEnabled": true,
+            "artifactsSeen": 105,
+            "uniqueEntries": 77,
+            "hashCollisions": 0,
+            "byteComparisons": 28
+        },
+        "layouts": {
+            "hashName": "fnv1a-64",
+            "dedupeEnabled": true,
+            "artifactsSeen": 105,
+            "uniqueEntries": 21,
+            "hashCollisions": 0,
+            "byteComparisons": 84
+        },
+        "rasterStates": {
+            "hashName": "fnv1a-64",
+            "dedupeEnabled": true,
+            "artifactsSeen": 105,
+            "uniqueEntries": 1,
+            "hashCollisions": 0,
+            "byteComparisons": 104
+        }
+    },
+    "provenance": {
+        "sources": [
+            {
+                "index": 0,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 0
+                    }
+                ]
+            },
+            {
+                "index": 1,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 0
+                    }
+                ]
+            },
+            {
+                "index": 2,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 0
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 4
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 5
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 6
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 7
+                    }
+                ]
+            },
+            {
+                "index": 3,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 4
+                    }
+                ]
+            },
+            {
+                "index": 4,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 4
+                    }
+                ]
+            },
+            {
+                "index": 5,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 5
+                    }
+                ]
+            },
+            {
+                "index": 6,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 5
+                    }
+                ]
+            },
+            {
+                "index": 7,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 6
+                    }
+                ]
+            },
+            {
+                "index": 8,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 6
+                    }
+                ]
+            },
+            {
+                "index": 9,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 7
+                    }
+                ]
+            },
+            {
+                "index": 10,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 7
+                    }
+                ]
+            },
+            {
+                "index": 11,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 8
+                    }
+                ]
+            },
+            {
+                "index": 12,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 8
+                    }
+                ]
+            },
+            {
+                "index": 13,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 8
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 12
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 13
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 14
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 15
+                    }
+                ]
+            },
+            {
+                "index": 14,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 12
+                    }
+                ]
+            },
+            {
+                "index": 15,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 12
+                    }
+                ]
+            },
+            {
+                "index": 16,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 13
+                    }
+                ]
+            },
+            {
+                "index": 17,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 13
+                    }
+                ]
+            },
+            {
+                "index": 18,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 14
+                    }
+                ]
+            },
+            {
+                "index": 19,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 14
+                    }
+                ]
+            },
+            {
+                "index": 20,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 15
+                    }
+                ]
+            },
+            {
+                "index": 21,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 15
+                    }
+                ]
+            },
+            {
+                "index": 22,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 16
+                    }
+                ]
+            },
+            {
+                "index": 23,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 16
+                    }
+                ]
+            },
+            {
+                "index": 24,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 16
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 20
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 21
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 22
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 23
+                    }
+                ]
+            },
+            {
+                "index": 25,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 20
+                    }
+                ]
+            },
+            {
+                "index": 26,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 20
+                    }
+                ]
+            },
+            {
+                "index": 27,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 21
+                    }
+                ]
+            },
+            {
+                "index": 28,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 21
+                    }
+                ]
+            },
+            {
+                "index": 29,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 22
+                    }
+                ]
+            },
+            {
+                "index": 30,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 22
+                    }
+                ]
+            },
+            {
+                "index": 31,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 23
+                    }
+                ]
+            },
+            {
+                "index": 32,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 23
+                    }
+                ]
+            },
+            {
+                "index": 33,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 24
+                    }
+                ]
+            },
+            {
+                "index": 34,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 24
+                    }
+                ]
+            },
+            {
+                "index": 35,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 24
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 28
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 29
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 30
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 31
+                    }
+                ]
+            },
+            {
+                "index": 36,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 28
+                    }
+                ]
+            },
+            {
+                "index": 37,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 28
+                    }
+                ]
+            },
+            {
+                "index": 38,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 29
+                    }
+                ]
+            },
+            {
+                "index": 39,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 29
+                    }
+                ]
+            },
+            {
+                "index": 40,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 30
+                    }
+                ]
+            },
+            {
+                "index": 41,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 30
+                    }
+                ]
+            },
+            {
+                "index": 42,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 31
+                    }
+                ]
+            },
+            {
+                "index": 43,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 31
+                    }
+                ]
+            },
+            {
+                "index": 44,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 32
+                    }
+                ]
+            },
+            {
+                "index": 45,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 32
+                    }
+                ]
+            },
+            {
+                "index": 46,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 32
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 36
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 37
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 38
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 39
+                    }
+                ]
+            },
+            {
+                "index": 47,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 36
+                    }
+                ]
+            },
+            {
+                "index": 48,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 36
+                    }
+                ]
+            },
+            {
+                "index": 49,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 37
+                    }
+                ]
+            },
+            {
+                "index": 50,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 37
+                    }
+                ]
+            },
+            {
+                "index": 51,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 38
+                    }
+                ]
+            },
+            {
+                "index": 52,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 38
+                    }
+                ]
+            },
+            {
+                "index": 53,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 39
+                    }
+                ]
+            },
+            {
+                "index": 54,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 39
+                    }
+                ]
+            },
+            {
+                "index": 55,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 40
+                    }
+                ]
+            },
+            {
+                "index": 56,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 40
+                    }
+                ]
+            },
+            {
+                "index": 57,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 40
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 44
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 45
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 46
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 47
+                    }
+                ]
+            },
+            {
+                "index": 58,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 44
+                    }
+                ]
+            },
+            {
+                "index": 59,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 44
+                    }
+                ]
+            },
+            {
+                "index": 60,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 45
+                    }
+                ]
+            },
+            {
+                "index": 61,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 45
+                    }
+                ]
+            },
+            {
+                "index": 62,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 46
+                    }
+                ]
+            },
+            {
+                "index": 63,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 46
+                    }
+                ]
+            },
+            {
+                "index": 64,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 47
+                    }
+                ]
+            },
+            {
+                "index": 65,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 47
+                    }
+                ]
+            },
+            {
+                "index": 66,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 48
+                    }
+                ]
+            },
+            {
+                "index": 67,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 48
+                    }
+                ]
+            },
+            {
+                "index": 68,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 48
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 52
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 53
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 54
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 55
+                    }
+                ]
+            },
+            {
+                "index": 69,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 52
+                    }
+                ]
+            },
+            {
+                "index": 70,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 52
+                    }
+                ]
+            },
+            {
+                "index": 71,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 53
+                    }
+                ]
+            },
+            {
+                "index": 72,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 53
+                    }
+                ]
+            },
+            {
+                "index": 73,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 54
+                    }
+                ]
+            },
+            {
+                "index": 74,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 54
+                    }
+                ]
+            },
+            {
+                "index": 75,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 55
+                    }
+                ]
+            },
+            {
+                "index": 76,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 55
+                    }
+                ]
+            }
+        ],
+        "layouts": [
+            {
+                "index": 0,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 0
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 4
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 5
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 6
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 7
+                    }
+                ]
+            },
+            {
+                "index": 1,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 0
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 4
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 5
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 6
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 7
+                    }
+                ]
+            },
+            {
+                "index": 2,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 0
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 4
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 5
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 6
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 7
+                    }
+                ]
+            },
+            {
+                "index": 3,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 8
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 12
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 13
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 14
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 15
+                    }
+                ]
+            },
+            {
+                "index": 4,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 8
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 12
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 13
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 14
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 15
+                    }
+                ]
+            },
+            {
+                "index": 5,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 8
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 12
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 13
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 14
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 15
+                    }
+                ]
+            },
+            {
+                "index": 6,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 16
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 20
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 21
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 22
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 23
+                    }
+                ]
+            },
+            {
+                "index": 7,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 16
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 20
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 21
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 22
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 23
+                    }
+                ]
+            },
+            {
+                "index": 8,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 16
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 20
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 21
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 22
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 23
+                    }
+                ]
+            },
+            {
+                "index": 9,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 24
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 28
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 29
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 30
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 31
+                    }
+                ]
+            },
+            {
+                "index": 10,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 24
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 28
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 29
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 30
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 31
+                    }
+                ]
+            },
+            {
+                "index": 11,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 24
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 28
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 29
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 30
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 31
+                    }
+                ]
+            },
+            {
+                "index": 12,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 32
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 36
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 37
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 38
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 39
+                    }
+                ]
+            },
+            {
+                "index": 13,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 32
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 36
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 37
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 38
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 39
+                    }
+                ]
+            },
+            {
+                "index": 14,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 32
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 36
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 37
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 38
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 39
+                    }
+                ]
+            },
+            {
+                "index": 15,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 40
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 44
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 45
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 46
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 47
+                    }
+                ]
+            },
+            {
+                "index": 16,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 40
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 44
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 45
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 46
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 47
+                    }
+                ]
+            },
+            {
+                "index": 17,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 40
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 44
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 45
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 46
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 47
+                    }
+                ]
+            },
+            {
+                "index": 18,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 48
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 52
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 53
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 54
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 55
+                    }
+                ]
+            },
+            {
+                "index": 19,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 48
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 52
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 53
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 54
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 55
+                    }
+                ]
+            },
+            {
+                "index": 20,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 48
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 52
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 53
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 54
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 55
+                    }
+                ]
+            }
+        ],
+        "rasterStates": [
+            {
+                "index": 0,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 0
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 0
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 0
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 4
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 4
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 4
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 5
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 5
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 5
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 6
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 6
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 6
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 7
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 7
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 7
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 8
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 8
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 8
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 12
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 12
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 12
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 13
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 13
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 13
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 14
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 14
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 14
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 15
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 15
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 15
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 16
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 16
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 16
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 20
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 20
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 20
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 21
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 21
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 21
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 22
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 22
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 22
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 23
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 23
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 23
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 24
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 24
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 24
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 28
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 28
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 28
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 29
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 29
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 29
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 30
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 30
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 30
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 31
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 31
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 31
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 32
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 32
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 32
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 36
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 36
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 36
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 37
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 37
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 37
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 38
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 38
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 38
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 39
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 39
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 39
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 40
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 40
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 40
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 44
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 44
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 44
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 45
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 45
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 45
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 46
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 46
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 46
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 47
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 47
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 47
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 48
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 48
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 48
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 52
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 52
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 52
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 53
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 53
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 53
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 54
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 54
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 54
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 55
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 55
+                    },
+                    {
+                        "entryPoint": "IfftPermuteCS",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 55
+                    }
+                ]
+            }
+        ]
+    }
+}

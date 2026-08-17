@@ -136,6 +136,18 @@ namespace
         }
     }
 
+    /** Why the cross-check will or will not run for this cook. */
+    std::string_view DescribeCrossCheckState(const TargetProfile& target,
+                                             const CookerOptions& options) noexcept
+    {
+        if (target.Validator == nullptr)
+        {
+            return "no validator given/available for this target";
+        }
+
+        return options.ValidateAgainstEmittedText ? "on" : "off by --no-validate";
+    }
+
     /** The reflection cross-check, after stage 4. It reads the emitted text back and compares it
      * against what reflection claims, so a disagreement is found by two opinions rather than by one
      * opinion trusted twice.
@@ -395,28 +407,29 @@ namespace
     }
 
     /** Names each entry point once, from the first variant. Every variant holds the same set. */
-    void CaptureEntryPointsOnce(CookedModule& cooked_module, const CompiledVariant& variant)
+    void CaptureEntryPointsOnce(InternedModule& interned_module, const CompiledVariant& variant)
     {
-        if (!cooked_module.EntryPoints.empty())
+        if (!interned_module.EntryPoints.empty())
         {
             return;
         }
 
-        cooked_module.EntryPoints.reserve(variant.EntryPoints.size());
+        interned_module.EntryPoints.reserve(variant.EntryPoints.size());
         for (const CompiledEntryPoint& entryPoint : variant.EntryPoints)
         {
-            cooked_module.EntryPoints.push_back(
-                LibraryEntryPoint{ entryPoint.Name, entryPoint.Reflection.Stage });
+            interned_module.EntryPoints.push_back(
+                LibraryEntryPoint{ .Name = entryPoint.Name, .Stage = entryPoint.Reflection.Stage });
         }
     }
 
-    /** Stage 3 then stage 4, one variant at a time. The raw output is kept only when a dump asked for
-     * it, because it holds the target text a second time and a 35-variant module is not small. */
+    /** @brief Runs Slang compiler on each variant (which contains multiple entry points, remember),
+     * and then takes that result and "resolves" it by evaluating our custom meta-language for sizes
+     * and resource descriptors etc */
     CookResult<void> CompileModuleVariants(const CookerOptions& options,
                                            const TargetProfile& target,
                                            SlangCompiler& compiler,
                                            const VariantSet& variant_set,
-                                           CookedModule& cooked_module,
+                                           InternedModule& interned_module,
                                            RawModule& raw_module,
                                            std::vector<CompiledVariant>& out_module_variants,
                                            std::vector<CompiledVariant>& out_variants,
@@ -467,10 +480,10 @@ namespace
                 ReportUnreferencedBindings(variant);
             }
 
-            CaptureEntryPointsOnce(cooked_module, variant);
+            CaptureEntryPointsOnce(interned_module, variant);
 
             if (CookResult<void> appendResult =
-                    AppendVariantToModule(cooked_module, variant, descriptor.Canonical);
+                    AppendVariantToModule(interned_module, variant, descriptor.Canonical);
                 !appendResult)
             {
                 return appendResult;
@@ -483,26 +496,31 @@ namespace
         return {};
     }
 
-    /** Freezes the tables, then runs every check that reads the finished model. */
-    CookResult<void> FinalizeModule(CookedModule& cooked_module,
-                                    std::span<const CompiledVariant> module_variants)
+    /**@brief Take `InternedModule` and package it into `CookedModule`. */
+    CookResult<CookedModule> FinalizeModule(InternedModule&& interned_module,
+                                            std::span<const CompiledVariant> module_variants)
     {
-        FreezeModuleTables(cooked_module);
+        CookedModule cookedModule = FreezeModuleTables(std::move(interned_module));
 
-        if (CookResult<void> roundTripResult = VerifyLibraryRoundTrip(cooked_module, module_variants);
+        if (CookResult<void> roundTripResult = VerifyLibraryRoundTrip(cookedModule, module_variants);
             !roundTripResult)
         {
-            return roundTripResult;
+            return std::unexpected(roundTripResult.error());
         }
 
         std::println(stderr,
                      "[shader_cooker] module {} round trip verified: {} variants resolve to the text "
                      "the compiler produced",
-                     cooked_module.Name,
-                     cooked_module.Variants.size());
+                     cookedModule.Name,
+                     cookedModule.Variants.size());
 
-        const ModuleInfluence influence = ComputeAxisInfluence(cooked_module);
-        return EnforceModulePolicy(cooked_module, influence);
+        const ModuleInfluence influence = ComputeAxisInfluence(cookedModule);
+        if (const CookResult<void> policy = EnforceModulePolicy(cookedModule, influence); !policy)
+        {
+            return std::unexpected(policy.error());
+        }
+
+        return cookedModule;
     }
 
     CookResult<void> CookModule(const CookerOptions& options,
@@ -536,9 +554,7 @@ namespace
                      "[shader_cooker] target {} ({} access), cross-check {}",
                      target->Name,
                      ToString(target->Access),
-                     target->Validator == nullptr         ? "unavailable for this target"
-                     : options.ValidateAgainstEmittedText ? "on"
-                                                          : "off by --no-validate");
+                     DescribeCrossCheckState(*target, options));
 
         const CookResult<VariantSet> variantSet = EnumerateVariants(*space);
         if (!variantSet)
@@ -581,15 +597,18 @@ namespace
             return variantDump;
         }
 
-        CookedModule cookedModule;
+        InternedModule internedModule;
         if (!options.DedupeEnabled)
         {
-            cookedModule.SourceInterner.Disable();
-            cookedModule.LayoutInterner.Disable();
+            // The raster interner stays on, and that is not obviously right. See the D8 note in
+            // `docs/phase-d-stage-separation-plan.md`. Kept as it was, because D8 moves a boundary
+            // and must not also change what a flag does.
+            internedModule.SourceInterner.Disable();
+            internedModule.LayoutInterner.Disable();
         }
-        cookedModule.Name = moduleName;
-        cookedModule.Space = space;
-        cookedModule.SpaceSize = variantSet.value().SpaceSize;
+        internedModule.Name = moduleName;
+        internedModule.Space = space;
+        internedModule.SpaceSize = variantSet.value().SpaceSize;
 
         std::vector<CompiledVariant> moduleVariants;
         moduleVariants.reserve(variantSet.value().Variants.size());
@@ -605,7 +624,7 @@ namespace
                                                               *target,
                                                               compiler,
                                                               variantSet.value(),
-                                                              cookedModule,
+                                                              internedModule,
                                                               rawModule,
                                                               moduleVariants,
                                                               out_variants,
@@ -642,10 +661,29 @@ namespace
             return resolvedDump;
         }
 
-        if (CookResult<void> finalized = FinalizeModule(cookedModule, moduleVariants); !finalized)
+        // Written before the freeze, because this is the one dump whose subject stops existing. Every
+        // other dump reads a value that outlives the call.
+        if (CookResult<void> internedDump =
+                WriteStageDumpIfRequested(options,
+                                          sink,
+                                          moduleName,
+                                          StageDumpKind::Interned,
+                                          [&]
+                                          {
+                                              return DumpInternedModule(internedModule);
+                                          });
+            !internedDump)
         {
-            return finalized;
+            return internedDump;
         }
+
+        CookResult<CookedModule> finalized = FinalizeModule(std::move(internedModule), moduleVariants);
+        if (!finalized)
+        {
+            return std::unexpected(finalized.error());
+        }
+
+        CookedModule cookedModule = std::move(finalized.value());
 
         if (CookResult<void> cookedDump = WriteStageDumpIfRequested(options,
                                                                     sink,

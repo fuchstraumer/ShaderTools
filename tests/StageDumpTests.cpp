@@ -66,9 +66,9 @@ CompiledVariant MakeVariant(uint32_t index, const std::string& suffix, std::stri
 
 /** Two variants with different text and one shared layout. The cooked dump must therefore report two
  * sources and one layout, which is the collapse the interner performed. */
-CookedModule BuildTinyModule()
+InternedModule BuildTinyInternedModule()
 {
-    CookedModule module;
+    InternedModule module;
     module.Name = "TinyModule";
     module.SpaceSize = 2u;
     module.EntryPoints.push_back(LibraryEntryPoint{ .Name = "MainCS", .Stage = ShaderStageKind::Compute });
@@ -86,8 +86,12 @@ CookedModule BuildTinyModule()
         }
     }
 
-    FreezeModuleTables(module);
     return module;
+}
+
+CookedModule BuildTinyModule()
+{
+    return FreezeModuleTables(BuildTinyInternedModule());
 }
 
 bool Contains(std::string_view text, std::string_view needle) noexcept
@@ -396,6 +400,35 @@ void CheckCookedDump(lodestone::tests::TestRunner& runner)
     runner.Check(dump == second, "two dumps of one module agree byte for byte");
 }
 
+/** Stage 6 has a boundary type as of D8, so `interned` is no longer a name that parses and writes
+ * nothing. The dump earns its place by showing the one thing the freeze destroys. */
+void CheckInternedDump(lodestone::tests::TestRunner& runner)
+{
+    runner.BeginSection("interned dump");
+
+    const InternedModule module = BuildTinyInternedModule();
+    const std::string dump = DumpInternedModule(module);
+
+    runner.Check(Contains(dump, R"("stage": "interned")"), "the dump names its stage");
+    runner.Check(Contains(dump, R"("module": "TinyModule")"), "the dump names its module");
+    runner.Check(Contains(dump, R"("hashName": "fnv1a-64")"),
+                 "the dump names the hash, because the name reaches the output");
+
+    // The reason this dump exists. `FreezeModuleTables` copies the unique entries out and leaves the
+    // provenance behind, so after the freeze nothing can say which variants collapsed onto which
+    // entry. Only this stage can answer it.
+    runner.Check(Contains(dump, R"("provenance")"), "the dump carries what the freeze discards");
+    runner.Check(Contains(dump, R"("mappedFrom")"), "each unique entry lists the artifacts that reached it");
+    runner.Check(Contains(dump, R"("variantIndex": 1)"),
+                 "provenance names the variant, so a surprising collapse is traceable");
+
+    runner.Check(!Contains(dump, "// variant zero"),
+                 "no target text reaches the dump, for the same reason the cooked dump holds none");
+
+    const std::string second = DumpInternedModule(module);
+    runner.Check(dump == second, "two dumps of one module agree byte for byte");
+}
+
 /** A dump that cannot tell two modules apart is worth nothing as a regression harness, so prove it
  * moves when the model moves. */
 void CheckCookedDumpDetectsChange(lodestone::tests::TestRunner& runner)
@@ -439,6 +472,7 @@ int main()
     CheckSpaceDump(runner);
     CheckDependentAxisDump(runner);
     CheckVariantDump(runner);
+    CheckInternedDump(runner);
     CheckRawPrimitives(runner);
     CheckRawDump(runner);
     CheckCookedDump(runner);

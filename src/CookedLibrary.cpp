@@ -81,7 +81,7 @@ ContentHashValue HashRasterPayload(const ReflectedRasterState& raster) noexcept
     return CombineHash(hash, raster.WritesFragDepth ? 1u : 0u);
 }
 
-CookResult<void> AppendVariantToModule(CookedModule& module,
+CookResult<void> AppendVariantToModule(InternedModule& module,
                                        const CompiledVariant& variant,
                                        const PermutationAssignment& canonical)
 {
@@ -105,11 +105,16 @@ CookResult<void> AppendVariantToModule(CookedModule& module,
     record.LayoutIndices.reserve(variant.EntryPoints.size());
     record.RasterIndices.reserve(variant.EntryPoints.size());
     record.Workgroups.reserve(variant.EntryPoints.size());
-
+    // we could probably make this more efficient in the future, it'll be moving a good bit of data 
+    // around as variant size grows
+    // todo-ship: once we have a better logger with levels, it'd be interesting to see how uniqueness count
+    // changes and grows per variant
     for (size_t entryPointIndex = 0u; entryPointIndex < variant.EntryPoints.size(); ++entryPointIndex)
     {
         const CompiledEntryPoint& entryPoint = variant.EntryPoints[entryPointIndex];
-        const ProvenanceRecord origin{ entryPoint.Name, variant.VariantDescription, variant.VariantIndex };
+        const ProvenanceRecord origin{ .EntryPointName = entryPoint.Name,
+                                       .VariantDescription = variant.VariantDescription,
+                                       .VariantIndex = variant.VariantIndex };
 
         const InternResult source = module.SourceInterner.Intern(entryPoint.Code, origin);
         record.SourceIndices.push_back(source.Index);
@@ -128,18 +133,37 @@ CookResult<void> AppendVariantToModule(CookedModule& module,
     return {};
 }
 
-/** Copies the interned tables into the module. The emitters read these, so they must be built once,
- * after every variant is in. */
-void FreezeModuleTables(CookedModule& module)
+namespace
 {
-    const std::span<const std::string> sources = module.SourceInterner.UniqueEntries();
-    module.Sources.assign(sources.begin(), sources.end());
 
-    const std::span<const ShaderLayout> layouts = module.LayoutInterner.UniqueEntries();
-    module.Layouts.assign(layouts.begin(), layouts.end());
+    template<typename PayloadType>
+    TableStatistics DescribeTable(const ContentInterner<PayloadType>& interner)
+    {
+        return TableStatistics{ .HashName = interner.HashName(),
+                                .DedupeEnabled = interner.IsEnabled(),
+                                .Interning = interner.Statistics() };
+    }
 
-    const std::span<const ReflectedRasterState> rasterStates = module.RasterInterner.UniqueEntries();
-    module.RasterStates.assign(rasterStates.begin(), rasterStates.end());
+} // namespace
+
+CookedModule FreezeModuleTables(InternedModule&& interned)
+{
+    CookedModule module;
+    module.Name = std::move(interned.Name);
+    module.Space = interned.Space;
+    module.SpaceSize = interned.SpaceSize;
+    module.EntryPoints = std::move(interned.EntryPoints);
+    module.Variants = std::move(interned.Variants);
+
+    module.Sources = std::move(interned.SourceInterner.ConsumeTable());
+    module.Layouts = std::move(interned.LayoutInterner.ConsumeTable());
+    module.RasterStates = std::move(interned.RasterInterner.ConsumeTable());
+
+    module.SourceTable = DescribeTable(interned.SourceInterner);
+    module.LayoutTable = DescribeTable(interned.LayoutInterner);
+    module.RasterTable = DescribeTable(interned.RasterInterner);
+
+    return module;
 }
 
 std::string_view ResolveSource(const CookedModule& module,

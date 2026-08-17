@@ -37,8 +37,7 @@ namespace
         "  --verify-deterministic cook twice and compare all artifacts\n"
         "  --dump-stage=<name> write one stage of the pipeline as JSON, beside the other artifacts.\n"
         "                  Repeat the flag for more than one stage. Names: space, variants, raw,\n"
-        "                  resolved, interned, cooked, all. raw, resolved, and interned parse but\n"
-        "                  have no boundary type yet, so they write nothing.\n";
+        "                  resolved, interned, cooked, all.\n";
 
     constexpr std::string_view k_OptimizationPrefix = "--O";
     constexpr std::string_view k_TargetPrefix = "--target=";
@@ -144,8 +143,7 @@ namespace
         options.MultithreadEntryPointCodegen = false;
     }
 
-    constexpr std::array<SwitchFlag, 5u> k_SwitchFlags
-    {
+    constexpr std::array<SwitchFlag, 5u> k_SwitchFlags{
         SwitchFlag{ .Name = "--no-dedupe", .Apply = &DisableDedupe },
         SwitchFlag{ .Name = "--verify-deterministic", .Apply = &EnableVerifyDeterminism },
         SwitchFlag{ .Name = "--no-validate", .Apply = &DisableValidateAgainstEmittedText },
@@ -156,7 +154,10 @@ namespace
     const SwitchFlag* FindSwitchFlag(std::string_view argument) noexcept
     {
         auto switchFlag = std::ranges::find_if(k_SwitchFlags,
-            [&argument](const SwitchFlag& flag) { return flag.Name == argument; });
+                                               [&argument](const SwitchFlag& flag)
+                                               {
+                                                   return flag.Name == argument;
+                                               });
         if (switchFlag != std::end(k_SwitchFlags))
         {
             return std::to_address(switchFlag);
@@ -197,8 +198,9 @@ namespace
                 validTargetNames += std::string(" ") + std::string(name);
             }
             std::println(stderr,
-                "[shader_cooker][cooker_options] No target profile named {}. Valid options: {}",
-                value, validTargetNames);
+                         "[shader_cooker][cooker_options] No target profile named {}. Valid options: {}",
+                         value,
+                         validTargetNames);
             return CookError::UnknownTargetProfile;
         }
         else
@@ -219,8 +221,7 @@ namespace
         return CookError::Success;
     }
 
-    const std::array<ValueFlag, 3u> k_ValueFlags
-    {
+    const std::array<ValueFlag, 3u> k_ValueFlags{
         ValueFlag{ .Prefix = k_StageDumpPrefix, .Apply = &ApplyDumpStageArgument },
         // Rejected here rather than in the driver. A name that reaches CookerOptions is a name
         // FindTargetProfile accepts, so no later stage has to ask again.
@@ -231,7 +232,10 @@ namespace
     const ValueFlag* FindValueFlag(std::string_view argument) noexcept
     {
         auto valueFlagIter = std::ranges::find_if(k_ValueFlags,
-            [&argument](const ValueFlag& flag){ return argument.starts_with(flag.Prefix); });
+                                                  [&argument](const ValueFlag& flag)
+                                                  {
+                                                      return argument.starts_with(flag.Prefix);
+                                                  });
         if (valueFlagIter != std::end(k_ValueFlags))
         {
             return std::to_address(valueFlagIter);

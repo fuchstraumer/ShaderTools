@@ -13,40 +13,38 @@
 /** Writes one point between two stages as JSON, so a change between two stages is a diff and not a
  * search.
  *
- * A dump goes through the `OutputSink` like every other artifact. Three things follow from that, and
- * all three are the reason for it:
+ * A dump goes through the `OutputSink` like every other artifact. That means three key things:
  *
  * - `MemoryOutputSink` captures a dump, so a test reads one without touching a disk.
  * - `--verify-deterministic` compares every artifact the sink holds, so it compares the dumps. An
  *   unordered container that reaches a dump then fails the cook.
  * - A dump file is named the way every other artifact is named.
  *
- * A dump holds no target text. The WGSL already ships in three other artifacts, and a dump that
- * repeats it is large, slow to diff, and hides the tables a reader wants. A source appears as an
- * index, a byte length, and a content hash. */
+ * A dump holds no shader source code. A source appears as an index, a byte length, and a content hash.
+ * That's all we need to diff and verify idempotence */
 namespace lodestone
 {
 
 /** `<module>.stage-<name>.json` */
 std::string MakeStageDumpFileName(std::string_view module_name, StageDumpKind kind);
 
-/** Stage 1. The axes the module declares, and the dense index range they expand to. */
+/**@brief The evaluated and expanded permutation axes (space) the module declares, and the indices these will map to */
 std::string DumpPermutationSpace(std::string_view module_name, const PermutationSpace& space);
-
-/** Stage 2. Every variant identity, with both the active and the canonical assignment. */
+/**@brief Every single variant we have, with it's active permutation values and it's fully expanded canonical
+ * permutation space */
 std::string DumpVariantSet(std::string_view module_name, const VariantSet& variant_set);
-
-/** Stage 3. Everything Slang said, with every `[vx_*]` argument still a string. A reader can see here
- * whether a wrong size came out of the compiler or out of the arithmetic that follows it. */
+/**@brief "Raw" here means just what came out of Slang, exactly as it is. We have not yet evaluated
+ * or collapsed our meta-language attributes like vx_size etc */
 std::string DumpRawModule(const RawModule& module);
-
-/** Stage 4. The same model as stage 3, with every `[vx_*]` argument evaluated for this variant. This
- * is the last dump that shows a size still attached to one variant's bindings, before interning
- * collapses them into shared tables. */
+/**@brief The same as `DumpRawModule`, but with our various meta-attributes in our DSL evaluated
+ * todo-ship: Resolved may be overloaded or misleading, I might change that. We really do evaluate more than
+ * resolve */
 std::string DumpResolvedModule(std::string_view module_name, std::span<const CompiledVariant> variants);
-
-/** Stage 7. The frozen tables, the indices each variant keys into them with, and what each interner
- * measured while it filled them. */
+/**@brief The tables while the interners still hold them, plus the provenance that the freeze
+ * discards. `cooked` shows what collapsed as a whole; this shows where each collapsed item came from */
+std::string DumpInternedModule(const InternedModule& module);
+/** @brief The frozen tables, indices used to key into each table, and the measurements from the interner per
+ *  table type (measures collapse/dedupe efficiency) */
 std::string DumpCookedModule(const CookedModule& module);
 
 } // namespace lodestone

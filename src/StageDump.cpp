@@ -177,11 +177,11 @@ namespace
         writer.EndArray();
     }
 
-    void WriteEntryPointTable(JsonWriter& writer, const CookedModule& module)
+    void WriteEntryPointTable(JsonWriter& writer, std::span<const LibraryEntryPoint> entry_points)
     {
         writer.Key("entryPoints");
         writer.BeginArray();
-        for (const LibraryEntryPoint& entryPoint : module.EntryPoints)
+        for (const LibraryEntryPoint& entryPoint : entry_points)
         {
             writer.BeginObject();
             writer.KeyString("name", entryPoint.Name);
@@ -259,11 +259,11 @@ namespace
         writer.EndArray();
     }
 
-    void WriteVariantTable(JsonWriter& writer, const CookedModule& module)
+    void WriteVariantTable(JsonWriter& writer, std::span<const LibraryVariant> variants)
     {
         writer.Key("variants");
         writer.BeginArray();
-        for (const LibraryVariant& variant : module.Variants)
+        for (const LibraryVariant& variant : variants)
         {
             writer.BeginObject();
             writer.KeyUInt("index", variant.Index);
@@ -303,19 +303,19 @@ namespace
         writer.BeginObject();
         WriteInterner(writer,
                       "sources",
-                      module.SourceInterner.HashName(),
-                      module.SourceInterner.IsEnabled(),
-                      module.SourceInterner.Statistics());
+                      module.SourceTable.HashName,
+                      module.SourceTable.DedupeEnabled,
+                      module.SourceTable.Interning);
         WriteInterner(writer,
                       "layouts",
-                      module.LayoutInterner.HashName(),
-                      module.LayoutInterner.IsEnabled(),
-                      module.LayoutInterner.Statistics());
+                      module.LayoutTable.HashName,
+                      module.LayoutTable.DedupeEnabled,
+                      module.LayoutTable.Interning);
         WriteInterner(writer,
                       "rasterStates",
-                      module.RasterInterner.HashName(),
-                      module.RasterInterner.IsEnabled(),
-                      module.RasterInterner.Statistics());
+                      module.RasterTable.HashName,
+                      module.RasterTable.DedupeEnabled,
+                      module.RasterTable.Interning);
         writer.EndObject();
     }
 
@@ -597,6 +597,86 @@ std::string DumpResolvedModule(std::string_view module_name, std::span<const Com
     return FinishDocument(writer);
 }
 
+namespace
+{
+
+    /** Every artifact that mapped onto one unique entry, for one table.
+     *
+     * This is the only thing the `interned` dump shows that `cooked` cannot. The interner records who
+     * mapped where, `FreezeModuleTables` copies out the unique entries and leaves the provenance
+     * behind, so after the freeze the answer is gone. A collapse that surprises you is findable here
+     * and nowhere else. */
+    template<typename PayloadType>
+    void WriteProvenance(JsonWriter& writer,
+                         std::string_view key,
+                         const ContentInterner<PayloadType>& interner)
+    {
+        writer.Key(key);
+        writer.BeginArray();
+        for (uint32_t index = 0u; index < interner.UniqueEntries().size(); ++index)
+        {
+            writer.BeginObject();
+            writer.KeyUInt("index", index);
+            writer.Key("mappedFrom");
+            writer.BeginArray();
+            for (const ProvenanceRecord& origin : interner.OriginsOf(index))
+            {
+                writer.BeginObject();
+                writer.KeyString("entryPoint", origin.EntryPointName);
+                writer.KeyString("variant", origin.VariantDescription);
+                writer.KeyUInt("variantIndex", origin.VariantIndex);
+                writer.EndObject();
+            }
+            writer.EndArray();
+            writer.EndObject();
+        }
+        writer.EndArray();
+    }
+
+} // namespace
+
+std::string DumpInternedModule(const InternedModule& module)
+{
+    JsonWriter writer{ true };
+    writer.BeginObject();
+    writer.KeyString("stage", "interned");
+    writer.KeyString("module", module.Name);
+    writer.KeyUInt("spaceSize", module.SpaceSize);
+    writer.KeyUInt("variantCount", module.Variants.size());
+
+    WriteEntryPointTable(writer, module.EntryPoints);
+    WriteVariantTable(writer, module.Variants);
+
+    writer.Key("interners");
+    writer.BeginObject();
+    WriteInterner(writer,
+                  "sources",
+                  module.SourceInterner.HashName(),
+                  module.SourceInterner.IsEnabled(),
+                  module.SourceInterner.Statistics());
+    WriteInterner(writer,
+                  "layouts",
+                  module.LayoutInterner.HashName(),
+                  module.LayoutInterner.IsEnabled(),
+                  module.LayoutInterner.Statistics());
+    WriteInterner(writer,
+                  "rasterStates",
+                  module.RasterInterner.HashName(),
+                  module.RasterInterner.IsEnabled(),
+                  module.RasterInterner.Statistics());
+    writer.EndObject();
+
+    writer.Key("provenance");
+    writer.BeginObject();
+    WriteProvenance(writer, "sources", module.SourceInterner);
+    WriteProvenance(writer, "layouts", module.LayoutInterner);
+    WriteProvenance(writer, "rasterStates", module.RasterInterner);
+    writer.EndObject();
+
+    writer.EndObject();
+    return FinishDocument(writer);
+}
+
 std::string DumpCookedModule(const CookedModule& module)
 {
     JsonWriter writer{ true };
@@ -609,11 +689,11 @@ std::string DumpCookedModule(const CookedModule& module)
     writer.KeyUInt("rasterStateCount", module.RasterStates.size());
     writer.KeyUInt("variantCount", module.Variants.size());
 
-    WriteEntryPointTable(writer, module);
+    WriteEntryPointTable(writer, module.EntryPoints);
     WriteSourceTable(writer, module);
     WriteLayoutTable(writer, module);
     WriteRasterTable(writer, module);
-    WriteVariantTable(writer, module);
+    WriteVariantTable(writer, module.Variants);
     WriteInternerTable(writer, module);
 
     writer.EndObject();

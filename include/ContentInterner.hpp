@@ -16,7 +16,7 @@
  * The provenance is important because there are many ways to get the same artifact. We
  * want to know what those inputs were, so that if we have issues with a specific instance
  * of an artifact, we can trace it back to it's source
- * 
+ *
  *
  * Three rules control this class:
  *
@@ -122,6 +122,13 @@ public:
     [[nodiscard]] std::span<const PayloadType> UniqueEntries() const noexcept
     {
         return uniqueEntries;
+    }
+
+    /**@brief used during freezing step: a span is a non-owning view, which is great, but we can't move out
+     * of it. and if we're holding a vector of source strings... it's worth moving it */
+    [[nodiscard]] std::vector<PayloadType> ConsumeTable() noexcept
+    {
+        return std::move(uniqueEntries);
     }
 
     [[nodiscard]] std::span<const ProvenanceRecord> OriginsOf(uint32_t index) const noexcept

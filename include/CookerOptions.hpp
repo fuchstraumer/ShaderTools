@@ -16,11 +16,7 @@ namespace lodestone
  *
  * A dump is a diagnostic, not a shipped format. It has no version field and nothing reads it back.
  * Every check that uses one is a byte comparison: against a golden file, or against the second cook
- * that `--verify-deterministic` runs.
- *
- * `Raw` and `Resolved` name the two halves of the stage 3 and stage 4 split, and `Interned` names the
- * stage 6 and stage 7 split. Those three stages have no boundary type yet, so the names parse and the
- * dumps do nothing. See `docs/phase-d-stage-separation-plan.md`. */
+ * that `--verify-deterministic` runs.*/
 enum class StageDumpKind : uint8_t
 {
     Invalid = 0,

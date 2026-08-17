@@ -426,8 +426,8 @@ std::string GenerateDedupeReport(const CookedLibrary& library)
 
     for (const CookedModule& module : library.Modules)
     {
-        const InternerStatistics& sourceStatistics = module.SourceInterner.Statistics();
-        const InternerStatistics& layoutStatistics = module.LayoutInterner.Statistics();
+        const InternerStatistics& sourceStatistics = module.SourceTable.Interning;
+        const InternerStatistics& layoutStatistics = module.LayoutTable.Interning;
 
         report += std::format("{}  {} variants x {} entrypoints = {} artifacts\n\n",
                               module.Name,
@@ -445,8 +445,8 @@ std::string GenerateDedupeReport(const CookedLibrary& library)
                         layoutStatistics.ArtifactsSeen,
                         layoutStatistics.UniqueEntries,
                         AllVariantsShareOneLayout(module) ? "   (every permutation shares one layout)" : "");
-        report += std::format("  dedup enabled: {}\n", module.SourceInterner.IsEnabled() ? "yes" : "no");
-        report += std::format("  hash function: {}\n", module.SourceInterner.HashName());
+        report += std::format("  dedup enabled: {}\n", module.SourceTable.DedupeEnabled ? "yes" : "no");
+        report += std::format("  hash function: {}\n", module.SourceTable.HashName);
         report += std::format("  hash collisions resolved by byte compare: {}\n",
                               sourceStatistics.HashCollisions + layoutStatistics.HashCollisions);
         report += std::format("  byte comparisons forced by a hash hit: {}\n",

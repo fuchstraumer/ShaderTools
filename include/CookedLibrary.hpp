@@ -56,8 +56,39 @@ struct LibraryVariant
 
 using ShaderLayout = std::vector<ReflectedBinding>;
 
-/** Sources and layouts intern separately. They collapse at very different rates, and one number for
- * both would hide the information in each. */
+/** @brief The hash that generated a table, whether or not it used dedupe logic,
+ *  and the results of the process (regardless of if it ran dedupe or not */
+struct TableStatistics
+{
+    std::string_view HashName;
+    bool DedupeEnabled{ true };
+    InternerStatistics Interning;
+};
+
+/** @brief An interned module is procedurally built by adding variants as they arrive, and represents
+ *  the deduplicated (if enabled) contents of a Slang module bundled together for the final cooking
+ *  stage to process as it sees fit. This object actually *does* the interning piece by piece, as 
+ *  compared to `CookedModule` which holds the completed results from this processing.
+ * 
+ * @note As of now, there is no `InternedLibrary`: interning is a per-module operation for now.
+ * In the future, we could intern libraries - but those would be most efficient running on interned
+ * modules, anyways. */
+struct InternedModule
+{
+    std::string Name;
+    const PermutationSpace* Space{ nullptr };
+    uint32_t SpaceSize{ 0u };
+    std::vector<LibraryEntryPoint> EntryPoints;
+    std::vector<LibraryVariant> Variants;
+
+    ContentInterner<std::string> SourceInterner{ &HashSourcePayload, "fnv1a-64" };
+    ContentInterner<ShaderLayout> LayoutInterner{ &HashLayoutPayload, "fnv1a-64" };
+    ContentInterner<ReflectedRasterState> RasterInterner{ &HashRasterPayload, "fnv1a-64" };
+};
+
+/**@brief Interned tables and information about how efficiently they were built. We store these 
+ * separately as they collapse at very different rates, so it's worth having insight into each.
+ * This object holds the results of the interning process, but doesn't do it itself. */
 struct CookedModule
 {
     std::string Name;
@@ -70,24 +101,28 @@ struct CookedModule
     std::vector<ReflectedRasterState> RasterStates;
     std::vector<LibraryVariant> Variants;
 
-    ContentInterner<std::string> SourceInterner{ &HashSourcePayload, "fnv1a-64" };
-    ContentInterner<ShaderLayout> LayoutInterner{ &HashLayoutPayload, "fnv1a-64" };
-    ContentInterner<ReflectedRasterState> RasterInterner{ &HashRasterPayload, "fnv1a-64" };
+    TableStatistics SourceTable;
+    TableStatistics LayoutTable;
+    TableStatistics RasterTable;
 };
 
+/** @brief Temp. Slang is designed for big libraries of shaders, but for now we're trying
+ *  to ensure core module handling is robust and modular: most Library operations will just
+ *  be further fold/combine operations over the datastructures we already have. */
 struct CookedLibrary
 {
     std::vector<CookedModule> Modules;
 };
 
-/** Adds one compiled variant to the module. It appends every source and layout, so each artifact
- * gets its own index. This is the identity mapping that dedup later collapses. */
-CookResult<void> AppendVariantToModule(CookedModule& module,
+/** Adds one compiled variant to the module, interning each source, layout, and raster state. */
+CookResult<void> AppendVariantToModule(InternedModule& module,
                                        const CompiledVariant& variant,
                                        const PermutationAssignment& canonical);
 
-/** Copies the interned tables into the module, once every variant is in. */
-void FreezeModuleTables(CookedModule& module);
+/**@brief "Freezes" the module by *consuming* `InternedModule`. CookedModule takes the results, gathering
+ * all the data so far in one place. The intent was that CookedModule is a bundle of data, it doesn't hold
+ * systems that build or modify that data. */
+CookedModule FreezeModuleTables(InternedModule&& interned);
 
 /** Resolves what a caller would get back for one entry point of one variant. The round-trip check
  * compares this against the text the compiler produced. */

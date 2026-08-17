@@ -103,7 +103,7 @@ PermutationAssignment MakeAssignment(const PermutationAxis& first_axis,
 
 CookedModule BuildModule(const PermutationSpace& space, bool dedupe_enabled)
 {
-    CookedModule module;
+    InternedModule module;
     module.Name = "InfluenceModule";
     module.Space = &space;
     module.SpaceSize = 4u;
@@ -132,20 +132,19 @@ CookedModule BuildModule(const PermutationSpace& space, bool dedupe_enabled)
             if (!appended)
             {
                 module.Variants.clear();
-                return module;
+                return FreezeModuleTables(std::move(module));
             }
 
             ++index;
         }
     }
 
-    FreezeModuleTables(module);
-    return module;
+    return FreezeModuleTables(std::move(module));
 }
 
 CookedModule BuildSingleEntryPointModule(const PermutationSpace& space, bool dedupe_enabled)
 {
-    CookedModule module;
+    InternedModule module;
     module.Name = "SharedLayoutModule";
     module.Space = &space;
     module.SpaceSize = 2u;
@@ -170,14 +169,13 @@ CookedModule BuildSingleEntryPointModule(const PermutationSpace& space, bool ded
         if (!appended)
         {
             module.Variants.clear();
-            return module;
+            return FreezeModuleTables(std::move(module));
         }
 
         ++index;
     }
 
-    FreezeModuleTables(module);
-    return module;
+    return FreezeModuleTables(std::move(module));
 }
 
 AxisInfluence InfluenceOf(const ModuleInfluence& influence,
