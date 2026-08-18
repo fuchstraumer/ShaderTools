@@ -114,7 +114,8 @@ void WriteEntryPoints(lodestone::JsonWriter& writer, const lodestone::ShaderMani
     {
         writer.BeginObject();
         writer.KeyString("name", view.String(entryPoint.NameString));
-        writer.KeyString("stage", magic_enum::enum_name(static_cast<lodestone::ShaderStageKind>(entryPoint.Stage)));
+        writer.KeyString("stage",
+                         magic_enum::enum_name(static_cast<lodestone::ShaderStageKind>(entryPoint.Stage)));
         writer.EndObject();
     }
     writer.EndArray();
@@ -142,8 +143,8 @@ void WriteAxes(lodestone::JsonWriter& writer, const lodestone::ShaderManifestVie
 }
 
 void WriteUniformMembers(lodestone::JsonWriter& writer,
-                        const lodestone::ShaderManifestView& view,
-                        const lodestone::ManifestBinding& binding) noexcept
+                         const lodestone::ShaderManifestView& view,
+                         const lodestone::ManifestBinding& binding) noexcept
 {
     writer.Key("members");
     writer.BeginArray();
@@ -181,10 +182,8 @@ void WriteBinding(lodestone::JsonWriter& writer,
     writer.KeyUInt("byteSize", binding.ByteSize);
     writer.KeyUInt("elementStride", binding.ElementStride);
     writer.KeyUInt("arrayCount", binding.ArrayCount);
-    writer.KeyUInt("derivedElementCount", binding.DerivedElementCount);
-    writer.KeyUInt("derivedExtentX", binding.DerivedExtentX);
-    writer.KeyUInt("derivedExtentY", binding.DerivedExtentY);
-    writer.KeyUInt("derivedExtentZ", binding.DerivedExtentZ);
+    writer.KeyString("placementKind",
+                     magic_enum::enum_name(static_cast<lodestone::PlacementKind>(binding.PlacementKind)));
     WriteUniformMembers(writer, view, binding);
     writer.EndObject();
 }
@@ -229,8 +228,8 @@ void WriteRaster(lodestone::JsonWriter& writer,
     {
         writer.BeginObject();
         writer.KeyUInt("location", target.Location);
-        writer.KeyString(
-            "scalarType", magic_enum::enum_name(static_cast<lodestone::VertexScalarType>(target.ScalarType)));
+        writer.KeyString("scalarType",
+                         magic_enum::enum_name(static_cast<lodestone::VertexScalarType>(target.ScalarType)));
         writer.KeyUInt("componentCount", target.ComponentCount);
         writer.EndObject();
     }
@@ -239,15 +238,37 @@ void WriteRaster(lodestone::JsonWriter& writer,
     writer.EndObject();
 }
 
+void WriteFootprint(lodestone::JsonWriter& writer, const lodestone::ManifestFootprint& footprint) noexcept
+{
+    writer.Key("footprint");
+    writer.BeginObject();
+    writer.KeyString("kind", magic_enum::enum_name(static_cast<lodestone::FootprintKind>(footprint.Kind)));
+
+    if (footprint.Kind == static_cast<uint32_t>(lodestone::FootprintKind::Buffer))
+    {
+        writer.KeyUInt("elementCount", footprint.ElementCount);
+    }
+    else if (footprint.Kind == static_cast<uint32_t>(lodestone::FootprintKind::Texture))
+    {
+        writer.KeyUInt("extentX", footprint.ExtentX);
+        writer.KeyUInt("extentY", footprint.ExtentY);
+        writer.KeyUInt("extentZ", footprint.ExtentZ);
+    }
+
+    writer.EndObject();
+}
+
 void WriteSlot(lodestone::JsonWriter& writer,
-              const lodestone::ShaderManifestView& view,
-              const lodestone::ManifestEntryPoint& entry_point,
-              const lodestone::ManifestSlot& slot,
-              bool with_sources) noexcept
+               const lodestone::ShaderManifestView& view,
+               const lodestone::ManifestVariant& variant,
+               const lodestone::ManifestEntryPoint& entry_point,
+               const lodestone::ManifestSlot& slot,
+               bool with_sources) noexcept
 {
     writer.BeginObject();
     writer.KeyString("entryPoint", view.String(entry_point.NameString));
-    writer.KeyString("stage", magic_enum::enum_name(static_cast<lodestone::ShaderStageKind>(entry_point.Stage)));
+    writer.KeyString("stage",
+                     magic_enum::enum_name(static_cast<lodestone::ShaderStageKind>(entry_point.Stage)));
 
     writer.Key("workgroup");
     writer.BeginObject();
@@ -256,11 +277,31 @@ void WriteSlot(lodestone::JsonWriter& writer,
     writer.KeyUInt("z", slot.WorkgroupZ);
     writer.EndObject();
 
+    // Resolved the way a consumer resolves it: visibility names a resource of the variant, and the
+    // footprint list of that variant says how much of it.
+    const std::span<const uint32_t> resources = view.ResourceList(variant.ResourceListIndex);
+    const std::span<const lodestone::ManifestFootprint> footprints =
+        view.FootprintList(variant.FootprintListIndex);
+
     writer.Key("layout");
     writer.BeginArray();
-    for (const lodestone::ManifestBinding& binding : view.LayoutBindings(slot.LayoutIndex))
+    for (const uint32_t local : view.VisibilityList(slot.VisibilityIndex))
     {
-        WriteBinding(writer, view, binding);
+        if (local >= resources.size() || resources[local] >= view.Bindings().size())
+        {
+            continue;
+        }
+
+        writer.BeginObject();
+        writer.Key("resource");
+        WriteBinding(writer, view, view.Bindings()[resources[local]]);
+
+        if (local < footprints.size())
+        {
+            WriteFootprint(writer, footprints[local]);
+        }
+
+        writer.EndObject();
     }
     writer.EndArray();
 
@@ -295,7 +336,7 @@ void WriteVariants(lodestone::JsonWriter& writer,
             const lodestone::ManifestSlot* slot = view.FindSlot(entryPointId, variant.Index);
             if (slot != nullptr)
             {
-                WriteSlot(writer, view, entryPoints[entryPointIndex], *slot, with_sources);
+                WriteSlot(writer, view, variant, entryPoints[entryPointIndex], *slot, with_sources);
             }
         }
         writer.EndArray();
@@ -329,8 +370,9 @@ std::expected<std::string, DumpError> BuildManifestJson(const lodestone::ShaderM
 
 int PrintUsage() noexcept
 {
-    std::println(stderr, "usage: manifest_dump <manifest.ls_shader_bin> [--compact] [--with-sources] "
-                          "[-o <output.json>]");
+    std::println(stderr,
+                 "usage: manifest_dump <manifest.ls_shader_bin> [--compact] [--with-sources] "
+                 "[-o <output.json>]");
     return 1;
 }
 
@@ -348,15 +390,17 @@ int main(int argc, char** argv)
     const auto bytesResult = ReadFileBytes(options.ManifestPath);
     if (!bytesResult.has_value())
     {
-        std::println(stderr, "Failed to read '{}': {}", options.ManifestPath.string(),
-                     ToString(bytesResult.error()));
+        std::println(
+            stderr, "Failed to read '{}': {}", options.ManifestPath.string(), ToString(bytesResult.error()));
         return 1;
     }
 
     const auto viewResult = lodestone::ShaderManifestView::Open(bytesResult.value());
     if (!viewResult.has_value())
     {
-        std::println(stderr, "Failed to open manifest '{}': {}", options.ManifestPath.string(),
+        std::println(stderr,
+                     "Failed to open manifest '{}': {}",
+                     options.ManifestPath.string(),
                      lodestone::ToString(viewResult.error()));
         return 1;
     }

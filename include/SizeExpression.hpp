@@ -10,7 +10,7 @@
  *
  * The expression travels as a string because Slang will not give us the value any other way. An
  * attribute's integer argument folds at compile time, but the permutation constants are
- * `extern const static` and fold at link time, so `[vx_size(IFFT_SIZE * 4)]` fails to compile. A
+ * `extern static const` and fold at link time, so `[vx_size(IFFT_SIZE * 4)]` fails to compile. A
  * string argument passes through untouched, and the cooker already holds the axis values, so the
  * cooker does the arithmetic per variant.
  *

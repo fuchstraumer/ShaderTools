@@ -46,7 +46,7 @@ uint32_t ArgumentCountOf(RawSizeAttributeKind kind) noexcept;
 /** One `[vx_*]` annotation, exactly as the shader author wrote it.
  *
  * A size travels as a string because Slang folds an attribute integer argument at compile time, while
- * the permutation constants are `extern const static` and fold at link time. So the argument reaches
+ * the permutation constants are `extern static const` and fold at link time. So the argument reaches
  * reflection untouched, and stage 4 does the arithmetic once for each variant. */
 struct RawSizeAttribute
 {
@@ -107,7 +107,7 @@ struct RawVariant
 /** Stage 3's per-module output.
  *
  * `ExternDefaults` is easy to miss and stage 4 cannot work without it. A size expression may name an
- * `extern const static` constant that no axis drives, and only Slang knows what that constant
+ * `extern static const` constant that no axis drives, and only Slang knows what that constant
  * defaults to. Stage 4 must not call Slang, so the defaults travel here. */
 struct RawModule
 {

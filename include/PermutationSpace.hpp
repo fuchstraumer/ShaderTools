@@ -18,7 +18,7 @@ using PermutationValue = std::variant<bool, uint32_t, int32_t>;
 
 /** One axis of variation. `Parent`/`RequiredParentValue` express a dependent axis: the axis only
  * contributes values when its parent already took the enabling value. `Name` must match the
- * `extern const static` declaration in the Slang source exactly -- a mismatch links a symbol nobody
+ * `extern static const` declaration in the Slang source exactly -- a mismatch links a symbol nobody
  * references and silently leaves the shader on its default value. */
 struct PermutationAxis
 {
@@ -78,7 +78,7 @@ PermutationAssignment CanonicalizeAssignment(const PermutationSpace& space, cons
 int32_t ComputeVariantIndex(const PermutationSpace& space, const PermutationAssignment& canonical);
 int32_t ComputeVariantSpaceSize(const PermutationSpace& space) noexcept;
 
-/**Every axis name must match an `extern const static` declaration in the shader. A mismatch links a
+/**Every axis name must match an `extern static const` declaration in the shader. A mismatch links a
  * symbol nobody references, leaves the shader on its default, and errors nowhere -- this will result in
  * a set of variants with duplicate source code and behavior, when we explicitly don't want that. */
 [[nodiscard]] CookError VerifyAxisNamesAreDeclared(const PermutationSpace& space,

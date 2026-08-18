@@ -8,6 +8,20 @@ public struct Cone
     public float Radius;
 }
 
+// While we could pass these as bare float4s, the optimizer should absolutely still see these as 
+// just float4s and this is so much easier to keep track of (imo). Maybe I'm just stupid, who knows.
+public struct Plane
+{
+    public float3 N;
+    public float d;
+}
+
+public struct Sphere
+{
+    public float3 Center;
+    public float Radius;
+}
+
 public struct Frustum
 {
     public float4 Planes[6];

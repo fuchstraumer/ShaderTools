@@ -5,7 +5,7 @@ module VeloxAttributes;
 // two statements drift apart.
 //
 // Every size travels as a string, and this is not a style choice. Slang folds an attribute's integer
-// argument at compile time, but the permutation constants are `extern const static` and only fold at
+// argument at compile time, but the permutation constants are `extern static const` and only fold at
 // link time, so `[vx_element_count(IFFT_SIZE * IFFT_SIZE)]` fails to compile outright. A string
 // argument reaches reflection untouched, and the cooker evaluates it once per variant against the
 // axis values it already holds.

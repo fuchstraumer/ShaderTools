@@ -17,7 +17,7 @@
  * language reuses it unchanged.
  *
  * The symbol table is the only input that does not come from stage 3, and it has two halves. The axis
- * values come from the variant's canonical assignment. The `extern const static` constants that no
+ * values come from the variant's canonical assignment. The `extern static const` constants that no
  * axis drives keep their declared defaults, and only Slang knows those, so stage 3 carries them out in
  * `RawModule::ExternDefaults`. */
 namespace lodestone

@@ -17,3 +17,5 @@ docs/
 .vscode/c_cpp_properties.json
 third_party/magic_enum
 out/
+*.pyc
+__pycache__/

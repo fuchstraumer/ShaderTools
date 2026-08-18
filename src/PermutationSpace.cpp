@@ -479,7 +479,7 @@ CookError VerifyAxisNamesAreDeclared(const PermutationSpace& space,
         {
             ++undeclaredCount;
             std::println(stderr,
-                         "[shader_cooker] axis '{}' has no matching `extern const static` declaration "
+                         "[shader_cooker] axis '{}' has no matching `extern static const` declaration "
                          "in module {}. Slang links this symbol, nothing references it, the shader "
                          "keeps its default, and every variant cooks identical output.",
                          axis->Name,

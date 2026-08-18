@@ -19,7 +19,8 @@ public float4 DoNormalMapping(in float3 normal, in float3x3 TBN)
 public float3x3 MakeTBN(in const float3 normal, in const float3 tangent)
 {
     const float3 bitangent = cross(normal, tangent);
-    return float3x3(tangent, bitangent, normal);
+    // row matrix -> column matrix
+    return transpose(float3x3(tangent, bitangent, normal));
 }
 
 public float Attenuate(in float range, in float distance)
@@ -49,16 +50,32 @@ public float GeometrySchlickGGX(in const float NdotV, in const float roughness)
     return NdotV / (NdotV * (1.0f - k) + k);
 }
 
-public float FresnelSchlick(in const float cosTheta, in const float3 F0)
+// fix: this took a float3 F0 and returned a float from F0.x alone, so it discarded two channels. A
+// metal has a coloured F0, and the reflection came out grey. The GLSL returns a vec3.
+public float3 FresnelSchlick(in const float cosTheta, in const float3 F0)
 {
-    return F0.x + (1.0f - F0.x) * pow(1.0f - cosTheta, 5.0f);
+    return F0 + (1.0f - F0) * pow(1.0f - cosTheta, 5.0f);
+}
+
+public float GeometrySmith(in const float3 normal, in const float3 view, in const float3 light, in const float roughness)
+{
+    const float NdotV = max(dot(normal, view), 0.0f);
+    const float NdotL = max(dot(normal, light), 0.0f);
+    return GeometrySchlickGGX(NdotV, roughness) * GeometrySchlickGGX(NdotL, roughness);
 }
 
 // Applying inverse projection matrix "undoes" the projection transform, converting clip space coordinates to view space coordinates.
+//
+// fix: this called mul(vector, matrix), which treats the vector as a row and therefore applies the
+// transpose of the matrix. Every other transform in this repository writes mul(matrix, vector), and
+// the GLSL wrote `inverse(projection) * clip_pos`. Two conventions in one tree cannot both be right.
+//
+// fix: the perspective divide covered all four components, so w became 1 by dividing itself. The GLSL
+// divides xyz only. The difference does not show in a position, and it does show when a caller reads w.
 public float4 ClipToView(in const float4 clip_position, in const float4x4 inverse_projection_matrix)
 {
-    float4 view_position = mul(clip_position, inverse_projection_matrix);
-    view_position /= view_position.w; // Perspective divide
+    float4 view_position = mul(inverse_projection_matrix, clip_position);
+    view_position.xyz /= view_position.w; // Perspective divide
     return view_position;
 }
 
@@ -67,6 +84,34 @@ public float4 ScreenToView(in const float4 screen_position, in float2 screen_dim
     float2 screen_coords = screen_position.xy / screen_dimensions;
     float4 clip_position = float4(screen_coords * 2.0f - 1.0f, screen_position.z, screen_position.w);
     return ClipToView(clip_position, inverse_projection_matrix);
+}
+
+public bool IntersectRayPlane(in const float3 ray_origin, in const float3 ray_direction, in const Plane plane, out float3 intersection)
+{
+    const float denominator = dot(plane.N, ray_direction);
+    const float numerator = -1.0f * (dot(ray_origin, plane.N) + plane.d);
+    const float t = (abs(denominator) > 1.0e-8f) ? numerator / denominator : 0.0f;
+    intersection = ray_origin + t * ray_direction;
+    return (t >= 0.0f);
+}
+
+public bool IntersectLinePlane(in const float3 a, in const float3 b, in const Plane plane, out float3 intersection)
+{
+    const float3 ab = b - a;
+    const float denominator = dot(plane.N, ab);
+    // if parallel to plane, we'll never meet it
+    const float t = (abs(denominator) > 1.0e-8f) ? (plane.d - dot(plane.N, a)) / denominator : 0.0f;
+    intersection = a + t * ab;
+    return (t >= 0.0f && t <= 1.0f);
+}
+
+// Returns 1 inside the cone, 0 outside it, and a smooth edge between the two.
+public float GetSpotLightCone(in const float spot_light_angle_degrees, in const float3 light_direction, in const float3 L)
+{
+    const float minCos = cos(radians(spot_light_angle_degrees));
+    const float maxCos = lerp(minCos, 1.0f, 0.5f);
+    const float cosAngle = dot(light_direction, -L);
+    return smoothstep(minCos, maxCos, cosAngle);
 }
 
 // Recall that plane.w is signed distance from the origin to the plane along the normal, so this returns true 

@@ -16,7 +16,9 @@ public struct TonemapParams
     float ChannelCrosstalk;
 };
 
-internal float Reinhard(in const float3 inColor)
+// fix: this was declared `float` and returned a float3, so the file did not compile. The defect stayed
+// hidden because ddCommon.slang never included this file, and nothing reached the function.
+internal float3 Reinhard(in const float3 inColor)
 {
     return inColor / (inColor + 1.0f);
 }
@@ -52,16 +54,26 @@ internal float3 LotteTonemap(in const float3 color, in uniform TonemapParams par
     return ratio * color;
 }
 
-[SpecializationConstant]
-const int TonemappingOperator = 1;
+// permutation parameter - expected range: 0, 1, 2
+// 0 passes the colour through, 1 applies the Lottes curve, 2 applies Reinhard.
+// todo: standardize this more, bring in colorspaces and ODTs, gamma correction, etc
+// expand with AgX, Khronos Neutral, and so on. we can do a lot better than just this
+extern static const uint DD_TONEMAP_OPERATOR = 1u;
 
+// fix: the switch had no default arm, so the function fell off its end when the constant held any
+// other value. A function that reaches its end without a return has no defined result. The chain below
+// always returns.
 public float3 ApplyTonemapping(in const float3 color, in uniform TonemapParams params)
 {
-    switch (TonemappingOperator)
+    if (DD_TONEMAP_OPERATOR == 1u)
     {
-    case 0:
-        return color; // no tonemapping
-    case 1:
         return LotteTonemap(color, params);
     }
+
+    if (DD_TONEMAP_OPERATOR == 2u)
+    {
+        return Reinhard(color);
+    }
+
+    return color; // no tonemapping
 }

@@ -609,7 +609,7 @@ struct SlangCompiler::Impl
     std::vector<std::string> EntryPointNames;
     std::vector<slang::CompilerOptionEntry> CompilerOptions;
     std::vector<std::string> ModuleSourceTexts;
-    /** The declared default of every `extern const static` constant no axis drives. Only Slang knows
+    /** The declared default of every `extern static const` constant no axis drives. Only Slang knows
      * these, and stage 4 may not call Slang, so they leave this file on `RawModule::ExternDefaults`. */
     std::vector<ExternConstantDefault> ExternDefaults;
     std::string ModuleName;
