@@ -35,16 +35,11 @@ CompiledVariant MakeVariant(uint32_t index, const std::string& suffix, std::stri
 {
     ReflectedBinding binding;
     binding.Name = "Waves";
-    binding.Group = 0u;
-    binding.Binding = 1u;
+    binding.Placement = BoundPlacement{ .Group = 0u, .Binding = 1u };
     binding.Kind = BindingKind::StorageBuffer;
-    binding.EntryPointUsageMask = 0u;
     binding.ElementStride = 16u;
     binding.ArrayCount = 1u;
     binding.Shape = ResourceShape::Buffer;
-    binding.Derived.Expression = "IFFT_SIZE * 4";
-    binding.Derived.ElementCount = 1024u;
-    binding.Derived.HasElementCount = true;
 
     CompiledEntryPoint entryPoint;
     entryPoint.Name = "MainCS";
@@ -60,6 +55,7 @@ CompiledVariant MakeVariant(uint32_t index, const std::string& suffix, std::stri
     variant.VariantSuffix = suffix;
     variant.VariantDescription = "USE_FOO=" + std::string{ index == 0u ? "false" : "true" };
     variant.GlobalBindings.push_back(binding);
+    variant.Footprints.push_back(BufferFootprint{ .ElementCount = 1024u, .Expression = "IFFT_SIZE * 4" });
     variant.EntryPoints.push_back(std::move(entryPoint));
     return variant;
 }
@@ -322,9 +318,9 @@ void CheckRawPrimitives(lodestone::tests::TestRunner& runner)
                  "a default placement is not group 0 binding 0, it is no placement at all");
     runner.Check(GetBoundPlacement(first) != nullptr, "a bound placement reports itself");
 
-    runner.Check(RawPlacementLess(first, second), "group orders before binding");
-    runner.Check(!RawPlacementLess(second, first), "and the order is not symmetric");
-    runner.Check(RawPlacementLess(first, unplaced) && !RawPlacementLess(unplaced, first),
+    runner.Check(PlacementLess(first, second), "group orders before binding");
+    runner.Check(!PlacementLess(second, first), "and the order is not symmetric");
+    runner.Check(PlacementLess(first, unplaced) && !PlacementLess(unplaced, first),
                  "an unplaced resource sorts after every placed one");
 
     runner.Check(ArgumentCountOf(RawSizeAttributeKind::ElementCount) == 1u, "element count takes one");
@@ -379,13 +375,16 @@ void CheckCookedDump(lodestone::tests::TestRunner& runner)
     runner.Check(Contains(dump, R"("stage": "cooked")"), "the dump names its stage");
     runner.Check(Contains(dump, R"("module": "TinyModule")"), "the dump names its module");
     runner.Check(Contains(dump, R"("sourceCount": 2)"), "two different texts stay two sources");
-    runner.Check(Contains(dump, R"("layoutCount": 1)"),
-                 "one shared layout collapses to one entry, and the dump shows the collapse");
+    runner.Check(Contains(dump, R"("resourceCount": 1)"),
+                 "one shared resource collapses to one entry, and the dump shows the collapse");
+    runner.Check(Contains(dump, R"("footprintListCount": 1)"),
+                 "both variants ask for the same size, so one footprint list serves both");
     runner.Check(Contains(dump, R"("rasterStateCount": 1)"), "a compute module has exactly one raster entry");
 
     runner.Check(Contains(dump, R"("name": "Waves")"), "a binding reaches the layout table");
     runner.Check(Contains(dump, R"("expression": "IFFT_SIZE * 4")"),
                  "the size expression survives, because a diagnostic must quote what the author wrote");
+    runner.Check(Contains(dump, R"("kind": "buffer")"), "a footprint names which kind it is");
     runner.Check(Contains(dump, R"("elementCount": 1024)"), "the evaluated size reaches the dump");
     runner.Check(Contains(dump, R"("hashName": "fnv1a-64")"),
                  "the dump names the hash, because the name reaches the output");

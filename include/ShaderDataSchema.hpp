@@ -6,6 +6,7 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <variant>
 #include <vector>
 
 /** The schema the cooker extracts and the rendergraph eventually consumes. It names no Slang, WebGPU,
@@ -23,31 +24,55 @@ std::string_view ToString(ShaderStageKind stage) noexcept;
 std::string_view ToString(ResourceShape shape) noexcept;
 std::string_view ToString(TextureSampleType sample_type) noexcept;
 
-/** A size the shader author declared with a `[vx_*]` attribute, already evaluated for this variant.
- * `Expression` is kept for diagnostics: when two shaders disagree about a shared resource, the error
- * has to name what each of them actually wrote, not just the numbers they arrived at. */
-struct DerivedSize
+/**@brief Where a resource lives under the bound access model. */
+struct BoundPlacement
 {
-    std::string Expression;
-    uint64_t ElementCount{ 0u };
-    uint32_t ExtentX{ 0u };
-    uint32_t ExtentY{ 0u };
-    uint32_t ExtentZ{ 0u };
-    bool HasElementCount{ false };
-    bool HasExtent{ false };
+    uint32_t Group{ 0u };
+    uint32_t Binding{ 0u };
 
-    friend bool operator==(const DerivedSize&, const DerivedSize&) = default;
+    friend bool operator==(const BoundPlacement&, const BoundPlacement&) = default;
 };
 
-/** One member of a uniform block, with the offset and the size the shader gave it.
+/**@brief `std::monostate` means the target reported no placement. That is not the same fact as group 0
+ * binding 0. Future work will add Indexed (bindless) and Pointer (BDA) placements here as well. */
+using ResourcePlacement = std::variant<std::monostate, BoundPlacement>;
+
+/**@brief Null when this resource is not placed by group and binding. */
+const BoundPlacement* GetBoundPlacement(const ResourcePlacement& placement) noexcept;
+
+/**@brief Orders two resources by placement. A resource with no placement sorts last. Most useful for
+ * bound resources, but not really relevant for the others since those switch their "locations" to runtime */
+bool PlacementLess(const ResourcePlacement& lhs, const ResourcePlacement& rhs) noexcept;
+
+/**@brief How many elements a buffer holds, dynamically evaluated from a `[vx_element_count]` attribute. */
+struct BufferFootprint
+{
+    uint64_t ElementCount{ 0u };
+    std::string Expression;
+
+    friend bool operator==(const BufferFootprint&, const BufferFootprint&) = default;
+};
+
+/**@brief The extent a texture is created with, from a `[vx_extent_2d]` or `[vx_extent_3d]` attribute.
  *
- * This table removes the hand-mirrored CPU struct. A struct on the CPU side whose padding is one float
- * wrong writes every field after that point to the wrong place, and nothing reports it: the buffer is
- * the right total size and the shader reads whatever is there. Compile() can compare offsetof against
- * this table and fail on the commit that introduces the drift.
+ * @note Briefly, it's important to realize why this isn't a byte size: textures are formatted, so every
+ * graphics API only wants the texture dimensions. We don't have format fields yet.
  *
- * A nested struct flattens into dotted names, so `Light.Color` is one row and the tree does not
- * survive. The consumer checks offsets, and a tree would only make that harder. */
+ * todo-ship: Optional format information would be helpful... but only really for storage images. For many
+ * of the rest, it could change based on asset pipeline and shouldn't be a concern of the shader. */
+struct TextureFootprint
+{
+    uint32_t ExtentX{ 1u };
+    uint32_t ExtentY{ 1u };
+    uint32_t ExtentZ{ 1u };
+    std::string Expression;
+
+    friend bool operator==(const TextureFootprint&, const TextureFootprint&) = default;
+};
+
+using ResourceFootprint = std::variant<std::monostate, BufferFootprint, TextureFootprint>;
+
+/**@brief One member of a uniform block, with the offset and the size the shader gave it. */
 struct ReflectedUniformMember
 {
     std::string Name;
@@ -58,14 +83,13 @@ struct ReflectedUniformMember
     friend bool operator==(const ReflectedUniformMember&, const ReflectedUniformMember&) = default;
 };
 
-/** What the shader states about one resource. The CPU side never writes any of this.
+/**@brief What a shader states about one resource. The CPU side should never write any of this: this
+ * information should be enough to drive most of the work the CPU needs to do to resolve a resource into
+ * the final packed data we'll write into the output resource tables.
  *
- * `ElementStride` is the size of one element of a structured buffer, in bytes. The graph multiplies
- * it by an element count. A caller therefore never writes a stride, and a mirrored CPU struct with
- * wrong padding cannot size a buffer.
- *
- * `ByteSize` is the total size of a uniform block. Reflection fully determines it, so a uniform block
- * must never take an explicit size from the caller.
+ * Note some key redundancies: `ElementStride` is useful for structured buffers and other resource
+ * types where a stride is required or helpful for CPU validation. `ByteSize` is most often explicit
+ * and required for uniforms. `ArrayCount` is *the binding array size* as declared in the shader (usually 1)
  *
  * `StorageFormat` is set only for a storage texture, because the shader spells the format into the
  * binding type there. A sampled texture leaves it Invalid: the shader says it samples a float4, not
@@ -73,10 +97,8 @@ struct ReflectedUniformMember
 struct ReflectedBinding
 {
     std::string Name;
-    uint32_t Group{ 0u };
-    uint32_t Binding{ 0u };
+    ResourcePlacement Placement;
     BindingKind Kind{ BindingKind::Invalid };
-    uint32_t EntryPointUsageMask{ 0u };
 
     uint32_t ElementStride{ 0u };
     uint64_t ByteSize{ 0u };
@@ -88,21 +110,32 @@ struct ReflectedBinding
     StorageTextureAccess StorageAccess{ StorageTextureAccess::Invalid };
     SamplerBindingType SamplerType{ SamplerBindingType::Invalid };
 
-    DerivedSize Derived;
     /** Filled only for a uniform block. Every other binding kind leaves it empty. */
     std::vector<ReflectedUniformMember> UniformMembers;
 
-    /** The interner compares whole layouts, so every field a consumer reads must take part. */
     friend bool operator==(const ReflectedBinding&, const ReflectedBinding&) = default;
+};
+
+/**@brief Group number, or zero when this resource has no bound placement. */
+uint32_t GroupOf(const ReflectedBinding& binding) noexcept;
+/**@brief Binding number, or zero when this resource has no bound placement. */
+uint32_t BindingOf(const ReflectedBinding& binding) noexcept;
+
+/**@brief Combined the reflected data (from the shader verbatim) with our "resolved"
+ * footprint data extracted from the resolve step. The latter is described in our markup
+ * / meta-annotation language, and is best constructed by using ReflectedBinding alongside it. */
+struct ResolvedBinding
+{
+    ReflectedBinding Resource;
+    ResourceFootprint Footprint;
+
+    friend bool operator==(const ResolvedBinding&, const ResolvedBinding&) = default;
 };
 
 std::string_view ToString(VertexScalarType scalar_type) noexcept;
 
-/** One vertex shader input.
- *
- * WGSL keeps only `@location`. The semantic name and index exist in the Slang source and nowhere in
- * the emitted text, so this record is the only place they survive. A vertex buffer layout that a
- * caller builds by hand can therefore be checked against what the shader asked for. */
+/**@brief One vertex shader input/attribute. Retrieving location, scalar type,
+ * and component count should be sufficient for all APIs to create vertex bindings. */
 struct ReflectedVertexInput
 {
     std::string SemanticName;
@@ -114,11 +147,10 @@ struct ReflectedVertexInput
     friend bool operator==(const ReflectedVertexInput&, const ReflectedVertexInput&) = default;
 };
 
-/** One fragment shader color target.
- *
- * The format is not here, and it cannot be. `float4 : SV_Target0` is equally Rgba8Unorm and
- * Rgba16Float. The shader states the component count and the scalar type only. The caller states the
- * format, and Compile() can check the two agree. */
+/**@brief One fragment shader color target. The scalar type and component count describe the output, but the
+ * actual format is determined by the client API being used, and what the actual runtime configuration is.
+ * Most of the time, client gfx APIs just convert. One should not build assumptions on the format you can
+ * interpret from this because of that */
 struct ReflectedColorTarget
 {
     uint32_t Location{ 0u };
@@ -128,20 +160,16 @@ struct ReflectedColorTarget
     friend bool operator==(const ReflectedColorTarget&, const ReflectedColorTarget&) = default;
 };
 
-/** Everything the cooker can say about the raster stages of one entry point.
- *
- * Slang declares no pipeline render state, so blend, cull, front face, depth compare, and topology are
- * not here and never will be. Those stay in RenderState on the CPU side.
- *
- * One struct holds the whole raster payload on purpose. The engine's RenderTarget type lands in
- * parallel with this work, so the remap must stay one function body. */
+/**@brief Everything the cooker can say about the raster stages of one entry point. This isn't much
+ * on purpose, because we assume clients will have some data-driven way to declare the rest of their
+ * raster state. This just accelerates creation of it by allowing code to dynamically configure what 
+ * it can from shader information. */
 struct ReflectedRasterState
 {
     std::vector<ReflectedVertexInput> VertexInputs;
     std::vector<ReflectedColorTarget> ColorTargets;
-    /** True when the fragment shader writes SV_Depth. This is not the same fact as depthWrite in
-     * RenderState: a pass that writes depth from the shader while depthWrite is off is a real error,
-     * and this is what makes that error findable. */
+    /**@note Detection of this state is not flawless, but can provide helpful validation. Users should
+     * still try to drive frag depth writing configuration themselves in their render state code. */
     bool WritesFragDepth{ false };
 
     friend bool operator==(const ReflectedRasterState&, const ReflectedRasterState&) = default;
@@ -153,11 +181,11 @@ struct ReflectedRasterState
  * variant sees the same set, and a copy for each entry point states the same fact three times. The set
  * lives once on `CompiledVariant::GlobalBindings`, and this record says only which of those bindings
  * this entry point reads.
+ * todo-ship: That's not always going to be true, especially with entrypoint parameter blocks. This will
+ * need revision.
  *
- * `UsedBindingIndices` holds indices into that shared list, in ascending order. It is a list rather
- * than a bit mask on purpose: a mask over bindings would cap a module at the width of the mask, and it
- * would read like the `ReflectedBinding::EntryPointUsageMask` field, which is a mask over entry
- * points and a different question. */
+ * `UsedBindingIndices` holds indices into that shared list, in ascending order. A list rather than a
+ * bit mask, because a mask caps a module at the width of the mask. */
 struct EntryPointReflection
 {
     std::string Name;
@@ -184,28 +212,25 @@ struct CompiledVariant
     /** Dense mixed-radix index over the canonical assignment. Stable across cooks, and the key the
      * rendergraph resolves a variant with. */
     uint32_t VariantIndex{ 0u };
-    /** Every program-scope binding of this variant, once. Slang reports one set for the whole program,
-     * so this is the set every entry point draws from.
-     *
-     * `EntryPointUsageMask` is zero on every entry here. The shared list states what a resource is and
-     * where it lives, and it makes no claim about who reads it. Each entry point answers that with
-     * `EntryPointReflection::UsedBindingIndices`. */
+    /** Every program-scope binding of this variant, once. It states where it is and what it is, that's it.*/
     std::vector<ReflectedBinding> GlobalBindings;
+    /** One footprint for each entry of `GlobalBindings`. A size expression reads the axis values, so
+     * a footprint belongs to the variant and not to the entry point that happens to use it. */
+    std::vector<ResourceFootprint> Footprints;
     std::vector<CompiledEntryPoint> EntryPoints;
 };
 
-/** Rebuilds the binding list one entry point sees: every global binding, with `EntryPointUsageMask`
- * set for the bindings this entry point reads and clear for the rest.
+/** The bindings one entry point uses, joined with the footprints of this variant.
  *
- * This is the layout the interner keys on, so the result must stay exactly what the compiler used to
- * hand over directly. Phase D step D8b takes the usage mask out of that key. Until then it is part of
- * the key, and the layout count states it: `OceanFft` interns 21 layouts, which is one placement times
- * three usage masks times seven derived sizes. */
-std::vector<ReflectedBinding> BuildEntryPointLayout(const CompiledVariant& variant, size_t entry_point_index);
+ * This is the subset the entry point reads, not every binding of the variant. A compute pass that
+ * touches no lookup table must not declare one. */
+std::vector<ResolvedBinding> BuildEntryPointLayout(const CompiledVariant& variant, size_t entry_point_index);
 
 bool SameBindingLocation(const ReflectedBinding& lhs, const ReflectedBinding& rhs) noexcept;
 void SortBindingsByLocation(std::span<ReflectedBinding> bindings) noexcept;
 std::string DescribeBinding(const ReflectedBinding& binding);
+/** Empty when the shader declared no size for this resource. */
+std::string DescribeFootprint(const ResourceFootprint& footprint);
 std::string DescribeUniformMembers(const ReflectedBinding& binding);
 
 } // namespace lodestone

@@ -30,34 +30,51 @@ struct LibraryEntryPoint
     ShaderStageKind Stage{ ShaderStageKind::Invalid };
 };
 
-/** Hashes one WGSL source. The interner compares bytes afterwards, so this only picks the bucket. */
+/**@brief Hashes one WGSL source. The interner compares bytes afterwards, so this only picks the bucket. */
 ContentHashValue HashSourcePayload(const std::string& source) noexcept;
 
-/** Hashes one binding table field by field. Every field that the graph reads takes part, so two
- * layouts that differ only in a derived size stay separate. */
-ContentHashValue HashLayoutPayload(const std::vector<ReflectedBinding>& layout) noexcept;
+/**@brief Hashes one resource: what it is and where it lives. Not how much of it, and not who reads it. */
+ContentHashValue HashResourcePayload(const ReflectedBinding& resource) noexcept;
 
-/** Hashes one raster state. A compute entry point gives an empty state, so every compute module has
- * exactly one raster entry and the table costs almost nothing. */
+/**@brief Hashes a run of indices. Used for a resource list and for a visibility list. */
+ContentHashValue HashIndexListPayload(const std::vector<uint32_t>& indices) noexcept;
+
+/**@brief Hashes the footprints of one variant, in resource order. */
+ContentHashValue HashFootprintListPayload(const std::vector<ResourceFootprint>& footprints) noexcept;
+
+/**@brief Hashes one raster state. A compute entry point gives an empty state. */
 ContentHashValue HashRasterPayload(const ReflectedRasterState& raster) noexcept;
 
-/** One (module, permutation) pair. The vectors run parallel to CookedModule::EntryPoints. */
+/**@brief One (module, permutation) pair.
+ * `ResourceListIndex` and `FootprintListIndex` are per variant, and say what resources
+ * the variant uses and the derived sizes/dims (footprints) of each. VisibilityIndices is
+ * the binding locations for each entrypoint - which can vary for the same pointed-to resources */
 struct LibraryVariant
 {
     uint32_t Index{ 0u };
     std::string Suffix;
     std::string Description;
     PermutationAssignment Canonical;
+    uint32_t ResourceListIndex{ 0u };
+    uint32_t FootprintListIndex{ 0u };
     std::vector<uint32_t> SourceIndices;
-    std::vector<uint32_t> LayoutIndices;
+    std::vector<uint32_t> VisibilityIndices;
     std::vector<uint32_t> RasterIndices;
     std::vector<WorkgroupSize> Workgroups;
 };
 
-using ShaderLayout = std::vector<ReflectedBinding>;
+/**@brief Indices into `CookedModule::Resources`: the resources one variant declares. */
+using ResourceList = std::vector<uint32_t>;
+/**@brief Indices into a variant's own resource list: the resources one entry point reads. Local, so the
+ * list stays valid when the resource table changes, and small enough to collapse well. */
+using VisibilityList = std::vector<uint32_t>;
+/**@brief One footprint for each entry of a variant's resource list. */
+using FootprintList = std::vector<ResourceFootprint>;
+/**@brief What a caller gets for one entry point: the resources it reads, joined with their footprints. */
+using ShaderLayout = std::vector<ResolvedBinding>;
 
-/** @brief The hash that generated a table, whether or not it used dedupe logic,
- *  and the results of the process (regardless of if it ran dedupe or not */
+/**@brief The hash that generated a table, whether or not it used dedupe logic,
+ *  and the results of the process (regardless of if it ran dedupe or not) */
 struct TableStatistics
 {
     std::string_view HashName;
@@ -65,11 +82,11 @@ struct TableStatistics
     InternerStatistics Interning;
 };
 
-/** @brief An interned module is procedurally built by adding variants as they arrive, and represents
+/**@brief An interned module is procedurally built by adding variants as they arrive, and represents
  *  the deduplicated (if enabled) contents of a Slang module bundled together for the final cooking
- *  stage to process as it sees fit. This object actually *does* the interning piece by piece, as 
+ *  stage to process as it sees fit. This object actually *does* the interning piece by piece, as
  *  compared to `CookedModule` which holds the completed results from this processing.
- * 
+ *
  * @note As of now, there is no `InternedLibrary`: interning is a per-module operation for now.
  * In the future, we could intern libraries - but those would be most efficient running on interned
  * modules, anyways. */
@@ -80,13 +97,17 @@ struct InternedModule
     uint32_t SpaceSize{ 0u };
     std::vector<LibraryEntryPoint> EntryPoints;
     std::vector<LibraryVariant> Variants;
-
+    // todo-ship: Change the hash to xxHash3. This needs to actually reference
+    // the "default" or "enabled" hash name for the library.
     ContentInterner<std::string> SourceInterner{ &HashSourcePayload, "fnv1a-64" };
-    ContentInterner<ShaderLayout> LayoutInterner{ &HashLayoutPayload, "fnv1a-64" };
+    ContentInterner<ReflectedBinding> ResourceInterner{ &HashResourcePayload, "fnv1a-64" };
+    ContentInterner<ResourceList> ResourceListInterner{ &HashIndexListPayload, "fnv1a-64" };
+    ContentInterner<FootprintList> FootprintListInterner{ &HashFootprintListPayload, "fnv1a-64" };
+    ContentInterner<VisibilityList> VisibilityInterner{ &HashIndexListPayload, "fnv1a-64" };
     ContentInterner<ReflectedRasterState> RasterInterner{ &HashRasterPayload, "fnv1a-64" };
 };
 
-/**@brief Interned tables and information about how efficiently they were built. We store these 
+/**@brief Interned tables and information about how efficiently they were built. We store these
  * separately as they collapse at very different rates, so it's worth having insight into each.
  * This object holds the results of the interning process, but doesn't do it itself. */
 struct CookedModule
@@ -97,12 +118,18 @@ struct CookedModule
     uint32_t SpaceSize{ 0u };
     std::vector<LibraryEntryPoint> EntryPoints;
     std::vector<std::string> Sources;
-    std::vector<ShaderLayout> Layouts;
+    std::vector<ReflectedBinding> Resources;
+    std::vector<ResourceList> ResourceLists;
+    std::vector<FootprintList> FootprintLists;
+    std::vector<VisibilityList> VisibilityLists;
     std::vector<ReflectedRasterState> RasterStates;
     std::vector<LibraryVariant> Variants;
 
     TableStatistics SourceTable;
-    TableStatistics LayoutTable;
+    TableStatistics ResourceTable;
+    TableStatistics ResourceListTable;
+    TableStatistics FootprintListTable;
+    TableStatistics VisibilityTable;
     TableStatistics RasterTable;
 };
 
@@ -114,6 +141,8 @@ struct CookedLibrary
     std::vector<CookedModule> Modules;
 };
 
+void DisableDedupe(InternedModule& module) noexcept;
+
 /** Adds one compiled variant to the module, interning each source, layout, and raster state. */
 CookResult<void> AppendVariantToModule(InternedModule& module,
                                        const CompiledVariant& variant,
@@ -124,11 +153,17 @@ CookResult<void> AppendVariantToModule(InternedModule& module,
  * systems that build or modify that data. */
 CookedModule FreezeModuleTables(InternedModule&& interned);
 
-/** Resolves what a caller would get back for one entry point of one variant. The round-trip check
+/**@brief Resolves what a caller would get back for one entry point of one variant. The round-trip check
  * compares this against the text the compiler produced. */
 std::string_view ResolveSource(const CookedModule& module,
                                const LibraryVariant& variant,
                                size_t entry_point_index) noexcept;
+
+/**@brief Retrieve the final shader layout built for one entry point of one variant
+ * within a module.*/
+ShaderLayout ResolveLayout(const CookedModule& module,
+                           const LibraryVariant& variant,
+                           size_t entry_point_index);
 
 } // namespace lodestone
 

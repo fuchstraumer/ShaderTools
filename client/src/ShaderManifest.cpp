@@ -100,28 +100,31 @@ ManifestResult<ShaderManifestView> ShaderManifestView::Open(std::span<const std:
         TableIsInBounds(parsed.SourceTableOffset, parsed.SourceCount, sizeof(ManifestSourceRef), fileSize) &&
         BlobIsInBounds(parsed.SourceBlobOffset, parsed.SourceBlobSize, fileSize) &&
         TableIsInBounds(parsed.BindingTableOffset, parsed.BindingCount, sizeof(ManifestBinding), fileSize) &&
-        TableIsInBounds(parsed.LayoutTableOffset, parsed.LayoutCount, sizeof(ManifestLayout), fileSize) &&
-        TableIsInBounds(parsed.EntryPointTableOffset,
-                        parsed.EntryPointCount,
-                        sizeof(ManifestEntryPoint),
-                        fileSize) &&
+        TableIsInBounds(
+            parsed.ResourceListTableOffset, parsed.ResourceListCount, sizeof(ManifestRun), fileSize) &&
+        TableIsInBounds(
+            parsed.ResourceIndexTableOffset, parsed.ResourceIndexCount, sizeof(uint32_t), fileSize) &&
+        TableIsInBounds(
+            parsed.FootprintTableOffset, parsed.FootprintCount, sizeof(ManifestFootprint), fileSize) &&
+        TableIsInBounds(
+            parsed.FootprintListTableOffset, parsed.FootprintListCount, sizeof(ManifestRun), fileSize) &&
+        TableIsInBounds(
+            parsed.VisibilityListTableOffset, parsed.VisibilityListCount, sizeof(ManifestRun), fileSize) &&
+        TableIsInBounds(
+            parsed.VisibilityIndexTableOffset, parsed.VisibilityIndexCount, sizeof(uint32_t), fileSize) &&
+        TableIsInBounds(
+            parsed.EntryPointTableOffset, parsed.EntryPointCount, sizeof(ManifestEntryPoint), fileSize) &&
         TableIsInBounds(parsed.SlotTableOffset, parsed.SlotCount, sizeof(ManifestSlot), fileSize) &&
         TableIsInBounds(parsed.VariantTableOffset, parsed.VariantCount, sizeof(ManifestVariant), fileSize) &&
-        TableIsInBounds(parsed.VariantIndexTableOffset,
-                        parsed.VariantIndexCount,
-                        sizeof(uint32_t),
-                        fileSize) &&
+        TableIsInBounds(
+            parsed.VariantIndexTableOffset, parsed.VariantIndexCount, sizeof(uint32_t), fileSize) &&
         TableIsInBounds(parsed.AxisTableOffset, parsed.AxisCount, sizeof(ManifestAxis), fileSize) &&
         TableIsInBounds(parsed.AxisValueTableOffset, parsed.AxisValueCount, sizeof(int64_t), fileSize) &&
         TableIsInBounds(parsed.RasterTableOffset, parsed.RasterCount, sizeof(ManifestRaster), fileSize) &&
-        TableIsInBounds(parsed.VertexInputTableOffset,
-                        parsed.VertexInputCount,
-                        sizeof(ManifestVertexInput),
-                        fileSize) &&
-        TableIsInBounds(parsed.ColorTargetTableOffset,
-                        parsed.ColorTargetCount,
-                        sizeof(ManifestColorTarget),
-                        fileSize) &&
+        TableIsInBounds(
+            parsed.VertexInputTableOffset, parsed.VertexInputCount, sizeof(ManifestVertexInput), fileSize) &&
+        TableIsInBounds(
+            parsed.ColorTargetTableOffset, parsed.ColorTargetCount, sizeof(ManifestColorTarget), fileSize) &&
         TableIsInBounds(parsed.UniformMemberTableOffset,
                         parsed.UniformMemberCount,
                         sizeof(ManifestUniformMember),
@@ -138,7 +141,17 @@ ManifestResult<ShaderManifestView> ShaderManifestView::Open(std::span<const std:
     view.strings = MakeTable<ManifestStringRef>(bytes, parsed.StringTableOffset, parsed.StringCount);
     view.sources = MakeTable<ManifestSourceRef>(bytes, parsed.SourceTableOffset, parsed.SourceCount);
     view.bindings = MakeTable<ManifestBinding>(bytes, parsed.BindingTableOffset, parsed.BindingCount);
-    view.layouts = MakeTable<ManifestLayout>(bytes, parsed.LayoutTableOffset, parsed.LayoutCount);
+    view.resourceLists =
+        MakeTable<ManifestRun>(bytes, parsed.ResourceListTableOffset, parsed.ResourceListCount);
+    view.resourceIndices =
+        MakeTable<uint32_t>(bytes, parsed.ResourceIndexTableOffset, parsed.ResourceIndexCount);
+    view.footprints = MakeTable<ManifestFootprint>(bytes, parsed.FootprintTableOffset, parsed.FootprintCount);
+    view.footprintLists =
+        MakeTable<ManifestRun>(bytes, parsed.FootprintListTableOffset, parsed.FootprintListCount);
+    view.visibilityLists =
+        MakeTable<ManifestRun>(bytes, parsed.VisibilityListTableOffset, parsed.VisibilityListCount);
+    view.visibilityIndices =
+        MakeTable<uint32_t>(bytes, parsed.VisibilityIndexTableOffset, parsed.VisibilityIndexCount);
     view.entryPoints =
         MakeTable<ManifestEntryPoint>(bytes, parsed.EntryPointTableOffset, parsed.EntryPointCount);
     view.slots = MakeTable<ManifestSlot>(bytes, parsed.SlotTableOffset, parsed.SlotCount);
@@ -152,9 +165,8 @@ ManifestResult<ShaderManifestView> ShaderManifestView::Open(std::span<const std:
         MakeTable<ManifestVertexInput>(bytes, parsed.VertexInputTableOffset, parsed.VertexInputCount);
     view.colorTargets =
         MakeTable<ManifestColorTarget>(bytes, parsed.ColorTargetTableOffset, parsed.ColorTargetCount);
-    view.uniformMembers = MakeTable<ManifestUniformMember>(bytes,
-                                                           parsed.UniformMemberTableOffset,
-                                                           parsed.UniformMemberCount);
+    view.uniformMembers =
+        MakeTable<ManifestUniformMember>(bytes, parsed.UniformMemberTableOffset, parsed.UniformMemberCount);
 
     return view;
 }
@@ -210,21 +222,60 @@ std::span<const ManifestBinding> ShaderManifestView::Bindings() const noexcept
     return bindings;
 }
 
-std::span<const ManifestBinding> ShaderManifestView::LayoutBindings(uint32_t layout_index) const noexcept
+namespace
 {
-    if (layout_index >= layouts.size())
+
+    /**@brief Because resources can have varying resource usages per entrypoint and variant, we store them in runs.
+     * This function returns the span of payloads for a given run index, or an empty span if the run is invalid. */
+    template<typename PayloadType>
+    std::span<const PayloadType> RunOf(std::span<const ManifestRun> runs,
+                                       std::span<const PayloadType> payloads,
+                                       uint32_t run_index) noexcept
+    {
+        if (run_index >= runs.size())
+        {
+            return {};
+        }
+
+        const ManifestRun& run = runs[run_index];
+        if (run.First > payloads.size() || run.Count > payloads.size() - run.First)
+        {
+            return {};
+        }
+
+        return payloads.subspan(run.First, run.Count);
+    }
+
+} // namespace
+
+std::span<const ManifestSlot> ShaderManifestView::SlotTable() const noexcept
+{
+    return slots;
+}
+
+std::span<const ManifestSlot> ShaderManifestView::Slots(const ManifestVariant& variant) const noexcept
+{
+    if (variant.FirstSlot > slots.size() || variant.SlotCount > slots.size() - variant.FirstSlot)
     {
         return {};
     }
 
-    const ManifestLayout& layout = layouts[layout_index];
-    if (layout.FirstBinding > bindings.size() ||
-        layout.BindingCount > bindings.size() - layout.FirstBinding)
-    {
-        return {};
-    }
+    return slots.subspan(variant.FirstSlot, variant.SlotCount);
+}
 
-    return bindings.subspan(layout.FirstBinding, layout.BindingCount);
+std::span<const uint32_t> ShaderManifestView::ResourceList(uint32_t list_index) const noexcept
+{
+    return RunOf(resourceLists, resourceIndices, list_index);
+}
+
+std::span<const ManifestFootprint> ShaderManifestView::FootprintList(uint32_t list_index) const noexcept
+{
+    return RunOf(footprintLists, footprints, list_index);
+}
+
+std::span<const uint32_t> ShaderManifestView::VisibilityList(uint32_t list_index) const noexcept
+{
+    return RunOf(visibilityLists, visibilityIndices, list_index);
 }
 
 std::span<const ManifestEntryPoint> ShaderManifestView::EntryPoints() const noexcept
@@ -314,8 +365,7 @@ std::span<const ManifestUniformMember> ShaderManifestView::UniformMembers(
     return uniformMembers.subspan(binding.FirstUniformMember, binding.UniformMemberCount);
 }
 
-const ManifestSlot* ShaderManifestView::FindSlot(uint16_t entry_point,
-                                                 uint32_t variant_index) const noexcept
+const ManifestSlot* ShaderManifestView::FindSlot(uint16_t entry_point, uint32_t variant_index) const noexcept
 {
     if (entry_point == 0u || variant_index >= variantIndices.size())
     {
@@ -346,9 +396,9 @@ const ManifestSlot* ShaderManifestView::FindSlot(uint16_t entry_point,
 }
 
 ManifestShaderSourceProvider::ManifestShaderSourceProvider(ShaderManifestView _view,
-                                                           uint64_t _generation) noexcept :
-    view{ _view },
-    generation{ _generation }
+                                                           uint64_t _generation) noexcept
+    : view{ _view },
+      generation{ _generation }
 {
     const std::span<const ManifestBinding> records = view.Bindings();
     bindingInfos.reserve(records.size());
@@ -373,36 +423,89 @@ ManifestShaderSourceProvider::ManifestShaderSourceProvider(ShaderManifestView _v
         }
     }
 
-    size_t memberCursor = 0u;
+    // Where each resource's members start, so a gathered binding can point at them.
+    std::vector<uint32_t> memberOffsets;
+    memberOffsets.reserve(records.size());
+    uint32_t memberCursor = 0u;
     for (const ManifestBinding& record : records)
     {
-        BindingInfo info;
-        info.Name = view.String(record.NameString);
-        info.Group = record.Group;
-        info.Binding = record.Binding;
-        info.Kind = static_cast<BindingKind>(record.Kind);
-        info.ElementStride = record.ElementStride;
-        info.ByteSize = record.ByteSize;
-        info.ArrayCount = record.ArrayCount;
-        info.Shape = static_cast<ResourceShape>(record.Shape);
-        info.SampleType = static_cast<TextureSampleType>(record.SampleType);
-        info.StorageFormat = static_cast<TextureFormat>(record.StorageFormat);
-        info.StorageAccess = static_cast<StorageTextureAccess>(record.StorageAccess);
-        info.SamplerType = static_cast<SamplerBindingType>(record.SamplerType);
-        info.DerivedElementCount = record.DerivedElementCount;
-        info.DerivedExtentX = record.DerivedExtentX;
-        info.DerivedExtentY = record.DerivedExtentY;
-        info.DerivedExtentZ = record.DerivedExtentZ;
-
-        if (record.UniformMemberCount != 0u)
-        {
-            info.Members = std::span<const UniformMemberInfo>{ memberInfos.data() + memberCursor,
-                                                               record.UniformMemberCount };
-            memberCursor += record.UniformMemberCount;
-        }
-
-        bindingInfos.push_back(info);
+        memberOffsets.push_back(memberCursor);
+        memberCursor += record.UniformMemberCount;
     }
+
+    const std::span<const ManifestSlot> allSlots = view.SlotTable();
+    slotFirstBinding.assign(allSlots.size(), 0u);
+    slotBindingCount.assign(allSlots.size(), 0u);
+
+    for (const ManifestVariant& variant : view.Variants())
+    {
+        GatherVariantBindings(variant, memberOffsets);
+    }
+}
+
+void ManifestShaderSourceProvider::GatherVariantBindings(const ManifestVariant& variant,
+                                                         const std::vector<uint32_t>& member_offsets)
+{
+    const std::span<const ManifestBinding> records = view.Bindings();
+    const std::span<const ManifestSlot> allSlots = view.SlotTable();
+    const std::span<const uint32_t> resources = view.ResourceList(variant.ResourceListIndex);
+    const std::span<const ManifestFootprint> footprints = view.FootprintList(variant.FootprintListIndex);
+
+    for (uint32_t i = 0u; i < variant.SlotCount && variant.FirstSlot + i < allSlots.size(); ++i)
+    {
+        const uint32_t slotIndex = variant.FirstSlot + i;
+        const std::span<const uint32_t> visible = view.VisibilityList(allSlots[slotIndex].VisibilityIndex);
+
+        slotFirstBinding[slotIndex] = static_cast<uint32_t>(bindingInfos.size());
+        slotBindingCount[slotIndex] = static_cast<uint32_t>(visible.size());
+
+        for (const uint32_t local : visible)
+        {
+            if (local >= resources.size() || resources[local] >= records.size())
+            {
+                continue;
+            }
+
+            bindingInfos.push_back(MakeBindingInfo(records[resources[local]],
+                                                   local < footprints.size() ? &footprints[local] : nullptr,
+                                                   member_offsets[resources[local]]));
+        }
+    }
+}
+
+BindingInfo ManifestShaderSourceProvider::MakeBindingInfo(const ManifestBinding& record,
+                                                          const ManifestFootprint* footprint,
+                                                          uint32_t member_offset) const noexcept
+{
+    BindingInfo info;
+    info.Name = view.String(record.NameString);
+    info.Group = record.Group;
+    info.Binding = record.Binding;
+    info.Kind = static_cast<BindingKind>(record.Kind);
+    info.ElementStride = record.ElementStride;
+    info.ByteSize = record.ByteSize;
+    info.ArrayCount = record.ArrayCount;
+    info.Shape = static_cast<ResourceShape>(record.Shape);
+    info.SampleType = static_cast<TextureSampleType>(record.SampleType);
+    info.StorageFormat = static_cast<TextureFormat>(record.StorageFormat);
+    info.StorageAccess = static_cast<StorageTextureAccess>(record.StorageAccess);
+    info.SamplerType = static_cast<SamplerBindingType>(record.SamplerType);
+
+    if (footprint != nullptr)
+    {
+        info.DerivedElementCount = footprint->ElementCount;
+        info.DerivedExtentX = footprint->ExtentX;
+        info.DerivedExtentY = footprint->ExtentY;
+        info.DerivedExtentZ = footprint->ExtentZ;
+    }
+
+    if (record.UniformMemberCount != 0u)
+    {
+        info.Members = std::span<const UniformMemberInfo>{ memberInfos.data() + member_offset,
+                                                           record.UniformMemberCount };
+    }
+
+    return info;
 }
 
 ManifestShaderSourceProvider::~ManifestShaderSourceProvider() = default;
@@ -428,14 +531,14 @@ std::span<const BindingInfo> ManifestShaderSourceProvider::Bindings(uint16_t ent
         return {};
     }
 
-    const std::span<const ManifestBinding> records = view.LayoutBindings(slot->LayoutIndex);
-    if (records.empty())
+    const size_t slotIndex = static_cast<size_t>(slot - view.SlotTable().data());
+    if (slotIndex >= slotBindingCount.size() || slotBindingCount[slotIndex] == 0u)
     {
         return {};
     }
 
-    const size_t first = static_cast<size_t>(records.data() - view.Bindings().data());
-    return std::span<const BindingInfo>{ bindingInfos.data() + first, records.size() };
+    return std::span<const BindingInfo>{ bindingInfos.data() + slotFirstBinding[slotIndex],
+                                         slotBindingCount[slotIndex] };
 }
 
 WorkgroupSize ManifestShaderSourceProvider::Workgroup(uint16_t entry_point,

@@ -15,6 +15,7 @@
 #include <expected>
 #include <string>
 #include <string_view>
+#include <variant>
 #include <vector>
 
 namespace lodestone
@@ -99,17 +100,30 @@ namespace
         writer.EndArray();
     }
 
-    void WriteDerivedSize(JsonWriter& writer, const DerivedSize& derived)
+    void WriteFootprint(JsonWriter& writer, const ResourceFootprint& footprint)
     {
-        writer.Key("derived");
+        writer.Key("footprint");
         writer.BeginObject();
-        writer.KeyString("expression", derived.Expression);
-        writer.KeyBool("hasElementCount", derived.HasElementCount);
-        writer.KeyUInt("elementCount", derived.ElementCount);
-        writer.KeyBool("hasExtent", derived.HasExtent);
-        writer.KeyUInt("extentX", derived.ExtentX);
-        writer.KeyUInt("extentY", derived.ExtentY);
-        writer.KeyUInt("extentZ", derived.ExtentZ);
+
+        if (const BufferFootprint* buffer = std::get_if<BufferFootprint>(&footprint))
+        {
+            writer.KeyString("kind", "buffer");
+            writer.KeyUInt("elementCount", buffer->ElementCount);
+            writer.KeyString("expression", buffer->Expression);
+        }
+        else if (const TextureFootprint* texture = std::get_if<TextureFootprint>(&footprint))
+        {
+            writer.KeyString("kind", "texture");
+            writer.KeyUInt("extentX", texture->ExtentX);
+            writer.KeyUInt("extentY", texture->ExtentY);
+            writer.KeyUInt("extentZ", texture->ExtentZ);
+            writer.KeyString("expression", texture->Expression);
+        }
+        else
+        {
+            writer.KeyString("kind", "none");
+        }
+
         writer.EndObject();
     }
 
@@ -117,10 +131,10 @@ namespace
     {
         writer.BeginObject();
         writer.KeyString("name", binding.Name);
-        writer.KeyUInt("group", binding.Group);
-        writer.KeyUInt("binding", binding.Binding);
+        writer.KeyString("placementKind", GetBoundPlacement(binding.Placement) != nullptr ? "bound" : "none");
+        writer.KeyUInt("group", GroupOf(binding));
+        writer.KeyUInt("binding", BindingOf(binding));
         writer.KeyString("kind", magic_enum::enum_name(binding.Kind));
-        writer.KeyUInt("entryPointUsageMask", binding.EntryPointUsageMask);
         writer.KeyUInt("elementStride", binding.ElementStride);
         writer.KeyUInt("byteSize", binding.ByteSize);
         writer.KeyUInt("arrayCount", binding.ArrayCount);
@@ -129,7 +143,6 @@ namespace
         writer.KeyString("storageFormat", magic_enum::enum_name(binding.StorageFormat));
         writer.KeyString("storageAccess", magic_enum::enum_name(binding.StorageAccess));
         writer.KeyString("samplerType", magic_enum::enum_name(binding.SamplerType));
-        WriteDerivedSize(writer, binding.Derived);
         WriteUniformMembers(writer, binding);
         writer.EndObject();
     }
@@ -206,20 +219,55 @@ namespace
         writer.EndArray();
     }
 
-    void WriteLayoutTable(JsonWriter& writer, const CookedModule& module)
+    void WriteResourceTable(JsonWriter& writer, const CookedModule& module)
     {
-        writer.Key("layouts");
+        writer.Key("resources");
         writer.BeginArray();
-        for (size_t i = 0u; i < module.Layouts.size(); ++i)
+        for (size_t i = 0u; i < module.Resources.size(); ++i)
         {
             writer.BeginObject();
             writer.KeyUInt("index", i);
-            writer.KeyUInt("contentHash", HashLayoutPayload(module.Layouts[i]));
-            writer.Key("bindings");
+            writer.KeyUInt("contentHash", HashResourcePayload(module.Resources[i]));
+            writer.Key("resource");
+            WriteBinding(writer, module.Resources[i]);
+            writer.EndObject();
+        }
+        writer.EndArray();
+    }
+
+    void WriteIndexListTable(JsonWriter& writer,
+                             std::string_view key,
+                             const std::vector<std::vector<uint32_t>>& lists)
+    {
+        writer.Key(key);
+        writer.BeginArray();
+        for (size_t i = 0u; i < lists.size(); ++i)
+        {
+            writer.BeginObject();
+            writer.KeyUInt("index", i);
+            writer.KeyUInt("contentHash", HashIndexListPayload(lists[i]));
+            WriteIndexArray(writer, "indices", lists[i]);
+            writer.EndObject();
+        }
+        writer.EndArray();
+    }
+
+    void WriteFootprintListTable(JsonWriter& writer, const CookedModule& module)
+    {
+        writer.Key("footprintLists");
+        writer.BeginArray();
+        for (size_t i = 0u; i < module.FootprintLists.size(); ++i)
+        {
+            writer.BeginObject();
+            writer.KeyUInt("index", i);
+            writer.KeyUInt("contentHash", HashFootprintListPayload(module.FootprintLists[i]));
+            writer.Key("footprints");
             writer.BeginArray();
-            for (const ReflectedBinding& binding : module.Layouts[i])
+            for (const ResourceFootprint& footprint : module.FootprintLists[i])
             {
-                WriteBinding(writer, binding);
+                writer.BeginObject();
+                WriteFootprint(writer, footprint);
+                writer.EndObject();
             }
             writer.EndArray();
             writer.EndObject();
@@ -271,8 +319,10 @@ namespace
             writer.KeyString("description", variant.Description);
             writer.Key("canonical");
             WriteAssignment(writer, variant.Canonical);
+            writer.KeyUInt("resourceListIndex", variant.ResourceListIndex);
+            writer.KeyUInt("footprintListIndex", variant.FootprintListIndex);
             WriteIndexArray(writer, "sourceIndices", variant.SourceIndices);
-            WriteIndexArray(writer, "layoutIndices", variant.LayoutIndices);
+            WriteIndexArray(writer, "visibilityIndices", variant.VisibilityIndices);
             WriteIndexArray(writer, "rasterIndices", variant.RasterIndices);
             WriteWorkgroups(writer, variant);
             writer.EndObject();
@@ -307,10 +357,25 @@ namespace
                       module.SourceTable.DedupeEnabled,
                       module.SourceTable.Interning);
         WriteInterner(writer,
-                      "layouts",
-                      module.LayoutTable.HashName,
-                      module.LayoutTable.DedupeEnabled,
-                      module.LayoutTable.Interning);
+                      "resources",
+                      module.ResourceTable.HashName,
+                      module.ResourceTable.DedupeEnabled,
+                      module.ResourceTable.Interning);
+        WriteInterner(writer,
+                      "resourceLists",
+                      module.ResourceListTable.HashName,
+                      module.ResourceListTable.DedupeEnabled,
+                      module.ResourceListTable.Interning);
+        WriteInterner(writer,
+                      "footprintLists",
+                      module.FootprintListTable.HashName,
+                      module.FootprintListTable.DedupeEnabled,
+                      module.FootprintListTable.Interning);
+        WriteInterner(writer,
+                      "visibility",
+                      module.VisibilityTable.HashName,
+                      module.VisibilityTable.DedupeEnabled,
+                      module.VisibilityTable.Interning);
         WriteInterner(writer,
                       "rasterStates",
                       module.RasterTable.HashName,
@@ -655,10 +720,25 @@ std::string DumpInternedModule(const InternedModule& module)
                   module.SourceInterner.IsEnabled(),
                   module.SourceInterner.Statistics());
     WriteInterner(writer,
-                  "layouts",
-                  module.LayoutInterner.HashName(),
-                  module.LayoutInterner.IsEnabled(),
-                  module.LayoutInterner.Statistics());
+                  "resources",
+                  module.ResourceInterner.HashName(),
+                  module.ResourceInterner.IsEnabled(),
+                  module.ResourceInterner.Statistics());
+    WriteInterner(writer,
+                  "resourceLists",
+                  module.ResourceListInterner.HashName(),
+                  module.ResourceListInterner.IsEnabled(),
+                  module.ResourceListInterner.Statistics());
+    WriteInterner(writer,
+                  "footprintLists",
+                  module.FootprintListInterner.HashName(),
+                  module.FootprintListInterner.IsEnabled(),
+                  module.FootprintListInterner.Statistics());
+    WriteInterner(writer,
+                  "visibility",
+                  module.VisibilityInterner.HashName(),
+                  module.VisibilityInterner.IsEnabled(),
+                  module.VisibilityInterner.Statistics());
     WriteInterner(writer,
                   "rasterStates",
                   module.RasterInterner.HashName(),
@@ -669,7 +749,10 @@ std::string DumpInternedModule(const InternedModule& module)
     writer.Key("provenance");
     writer.BeginObject();
     WriteProvenance(writer, "sources", module.SourceInterner);
-    WriteProvenance(writer, "layouts", module.LayoutInterner);
+    WriteProvenance(writer, "resources", module.ResourceInterner);
+    WriteProvenance(writer, "resourceLists", module.ResourceListInterner);
+    WriteProvenance(writer, "footprintLists", module.FootprintListInterner);
+    WriteProvenance(writer, "visibility", module.VisibilityInterner);
     WriteProvenance(writer, "rasterStates", module.RasterInterner);
     writer.EndObject();
 
@@ -685,13 +768,19 @@ std::string DumpCookedModule(const CookedModule& module)
     writer.KeyString("module", module.Name);
     writer.KeyUInt("spaceSize", module.SpaceSize);
     writer.KeyUInt("sourceCount", module.Sources.size());
-    writer.KeyUInt("layoutCount", module.Layouts.size());
+    writer.KeyUInt("resourceCount", module.Resources.size());
+    writer.KeyUInt("resourceListCount", module.ResourceLists.size());
+    writer.KeyUInt("footprintListCount", module.FootprintLists.size());
+    writer.KeyUInt("visibilityListCount", module.VisibilityLists.size());
     writer.KeyUInt("rasterStateCount", module.RasterStates.size());
     writer.KeyUInt("variantCount", module.Variants.size());
 
     WriteEntryPointTable(writer, module.EntryPoints);
     WriteSourceTable(writer, module);
-    WriteLayoutTable(writer, module);
+    WriteResourceTable(writer, module);
+    WriteIndexListTable(writer, "resourceLists", module.ResourceLists);
+    WriteFootprintListTable(writer, module);
+    WriteIndexListTable(writer, "visibilityLists", module.VisibilityLists);
     WriteRasterTable(writer, module);
     WriteVariantTable(writer, module.Variants);
     WriteInternerTable(writer, module);

@@ -14,6 +14,24 @@
 namespace lodestone
 {
 
+/** @brief How a shader reaches a resource. Only `Bound` is produced today. */
+enum class PlacementKind : uint8_t
+{
+    None = 0,
+    Bound,
+    Indexed,
+    Pointer,
+};
+
+/** @brief Type of a memory footprint field: `None` means unspecified in the shader,
+ *  so users are expected to handle it. */
+enum class FootprintKind : uint8_t
+{
+    None = 0,
+    Buffer,
+    Texture,
+};
+
 /** @brief The Graphics API binding type that one shader resource needs. */
 enum class BindingKind : uint8_t
 {

@@ -36,15 +36,17 @@
                     "value": "16"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 0,
             "sourceIndices": [
                 0,
                 1,
                 2
             ],
-            "layoutIndices": [
+            "visibilityIndices": [
                 0,
-                1,
-                2
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -87,15 +89,17 @@
                     "value": "16"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 0,
             "sourceIndices": [
                 3,
                 4,
                 2
             ],
-            "layoutIndices": [
+            "visibilityIndices": [
                 0,
-                1,
-                2
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -138,15 +142,17 @@
                     "value": "32"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 0,
             "sourceIndices": [
                 5,
                 6,
                 2
             ],
-            "layoutIndices": [
+            "visibilityIndices": [
                 0,
-                1,
-                2
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -189,15 +195,17 @@
                     "value": "64"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 0,
             "sourceIndices": [
                 7,
                 8,
                 2
             ],
-            "layoutIndices": [
+            "visibilityIndices": [
                 0,
-                1,
-                2
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -240,15 +248,17 @@
                     "value": "128"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 0,
             "sourceIndices": [
                 9,
                 10,
                 2
             ],
-            "layoutIndices": [
+            "visibilityIndices": [
                 0,
-                1,
-                2
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -291,15 +301,17 @@
                     "value": "16"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 1,
             "sourceIndices": [
                 11,
                 12,
                 13
             ],
-            "layoutIndices": [
-                3,
-                4,
-                5
+            "visibilityIndices": [
+                0,
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -342,15 +354,17 @@
                     "value": "16"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 1,
             "sourceIndices": [
                 14,
                 15,
                 13
             ],
-            "layoutIndices": [
-                3,
-                4,
-                5
+            "visibilityIndices": [
+                0,
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -393,15 +407,17 @@
                     "value": "32"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 1,
             "sourceIndices": [
                 16,
                 17,
                 13
             ],
-            "layoutIndices": [
-                3,
-                4,
-                5
+            "visibilityIndices": [
+                0,
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -444,15 +460,17 @@
                     "value": "64"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 1,
             "sourceIndices": [
                 18,
                 19,
                 13
             ],
-            "layoutIndices": [
-                3,
-                4,
-                5
+            "visibilityIndices": [
+                0,
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -495,15 +513,17 @@
                     "value": "128"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 1,
             "sourceIndices": [
                 20,
                 21,
                 13
             ],
-            "layoutIndices": [
-                3,
-                4,
-                5
+            "visibilityIndices": [
+                0,
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -546,15 +566,17 @@
                     "value": "16"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 2,
             "sourceIndices": [
                 22,
                 23,
                 24
             ],
-            "layoutIndices": [
-                6,
-                7,
-                8
+            "visibilityIndices": [
+                0,
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -597,15 +619,17 @@
                     "value": "16"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 2,
             "sourceIndices": [
                 25,
                 26,
                 24
             ],
-            "layoutIndices": [
-                6,
-                7,
-                8
+            "visibilityIndices": [
+                0,
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -648,15 +672,17 @@
                     "value": "32"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 2,
             "sourceIndices": [
                 27,
                 28,
                 24
             ],
-            "layoutIndices": [
-                6,
-                7,
-                8
+            "visibilityIndices": [
+                0,
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -699,15 +725,17 @@
                     "value": "64"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 2,
             "sourceIndices": [
                 29,
                 30,
                 24
             ],
-            "layoutIndices": [
-                6,
-                7,
-                8
+            "visibilityIndices": [
+                0,
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -750,15 +778,17 @@
                     "value": "128"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 2,
             "sourceIndices": [
                 31,
                 32,
                 24
             ],
-            "layoutIndices": [
-                6,
-                7,
-                8
+            "visibilityIndices": [
+                0,
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -801,15 +831,17 @@
                     "value": "16"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 3,
             "sourceIndices": [
                 33,
                 34,
                 35
             ],
-            "layoutIndices": [
-                9,
-                10,
-                11
+            "visibilityIndices": [
+                0,
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -852,15 +884,17 @@
                     "value": "16"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 3,
             "sourceIndices": [
                 36,
                 37,
                 35
             ],
-            "layoutIndices": [
-                9,
-                10,
-                11
+            "visibilityIndices": [
+                0,
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -903,15 +937,17 @@
                     "value": "32"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 3,
             "sourceIndices": [
                 38,
                 39,
                 35
             ],
-            "layoutIndices": [
-                9,
-                10,
-                11
+            "visibilityIndices": [
+                0,
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -954,15 +990,17 @@
                     "value": "64"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 3,
             "sourceIndices": [
                 40,
                 41,
                 35
             ],
-            "layoutIndices": [
-                9,
-                10,
-                11
+            "visibilityIndices": [
+                0,
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -1005,15 +1043,17 @@
                     "value": "128"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 3,
             "sourceIndices": [
                 42,
                 43,
                 35
             ],
-            "layoutIndices": [
-                9,
-                10,
-                11
+            "visibilityIndices": [
+                0,
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -1056,15 +1096,17 @@
                     "value": "16"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 4,
             "sourceIndices": [
                 44,
                 45,
                 46
             ],
-            "layoutIndices": [
-                12,
-                13,
-                14
+            "visibilityIndices": [
+                0,
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -1107,15 +1149,17 @@
                     "value": "16"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 4,
             "sourceIndices": [
                 47,
                 48,
                 46
             ],
-            "layoutIndices": [
-                12,
-                13,
-                14
+            "visibilityIndices": [
+                0,
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -1158,15 +1202,17 @@
                     "value": "32"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 4,
             "sourceIndices": [
                 49,
                 50,
                 46
             ],
-            "layoutIndices": [
-                12,
-                13,
-                14
+            "visibilityIndices": [
+                0,
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -1209,15 +1255,17 @@
                     "value": "64"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 4,
             "sourceIndices": [
                 51,
                 52,
                 46
             ],
-            "layoutIndices": [
-                12,
-                13,
-                14
+            "visibilityIndices": [
+                0,
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -1260,15 +1308,17 @@
                     "value": "128"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 4,
             "sourceIndices": [
                 53,
                 54,
                 46
             ],
-            "layoutIndices": [
-                12,
-                13,
-                14
+            "visibilityIndices": [
+                0,
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -1311,15 +1361,17 @@
                     "value": "16"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 5,
             "sourceIndices": [
                 55,
                 56,
                 57
             ],
-            "layoutIndices": [
-                15,
-                16,
-                17
+            "visibilityIndices": [
+                0,
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -1362,15 +1414,17 @@
                     "value": "16"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 5,
             "sourceIndices": [
                 58,
                 59,
                 57
             ],
-            "layoutIndices": [
-                15,
-                16,
-                17
+            "visibilityIndices": [
+                0,
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -1413,15 +1467,17 @@
                     "value": "32"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 5,
             "sourceIndices": [
                 60,
                 61,
                 57
             ],
-            "layoutIndices": [
-                15,
-                16,
-                17
+            "visibilityIndices": [
+                0,
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -1464,15 +1520,17 @@
                     "value": "64"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 5,
             "sourceIndices": [
                 62,
                 63,
                 57
             ],
-            "layoutIndices": [
-                15,
-                16,
-                17
+            "visibilityIndices": [
+                0,
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -1515,15 +1573,17 @@
                     "value": "128"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 5,
             "sourceIndices": [
                 64,
                 65,
                 57
             ],
-            "layoutIndices": [
-                15,
-                16,
-                17
+            "visibilityIndices": [
+                0,
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -1566,15 +1626,17 @@
                     "value": "16"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 6,
             "sourceIndices": [
                 66,
                 67,
                 68
             ],
-            "layoutIndices": [
-                18,
-                19,
-                20
+            "visibilityIndices": [
+                0,
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -1617,15 +1679,17 @@
                     "value": "16"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 6,
             "sourceIndices": [
                 69,
                 70,
                 68
             ],
-            "layoutIndices": [
-                18,
-                19,
-                20
+            "visibilityIndices": [
+                0,
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -1668,15 +1732,17 @@
                     "value": "32"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 6,
             "sourceIndices": [
                 71,
                 72,
                 68
             ],
-            "layoutIndices": [
-                18,
-                19,
-                20
+            "visibilityIndices": [
+                0,
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -1719,15 +1785,17 @@
                     "value": "64"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 6,
             "sourceIndices": [
                 73,
                 74,
                 68
             ],
-            "layoutIndices": [
-                18,
-                19,
-                20
+            "visibilityIndices": [
+                0,
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -1770,15 +1838,17 @@
                     "value": "128"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 6,
             "sourceIndices": [
                 75,
                 76,
                 68
             ],
-            "layoutIndices": [
-                18,
-                19,
-                20
+            "visibilityIndices": [
+                0,
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -1813,13 +1883,37 @@
             "hashCollisions": 0,
             "byteComparisons": 28
         },
-        "layouts": {
+        "resources": {
+            "hashName": "fnv1a-64",
+            "dedupeEnabled": true,
+            "artifactsSeen": 140,
+            "uniqueEntries": 4,
+            "hashCollisions": 0,
+            "byteComparisons": 136
+        },
+        "resourceLists": {
+            "hashName": "fnv1a-64",
+            "dedupeEnabled": true,
+            "artifactsSeen": 35,
+            "uniqueEntries": 1,
+            "hashCollisions": 0,
+            "byteComparisons": 34
+        },
+        "footprintLists": {
+            "hashName": "fnv1a-64",
+            "dedupeEnabled": true,
+            "artifactsSeen": 35,
+            "uniqueEntries": 7,
+            "hashCollisions": 0,
+            "byteComparisons": 28
+        },
+        "visibility": {
             "hashName": "fnv1a-64",
             "dedupeEnabled": true,
             "artifactsSeen": 105,
-            "uniqueEntries": 21,
+            "uniqueEntries": 2,
             "hashCollisions": 0,
-            "byteComparisons": 84
+            "byteComparisons": 103
         },
         "rasterStates": {
             "hashName": "fnv1a-64",
@@ -2743,32 +2837,936 @@
                 ]
             }
         ],
-        "layouts": [
+        "resources": [
             {
                 "index": 0,
                 "mappedFrom": [
                     {
-                        "entryPoint": "IfftRadix2CS",
+                        "entryPoint": "",
                         "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
                         "variantIndex": 0
                     },
                     {
-                        "entryPoint": "IfftRadix2CS",
+                        "entryPoint": "",
                         "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
                         "variantIndex": 4
                     },
                     {
-                        "entryPoint": "IfftRadix2CS",
+                        "entryPoint": "",
                         "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
                         "variantIndex": 5
                     },
                     {
-                        "entryPoint": "IfftRadix2CS",
+                        "entryPoint": "",
                         "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
                         "variantIndex": 6
                     },
                     {
-                        "entryPoint": "IfftRadix2CS",
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 7
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 8
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 12
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 13
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 14
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 15
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 16
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 20
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 21
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 22
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 23
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 24
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 28
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 29
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 30
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 31
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 32
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 36
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 37
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 38
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 39
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 40
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 44
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 45
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 46
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 47
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 48
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 52
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 53
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 54
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 55
+                    }
+                ]
+            },
+            {
+                "index": 1,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 0
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 4
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 5
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 6
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 7
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 8
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 12
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 13
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 14
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 15
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 16
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 20
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 21
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 22
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 23
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 24
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 28
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 29
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 30
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 31
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 32
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 36
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 37
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 38
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 39
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 40
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 44
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 45
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 46
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 47
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 48
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 52
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 53
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 54
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 55
+                    }
+                ]
+            },
+            {
+                "index": 2,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 0
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 4
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 5
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 6
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 7
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 8
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 12
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 13
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 14
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 15
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 16
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 20
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 21
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 22
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 23
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 24
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 28
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 29
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 30
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 31
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 32
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 36
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 37
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 38
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 39
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 40
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 44
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 45
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 46
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 47
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 48
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 52
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 53
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 54
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 55
+                    }
+                ]
+            },
+            {
+                "index": 3,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 0
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 4
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 5
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 6
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 7
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 8
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 12
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 13
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 14
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 15
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 16
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 20
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 21
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 22
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 23
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 24
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 28
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 29
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 30
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 31
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 32
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 36
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 37
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 38
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 39
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 40
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 44
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 45
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 46
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 47
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 48
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 52
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 53
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 54
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 55
+                    }
+                ]
+            }
+        ],
+        "resourceLists": [
+            {
+                "index": 0,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 0
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 4
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 5
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 6
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 7
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 8
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 12
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 13
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 14
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 15
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 16
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 20
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 21
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 22
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 23
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 24
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 28
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 29
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 30
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 31
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 32
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 36
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 37
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 38
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 39
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 40
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 44
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 45
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 46
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 47
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 48
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 52
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 53
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 54
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 55
+                    }
+                ]
+            }
+        ],
+        "footprintLists": [
+            {
+                "index": 0,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 0
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 4
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 5
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 6
+                    },
+                    {
+                        "entryPoint": "",
                         "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
                         "variantIndex": 7
                     }
@@ -2778,29 +3776,29 @@
                 "index": 1,
                 "mappedFrom": [
                     {
-                        "entryPoint": "IfftRadix4CS",
-                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
-                        "variantIndex": 0
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 8
                     },
                     {
-                        "entryPoint": "IfftRadix4CS",
-                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
-                        "variantIndex": 4
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 12
                     },
                     {
-                        "entryPoint": "IfftRadix4CS",
-                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
-                        "variantIndex": 5
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 13
                     },
                     {
-                        "entryPoint": "IfftRadix4CS",
-                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
-                        "variantIndex": 6
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 14
                     },
                     {
-                        "entryPoint": "IfftRadix4CS",
-                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
-                        "variantIndex": 7
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 15
                     }
                 ]
             },
@@ -2808,6 +3806,513 @@
                 "index": 2,
                 "mappedFrom": [
                     {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 16
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 20
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 21
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 22
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 23
+                    }
+                ]
+            },
+            {
+                "index": 3,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 24
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 28
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 29
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 30
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 31
+                    }
+                ]
+            },
+            {
+                "index": 4,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 32
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 36
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 37
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 38
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 39
+                    }
+                ]
+            },
+            {
+                "index": 5,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 40
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 44
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 45
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 46
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 47
+                    }
+                ]
+            },
+            {
+                "index": 6,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 48
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 52
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 53
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 54
+                    },
+                    {
+                        "entryPoint": "",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 55
+                    }
+                ]
+            }
+        ],
+        "visibility": [
+            {
+                "index": 0,
+                "mappedFrom": [
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 0
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 0
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 4
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 4
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 5
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 5
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 6
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 6
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 7
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 7
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 8
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 8
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 12
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 12
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 13
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 13
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 14
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 14
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 15
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 15
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 16
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 16
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 20
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 20
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 21
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 21
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 22
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 22
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 23
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 23
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 24
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 24
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 28
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 28
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 29
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 29
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 30
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 30
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 31
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 31
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 32
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 32
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 36
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 36
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 37
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 37
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 38
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 38
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 39
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 39
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 40
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 40
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 44
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 44
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 45
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 45
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 46
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 46
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 47
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 47
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 48
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 48
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 52
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
+                        "variantIndex": 52
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 53
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
+                        "variantIndex": 53
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 54
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
+                        "variantIndex": 54
+                    },
+                    {
+                        "entryPoint": "IfftRadix2CS",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 55
+                    },
+                    {
+                        "entryPoint": "IfftRadix4CS",
+                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
+                        "variantIndex": 55
+                    }
+                ]
+            },
+            {
+                "index": 1,
+                "mappedFrom": [
+                    {
                         "entryPoint": "IfftPermuteCS",
                         "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
                         "variantIndex": 0
@@ -2831,72 +4336,7 @@
                         "entryPoint": "IfftPermuteCS",
                         "variant": "IFFT_SIZE=128, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
                         "variantIndex": 7
-                    }
-                ]
-            },
-            {
-                "index": 3,
-                "mappedFrom": [
-                    {
-                        "entryPoint": "IfftRadix2CS",
-                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
-                        "variantIndex": 8
                     },
-                    {
-                        "entryPoint": "IfftRadix2CS",
-                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
-                        "variantIndex": 12
-                    },
-                    {
-                        "entryPoint": "IfftRadix2CS",
-                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
-                        "variantIndex": 13
-                    },
-                    {
-                        "entryPoint": "IfftRadix2CS",
-                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
-                        "variantIndex": 14
-                    },
-                    {
-                        "entryPoint": "IfftRadix2CS",
-                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
-                        "variantIndex": 15
-                    }
-                ]
-            },
-            {
-                "index": 4,
-                "mappedFrom": [
-                    {
-                        "entryPoint": "IfftRadix4CS",
-                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
-                        "variantIndex": 8
-                    },
-                    {
-                        "entryPoint": "IfftRadix4CS",
-                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
-                        "variantIndex": 12
-                    },
-                    {
-                        "entryPoint": "IfftRadix4CS",
-                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
-                        "variantIndex": 13
-                    },
-                    {
-                        "entryPoint": "IfftRadix4CS",
-                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
-                        "variantIndex": 14
-                    },
-                    {
-                        "entryPoint": "IfftRadix4CS",
-                        "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
-                        "variantIndex": 15
-                    }
-                ]
-            },
-            {
-                "index": 5,
-                "mappedFrom": [
                     {
                         "entryPoint": "IfftPermuteCS",
                         "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
@@ -2921,72 +4361,7 @@
                         "entryPoint": "IfftPermuteCS",
                         "variant": "IFFT_SIZE=256, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
                         "variantIndex": 15
-                    }
-                ]
-            },
-            {
-                "index": 6,
-                "mappedFrom": [
-                    {
-                        "entryPoint": "IfftRadix2CS",
-                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
-                        "variantIndex": 16
                     },
-                    {
-                        "entryPoint": "IfftRadix2CS",
-                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
-                        "variantIndex": 20
-                    },
-                    {
-                        "entryPoint": "IfftRadix2CS",
-                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
-                        "variantIndex": 21
-                    },
-                    {
-                        "entryPoint": "IfftRadix2CS",
-                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
-                        "variantIndex": 22
-                    },
-                    {
-                        "entryPoint": "IfftRadix2CS",
-                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
-                        "variantIndex": 23
-                    }
-                ]
-            },
-            {
-                "index": 7,
-                "mappedFrom": [
-                    {
-                        "entryPoint": "IfftRadix4CS",
-                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
-                        "variantIndex": 16
-                    },
-                    {
-                        "entryPoint": "IfftRadix4CS",
-                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
-                        "variantIndex": 20
-                    },
-                    {
-                        "entryPoint": "IfftRadix4CS",
-                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
-                        "variantIndex": 21
-                    },
-                    {
-                        "entryPoint": "IfftRadix4CS",
-                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
-                        "variantIndex": 22
-                    },
-                    {
-                        "entryPoint": "IfftRadix4CS",
-                        "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
-                        "variantIndex": 23
-                    }
-                ]
-            },
-            {
-                "index": 8,
-                "mappedFrom": [
                     {
                         "entryPoint": "IfftPermuteCS",
                         "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
@@ -3011,72 +4386,7 @@
                         "entryPoint": "IfftPermuteCS",
                         "variant": "IFFT_SIZE=512, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
                         "variantIndex": 23
-                    }
-                ]
-            },
-            {
-                "index": 9,
-                "mappedFrom": [
-                    {
-                        "entryPoint": "IfftRadix2CS",
-                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
-                        "variantIndex": 24
                     },
-                    {
-                        "entryPoint": "IfftRadix2CS",
-                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
-                        "variantIndex": 28
-                    },
-                    {
-                        "entryPoint": "IfftRadix2CS",
-                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
-                        "variantIndex": 29
-                    },
-                    {
-                        "entryPoint": "IfftRadix2CS",
-                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
-                        "variantIndex": 30
-                    },
-                    {
-                        "entryPoint": "IfftRadix2CS",
-                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
-                        "variantIndex": 31
-                    }
-                ]
-            },
-            {
-                "index": 10,
-                "mappedFrom": [
-                    {
-                        "entryPoint": "IfftRadix4CS",
-                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
-                        "variantIndex": 24
-                    },
-                    {
-                        "entryPoint": "IfftRadix4CS",
-                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
-                        "variantIndex": 28
-                    },
-                    {
-                        "entryPoint": "IfftRadix4CS",
-                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
-                        "variantIndex": 29
-                    },
-                    {
-                        "entryPoint": "IfftRadix4CS",
-                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
-                        "variantIndex": 30
-                    },
-                    {
-                        "entryPoint": "IfftRadix4CS",
-                        "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
-                        "variantIndex": 31
-                    }
-                ]
-            },
-            {
-                "index": 11,
-                "mappedFrom": [
                     {
                         "entryPoint": "IfftPermuteCS",
                         "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
@@ -3101,72 +4411,7 @@
                         "entryPoint": "IfftPermuteCS",
                         "variant": "IFFT_SIZE=1024, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
                         "variantIndex": 31
-                    }
-                ]
-            },
-            {
-                "index": 12,
-                "mappedFrom": [
-                    {
-                        "entryPoint": "IfftRadix2CS",
-                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
-                        "variantIndex": 32
                     },
-                    {
-                        "entryPoint": "IfftRadix2CS",
-                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
-                        "variantIndex": 36
-                    },
-                    {
-                        "entryPoint": "IfftRadix2CS",
-                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
-                        "variantIndex": 37
-                    },
-                    {
-                        "entryPoint": "IfftRadix2CS",
-                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
-                        "variantIndex": 38
-                    },
-                    {
-                        "entryPoint": "IfftRadix2CS",
-                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
-                        "variantIndex": 39
-                    }
-                ]
-            },
-            {
-                "index": 13,
-                "mappedFrom": [
-                    {
-                        "entryPoint": "IfftRadix4CS",
-                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
-                        "variantIndex": 32
-                    },
-                    {
-                        "entryPoint": "IfftRadix4CS",
-                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
-                        "variantIndex": 36
-                    },
-                    {
-                        "entryPoint": "IfftRadix4CS",
-                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
-                        "variantIndex": 37
-                    },
-                    {
-                        "entryPoint": "IfftRadix4CS",
-                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
-                        "variantIndex": 38
-                    },
-                    {
-                        "entryPoint": "IfftRadix4CS",
-                        "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
-                        "variantIndex": 39
-                    }
-                ]
-            },
-            {
-                "index": 14,
-                "mappedFrom": [
                     {
                         "entryPoint": "IfftPermuteCS",
                         "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
@@ -3191,72 +4436,7 @@
                         "entryPoint": "IfftPermuteCS",
                         "variant": "IFFT_SIZE=2048, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
                         "variantIndex": 39
-                    }
-                ]
-            },
-            {
-                "index": 15,
-                "mappedFrom": [
-                    {
-                        "entryPoint": "IfftRadix2CS",
-                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
-                        "variantIndex": 40
                     },
-                    {
-                        "entryPoint": "IfftRadix2CS",
-                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
-                        "variantIndex": 44
-                    },
-                    {
-                        "entryPoint": "IfftRadix2CS",
-                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
-                        "variantIndex": 45
-                    },
-                    {
-                        "entryPoint": "IfftRadix2CS",
-                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
-                        "variantIndex": 46
-                    },
-                    {
-                        "entryPoint": "IfftRadix2CS",
-                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
-                        "variantIndex": 47
-                    }
-                ]
-            },
-            {
-                "index": 16,
-                "mappedFrom": [
-                    {
-                        "entryPoint": "IfftRadix4CS",
-                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
-                        "variantIndex": 40
-                    },
-                    {
-                        "entryPoint": "IfftRadix4CS",
-                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
-                        "variantIndex": 44
-                    },
-                    {
-                        "entryPoint": "IfftRadix4CS",
-                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
-                        "variantIndex": 45
-                    },
-                    {
-                        "entryPoint": "IfftRadix4CS",
-                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
-                        "variantIndex": 46
-                    },
-                    {
-                        "entryPoint": "IfftRadix4CS",
-                        "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
-                        "variantIndex": 47
-                    }
-                ]
-            },
-            {
-                "index": 17,
-                "mappedFrom": [
                     {
                         "entryPoint": "IfftPermuteCS",
                         "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
@@ -3281,72 +4461,7 @@
                         "entryPoint": "IfftPermuteCS",
                         "variant": "IFFT_SIZE=4096, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
                         "variantIndex": 47
-                    }
-                ]
-            },
-            {
-                "index": 18,
-                "mappedFrom": [
-                    {
-                        "entryPoint": "IfftRadix2CS",
-                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
-                        "variantIndex": 48
                     },
-                    {
-                        "entryPoint": "IfftRadix2CS",
-                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
-                        "variantIndex": 52
-                    },
-                    {
-                        "entryPoint": "IfftRadix2CS",
-                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
-                        "variantIndex": 53
-                    },
-                    {
-                        "entryPoint": "IfftRadix2CS",
-                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
-                        "variantIndex": 54
-                    },
-                    {
-                        "entryPoint": "IfftRadix2CS",
-                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
-                        "variantIndex": 55
-                    }
-                ]
-            },
-            {
-                "index": 19,
-                "mappedFrom": [
-                    {
-                        "entryPoint": "IfftRadix4CS",
-                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",
-                        "variantIndex": 48
-                    },
-                    {
-                        "entryPoint": "IfftRadix4CS",
-                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=16",
-                        "variantIndex": 52
-                    },
-                    {
-                        "entryPoint": "IfftRadix4CS",
-                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=32",
-                        "variantIndex": 53
-                    },
-                    {
-                        "entryPoint": "IfftRadix4CS",
-                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=64",
-                        "variantIndex": 54
-                    },
-                    {
-                        "entryPoint": "IfftRadix4CS",
-                        "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=true, IFFT_WAVE_SIZE=128",
-                        "variantIndex": 55
-                    }
-                ]
-            },
-            {
-                "index": 20,
-                "mappedFrom": [
                     {
                         "entryPoint": "IfftPermuteCS",
                         "variant": "IFFT_SIZE=8192, IFFT_USE_WAVE_OPS=false, IFFT_WAVE_SIZE=16",

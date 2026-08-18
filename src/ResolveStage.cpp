@@ -58,10 +58,9 @@ namespace
         return static_cast<uint32_t>(value.value());
     }
 
-    CookResult<void> ResolveExtent(const RawSizeAttribute& attribute,
-                                   std::string_view binding_name,
-                                   const ResolveContext& context,
-                                   DerivedSize& derived)
+    CookResult<TextureFootprint> ResolveExtent(const RawSizeAttribute& attribute,
+                                               std::string_view binding_name,
+                                               const ResolveContext& context)
     {
         const uint32_t argumentCount = ArgumentCountOf(attribute.Kind);
         std::array<uint32_t, 3u> axes{ 1u, 1u, 1u };
@@ -77,17 +76,15 @@ namespace
             axes.at(i) = value.value();
         }
 
-        derived.ExtentX = axes[0];
-        derived.ExtentY = axes[1];
-        derived.ExtentZ = axes[2];
-        derived.HasExtent = true;
-        return {};
+        return TextureFootprint{ .ExtentX = axes[0],
+                                 .ExtentY = axes[1],
+                                 .ExtentZ = axes[2],
+                                 .Expression = attribute.Arguments.front() };
     }
 
-    CookResult<void> ResolveElementCount(const RawSizeAttribute& attribute,
-                                         std::string_view binding_name,
-                                         const ResolveContext& context,
-                                         DerivedSize& derived)
+    CookResult<BufferFootprint> ResolveElementCount(const RawSizeAttribute& attribute,
+                                                    std::string_view binding_name,
+                                                    const ResolveContext& context)
     {
         if (attribute.Arguments.empty())
         {
@@ -119,66 +116,68 @@ namespace
             return std::unexpected(CookError::SizeExpressionOutOfRange);
         }
 
-        derived.Expression = attribute.Arguments.front();
-        derived.ElementCount = static_cast<uint64_t>(value.value());
-        derived.HasElementCount = true;
-        return {};
+        return BufferFootprint{ .ElementCount = static_cast<uint64_t>(value.value()),
+                                .Expression = attribute.Arguments.front() };
     }
 
-    /** Every annotation on one resource, evaluated. A resource with no annotation is not an error --
-     * most resources are sized by the caller -- but a malformed one is, because the alternative is a
-     * size that silently defaults to zero. */
-    CookResult<DerivedSize> ResolveDerivedSize(std::span<const RawSizeAttribute> attributes,
-                                               std::string_view binding_name,
-                                               const ResolveContext& context)
-    {
-        DerivedSize derived;
 
-        const RawSizeAttribute* extent2d = nullptr;
-        const RawSizeAttribute* extent3d = nullptr;
+    /**@brief Every annotation on one resource, evaluated. A resource with no annotation is not an error,
+     * because many resources can be sized by the caller. The annotation kind tells us if the author is
+     * describing a buffer or texture, which is the current extent of our taxonomy here */
+    CookResult<ResourceFootprint> ResolveFootprint(std::span<const RawSizeAttribute> attributes,
+                                                   std::string_view binding_name,
+                                                   const ResolveContext& context)
+    {
+        const RawSizeAttribute* count = nullptr;
+        const RawSizeAttribute* extent = nullptr;
 
         for (const RawSizeAttribute& attribute : attributes)
         {
-            if (attribute.Kind == RawSizeAttributeKind::ElementCount)
+            const RawSizeAttribute*& slot =
+                attribute.Kind == RawSizeAttributeKind::ElementCount ? count : extent;
+            if (slot != nullptr)
             {
-                if (CookResult<void> counted = ResolveElementCount(attribute, binding_name, context, derived);
-                    !counted)
-                {
-                    return std::unexpected(counted.error());
-                }
+                std::println(stderr,
+                             "[shader_cooker] '{}' carries [{}] and [{}]; only one may size a resource",
+                             binding_name,
+                             ToString(slot->Kind),
+                             ToString(attribute.Kind));
+                return std::unexpected(CookError::ReflectionSizeUnresolved);
             }
-            else if (attribute.Kind == RawSizeAttributeKind::Extent2d)
-            {
-                extent2d = &attribute;
-            }
-            else if (attribute.Kind == RawSizeAttributeKind::Extent3d)
-            {
-                extent3d = &attribute;
-            }
+
+            slot = &attribute;
         }
 
-        if (extent2d != nullptr && extent3d != nullptr)
+        if (count != nullptr && extent != nullptr)
         {
             std::println(stderr,
-                         "[shader_cooker] '{}' carries both [{}] and [{}]; only one may size a texture",
-                         binding_name,
-                         ToString(RawSizeAttributeKind::Extent2d),
-                         ToString(RawSizeAttributeKind::Extent3d));
+                         "[shader_cooker] '{}' carries an element count and an extent; a resource is a "
+                         "buffer or a texture",
+                         binding_name);
             return std::unexpected(CookError::ReflectionSizeUnresolved);
         }
 
-        const RawSizeAttribute* extent = extent2d != nullptr ? extent2d : extent3d;
-        if (extent == nullptr)
+        if (count != nullptr)
         {
-            return derived;
+            CookResult<BufferFootprint> buffer = ResolveElementCount(*count, binding_name, context);
+            if (!buffer)
+            {
+                return std::unexpected(buffer.error());
+            }
+            return ResourceFootprint{ std::move(buffer.value()) };
         }
 
-        if (CookResult<void> resolved = ResolveExtent(*extent, binding_name, context, derived); !resolved)
+        if (extent != nullptr)
         {
-            return std::unexpected(resolved.error());
+            CookResult<TextureFootprint> texture = ResolveExtent(*extent, binding_name, context);
+            if (!texture)
+            {
+                return std::unexpected(texture.error());
+            }
+            return ResourceFootprint{ std::move(texture.value()) };
         }
 
-        return derived;
+        return ResourceFootprint{};
     }
 
     std::vector<RawSizeAttribute> AttributesOfBinding(const RawVariant& raw, size_t binding_index)
@@ -196,39 +195,21 @@ namespace
         return attributes;
     }
 
-    CookResult<ReflectedBinding> ResolveBinding(const RawVariant& raw,
-                                                size_t binding_index,
-                                                const ResolveContext& context)
+    ReflectedBinding ResolveBinding(const RawBinding& raw_binding)
     {
-        const RawBinding& rawBinding = raw.GlobalBindings[binding_index];
-
         ReflectedBinding binding;
-        binding.Name = rawBinding.Name;
-        binding.Kind = rawBinding.Kind;
-        binding.ElementStride = rawBinding.ElementStride;
-        binding.ByteSize = rawBinding.ByteSize;
-        binding.ArrayCount = rawBinding.ArrayCount;
-        binding.Shape = rawBinding.Shape;
-        binding.SampleType = rawBinding.SampleType;
-        binding.StorageFormat = rawBinding.StorageFormat;
-        binding.StorageAccess = rawBinding.StorageAccess;
-        binding.SamplerType = rawBinding.SamplerType;
-        binding.UniformMembers = rawBinding.UniformMembers;
-
-        if (const BoundPlacement* placement = GetBoundPlacement(rawBinding.Placement))
-        {
-            binding.Group = placement->Group;
-            binding.Binding = placement->Binding;
-        }
-
-        CookResult<DerivedSize> derived =
-            ResolveDerivedSize(AttributesOfBinding(raw, binding_index), binding.Name, context);
-        if (!derived)
-        {
-            return std::unexpected(derived.error());
-        }
-
-        binding.Derived = std::move(derived.value());
+        binding.Name = raw_binding.Name;
+        binding.Placement = raw_binding.Placement;
+        binding.Kind = raw_binding.Kind;
+        binding.ElementStride = raw_binding.ElementStride;
+        binding.ByteSize = raw_binding.ByteSize;
+        binding.ArrayCount = raw_binding.ArrayCount;
+        binding.Shape = raw_binding.Shape;
+        binding.SampleType = raw_binding.SampleType;
+        binding.StorageFormat = raw_binding.StorageFormat;
+        binding.StorageAccess = raw_binding.StorageAccess;
+        binding.SamplerType = raw_binding.SamplerType;
+        binding.UniformMembers = raw_binding.UniformMembers;
         return binding;
     }
 
@@ -276,15 +257,21 @@ CookResult<CompiledVariant> ResolveVariant(const RawVariant& raw, const ResolveC
     variant.VariantIndex = raw.VariantIndex;
     variant.GlobalBindings.reserve(raw.GlobalBindings.size());
 
+    variant.Footprints.reserve(raw.GlobalBindings.size());
+
     for (size_t i = 0u; i < raw.GlobalBindings.size(); ++i)
     {
-        CookResult<ReflectedBinding> binding = ResolveBinding(raw, i, context);
-        if (!binding)
+        const RawBinding& rawBinding = raw.GlobalBindings[i];
+
+        CookResult<ResourceFootprint> footprint =
+            ResolveFootprint(AttributesOfBinding(raw, i), rawBinding.Name, context);
+        if (!footprint)
         {
-            return std::unexpected(binding.error());
+            return std::unexpected(footprint.error());
         }
 
-        variant.GlobalBindings.push_back(std::move(binding.value()));
+        variant.GlobalBindings.push_back(ResolveBinding(rawBinding));
+        variant.Footprints.push_back(std::move(footprint.value()));
     }
 
     variant.EntryPoints.reserve(raw.EntryPoints.size());

@@ -13,40 +13,22 @@
 
 /** What stage 3 produces: everything the compiler said, and no opinion about any of it.
  *
- * Stage 3 is the only stage that talks to Slang. It carries the `[vx_*]` argument strings without
- * understanding them, because evaluating one needs the axis values, and that is stage 4's job. A type
- * here that held an evaluated number could not tell "not resolved yet" from "the shader declared
- * nothing", so the numbers are absent instead of zero.
- *
- * This model names no Slang type, so stage 4 and everything after it never links against a compiler.
+ * Stage 3 is the only stage that talks to Slang.The interfaces name and use no Slang types,
+ * so that dependencies on the compiler can stay precisely isolated to this stage. It carries
+ * through our meta-annotations without interpreting them, ensuring that stage 4 can evaluate
+ * those alongside the retrieved compiler information to fully build resource information
+ * (thus why it's the "resolve" step)
  *
  * A binding record here holds **placement** and the shape of the resource. It holds no visibility and
- * no footprint, because those have different keys and different lifetimes. See
- * `docs/phase-d-stage-separation-plan.md` §4b. */
+ * no footprint, because those have different keys and different lifetimes. Additionally, most of our
+ * visiblity and footprint information is dependent on the permutation system and is highly
+ * variant-specific.*/
 namespace lodestone
 {
 
-/** Where a resource lives under the bound access model, which is the only model today.
- *
- * Group and binding are not fields of `RawBinding`, and that is deliberate. They are concepts of one
- * access model. A pointer-model target places a resource at a byte offset inside a struct, and an
- * indexed target places it at a heap index. Phase F adds those alternatives here, and every consumer
- * that already asks the variant which model it is looking at keeps working. See
- * `docs/phase-f-vocabulary.md` §4. */
-struct BoundPlacement
-{
-    uint32_t Group{ 0u };
-    uint32_t Binding{ 0u };
-
-    friend bool operator==(const BoundPlacement&, const BoundPlacement&) = default;
-};
-
-/** `std::monostate` means the target reported no placement for this resource. It is not the same fact
- * as group 0 binding 0, and a struct with two integers could not say the difference. */
-using RawPlacement = std::variant<std::monostate, BoundPlacement>;
-
-/** Null when this resource is not placed by group and binding. */
-const BoundPlacement* GetBoundPlacement(const RawPlacement& placement) noexcept;
+/** Placement is vocabulary rather than a stage 3 idea, so it lives on the data schema and stage 4
+ * carries it across without flattening it. */
+using RawPlacement = ResourcePlacement;
 
 enum class RawSizeAttributeKind : uint8_t
 {
@@ -97,10 +79,6 @@ struct RawBinding
 
     std::vector<ReflectedUniformMember> UniformMembers;
 };
-
-/** Orders two resources by placement, so two cooks of one input give one order. A resource with no
- * placement sorts after every placed one. */
-bool RawPlacementLess(const RawPlacement& lhs, const RawPlacement& rhs) noexcept;
 
 struct RawEntryPoint
 {

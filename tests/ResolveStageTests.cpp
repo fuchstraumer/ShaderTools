@@ -5,6 +5,7 @@
 #include <expected>
 #include <string>
 #include <utility>
+#include <variant>
 #include <vector>
 
 // Stage 4 is a pure function of a `RawVariant` and a symbol table. This test is the proof of that
@@ -18,6 +19,7 @@
 
 using lodestone::BindingKind;
 using lodestone::BoundPlacement;
+using lodestone::BufferFootprint;
 using lodestone::CompiledVariant;
 using lodestone::CookError;
 using lodestone::CookResult;
@@ -32,7 +34,9 @@ using lodestone::RawSizeAttributeKind;
 using lodestone::RawVariant;
 using lodestone::ResolveContext;
 using lodestone::ResolveVariant;
+using lodestone::ResourcePlacement;
 using lodestone::ShaderStageKind;
+using lodestone::TextureFootprint;
 using lodestone::tests::TestRunner;
 
 namespace
@@ -78,7 +82,7 @@ RawSizeAttribute MakeAttribute(RawSizeAttributeKind kind, std::vector<std::strin
 }
 
 /** Resolves a variant that carries one annotation, and gives back the derived size of binding 0. */
-CookResult<lodestone::DerivedSize> ResolveOneAttribute(RawSizeAttribute attribute)
+CookResult<lodestone::ResourceFootprint> ResolveOneAttribute(RawSizeAttribute attribute)
 {
     RawVariant variant = MakeVariantWithOneBuffer();
     variant.SizeAttributes.push_back(std::move(attribute));
@@ -89,7 +93,7 @@ CookResult<lodestone::DerivedSize> ResolveOneAttribute(RawSizeAttribute attribut
         return std::unexpected(resolved.error());
     }
 
-    return resolved.value().GlobalBindings.front().Derived;
+    return resolved.value().Footprints.front();
 }
 
 void CheckElementCount(TestRunner& runner,
@@ -99,9 +103,9 @@ void CheckElementCount(TestRunner& runner,
 {
     const auto derived =
         ResolveOneAttribute(MakeAttribute(RawSizeAttributeKind::ElementCount, { std::string{ expression } }));
-    runner.Check(derived.has_value() && derived.value().HasElementCount &&
-                     derived.value().ElementCount == expected,
-                 description);
+    const BufferFootprint* buffer =
+        derived.has_value() ? std::get_if<BufferFootprint>(&derived.value()) : nullptr;
+    runner.Check(buffer != nullptr && buffer->ElementCount == expected, description);
 }
 
 void CheckRejection(TestRunner& runner,
@@ -144,9 +148,12 @@ void TestElementCount(TestRunner& runner)
 
     const auto derived =
         ResolveOneAttribute(MakeAttribute(RawSizeAttributeKind::ElementCount, { "IFFT_SIZE * 4" }));
-    runner.Check(derived.has_value() && derived.value().Expression == "IFFT_SIZE * 4",
+    const BufferFootprint* buffer =
+        derived.has_value() ? std::get_if<BufferFootprint>(&derived.value()) : nullptr;
+    runner.Check(buffer != nullptr && buffer->Expression == "IFFT_SIZE * 4",
                  "the source expression is kept beside the number it evaluated to");
-    runner.Check(derived.has_value() && !derived.value().HasExtent, "an element count sets no extent");
+    runner.Check(derived.has_value() && !std::holds_alternative<TextureFootprint>(derived.value()),
+                 "an element count is a buffer footprint, never a texture one");
 }
 
 void TestExtent(TestRunner& runner)
@@ -155,18 +162,20 @@ void TestExtent(TestRunner& runner)
 
     const auto extent2d =
         ResolveOneAttribute(MakeAttribute(RawSizeAttributeKind::Extent2d, { "IFFT_SIZE", "IFFT_SIZE / 2" }));
-    runner.Check(extent2d.has_value() && extent2d.value().HasExtent && extent2d.value().ExtentX == 512u &&
-                     extent2d.value().ExtentY == 256u,
+    const TextureFootprint* first =
+        extent2d.has_value() ? std::get_if<TextureFootprint>(&extent2d.value()) : nullptr;
+    runner.Check(first != nullptr && first->ExtentX == 512u && first->ExtentY == 256u,
                  "a 2d extent evaluates each argument on its own");
-    runner.Check(extent2d.has_value() && extent2d.value().ExtentZ == 1u,
-                 "a 2d extent leaves the third axis at one");
-    runner.Check(extent2d.has_value() && !extent2d.value().HasElementCount,
-                 "an extent sets no element count");
+    runner.Check(first != nullptr && first->ExtentZ == 1u, "a 2d extent leaves the third axis at one");
+    runner.Check(extent2d.has_value() && !std::holds_alternative<BufferFootprint>(extent2d.value()),
+                 "an extent is a texture footprint, never a buffer one");
 
     const auto extent3d = ResolveOneAttribute(MakeAttribute(
         RawSizeAttributeKind::Extent3d, { "IFFT_SIZE", "IFFT_SIZE", "IFFT_NUM_WAVE_CASCADES" }));
-    runner.Check(extent3d.has_value() && extent3d.value().ExtentX == 512u &&
-                     extent3d.value().ExtentY == 512u && extent3d.value().ExtentZ == 4u,
+    const TextureFootprint* second =
+        extent3d.has_value() ? std::get_if<TextureFootprint>(&extent3d.value()) : nullptr;
+    runner.Check(second != nullptr && second->ExtentX == 512u && second->ExtentY == 512u &&
+                     second->ExtentZ == 4u,
                  "a 3d extent fills all three axes");
 }
 
@@ -184,10 +193,9 @@ void TestNoAnnotation(TestRunner& runner)
         return;
     }
 
-    const lodestone::DerivedSize& derived = resolved.value().GlobalBindings.front().Derived;
-    runner.Check(!derived.HasElementCount, "no annotation leaves HasElementCount false");
-    runner.Check(!derived.HasExtent, "no annotation leaves HasExtent false");
-    runner.Check(derived.Expression.empty(), "no annotation leaves the expression empty");
+    // A sum makes the third state a value rather than two flags that could disagree.
+    runner.Check(std::holds_alternative<std::monostate>(resolved.value().Footprints.front()),
+                 "no annotation gives no footprint, which is a state of its own");
 }
 
 void TestRejections(TestRunner& runner)
@@ -254,9 +262,10 @@ void TestAttributeTargeting(TestRunner& runner)
         return;
     }
 
-    runner.Check(!resolved.value().GlobalBindings[0].Derived.HasElementCount,
+    runner.Check(std::holds_alternative<std::monostate>(resolved.value().Footprints[0]),
                  "the annotation does not reach the binding it does not name");
-    runner.Check(resolved.value().GlobalBindings[1].Derived.ElementCount == 512u,
+    const BufferFootprint* named = std::get_if<BufferFootprint>(&resolved.value().Footprints[1]);
+    runner.Check(named != nullptr && named->ElementCount == 512u,
                  "the annotation reaches the binding it names");
 }
 
@@ -282,10 +291,11 @@ void TestPlacementAndPassthrough(TestRunner& runner)
     }
 
     const CompiledVariant& value = resolved.value();
-    runner.Check(value.GlobalBindings[0].Group == 2u && value.GlobalBindings[0].Binding == 3u,
-                 "a bound placement reaches the group and the binding number");
-    runner.Check(value.GlobalBindings[1].Group == 0u && value.GlobalBindings[1].Binding == 0u,
-                 "an unplaced resource keeps the default group and binding number");
+    runner.Check(value.GlobalBindings[0].Placement == ResourcePlacement{ BoundPlacement{ 2u, 3u } },
+                 "a bound placement reaches the resource unflattened");
+    // A resource with no placement is not a resource at group 0 binding 0, and the sum says so.
+    runner.Check(std::holds_alternative<std::monostate>(value.GlobalBindings[1].Placement),
+                 "an unplaced resource holds no placement at all");
     runner.Check(value.GlobalBindings[1].ByteSize == 64u, "the declared byte size passes through");
     runner.Check(value.VariantSuffix == "_S512_W1" && value.VariantIndex == 3u,
                  "the variant identity passes through");

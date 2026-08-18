@@ -19,8 +19,7 @@ int main(int argc, char** argv)
         arguments.emplace_back(argv[i]);
     }
 
-    const lodestone::CookResult<lodestone::CookerOptions> options =
-        lodestone::ParseCommandLine(arguments);
+    const lodestone::CookResult<lodestone::CookerOptions> options = lodestone::ParseCommandLine(arguments);
     if (!options)
     {
         std::println(stderr,

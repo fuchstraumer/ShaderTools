@@ -48,17 +48,16 @@ CookedModule MakeSmallModule()
 
     lodestone::ReflectedBinding binding;
     binding.Name = "IfftInput";
-    binding.Group = 0u;
-    binding.Binding = 1u;
+    binding.Placement = lodestone::BoundPlacement{ .Group = 0u, .Binding = 1u };
     binding.Kind = lodestone::BindingKind::StorageBuffer;
     binding.ElementStride = 16u;
     binding.Shape = lodestone::ResourceShape::Buffer;
-    binding.Derived.ElementCount = 256u;
-    binding.Derived.HasElementCount = true;
 
-    lodestone::ShaderLayout layout;
-    layout.push_back(binding);
-    module.Layouts.push_back(layout);
+    module.Resources.push_back(binding);
+    module.ResourceLists.push_back(lodestone::ResourceList{ 0u });
+    module.FootprintLists.push_back(
+        lodestone::FootprintList{ lodestone::BufferFootprint{ .ElementCount = 256u } });
+    module.VisibilityLists.push_back(lodestone::VisibilityList{ 0u });
 
     module.RasterStates.emplace_back();
 
@@ -69,7 +68,7 @@ CookedModule MakeSmallModule()
         variant.Suffix = i == 0u ? "_A" : "_B";
         variant.Description = i == 0u ? "first" : "second";
         variant.SourceIndices.push_back(i);
-        variant.LayoutIndices.push_back(0u);
+        variant.VisibilityIndices.push_back(0u);
         variant.RasterIndices.push_back(0u);
         variant.Workgroups.push_back(lodestone::WorkgroupSize{ 64u, 1u, 1u });
         module.Variants.push_back(std::move(variant));

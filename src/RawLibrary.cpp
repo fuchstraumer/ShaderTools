@@ -9,11 +9,6 @@
 namespace lodestone
 {
 
-const BoundPlacement* GetBoundPlacement(const RawPlacement& placement) noexcept
-{
-    return std::get_if<BoundPlacement>(&placement);
-}
-
 std::string_view ToString(RawSizeAttributeKind kind) noexcept
 {
     switch (kind)
@@ -46,24 +41,6 @@ uint32_t ArgumentCountOf(RawSizeAttributeKind kind) noexcept
     }
 
     return 0u;
-}
-
-bool RawPlacementLess(const RawPlacement& lhs, const RawPlacement& rhs) noexcept
-{
-    const BoundPlacement* leftPlacement = GetBoundPlacement(lhs);
-    const BoundPlacement* rightPlacement = GetBoundPlacement(rhs);
-
-    if (leftPlacement == nullptr || rightPlacement == nullptr)
-    {
-        return leftPlacement != nullptr;
-    }
-
-    if (leftPlacement->Group != rightPlacement->Group)
-    {
-        return leftPlacement->Group < rightPlacement->Group;
-    }
-
-    return leftPlacement->Binding < rightPlacement->Binding;
 }
 
 } // namespace lodestone

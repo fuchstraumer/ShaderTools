@@ -1051,7 +1051,7 @@ CookResult<void> SlangCompiler::Impl::ExtractRawBindings(slang::ProgramLayout* p
     std::ranges::stable_sort(drafts,
                              [](const RawBindingDraft& lhs, const RawBindingDraft& rhs)
                              {
-                                 return RawPlacementLess(lhs.Binding.Placement, rhs.Binding.Placement);
+                                 return PlacementLess(lhs.Binding.Placement, rhs.Binding.Placement);
                              });
 
     out_bindings.reserve(drafts.size());

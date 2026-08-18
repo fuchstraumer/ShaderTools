@@ -54,8 +54,7 @@ ReflectedBinding MakeReflected(std::string_view name, uint32_t group, uint32_t b
 {
     ReflectedBinding reflected;
     reflected.Name = std::string{ name };
-    reflected.Group = group;
-    reflected.Binding = binding;
+    reflected.Placement = lodestone::BoundPlacement{ .Group = group, .Binding = binding };
     reflected.Kind = kind;
     return reflected;
 }

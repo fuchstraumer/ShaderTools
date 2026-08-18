@@ -79,31 +79,33 @@ namespace
 
         if (raster.VertexInputs.empty())
         {
-            emitted += std::format("constexpr lodestone::VertexAttributeInfo k_VertexInputs{}[1]\n{{}};\n", index);
+            emitted +=
+                std::format("constexpr lodestone::VertexAttributeInfo k_VertexInputs{}[1]\n{{}};\n", index);
             emitted += std::format("constexpr uint32_t k_VertexInputCount{} = 0u;\n", index);
         }
         else
         {
-            emitted += std::format("constexpr lodestone::VertexAttributeInfo k_VertexInputs{}[]\n{{\n", index);
+            emitted +=
+                std::format("constexpr lodestone::VertexAttributeInfo k_VertexInputs{}[]\n{{\n", index);
             for (const ReflectedVertexInput& input : raster.VertexInputs)
             {
-                emitted += std::format("    lodestone::VertexAttributeInfo{{ \"{}\", {}u, {}u, {}, {}u }},\n",
-                                       input.SemanticName,
-                                       input.SemanticIndex,
-                                       input.Location,
-                                       EnumeratorFor("VertexScalarType",
-                                                     VertexScalarTypeEnumeratorName(input.ScalarType)),
-                                       input.ComponentCount);
+                emitted += std::format(
+                    "    lodestone::VertexAttributeInfo{{ \"{}\", {}u, {}u, {}, {}u }},\n",
+                    input.SemanticName,
+                    input.SemanticIndex,
+                    input.Location,
+                    EnumeratorFor("VertexScalarType", VertexScalarTypeEnumeratorName(input.ScalarType)),
+                    input.ComponentCount);
             }
             emitted += "};\n";
-            emitted += std::format("constexpr uint32_t k_VertexInputCount{} = {}u;\n",
-                                   index,
-                                   raster.VertexInputs.size());
+            emitted += std::format(
+                "constexpr uint32_t k_VertexInputCount{} = {}u;\n", index, raster.VertexInputs.size());
         }
 
         if (raster.ColorTargets.empty())
         {
-            emitted += std::format("constexpr lodestone::ColorTargetInfo k_ColorTargets{}[1]\n{{}};\n", index);
+            emitted +=
+                std::format("constexpr lodestone::ColorTargetInfo k_ColorTargets{}[1]\n{{}};\n", index);
             emitted += std::format("constexpr uint32_t k_ColorTargetCount{} = 0u;\n", index);
         }
         else
@@ -111,21 +113,19 @@ namespace
             emitted += std::format("constexpr lodestone::ColorTargetInfo k_ColorTargets{}[]\n{{\n", index);
             for (const ReflectedColorTarget& target : raster.ColorTargets)
             {
-                emitted += std::format("    lodestone::ColorTargetInfo{{ {}u, {}, {}u }},\n",
-                                       target.Location,
-                                       EnumeratorFor("VertexScalarType",
-                                                     VertexScalarTypeEnumeratorName(target.ScalarType)),
-                                       target.ComponentCount);
+                emitted += std::format(
+                    "    lodestone::ColorTargetInfo{{ {}u, {}, {}u }},\n",
+                    target.Location,
+                    EnumeratorFor("VertexScalarType", VertexScalarTypeEnumeratorName(target.ScalarType)),
+                    target.ComponentCount);
             }
             emitted += "};\n";
-            emitted += std::format("constexpr uint32_t k_ColorTargetCount{} = {}u;\n",
-                                   index,
-                                   raster.ColorTargets.size());
+            emitted += std::format(
+                "constexpr uint32_t k_ColorTargetCount{} = {}u;\n", index, raster.ColorTargets.size());
         }
 
-        emitted += std::format("constexpr bool k_WritesFragDepth{} = {};\n\n",
-                               index,
-                               raster.WritesFragDepth ? "true" : "false");
+        emitted += std::format(
+            "constexpr bool k_WritesFragDepth{} = {};\n\n", index, raster.WritesFragDepth ? "true" : "false");
         return emitted;
     }
 
@@ -208,27 +208,31 @@ namespace
         return emitted;
     }
 
-    std::string EmitBindingRow(const ReflectedBinding& binding, std::string_view member_table_name)
+    std::string EmitBindingRow(const ResolvedBinding& resolved, std::string_view member_table_name)
     {
+        const ReflectedBinding& binding = resolved.Resource;
         std::string row = std::format("    lodestone::BindingInfo{{ \"{}\", {}u, {}u, {}",
                                       binding.Name,
-                                      binding.Group,
-                                      binding.Binding,
+                                      GroupOf(binding),
+                                      BindingOf(binding),
                                       BindingKindEnumerator(binding.Kind));
 
         row += std::format(", {}u, {}ull, {}u", binding.ElementStride, binding.ByteSize, binding.ArrayCount);
         row += std::format(", {}", EnumeratorFor("ResourceShape", ToString(binding.Shape)));
         row += std::format(", {}", EnumeratorFor("TextureSampleType", ToString(binding.SampleType)));
-        row += std::format(", lodestone::TextureFormat{{ {} }}", static_cast<uint32_t>(binding.StorageFormat));
+        row +=
+            std::format(", lodestone::TextureFormat{{ {} }}", static_cast<uint32_t>(binding.StorageFormat));
         row += std::format(", lodestone::StorageTextureAccess{{ {} }}",
                            static_cast<uint32_t>(binding.StorageAccess));
         row += std::format(", lodestone::SamplerBindingType{{ {} }}",
                            static_cast<uint32_t>(binding.SamplerType));
-        row += std::format(", {}ull", binding.Derived.ElementCount);
+        const BufferFootprint* buffer = std::get_if<BufferFootprint>(&resolved.Footprint);
+        const TextureFootprint* texture = std::get_if<TextureFootprint>(&resolved.Footprint);
+        row += std::format(", {}ull", buffer != nullptr ? buffer->ElementCount : 0u);
         row += std::format(", {}u, {}u, {}u",
-                           binding.Derived.ExtentX,
-                           binding.Derived.ExtentY,
-                           binding.Derived.ExtentZ);
+                           texture != nullptr ? texture->ExtentX : 0u,
+                           texture != nullptr ? texture->ExtentY : 0u,
+                           texture != nullptr ? texture->ExtentZ : 0u);
 
         if (member_table_name.empty())
         {
@@ -263,8 +267,7 @@ namespace
             }
             else if (std::holds_alternative<uint32_t>(first))
             {
-                emitted +=
-                    std::format("    uint32_t {}{{ {}u }};\n", field, std::get<uint32_t>(first));
+                emitted += std::format("    uint32_t {}{{ {}u }};\n", field, std::get<uint32_t>(first));
             }
             else
             {
@@ -297,27 +300,25 @@ namespace
                                std::get<bool>(axis.Values.front()) ? 1u : 0u);
         }
 
-        std::string emitted = std::format(
-            "constexpr uint32_t IndexOf{}{}(const {}& permutation) noexcept\n{{\n    switch "
-            "(permutation.{})\n    {{\n",
-            MakeTypeIdentifier(module.Name),
-            field,
-            typeName,
-            field);
+        std::string emitted =
+            std::format("constexpr uint32_t IndexOf{}{}(const {}& permutation) noexcept\n{{\n    switch "
+                        "(permutation.{})\n    {{\n",
+                        MakeTypeIdentifier(module.Name),
+                        field,
+                        typeName,
+                        field);
 
         for (size_t i = 0u; i < axis.Values.size(); ++i)
         {
             const PermutationValue& value = axis.Values[i];
             if (std::holds_alternative<bool>(value))
             {
-                emitted += std::format("    case {}:\n        return {}u;\n",
-                                       ToLiteral(std::get<bool>(value)),
-                                       i);
+                emitted +=
+                    std::format("    case {}:\n        return {}u;\n", ToLiteral(std::get<bool>(value)), i);
             }
             else if (std::holds_alternative<uint32_t>(value))
             {
-                emitted +=
-                    std::format("    case {}u:\n        return {}u;\n", std::get<uint32_t>(value), i);
+                emitted += std::format("    case {}u:\n        return {}u;\n", std::get<uint32_t>(value), i);
             }
             else
             {
@@ -378,10 +379,10 @@ namespace
     {
         const std::string moduleType = MakeTypeIdentifier(module.Name);
         const std::string typeName = std::format("{}Permutation", moduleType);
-        std::string emitted = std::format(
-            "constexpr uint32_t VariantIndex({} permutation) noexcept\n{{\n"
-            "    permutation = Canonicalize(permutation);\n    uint32_t index = 0u;\n",
-            typeName);
+        std::string emitted =
+            std::format("constexpr uint32_t VariantIndex({} permutation) noexcept\n{{\n"
+                        "    permutation = Canonicalize(permutation);\n    uint32_t index = 0u;\n",
+                        typeName);
 
         for (const PermutationAxis* axis : *module.Space)
         {
@@ -412,8 +413,8 @@ std::string MakeFieldIdentifier(std::string_view axis_name)
         }
 
         const unsigned char raw = static_cast<unsigned char>(character);
-        identifier += startOfWord ? static_cast<char>(std::toupper(raw))
-                                  : static_cast<char>(std::tolower(raw));
+        identifier +=
+            startOfWord ? static_cast<char>(std::toupper(raw)) : static_cast<char>(std::tolower(raw));
         startOfWord = false;
     }
 
@@ -480,8 +481,9 @@ std::string EmitShaderLibraryHeader(const CookedLibrary& library)
     header += "/** The vertex attributes this entry point reads. Empty for every stage except vertex.\n"
               " * The semantic name survives here and nowhere in the WGSL, so a vertex buffer layout\n"
               " * can be checked against the shader by name. */\n";
-    header += "std::span<const lodestone::VertexAttributeInfo> GetVertexInputs(EntryPointId entry_point,\n"
-              "                                                            uint32_t variant_index) noexcept;\n";
+    header +=
+        "std::span<const lodestone::VertexAttributeInfo> GetVertexInputs(EntryPointId entry_point,\n"
+        "                                                            uint32_t variant_index) noexcept;\n";
     header += "std::span<const lodestone::ColorTargetInfo> GetColorTargets(EntryPointId entry_point,\n"
               "                                                        uint32_t variant_index) noexcept;\n";
     header += "/** True when the fragment shader writes SV_Depth. This is not depthWrite in RenderState.\n"
@@ -491,15 +493,16 @@ std::string EmitShaderLibraryHeader(const CookedLibrary& library)
     header += "/** Serves the baked tables through the provider seam. Sources live in the data segment\n"
               " * for the life of the process, so Generation() never changes. A watch-and-serve cooker\n"
               " * implements the same interface and increments it instead. */\n";
-    header += "class BakedShaderSourceProvider final : public lodestone::ShaderSourceProvider\n{\npublic:\n"
-              "    BakedShaderSourceProvider() noexcept;\n"
-              "    ~BakedShaderSourceProvider() override;\n\n"
-              "    std::string_view Source(uint16_t entry_point, uint32_t variant_index) const noexcept override;\n"
-              "    std::span<const lodestone::BindingInfo> Bindings(uint16_t entry_point,\n"
-              "                                                 uint32_t variant_index) const noexcept override;\n"
-              "    lodestone::WorkgroupSize Workgroup(uint16_t entry_point,\n"
-              "                                   uint32_t variant_index) const noexcept override;\n"
-              "    uint64_t Generation() const noexcept override;\n};\n\n";
+    header +=
+        "class BakedShaderSourceProvider final : public lodestone::ShaderSourceProvider\n{\npublic:\n"
+        "    BakedShaderSourceProvider() noexcept;\n"
+        "    ~BakedShaderSourceProvider() override;\n\n"
+        "    std::string_view Source(uint16_t entry_point, uint32_t variant_index) const noexcept override;\n"
+        "    std::span<const lodestone::BindingInfo> Bindings(uint16_t entry_point,\n"
+        "                                                 uint32_t variant_index) const noexcept override;\n"
+        "    lodestone::WorkgroupSize Workgroup(uint16_t entry_point,\n"
+        "                                   uint32_t variant_index) const noexcept override;\n"
+        "    uint64_t Generation() const noexcept override;\n};\n\n";
 
     header += "} // namespace lodestone::shaders\n";
     return header;
@@ -514,9 +517,8 @@ namespace
 
         for (size_t i = 0u; i < module.Sources.size(); ++i)
         {
-            emitted += std::format("constexpr std::string_view k_Source{} ={};\n\n",
-                                   i,
-                                   EmitChunkedLiteral(module.Sources[i]));
+            emitted += std::format(
+                "constexpr std::string_view k_Source{} ={};\n\n", i, EmitChunkedLiteral(module.Sources[i]));
         }
 
         return emitted;
@@ -535,17 +537,17 @@ namespace
         std::string emitted;
         for (size_t bindingIndex = 0u; bindingIndex < layout.size(); ++bindingIndex)
         {
-            emitted += EmitUniformMemberTable(layout[bindingIndex], layout_index, bindingIndex);
+            emitted += EmitUniformMemberTable(layout[bindingIndex].Resource, layout_index, bindingIndex);
         }
 
         emitted += std::format("constexpr lodestone::BindingInfo k_Layout{}[]\n{{\n", layout_index);
         for (size_t bindingIndex = 0u; bindingIndex < layout.size(); ++bindingIndex)
         {
-            const ReflectedBinding& binding = layout[bindingIndex];
-            const std::string memberTableName =
-                binding.UniformMembers.empty() ? std::string{}
-                                               : MakeUniformMemberTableName(layout_index, bindingIndex);
-            emitted += EmitBindingRow(binding, memberTableName);
+            const ResolvedBinding& resolved = layout[bindingIndex];
+            const std::string memberTableName = resolved.Resource.UniformMembers.empty()
+                                                    ? std::string{}
+                                                    : MakeUniformMemberTableName(layout_index, bindingIndex);
+            emitted += EmitBindingRow(resolved, memberTableName);
         }
 
         emitted += "};\n\n";
@@ -553,13 +555,62 @@ namespace
         return emitted;
     }
 
-    std::string EmitLayoutTables(const CookedModule& module)
+    /** The generated header hands a caller one flat `BindingInfo` array for each entry point of each
+     * variant, so this emitter resolves the four tables back into arrays and collapses the equal ones.
+     *
+     * The split keyed the tables by placement, footprint, and visibility because each changes for its
+     * own reason. A consumer of the generated header wants them joined again, so the product reappears
+     * here and nowhere earlier. */
+    struct LayoutProjection
+    {
+        std::vector<ShaderLayout> Layouts;
+        /** One row for each dense variant index, holding one layout index per entry point. */
+        std::vector<std::vector<uint32_t>> IndicesByVariantIndex;
+    };
+
+    LayoutProjection ProjectLayouts(const CookedModule& module)
+    {
+        LayoutProjection projection;
+        projection.IndicesByVariantIndex.resize(module.SpaceSize);
+
+        for (const LibraryVariant& variant : module.Variants)
+        {
+            std::vector<uint32_t> indices;
+            indices.reserve(variant.VisibilityIndices.size());
+
+            for (size_t i = 0u; i < variant.VisibilityIndices.size(); ++i)
+            {
+                ShaderLayout layout = ResolveLayout(module, variant, i);
+                const auto found = std::ranges::find(projection.Layouts, layout);
+
+                if (found == projection.Layouts.end())
+                {
+                    indices.push_back(static_cast<uint32_t>(projection.Layouts.size()));
+                    projection.Layouts.push_back(std::move(layout));
+                }
+                else
+                {
+                    indices.push_back(
+                        static_cast<uint32_t>(std::distance(projection.Layouts.begin(), found)));
+                }
+            }
+
+            if (variant.Index < projection.IndicesByVariantIndex.size())
+            {
+                projection.IndicesByVariantIndex[variant.Index] = std::move(indices);
+            }
+        }
+
+        return projection;
+    }
+
+    std::string EmitLayoutTables(const LayoutProjection& projection)
     {
         std::string emitted;
 
-        for (size_t i = 0u; i < module.Layouts.size(); ++i)
+        for (size_t i = 0u; i < projection.Layouts.size(); ++i)
         {
-            emitted += EmitOneLayoutTable(module.Layouts[i], i);
+            emitted += EmitOneLayoutTable(projection.Layouts[i], i);
         }
 
         return emitted;
@@ -594,17 +645,16 @@ namespace
         return slots;
     }
 
-    std::string EmitVariantRow(const LibraryVariant& variant, size_t entry_point_index)
+    std::string EmitVariantRow(const LibraryVariant& variant, size_t entry_point_index, uint32_t layout_index)
     {
         const uint32_t sourceIndex = variant.SourceIndices[entry_point_index];
-        const uint32_t layoutIndex = variant.LayoutIndices[entry_point_index];
         const WorkgroupSize workgroup = variant.Workgroups[entry_point_index];
 
         return std::format("    VariantRecord{{ k_Source{}, k_Layout{}, k_LayoutCount{}, "
                            "lodestone::WorkgroupSize{{ {}u, {}u, {}u }}, {} }},\n",
                            sourceIndex,
-                           layoutIndex,
-                           layoutIndex,
+                           layout_index,
+                           layout_index,
                            workgroup.X,
                            workgroup.Y,
                            workgroup.Z,
@@ -613,7 +663,7 @@ namespace
 
     /** One table for each entry point, indexed by the dense variant index. A dependent axis leaves
      * holes; those rows stay empty and every accessor reports them as unknown. */
-    std::string EmitVariantTables(const CookedModule& module)
+    std::string EmitVariantTables(const CookedModule& module, const LayoutProjection& projection)
     {
         const std::vector<const LibraryVariant*> slots = BuildVariantSlotTable(module);
         std::string emitted;
@@ -632,7 +682,9 @@ namespace
                     continue;
                 }
 
-                emitted += EmitVariantRow(*variant, entryPointIndex);
+                emitted += EmitVariantRow(*variant,
+                                          entryPointIndex,
+                                          projection.IndicesByVariantIndex[variant->Index][entryPointIndex]);
             }
 
             emitted += "};\n\n";
@@ -652,8 +704,10 @@ std::string EmitShaderLibraryModuleSource(const CookedModule& module, std::strin
     source += std::format("#include \"{}\"\n\n", header_name);
     source += "namespace lodestone::shaders\n{\n\nnamespace\n{\n\n";
 
+    const LayoutProjection projection = ProjectLayouts(module);
+
     source += EmitSourceLiterals(module);
-    source += EmitLayoutTables(module);
+    source += EmitLayoutTables(projection);
     source += EmitRasterTables(module);
 
     source += "struct VariantRecord\n{\n    std::string_view Source;\n"
@@ -663,7 +717,7 @@ std::string EmitShaderLibraryModuleSource(const CookedModule& module, std::strin
               "    const lodestone::ColorTargetInfo* ColorTargets;\n    uint32_t ColorTargetCount;\n"
               "    bool WritesFragDepth;\n};\n\n";
 
-    source += EmitVariantTables(module);
+    source += EmitVariantTables(module, projection);
 
     source += std::format("constexpr uint32_t k_VariantSpaceSize = {}u;\n\n", module.SpaceSize);
 
@@ -689,26 +743,29 @@ std::string EmitShaderLibraryModuleSource(const CookedModule& module, std::strin
               "                                                uint32_t variant_index) noexcept\n"
               "{\n    const VariantRecord* record = FindRecord(entry_point, variant_index);\n"
               "    if (record == nullptr || record->BindingCount == 0u)\n    {\n        return {};\n    }\n\n"
-              "    return std::span<const lodestone::BindingInfo>{ record->Bindings, record->BindingCount };\n}\n\n";
+              "    return std::span<const lodestone::BindingInfo>{ record->Bindings, record->BindingCount "
+              "};\n}\n\n";
 
     source += "lodestone::WorkgroupSize GetWorkgroupSize(EntryPointId entry_point,\n"
               "                                      uint32_t variant_index) noexcept\n"
               "{\n    const VariantRecord* record = FindRecord(entry_point, variant_index);\n"
               "    return record != nullptr ? record->Workgroup : lodestone::WorkgroupSize{};\n}\n\n";
 
-    source += "std::span<const lodestone::VertexAttributeInfo> GetVertexInputs(EntryPointId entry_point,\n"
-              "                                                            uint32_t variant_index) noexcept\n"
-              "{\n    const VariantRecord* record = FindRecord(entry_point, variant_index);\n"
-              "    if (record == nullptr || record->VertexInputCount == 0u)\n    {\n        return {};\n    }\n\n"
-              "    return std::span<const lodestone::VertexAttributeInfo>{ record->VertexInputs,\n"
-              "                                                        record->VertexInputCount };\n}\n\n";
+    source +=
+        "std::span<const lodestone::VertexAttributeInfo> GetVertexInputs(EntryPointId entry_point,\n"
+        "                                                            uint32_t variant_index) noexcept\n"
+        "{\n    const VariantRecord* record = FindRecord(entry_point, variant_index);\n"
+        "    if (record == nullptr || record->VertexInputCount == 0u)\n    {\n        return {};\n    }\n\n"
+        "    return std::span<const lodestone::VertexAttributeInfo>{ record->VertexInputs,\n"
+        "                                                        record->VertexInputCount };\n}\n\n";
 
-    source += "std::span<const lodestone::ColorTargetInfo> GetColorTargets(EntryPointId entry_point,\n"
-              "                                                        uint32_t variant_index) noexcept\n"
-              "{\n    const VariantRecord* record = FindRecord(entry_point, variant_index);\n"
-              "    if (record == nullptr || record->ColorTargetCount == 0u)\n    {\n        return {};\n    }\n\n"
-              "    return std::span<const lodestone::ColorTargetInfo>{ record->ColorTargets,\n"
-              "                                                    record->ColorTargetCount };\n}\n\n";
+    source +=
+        "std::span<const lodestone::ColorTargetInfo> GetColorTargets(EntryPointId entry_point,\n"
+        "                                                        uint32_t variant_index) noexcept\n"
+        "{\n    const VariantRecord* record = FindRecord(entry_point, variant_index);\n"
+        "    if (record == nullptr || record->ColorTargetCount == 0u)\n    {\n        return {};\n    }\n\n"
+        "    return std::span<const lodestone::ColorTargetInfo>{ record->ColorTargets,\n"
+        "                                                    record->ColorTargetCount };\n}\n\n";
 
     source += "bool GetWritesFragDepth(EntryPointId entry_point, uint32_t variant_index) noexcept\n"
               "{\n    const VariantRecord* record = FindRecord(entry_point, variant_index);\n"
@@ -724,18 +781,19 @@ std::string EmitShaderLibraryModuleSource(const CookedModule& module, std::strin
     }
     source += "    default:\n        return lodestone::ShaderStageKind::Invalid;\n    }\n}\n\n";
 
-    source += "BakedShaderSourceProvider::BakedShaderSourceProvider() noexcept = default;\n"
-              "BakedShaderSourceProvider::~BakedShaderSourceProvider() = default;\n\n"
-              "std::string_view BakedShaderSourceProvider::Source(uint16_t entry_point,\n"
-              "                                                  uint32_t variant_index) const noexcept\n"
-              "{\n    return GetSource(static_cast<EntryPointId>(entry_point), variant_index);\n}\n\n"
-              "std::span<const lodestone::BindingInfo> BakedShaderSourceProvider::Bindings(\n"
-              "    uint16_t entry_point,\n    uint32_t variant_index) const noexcept\n"
-              "{\n    return GetBindings(static_cast<EntryPointId>(entry_point), variant_index);\n}\n\n"
-              "lodestone::WorkgroupSize BakedShaderSourceProvider::Workgroup(uint16_t entry_point,\n"
-              "                                                         uint32_t variant_index) const noexcept\n"
-              "{\n    return GetWorkgroupSize(static_cast<EntryPointId>(entry_point), variant_index);\n}\n\n"
-              "uint64_t BakedShaderSourceProvider::Generation() const noexcept\n{\n    return 1u;\n}\n\n";
+    source +=
+        "BakedShaderSourceProvider::BakedShaderSourceProvider() noexcept = default;\n"
+        "BakedShaderSourceProvider::~BakedShaderSourceProvider() = default;\n\n"
+        "std::string_view BakedShaderSourceProvider::Source(uint16_t entry_point,\n"
+        "                                                  uint32_t variant_index) const noexcept\n"
+        "{\n    return GetSource(static_cast<EntryPointId>(entry_point), variant_index);\n}\n\n"
+        "std::span<const lodestone::BindingInfo> BakedShaderSourceProvider::Bindings(\n"
+        "    uint16_t entry_point,\n    uint32_t variant_index) const noexcept\n"
+        "{\n    return GetBindings(static_cast<EntryPointId>(entry_point), variant_index);\n}\n\n"
+        "lodestone::WorkgroupSize BakedShaderSourceProvider::Workgroup(uint16_t entry_point,\n"
+        "                                                         uint32_t variant_index) const noexcept\n"
+        "{\n    return GetWorkgroupSize(static_cast<EntryPointId>(entry_point), variant_index);\n}\n\n"
+        "uint64_t BakedShaderSourceProvider::Generation() const noexcept\n{\n    return 1u;\n}\n\n";
 
     source += "} // namespace lodestone::shaders\n";
     return source;

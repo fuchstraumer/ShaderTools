@@ -5,6 +5,7 @@
 #include "PermutationSpace.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
@@ -271,24 +272,23 @@ ModuleInfluence ComputeAxisInfluence(const CookedModule& module)
     return influence;
 }
 
-bool AllVariantsShareOneLayout(const CookedModule& module) noexcept
+bool AllVariantsShareOneLayout(const CookedModule& module)
 {
-    const ShaderLayout* first = nullptr;
+    bool seenOne = false;
+    ShaderLayout first;
 
     for (const LibraryVariant& variant : module.Variants)
     {
-        for (const uint32_t layoutIndex : variant.LayoutIndices)
+        for (size_t i = 0u; i < variant.VisibilityIndices.size(); ++i)
         {
-            if (layoutIndex >= module.Layouts.size())
-            {
-                return false;
-            }
+            ShaderLayout layout = ResolveLayout(module, variant, i);
 
-            if (first == nullptr)
+            if (!seenOne)
             {
-                first = &module.Layouts[layoutIndex];
+                first = std::move(layout);
+                seenOne = true;
             }
-            else if (module.Layouts[layoutIndex] != *first)
+            else if (layout != first)
             {
                 return false;
             }
@@ -427,7 +427,6 @@ std::string GenerateDedupeReport(const CookedLibrary& library)
     for (const CookedModule& module : library.Modules)
     {
         const InternerStatistics& sourceStatistics = module.SourceTable.Interning;
-        const InternerStatistics& layoutStatistics = module.LayoutTable.Interning;
 
         report += std::format("{}  {} variants x {} entrypoints = {} artifacts\n\n",
                               module.Name,
@@ -438,19 +437,35 @@ std::string GenerateDedupeReport(const CookedLibrary& library)
         report += EmitProvenance(module);
         report += "\n";
 
-        report += std::format(
-            "  sources: {} -> {} unique\n", sourceStatistics.ArtifactsSeen, sourceStatistics.UniqueEntries);
-        report +=
-            std::format("  layouts: {} -> {} unique{}\n",
-                        layoutStatistics.ArtifactsSeen,
-                        layoutStatistics.UniqueEntries,
-                        AllVariantsShareOneLayout(module) ? "   (every permutation shares one layout)" : "");
+        // One line for each table. Placement, footprint, and visibility collapse at different rates,
+        // and one number for all three would hide which one grows.
+        const std::array<std::pair<std::string_view, const TableStatistics*>, 5u> tables{
+            std::pair{ std::string_view{ "sources" }, &module.SourceTable },
+            std::pair{ std::string_view{ "resources" }, &module.ResourceTable },
+            std::pair{ std::string_view{ "resource lists" }, &module.ResourceListTable },
+            std::pair{ std::string_view{ "footprints" }, &module.FootprintListTable },
+            std::pair{ std::string_view{ "visibility" }, &module.VisibilityTable }
+        };
+
+        uint32_t collisions = 0u;
+        uint32_t comparisons = 0u;
+
+        for (const auto& [name, table] : tables)
+        {
+            const bool sharedLayout = name == "resource lists" && AllVariantsShareOneLayout(module);
+            report += std::format("  {}: {} -> {} unique{}\n",
+                                  name,
+                                  table->Interning.ArtifactsSeen,
+                                  table->Interning.UniqueEntries,
+                                  sharedLayout ? "   (every permutation shares one layout)" : "");
+            collisions += table->Interning.HashCollisions;
+            comparisons += table->Interning.ByteComparisons;
+        }
+
         report += std::format("  dedup enabled: {}\n", module.SourceTable.DedupeEnabled ? "yes" : "no");
         report += std::format("  hash function: {}\n", module.SourceTable.HashName);
-        report += std::format("  hash collisions resolved by byte compare: {}\n",
-                              sourceStatistics.HashCollisions + layoutStatistics.HashCollisions);
-        report += std::format("  byte comparisons forced by a hash hit: {}\n",
-                              sourceStatistics.ByteComparisons + layoutStatistics.ByteComparisons);
+        report += std::format("  hash collisions resolved by byte compare: {}\n", collisions);
+        report += std::format("  byte comparisons forced by a hash hit: {}\n", comparisons);
         report += "  normalization passes active: (none)\n\n";
 
         const ModuleInfluence influence = ComputeAxisInfluence(module);

@@ -53,10 +53,8 @@ int main()
     runner.BeginSection("symbols");
     CheckValue(runner, "IFFT_SIZE", 512, "bare symbol");
     CheckValue(runner, "IFFT_SIZE * IFFT_SIZE", 262144, "the square case the ocean demo needs");
-    CheckValue(runner,
-               "IFFT_SIZE * IFFT_SIZE * IFFT_NUM_WAVE_CASCADES",
-               1048576,
-               "cascaded texture element count");
+    CheckValue(
+        runner, "IFFT_SIZE * IFFT_SIZE * IFFT_NUM_WAVE_CASCADES", 1048576, "cascaded texture element count");
 
     runner.BeginSection("precedence");
     CheckValue(runner, "2 + 3 * 4", 14, "multiply binds tighter than add");

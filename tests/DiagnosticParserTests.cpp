@@ -8,8 +8,8 @@
 // reads a record, so a field this file gets wrong is a field no later stage can question.
 //
 // It takes a string, so it needs no compiler and no asset. The text in `k_RealCapture` is a real
-// capture created by writing a purposefully broken test function. By comparing against that, 
-// we know that 
+// capture created by writing a purposefully broken test function. By comparing against that,
+// we know that
 
 using lodestone::Diagnostic;
 using lodestone::DiagnosticSeverity;

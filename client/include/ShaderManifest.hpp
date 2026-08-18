@@ -2,11 +2,12 @@
 #ifndef LODESTONE_SHADER_MANIFEST_HPP
 #define LODESTONE_SHADER_MANIFEST_HPP
 #include "ShaderLibraryTypes.hpp"
-#include <cstdint>
 #include <cstddef>
+#include <cstdint>
 #include <expected>
 #include <span>
 #include <string_view>
+#include <type_traits>
 #include <vector>
 
 /**
@@ -70,8 +71,21 @@ struct ShaderManifestHeader
 
     uint32_t BindingTableOffset{ 0u };
     uint32_t BindingCount{ 0u };
-    uint32_t LayoutTableOffset{ 0u };
-    uint32_t LayoutCount{ 0u };
+    uint32_t ResourceListTableOffset{ 0u };
+    uint32_t ResourceListCount{ 0u };
+
+    uint32_t ResourceIndexTableOffset{ 0u };
+    uint32_t ResourceIndexCount{ 0u };
+    uint32_t FootprintTableOffset{ 0u };
+    uint32_t FootprintCount{ 0u };
+
+    uint32_t FootprintListTableOffset{ 0u };
+    uint32_t FootprintListCount{ 0u };
+    uint32_t VisibilityListTableOffset{ 0u };
+    uint32_t VisibilityListCount{ 0u };
+
+    uint32_t VisibilityIndexTableOffset{ 0u };
+    uint32_t VisibilityIndexCount{ 0u };
 
     uint32_t EntryPointTableOffset{ 0u };
     uint32_t EntryPointCount{ 0u };
@@ -115,19 +129,16 @@ struct ManifestSourceRef
 struct ManifestBinding
 {
     uint64_t ByteSize{ 0u };
-    uint64_t DerivedElementCount{ 0u };
     uint32_t NameString{ 0u };
     uint32_t Group{ 0u };
     uint32_t Binding{ 0u };
     uint32_t ElementStride{ 0u };
     uint32_t ArrayCount{ 1u };
-    uint32_t DerivedExtentX{ 0u };
-    uint32_t DerivedExtentY{ 0u };
-    uint32_t DerivedExtentZ{ 0u };
     uint32_t StorageFormat{ 0u };
     uint32_t FirstUniformMember{ 0u };
     uint32_t UniformMemberCount{ 0u };
-    uint32_t Reserved{ 0u };
+    /** @brief Which placement fields mean anything. `Bound` uses Group and Binding. */
+    uint8_t PlacementKind{ 0u };
     uint8_t Kind{ 0u };
     uint8_t Shape{ 0u };
     uint8_t SampleType{ 0u };
@@ -135,14 +146,28 @@ struct ManifestBinding
     uint8_t SamplerType{ 0u };
     uint8_t Reserved0{ 0u };
     uint8_t Reserved1{ 0u };
-    uint8_t Reserved2{ 0u };
 };
 
-/** @brief A run of bindings in the binding table. Two variants that share a layout name the same run. */
-struct ManifestLayout
+/**@brief "Footprint" refers to the memory footprint of a resource, insofar as we can declare it. `Kind`
+ * specifies if this is a buffer, texture, or invalid. `ElementCount` is *only* valid fo buffers, and
+ * `ExtentX/Y/Z` is only valid for a texture. The latter is NOT a byte size: it is pixel dims.*/
+// todo-ship: Union ExtentX w ElementCount, or just replace ElementCount with ExtentX. That's what a buffer
+// length is anyways. This gets us to a round 16 bytes, which is nice and aligned vs 24 now
+struct ManifestFootprint
 {
-    uint32_t FirstBinding{ 0u };
-    uint32_t BindingCount{ 0u };
+    uint64_t ElementCount{ 0u };
+    uint32_t ExtentX{ 0u };
+    uint32_t ExtentY{ 0u };
+    uint32_t ExtentZ{ 0u };
+    uint32_t Kind{ 0u };
+};
+
+/** @brief A run in an index table. Used for a resource list and for a visibility list. Variants can have
+ *  different counts of resources, so this allows us to compact them efficiently in the binary schema. */
+struct ManifestRun
+{
+    uint32_t First{ 0u };
+    uint32_t Count{ 0u };
 };
 
 struct ManifestEntryPoint
@@ -155,7 +180,8 @@ struct ManifestEntryPoint
 struct ManifestSlot
 {
     uint32_t SourceIndex{ 0u };
-    uint32_t LayoutIndex{ 0u };
+    /** @brief Index into visibility list table: which of the variant's resources this entry point reads.*/
+    uint32_t VisibilityIndex{ 0u };
     uint32_t WorkgroupX{ 1u };
     uint32_t WorkgroupY{ 1u };
     uint32_t WorkgroupZ{ 1u };
@@ -206,6 +232,9 @@ struct ManifestVariant
     uint32_t FirstSlot{ 0u };
     uint32_t SlotCount{ 0u };
     uint32_t SuffixString{ 0u };
+    /** @brief What this variant declares, and how much of each. Both are per variant. */
+    uint32_t ResourceListIndex{ 0u };
+    uint32_t FootprintListIndex{ 0u };
 };
 
 struct ManifestAxis
@@ -216,11 +245,31 @@ struct ManifestAxis
     uint32_t Reserved{ 0u };
 };
 
-static_assert(sizeof(ShaderManifestHeader) == 144u, "manifest header size is part of the file format");
-static_assert(sizeof(ManifestBinding) == 72u, "binding record size is part of the file format");
-static_assert(sizeof(ManifestSlot) == 24u, "slot record size is part of the file format");
-static_assert(sizeof(ManifestVariant) == 16u, "variant record size is part of the file format");
-static_assert(sizeof(ManifestAxis) == 16u, "axis record size is part of the file format");
+/** The reader reinterprets manifest bytes as records, so a record must be a bag of bytes.
+ *
+ * A record that held a pointer, a `std::string`, or a virtual table would make the reader read a
+ * pointer out of a file. Nothing else in this repository catches that.
+ *
+ * Record sizes and layouts are not pinned yet, as we're still building out this library.*/
+// todo-ship: Better versioning system, graceful extension of fields, converters between versions
+template<typename RecordType>
+inline constexpr bool k_IsManifestRecord =
+    std::is_trivially_copyable_v<RecordType> && alignof(RecordType) <= 8u;
+
+static_assert(k_IsManifestRecord<ShaderManifestHeader>);
+static_assert(k_IsManifestRecord<ManifestStringRef>);
+static_assert(k_IsManifestRecord<ManifestSourceRef>);
+static_assert(k_IsManifestRecord<ManifestBinding>);
+static_assert(k_IsManifestRecord<ManifestRun>);
+static_assert(k_IsManifestRecord<ManifestFootprint>);
+static_assert(k_IsManifestRecord<ManifestEntryPoint>);
+static_assert(k_IsManifestRecord<ManifestSlot>);
+static_assert(k_IsManifestRecord<ManifestVertexInput>);
+static_assert(k_IsManifestRecord<ManifestUniformMember>);
+static_assert(k_IsManifestRecord<ManifestColorTarget>);
+static_assert(k_IsManifestRecord<ManifestRaster>);
+static_assert(k_IsManifestRecord<ManifestVariant>);
+static_assert(k_IsManifestRecord<ManifestAxis>);
 
 /**
  * @brief Spans over one manifest byte span, checked once when it opens.
@@ -240,7 +289,12 @@ public:
     [[nodiscard]] std::string_view Source(uint32_t source_index) const noexcept;
 
     [[nodiscard]] std::span<const ManifestBinding> Bindings() const noexcept;
-    [[nodiscard]] std::span<const ManifestBinding> LayoutBindings(uint32_t layout_index) const noexcept;
+    /** @brief The resources one variant declares. Indices into Bindings(). */
+    [[nodiscard]] std::span<const uint32_t> ResourceList(uint32_t list_index) const noexcept;
+    /** @brief How much of each resource, in the same order as the resource list. */
+    [[nodiscard]] std::span<const ManifestFootprint> FootprintList(uint32_t list_index) const noexcept;
+    /** @brief Which of a variant's resources one entry point reads. Indices into the resource list. */
+    [[nodiscard]] std::span<const uint32_t> VisibilityList(uint32_t list_index) const noexcept;
     [[nodiscard]] std::span<const ManifestEntryPoint> EntryPoints() const noexcept;
     [[nodiscard]] std::span<const ManifestVariant> Variants() const noexcept;
     [[nodiscard]] std::span<const ManifestAxis> Axes() const noexcept;
@@ -257,8 +311,11 @@ public:
      *
      * `entry_point` is the `EntryPointId` value, so it counts from one and zero is Invalid.
      * `variant_index` is the dense index, the same number the generated library uses. */
-    [[nodiscard]] const ManifestSlot* FindSlot(uint16_t entry_point,
-                                               uint32_t variant_index) const noexcept;
+    [[nodiscard]] const ManifestSlot* FindSlot(uint16_t entry_point, uint32_t variant_index) const noexcept;
+    /** @brief One slot for each entry point of this variant, in entry point order. */
+    [[nodiscard]] std::span<const ManifestSlot> Slots(const ManifestVariant& variant) const noexcept;
+    /** @brief Every slot, in file order. */
+    [[nodiscard]] std::span<const ManifestSlot> SlotTable() const noexcept;
 
 private:
     std::span<const std::byte> bytes;
@@ -266,7 +323,12 @@ private:
     std::span<const ManifestStringRef> strings;
     std::span<const ManifestSourceRef> sources;
     std::span<const ManifestBinding> bindings;
-    std::span<const ManifestLayout> layouts;
+    std::span<const ManifestRun> resourceLists;
+    std::span<const uint32_t> resourceIndices;
+    std::span<const ManifestFootprint> footprints;
+    std::span<const ManifestRun> footprintLists;
+    std::span<const ManifestRun> visibilityLists;
+    std::span<const uint32_t> visibilityIndices;
     std::span<const ManifestEntryPoint> entryPoints;
     std::span<const ManifestSlot> slots;
     std::span<const ManifestVariant> variants;
@@ -309,7 +371,18 @@ private:
     ShaderManifestView view;
     /** Built before bindingInfos and reserved to its final size, so the spans below stay valid. */
     std::vector<UniformMemberInfo> memberInfos;
+    /** One entry for each slot, gathered from the resource list and the footprint list of the slot's
+     * variant. A layout is a subset of what the variant declares, so it is not a run of the resource
+     * table and has to be materialized. */
     std::vector<BindingInfo> bindingInfos;
+    /** Where each slot's bindings begin in bindingInfos, and how many there are. */
+    std::vector<uint32_t> slotFirstBinding;
+    std::vector<uint32_t> slotBindingCount;
+
+    void GatherVariantBindings(const ManifestVariant& variant, const std::vector<uint32_t>& member_offsets);
+    [[nodiscard]] BindingInfo MakeBindingInfo(const ManifestBinding& record,
+                                              const ManifestFootprint* footprint,
+                                              uint32_t member_offset) const noexcept;
     uint64_t generation{ 0u };
 };
 

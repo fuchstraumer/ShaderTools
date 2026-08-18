@@ -41,10 +41,8 @@ ReflectedBinding MakeSharedBinding()
 {
     ReflectedBinding binding;
     binding.Name = "Waves";
-    binding.Group = 0u;
-    binding.Binding = 0u;
+    binding.Placement = BoundPlacement{ .Group = 0u, .Binding = 0u };
     binding.Kind = BindingKind::StorageBuffer;
-    binding.EntryPointUsageMask = 0u;
     binding.ElementStride = 16u;
     binding.ArrayCount = 1u;
     binding.Shape = ResourceShape::Buffer;
@@ -114,9 +112,7 @@ CookedModule BuildModule(const PermutationSpace& space, bool dedupe_enabled)
 
     if (!dedupe_enabled)
     {
-        module.SourceInterner.Disable();
-        module.LayoutInterner.Disable();
-        module.RasterInterner.Disable();
+        DisableDedupe(module);
     }
 
     uint32_t index = 0u;
@@ -153,9 +149,7 @@ CookedModule BuildSingleEntryPointModule(const PermutationSpace& space, bool ded
 
     if (!dedupe_enabled)
     {
-        module.SourceInterner.Disable();
-        module.LayoutInterner.Disable();
-        module.RasterInterner.Disable();
+        DisableDedupe(module);
     }
 
     uint32_t index = 0u;
@@ -203,11 +197,18 @@ void CheckTheTwoArmsReallyDiffer(lodestone::tests::TestRunner& runner,
     runner.Check(deduped.Variants.size() == 4u && raw.Variants.size() == 4u, "both arms hold every variant");
     runner.Check(deduped.Sources.size() == 3u, "dedup collapses eight artifacts onto three unique texts");
     runner.Check(raw.Sources.size() == 8u, "no-dedupe gives each of the eight artifacts its own entry");
-    runner.Check(deduped.Layouts.size() == 2u,
-                 "the two entry points bind one resource at one place, but the usage mask is part of "
-                 "the layout key today, so the table holds one entry for each of them. Phase D step "
-                 "D8b takes the mask out of the key and this becomes 1");
-    runner.Check(raw.Layouts.size() == 8u, "no-dedupe gives each of the eight layouts its own entry");
+    // D8b took the usage mask and the footprint out of the resource key, so one resource at one
+    // place is one row however many entry points read it.
+    runner.Check(deduped.Resources.size() == 1u,
+                 "two entry points binding one resource at one place give one resource");
+    runner.Check(deduped.ResourceLists.size() == 1u, "every variant declares the same one resource");
+    runner.Check(deduped.VisibilityLists.size() == 1u,
+                 "both entry points read that resource, so both see the same visibility list");
+    // Four, not eight. A resource belongs to the variant, so it is interned once for each variant and
+    // not once for each entry point that reads it. The sources stay at eight, because a source does
+    // belong to an entry point.
+    runner.Check(raw.Resources.size() == 4u,
+                 "no-dedupe gives each variant its own resource entry, one for each of the four");
 }
 
 void CheckInfluenceAgrees(lodestone::tests::TestRunner& runner,
@@ -248,8 +249,8 @@ void CheckSharedLayoutAgrees(lodestone::tests::TestRunner& runner, const Permuta
     const CookedModule deduped = BuildSingleEntryPointModule(space, true);
     const CookedModule raw = BuildSingleEntryPointModule(space, false);
 
-    runner.Check(deduped.Layouts.size() == 1u && raw.Layouts.size() == 2u,
-                 "the two arms hold the same one layout in a different number of entries");
+    runner.Check(deduped.Resources.size() == 1u && raw.Resources.size() == 2u,
+                 "the two arms hold the same one resource in a different number of entries");
     runner.Check(AllVariantsShareOneLayout(deduped), "with dedup on, every permutation shares one layout");
     runner.Check(AllVariantsShareOneLayout(raw),
                  "with dedup off, every permutation still shares one layout, because the claim is "
@@ -264,10 +265,11 @@ void CheckSharedLayoutRejectsADifference(lodestone::tests::TestRunner& runner, c
     CookedModule module = BuildSingleEntryPointModule(space, true);
     runner.Check(AllVariantsShareOneLayout(module), "the module starts with one shared layout");
 
-    ShaderLayout differentLayout = module.Layouts.front();
-    differentLayout.front().Binding = 7u;
-    module.Layouts.push_back(std::move(differentLayout));
-    module.Variants.front().LayoutIndices.front() = static_cast<uint32_t>(module.Layouts.size() - 1u);
+    ReflectedBinding moved = module.Resources.front();
+    moved.Placement = BoundPlacement{ .Group = 0u, .Binding = 7u };
+    module.Resources.push_back(std::move(moved));
+    module.ResourceLists.push_back(ResourceList{ static_cast<uint32_t>(module.Resources.size() - 1u) });
+    module.Variants.front().ResourceListIndex = static_cast<uint32_t>(module.ResourceLists.size() - 1u);
 
     runner.Check(!AllVariantsShareOneLayout(module), "one variant with a different layout ends the claim");
 }

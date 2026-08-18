@@ -6,21 +6,25 @@
 #include "ShaderLibraryTypes.hpp"
 #include "ShaderManifest.hpp"
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
 #include <cstring>
 #include <expected>
 #include <format>
+#include <numeric>
 #include <print>
+#include <ranges>
 #include <span>
 #include <string>
 #include <string_view>
 #include <unordered_map>
 #include <vector>
 
-// todo-ship: in almost all places we are using std::string, we could just use std::vector<std::byte> and avoid the string encoding issues.
-// the manifest is a binary file, so we don't need to treat it as text anywhere
+// todo-ship: in almost all places we are using std::string, we could just use std::vector<std::byte> and
+// avoid the string encoding issues. the manifest is a binary file, so we don't need to treat it as text
+// anywhere
 namespace lodestone
 {
 
@@ -29,16 +33,18 @@ namespace
 
     /** Collects strings once and hands back the index of each. Two equal strings share one entry, so
      * the blob holds each binding name a single time however many layouts name it. */
+    // todo-ship: There are better ways to do this, and we should absolutely explore them since strings
+    // will rapidly become a huge cost as variant count increases
     class StringTableBuilder
     {
     public:
         StringTableBuilder()
         {
-            lookup.reserve(512);
-            references.reserve(512);
-            blob.reserve(4096);
+            lookup.reserve(1024);
+            references.reserve(1024);
+            blob.reserve(16384);
         }
-        
+
         uint32_t Add(std::string_view text)
         {
             // todo: having to build a string to search seems wasteful. must be a better way
@@ -49,8 +55,7 @@ namespace
             }
 
             const auto index = static_cast<uint32_t>(references.size());
-            references.push_back(
-                ManifestStringRef{ .Offset=static_cast<uint32_t>(blob.size()), .Length=static_cast<uint32_t>(text.size()) });
+            references.emplace_back(static_cast<uint32_t>(blob.size()), static_cast<uint32_t>(text.size()));
             blob.append(text);
             lookup.emplace(std::string{ text }, index);
             return index;
@@ -109,16 +114,14 @@ namespace
     {
         ManifestBinding record;
         record.ByteSize = binding.ByteSize;
-        record.DerivedElementCount = binding.Derived.HasElementCount ? binding.Derived.ElementCount : 0u;
         record.NameString = strings.Add(binding.Name);
-        record.Group = binding.Group;
-        record.Binding = binding.Binding;
+        record.Group = GroupOf(binding);
+        record.Binding = BindingOf(binding);
         record.ElementStride = binding.ElementStride;
         record.ArrayCount = binding.ArrayCount;
-        record.DerivedExtentX = binding.Derived.HasExtent ? binding.Derived.ExtentX : 0u;
-        record.DerivedExtentY = binding.Derived.HasExtent ? binding.Derived.ExtentY : 0u;
-        record.DerivedExtentZ = binding.Derived.HasExtent ? binding.Derived.ExtentZ : 0u;
         record.StorageFormat = static_cast<uint32_t>(binding.StorageFormat);
+        record.PlacementKind = static_cast<uint8_t>(
+            GetBoundPlacement(binding.Placement) != nullptr ? PlacementKind::Bound : PlacementKind::None);
         record.Kind = static_cast<uint8_t>(binding.Kind);
         record.Shape = static_cast<uint8_t>(binding.Shape);
         record.SampleType = static_cast<uint8_t>(binding.SampleType);
@@ -141,18 +144,38 @@ namespace
         return record;
     }
 
+    ManifestFootprint MakeFootprintRecord(const ResourceFootprint& footprint) noexcept
+    {
+        if (const BufferFootprint* buffer = std::get_if<BufferFootprint>(&footprint))
+        {
+            return ManifestFootprint{ .ElementCount = buffer->ElementCount,
+                                      .Kind = static_cast<uint32_t>(FootprintKind::Buffer) };
+        }
+
+        if (const TextureFootprint* texture = std::get_if<TextureFootprint>(&footprint))
+        {
+            return ManifestFootprint{ .ExtentX = texture->ExtentX,
+                                      .ExtentY = texture->ExtentY,
+                                      .ExtentZ = texture->ExtentZ,
+                                      .Kind = static_cast<uint32_t>(FootprintKind::Texture) };
+        }
+
+        return ManifestFootprint{};
+    }
+
+    bool RecordMatchesFootprint(const ManifestFootprint& record, const ResourceFootprint& footprint) noexcept
+    {
+        const ManifestFootprint expected = MakeFootprintRecord(footprint);
+        return record.Kind == expected.Kind && record.ElementCount == expected.ElementCount &&
+               record.ExtentX == expected.ExtentX && record.ExtentY == expected.ExtentY &&
+               record.ExtentZ == expected.ExtentZ;
+    }
+
     bool RecordMatchesBinding(const ManifestBinding& record, const ReflectedBinding& binding) noexcept
     {
-        const uint64_t expectedElements = binding.Derived.HasElementCount ? binding.Derived.ElementCount : 0u;
-        const uint32_t expectedExtentX = binding.Derived.HasExtent ? binding.Derived.ExtentX : 0u;
-        const uint32_t expectedExtentY = binding.Derived.HasExtent ? binding.Derived.ExtentY : 0u;
-        const uint32_t expectedExtentZ = binding.Derived.HasExtent ? binding.Derived.ExtentZ : 0u;
-
-        return record.ByteSize == binding.ByteSize && record.DerivedElementCount == expectedElements &&
-               record.Group == binding.Group && record.Binding == binding.Binding &&
-               record.ElementStride == binding.ElementStride && record.ArrayCount == binding.ArrayCount &&
-               record.DerivedExtentX == expectedExtentX && record.DerivedExtentY == expectedExtentY &&
-               record.DerivedExtentZ == expectedExtentZ &&
+        return record.ByteSize == binding.ByteSize && record.Group == GroupOf(binding) &&
+               record.Binding == BindingOf(binding) && record.ElementStride == binding.ElementStride &&
+               record.ArrayCount == binding.ArrayCount &&
                record.StorageFormat == static_cast<uint32_t>(binding.StorageFormat) &&
                record.Kind == static_cast<uint8_t>(binding.Kind) &&
                record.Shape == static_cast<uint8_t>(binding.Shape) &&
@@ -260,32 +283,75 @@ namespace
                                          const LibraryVariant& variant,
                                          size_t entry_point_index)
     {
-        const uint32_t layoutIndex = variant.LayoutIndices[entry_point_index];
-        const ShaderLayout& expectedLayout = module.Layouts[layoutIndex];
-        const std::span<const ManifestBinding> readBindings = view.LayoutBindings(layoutIndex);
+        auto readVariantIter = std::ranges::find_if(view.Variants(),
+                                                    [&](const ManifestVariant& candidate)
+                                                    {
+                                                        return candidate.Index == variant.Index;
+                                                    });
+        if (readVariantIter == view.Variants().end())
+        {
+            std::println(stderr, "[shader_cooker] manifest holds no variant {}", variant.Index);
+            return std::unexpected(CookError::LibraryRoundTripFailed);
+        }
 
-        if (readBindings.size() != expectedLayout.size())
+        const ManifestVariant& readVariant = *readVariantIter;
+        const ShaderLayout expectedLayout = ResolveLayout(module, variant, entry_point_index);
+
+        const std::span<const uint32_t> resources = view.ResourceList(readVariant.ResourceListIndex);
+        const std::span<const ManifestFootprint> footprints =
+            view.FootprintList(readVariant.FootprintListIndex);
+        const std::span<const ManifestSlot> slots = view.Slots(readVariant);
+
+        if (entry_point_index >= slots.size())
         {
             std::println(stderr,
-                         "[shader_cooker] manifest layout {} holds {} bindings, the cook produced {}",
-                         layoutIndex,
-                         readBindings.size(),
+                         "[shader_cooker] manifest variant {} holds no slot {}",
+                         variant.Index,
+                         entry_point_index);
+            return std::unexpected(CookError::LibraryRoundTripFailed);
+        }
+
+        const std::span<const uint32_t> visible =
+            view.VisibilityList(slots[entry_point_index].VisibilityIndex);
+
+        if (visible.size() != expectedLayout.size())
+        {
+            std::println(stderr,
+                         "[shader_cooker] manifest variant {} entry point {} sees {} resources, the cook "
+                         "produced {}",
+                         variant.Index,
+                         entry_point_index,
+                         visible.size(),
                          expectedLayout.size());
             return std::unexpected(CookError::LibraryRoundTripFailed);
         }
 
-        for (size_t bindingIndex = 0u; bindingIndex < expectedLayout.size(); ++bindingIndex)
+        for (size_t i = 0u; i < expectedLayout.size(); ++i)
         {
-            const ReflectedBinding& expected = expectedLayout[bindingIndex];
-            const ManifestBinding& read = readBindings[bindingIndex];
+            const ResolvedBinding& expected = expectedLayout[i];
+            const uint32_t local = visible[i];
 
-            if (view.String(read.NameString) != expected.Name || !RecordMatchesBinding(read, expected) ||
-                !ManifestUniformMembersMatch(view, read, expected))
+            if (local >= resources.size() || resources[local] >= view.Bindings().size() ||
+                local >= footprints.size())
             {
                 std::println(stderr,
-                             "[shader_cooker] manifest binding '{}' of layout {} does not match the cook",
-                             expected.Name,
-                             layoutIndex);
+                             "[shader_cooker] manifest variant {} resolves resource {} out of range",
+                             variant.Index,
+                             local);
+                return std::unexpected(CookError::LibraryRoundTripFailed);
+            }
+
+            const ManifestBinding& read = view.Bindings()[resources[local]];
+
+            if (view.String(read.NameString) != expected.Resource.Name ||
+                !RecordMatchesBinding(read, expected.Resource) ||
+                !RecordMatchesFootprint(footprints[local], expected.Footprint) ||
+                !ManifestUniformMembersMatch(view, read, expected.Resource))
+            {
+                std::println(stderr,
+                             "[shader_cooker] manifest binding '{}' of variant {} does not match the cook",
+                             expected.Resource.Name,
+                             variant.Index);
                 return std::unexpected(CookError::LibraryRoundTripFailed);
             }
         }
@@ -415,7 +481,6 @@ namespace
     /** Each builder appends to the string table in call order, so the order of the calls in
      * EmitShaderManifest decides every string index in the file. Do not reorder them. */
 
-
     std::vector<ManifestEntryPoint> BuildEntryPointRecords(const CookedModule& module,
                                                            StringTableBuilder& strings)
     {
@@ -431,29 +496,69 @@ namespace
         return records;
     }
 
+    /** The four cooked tables, flattened into runs over index and payload tables. */
     struct LayoutTables
     {
         std::vector<ManifestUniformMember> UniformMembers;
         std::vector<ManifestBinding> Bindings;
-        std::vector<ManifestLayout> Layouts;
+        std::vector<uint32_t> ResourceIndices;
+        std::vector<ManifestRun> ResourceLists;
+        std::vector<ManifestFootprint> Footprints;
+        std::vector<ManifestRun> FootprintLists;
+        std::vector<uint32_t> VisibilityIndices;
+        std::vector<ManifestRun> VisibilityLists;
     };
+
+    template<typename PayloadType, typename RecordType, typename MakeRecordFn>
+    void AppendRuns(const std::vector<std::vector<PayloadType>>& lists,
+                    std::vector<RecordType>& out_payloads,
+                    std::vector<ManifestRun>& out_runs,
+                    MakeRecordFn make_record)
+    {
+        // using input sizes as part of reserve in case we merge lists or runs
+        // together in the future: otherwise we'd underallocate (if at all) often
+        size_t totalSize = 0u;
+        for (const std::vector<PayloadType>& list : lists)
+        {
+            totalSize += list.size();
+        }
+
+        uint32_t currentOffset = static_cast<uint32_t>(out_payloads.size());
+        for (const std::vector<PayloadType>& list : lists)
+        {
+            const uint32_t currentListSize = static_cast<uint32_t>(list.size());
+            out_runs.emplace_back(currentOffset, currentListSize);
+            currentOffset += currentListSize;
+        }
+
+        // trying something a little new, esp. since we have that input lambda
+        auto flattenedRecords = lists | std::views::join | std::views::transform(make_record);
+        out_payloads.insert(out_payloads.end(),
+                            std::make_move_iterator(flattenedRecords.begin()),
+                            std::make_move_iterator(flattenedRecords.end()));
+    }
+
+    uint32_t PassThroughIndex(uint32_t index) noexcept
+    {
+        return index;
+    }
 
     LayoutTables BuildLayoutTables(const CookedModule& module, StringTableBuilder& strings)
     {
         LayoutTables tables;
-        tables.Layouts.reserve(module.Layouts.size());
+        tables.Bindings.reserve(module.Resources.size());
 
-        for (const ShaderLayout& layout : module.Layouts)
+        for (const ReflectedBinding& resource : module.Resources)
         {
-            tables.Layouts.push_back(
-                ManifestLayout{ .FirstBinding = static_cast<uint32_t>(tables.Bindings.size()),
-                                .BindingCount = static_cast<uint32_t>(layout.size()) });
-
-            for (const ReflectedBinding& binding : layout)
-            {
-                tables.Bindings.push_back(MakeBindingRecord(binding, strings, tables.UniformMembers));
-            }
+            tables.Bindings.push_back(MakeBindingRecord(resource, strings, tables.UniformMembers));
         }
+        // todo-ship: Make this into a move, and make footprint record stop using a variant. Change values
+        // to be stored not in a variant, but in a dedicated footprint record structure that we can just copy
+        // already. Use sentinel values to derive type
+        AppendRuns(module.ResourceLists, tables.ResourceIndices, tables.ResourceLists, &PassThroughIndex);
+        AppendRuns(module.FootprintLists, tables.Footprints, tables.FootprintLists, &MakeFootprintRecord);
+        AppendRuns(
+            module.VisibilityLists, tables.VisibilityIndices, tables.VisibilityLists, &PassThroughIndex);
 
         return tables;
     }
@@ -465,8 +570,7 @@ namespace
         std::vector<ManifestRaster> Rasters;
     };
 
-    ManifestVertexInput MakeVertexInputRecord(const ReflectedVertexInput& input,
-                                              StringTableBuilder& strings)
+    ManifestVertexInput MakeVertexInputRecord(const ReflectedVertexInput& input, StringTableBuilder& strings)
     {
         ManifestVertexInput record;
         record.SemanticNameString = strings.Add(input.SemanticName);
@@ -525,7 +629,7 @@ namespace
     {
         ManifestSlot slot;
         slot.SourceIndex = variant.SourceIndices[entry_point_index];
-        slot.LayoutIndex = variant.LayoutIndices[entry_point_index];
+        slot.VisibilityIndex = variant.VisibilityIndices[entry_point_index];
         slot.WorkgroupX = variant.Workgroups[entry_point_index].X;
         slot.WorkgroupY = variant.Workgroups[entry_point_index].Y;
         slot.WorkgroupZ = variant.Workgroups[entry_point_index].Z;
@@ -547,6 +651,8 @@ namespace
             record.FirstSlot = static_cast<uint32_t>(tables.Slots.size());
             record.SlotCount = static_cast<uint32_t>(module.EntryPoints.size());
             record.SuffixString = strings.Add(variant.Suffix);
+            record.ResourceListIndex = variant.ResourceListIndex;
+            record.FootprintListIndex = variant.FootprintListIndex;
             tables.Variants.push_back(record);
 
             for (size_t i = 0u; i < module.EntryPoints.size(); ++i)
@@ -635,11 +741,11 @@ std::string EmitShaderManifest(const CookedModule& module)
 {
     StringTableBuilder strings;
     /** DO NOT REORDER THESE. The order of these calls currently decides the order of the strings
-      * in the resulting manifest file. We encode the offsets and lengths of these strings based 
-      * on the header of ShaderManifest, so changing the order changes data locations and result layout! 
-      * This is, of course, a fragile design, but doing more is a bit out of scope for this tool rn.
-      * And to be clear, this ordering *here* exactly is for the indices. Not the actual stored bytes.
-      */
+     * in the resulting manifest file. We encode the offsets and lengths of these strings based
+     * on the header of ShaderManifest, so changing the order changes data locations and result layout!
+     * This is, of course, a fragile design, but doing more is a bit out of scope for this tool rn.
+     * And to be clear, this ordering *here* exactly is for the indices. Not the actual stored bytes.
+     */
     const uint32_t moduleNameString = strings.Add(module.Name);
     const std::vector<ManifestEntryPoint> entryPointRecords = BuildEntryPointRecords(module, strings);
     const LayoutTables layouts = BuildLayoutTables(module, strings);
@@ -653,23 +759,29 @@ std::string EmitShaderManifest(const CookedModule& module)
     header.Magic = k_ShaderManifestMagic;
     header.Version = k_ShaderManifestVersion;
     header.ModuleNameString = moduleNameString;
-    
+
     std::string bytes;
 
     // fully reserve bytes: we know all of our sizes now!
-    // some of these use decltype, as I have a hunch we might change them in the future (namely, integral types)
-    const size_t totalSize = sizeof(ShaderManifestHeader) + strings.Blob().size() + sources.Blob.size() +
-                             (entryPointRecords.size() * sizeof(ManifestEntryPoint)) +
-                             (layouts.Bindings.size() * sizeof(ManifestBinding)) +
-                             (layouts.Layouts.size() * sizeof(ManifestLayout)) +
-                             (rasters.VertexInputs.size() * sizeof(ManifestVertexInput)) +
-                             (rasters.ColorTargets.size() * sizeof(ManifestColorTarget)) +
-                             (rasters.Rasters.size() * sizeof(ManifestRaster)) +
-                             (variants.Slots.size() * sizeof(ManifestSlot)) +
-                             (variants.Variants.size() * sizeof(ManifestVariant)) +
-                             (variantIndexRecords.size() * sizeof(decltype(variantIndexRecords)::value_type)) +
-                             (axes.Axes.size() * sizeof(ManifestAxis)) +
-                             (axes.Values.size() * sizeof(decltype(axes.Values)::value_type));
+    // some of these use decltype, as I have a hunch we might change them in the future (namely, integral
+    // types)
+    const size_t totalSize =
+        sizeof(ShaderManifestHeader) + strings.Blob().size() + sources.Blob.size() +
+        (entryPointRecords.size() * sizeof(ManifestEntryPoint)) +
+        (layouts.Bindings.size() * sizeof(ManifestBinding)) +
+        (layouts.ResourceIndices.size() * sizeof(uint32_t)) +
+        (layouts.ResourceLists.size() * sizeof(ManifestRun)) +
+        (layouts.Footprints.size() * sizeof(ManifestFootprint)) +
+        (layouts.FootprintLists.size() * sizeof(ManifestRun)) +
+        (layouts.VisibilityIndices.size() * sizeof(uint32_t)) +
+        (layouts.VisibilityLists.size() * sizeof(ManifestRun)) +
+        (rasters.VertexInputs.size() * sizeof(ManifestVertexInput)) +
+        (rasters.ColorTargets.size() * sizeof(ManifestColorTarget)) +
+        (rasters.Rasters.size() * sizeof(ManifestRaster)) + (variants.Slots.size() * sizeof(ManifestSlot)) +
+        (variants.Variants.size() * sizeof(ManifestVariant)) +
+        (variantIndexRecords.size() * sizeof(decltype(variantIndexRecords)::value_type)) +
+        (axes.Axes.size() * sizeof(ManifestAxis)) +
+        (axes.Values.size() * sizeof(decltype(axes.Values)::value_type));
 
     bytes.reserve(totalSize);
     bytes.resize(sizeof(ShaderManifestHeader), '\0');
@@ -693,11 +805,21 @@ std::string EmitShaderManifest(const CookedModule& module)
     // DO NOT REORDER THESE. Above, the ordering sets how the indices for the string table are assigned.
     // This ordering controls the actual order of the data the indices refer to. Changing either one
     // will break the other. If you are going to change something, BOTH must be changed together
-    
+
     header.BindingTableOffset = AppendTable(bytes, layouts.Bindings);
     header.BindingCount = static_cast<uint32_t>(layouts.Bindings.size());
-    header.LayoutTableOffset = AppendTable(bytes, layouts.Layouts);
-    header.LayoutCount = static_cast<uint32_t>(layouts.Layouts.size());
+    header.ResourceIndexTableOffset = AppendTable(bytes, layouts.ResourceIndices);
+    header.ResourceIndexCount = static_cast<uint32_t>(layouts.ResourceIndices.size());
+    header.ResourceListTableOffset = AppendTable(bytes, layouts.ResourceLists);
+    header.ResourceListCount = static_cast<uint32_t>(layouts.ResourceLists.size());
+    header.FootprintTableOffset = AppendTable(bytes, layouts.Footprints);
+    header.FootprintCount = static_cast<uint32_t>(layouts.Footprints.size());
+    header.FootprintListTableOffset = AppendTable(bytes, layouts.FootprintLists);
+    header.FootprintListCount = static_cast<uint32_t>(layouts.FootprintLists.size());
+    header.VisibilityIndexTableOffset = AppendTable(bytes, layouts.VisibilityIndices);
+    header.VisibilityIndexCount = static_cast<uint32_t>(layouts.VisibilityIndices.size());
+    header.VisibilityListTableOffset = AppendTable(bytes, layouts.VisibilityLists);
+    header.VisibilityListCount = static_cast<uint32_t>(layouts.VisibilityLists.size());
     header.EntryPointTableOffset = AppendTable(bytes, entryPointRecords);
     header.EntryPointCount = static_cast<uint32_t>(entryPointRecords.size());
     header.SlotTableOffset = AppendTable(bytes, variants.Slots);

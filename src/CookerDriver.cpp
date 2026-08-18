@@ -69,14 +69,14 @@ namespace
                      entryPoint.Reflection.Workgroup.Y,
                      entryPoint.Reflection.Workgroup.Z);
 
-        for (const ReflectedBinding& binding : BuildEntryPointLayout(variant, entry_point_index))
+        for (const ResolvedBinding& resolved : BuildEntryPointLayout(variant, entry_point_index))
         {
             std::println(stderr,
-                         "[shader_cooker]     {} usedBy=0x{:x}",
-                         DescribeBinding(binding),
-                         binding.EntryPointUsageMask);
+                         "[shader_cooker]     {}{}",
+                         DescribeBinding(resolved.Resource),
+                         DescribeFootprint(resolved.Footprint));
 
-            const std::string members = DescribeUniformMembers(binding);
+            const std::string members = DescribeUniformMembers(resolved.Resource);
             if (!members.empty())
             {
                 std::print(stderr, "{}", members);
@@ -189,6 +189,63 @@ namespace
     /** Replays every variant through the finished tables and compares the result against the text the
      * compiler produced. This is the one check that makes a wrong shader impossible to ship: an index
      * mistake, a table hole, or a bad collapse all show up here, and all of them fail the cook. */
+    const CompiledVariant* FindCompiledVariant(std::span<const CompiledVariant> compiled,
+                                               uint32_t variant_index) noexcept
+    {
+        for (const CompiledVariant& candidate : compiled)
+        {
+            if (candidate.VariantIndex == variant_index)
+            {
+                return &candidate;
+            }
+        }
+
+        return nullptr;
+    }
+
+    /** Replays every layout through the finished tables and compares it against the bindings the
+     * compiler produced.
+     *
+     * The source table has a second opinion, and until this check the layout table had none.
+     * `CheckManifestLayout` compares the manifest against the table it was written from, so it can
+     * prove the serialization is faithful and cannot see a wrong collapse. */
+    CookResult<void> VerifyLayoutRoundTrip(const CookedModule& module,
+                                           std::span<const CompiledVariant> compiled)
+    {
+        uint32_t mismatches = 0u;
+
+        for (const LibraryVariant& variant : module.Variants)
+        {
+            const CompiledVariant* origin = FindCompiledVariant(compiled, variant.Index);
+            if (origin == nullptr)
+            {
+                continue;
+            }
+
+            for (size_t i = 0u; i < origin->EntryPoints.size(); ++i)
+            {
+                if (ResolveLayout(module, variant, i) == BuildEntryPointLayout(*origin, i))
+                {
+                    continue;
+                }
+
+                std::println(stderr,
+                             "[shader_cooker] LAYOUT ROUND TRIP FAILED for {} [{}]: the tables return "
+                             "different bindings than the compiler produced",
+                             origin->EntryPoints[i].Name,
+                             variant.Description);
+                ++mismatches;
+            }
+        }
+
+        if (mismatches != 0u)
+        {
+            return std::unexpected(CookError::LibraryRoundTripFailed);
+        }
+
+        return {};
+    }
+
     CookResult<void> VerifyLibraryRoundTrip(const CookedModule& module,
                                             std::span<const CompiledVariant> compiled)
     {
@@ -205,16 +262,7 @@ namespace
         uint32_t mismatches = 0u;
         for (const LibraryVariant& variant : module.Variants)
         {
-            const CompiledVariant* origin = nullptr;
-            for (const CompiledVariant& candidate : compiled)
-            {
-                if (candidate.VariantIndex == variant.Index)
-                {
-                    origin = &candidate;
-                    break;
-                }
-            }
-
+            const CompiledVariant* origin = FindCompiledVariant(compiled, variant.Index);
             if (origin == nullptr)
             {
                 std::println(stderr,
@@ -264,10 +312,14 @@ namespace
 
             statistics.GeneratedSourceBytes += source.size();
             std::println(stderr,
-                         "[shader_cooker] wrote {} ({} unique sources, {} layouts, {} KiB)",
+                         "[shader_cooker] wrote {} ({} unique sources, {} resources, {} resource "
+                         "lists, {} footprint lists, {} visibility lists, {} KiB)",
                          sourceName,
                          module.Sources.size(),
-                         module.Layouts.size(),
+                         module.Resources.size(),
+                         module.ResourceLists.size(),
+                         module.FootprintLists.size(),
+                         module.VisibilityLists.size(),
                          source.size() / 1024u);
 
             const std::string manifest = EmitShaderManifest(module);
@@ -424,7 +476,7 @@ namespace
 
     /** @brief Runs Slang compiler on each variant (which contains multiple entry points, remember),
      * and then takes that result and "resolves" it by evaluating our custom meta-language for sizes
-     * and resource descriptors etc */
+     * and resource descriptors etc. This is also when the index tables are built as well. */
     CookResult<void> CompileModuleVariants(const CookerOptions& options,
                                            const TargetProfile& target,
                                            SlangCompiler& compiler,
@@ -506,6 +558,12 @@ namespace
             !roundTripResult)
         {
             return std::unexpected(roundTripResult.error());
+        }
+
+        if (CookResult<void> layoutResult = VerifyLayoutRoundTrip(cookedModule, module_variants);
+            !layoutResult)
+        {
+            return std::unexpected(layoutResult.error());
         }
 
         std::println(stderr,
@@ -600,11 +658,7 @@ namespace
         InternedModule internedModule;
         if (!options.DedupeEnabled)
         {
-            // The raster interner stays on, and that is not obviously right. See the D8 note in
-            // `docs/phase-d-stage-separation-plan.md`. Kept as it was, because D8 moves a boundary
-            // and must not also change what a flag does.
-            internedModule.SourceInterner.Disable();
-            internedModule.LayoutInterner.Disable();
+            DisableDedupe(internedModule);
         }
         internedModule.Name = moduleName;
         internedModule.Space = space;

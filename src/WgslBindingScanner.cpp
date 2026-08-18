@@ -82,8 +82,7 @@ namespace
         return offset;
     }
 
-    WgslAddressSpace ClassifyAddressSpace(std::string_view space_word,
-                                          std::string_view access_word) noexcept
+    WgslAddressSpace ClassifyAddressSpace(std::string_view space_word, std::string_view access_word) noexcept
     {
         if (space_word == "uniform")
         {
@@ -311,8 +310,8 @@ BindingComparison CompareBindings(std::span<const WgslDeclaredBinding> declared,
         const ReflectedBinding* match = nullptr;
         for (const ReflectedBinding& reflectedBinding : reflected)
         {
-            if (reflectedBinding.Group == declaredBinding.Group &&
-                reflectedBinding.Binding == declaredBinding.Binding)
+            if (GroupOf(reflectedBinding) == declaredBinding.Group &&
+                BindingOf(reflectedBinding) == declaredBinding.Binding)
             {
                 match = &reflectedBinding;
                 break;
@@ -360,8 +359,8 @@ BindingComparison CompareBindings(std::span<const WgslDeclaredBinding> declared,
             std::ranges::find_if(declared,
                                  [&reflectedBinding](const WgslDeclaredBinding& candidate)
                                  {
-                                     return candidate.Group == reflectedBinding.Group &&
-                                            candidate.Binding == reflectedBinding.Binding;
+                                     return candidate.Group == GroupOf(reflectedBinding) &&
+                                            candidate.Binding == BindingOf(reflectedBinding);
                                  });
 
         if (found == declared.end())

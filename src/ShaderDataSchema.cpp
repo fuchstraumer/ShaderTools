@@ -147,27 +147,69 @@ std::string DescribeRasterState(const ReflectedRasterState& raster)
     return description;
 }
 
-bool SameBindingLocation(const ReflectedBinding& lhs, const ReflectedBinding& rhs) noexcept
+const BoundPlacement* GetBoundPlacement(const ResourcePlacement& placement) noexcept
 {
-    return lhs.Group == rhs.Group && lhs.Binding == rhs.Binding;
+    return std::get_if<BoundPlacement>(&placement);
 }
 
-std::vector<ReflectedBinding> BuildEntryPointLayout(const CompiledVariant& variant, size_t entry_point_index)
+bool PlacementLess(const ResourcePlacement& lhs, const ResourcePlacement& rhs) noexcept
+{
+    const BoundPlacement* left = GetBoundPlacement(lhs);
+    const BoundPlacement* right = GetBoundPlacement(rhs);
+
+    if (left == nullptr || right == nullptr)
+    {
+        return left != nullptr;
+    }
+
+    if (left->Group != right->Group)
+    {
+        return left->Group < right->Group;
+    }
+
+    return left->Binding < right->Binding;
+}
+
+uint32_t GroupOf(const ReflectedBinding& binding) noexcept
+{
+    const BoundPlacement* placement = GetBoundPlacement(binding.Placement);
+    return placement != nullptr ? placement->Group : 0u;
+}
+
+uint32_t BindingOf(const ReflectedBinding& binding) noexcept
+{
+    const BoundPlacement* placement = GetBoundPlacement(binding.Placement);
+    return placement != nullptr ? placement->Binding : 0u;
+}
+
+bool SameBindingLocation(const ReflectedBinding& lhs, const ReflectedBinding& rhs) noexcept
+{
+    return lhs.Placement == rhs.Placement;
+}
+
+std::vector<ResolvedBinding> BuildEntryPointLayout(const CompiledVariant& variant, size_t entry_point_index)
 {
     if (entry_point_index >= variant.EntryPoints.size())
     {
         return {};
     }
 
-    std::vector<ReflectedBinding> layout = variant.GlobalBindings;
-    const uint32_t entryPointBit = 1u << static_cast<uint32_t>(entry_point_index);
+    std::vector<ResolvedBinding> layout;
 
-    for (const uint32_t bindingIndex : variant.EntryPoints[entry_point_index].Reflection.UsedBindingIndices)
+    for (const uint32_t index : variant.EntryPoints[entry_point_index].Reflection.UsedBindingIndices)
     {
-        if (bindingIndex < layout.size())
+        if (index >= variant.GlobalBindings.size())
         {
-            layout[bindingIndex].EntryPointUsageMask = entryPointBit;
+            continue;
         }
+
+        ResourceFootprint footprint{};
+        if (index < variant.Footprints.size())
+        {
+            footprint = variant.Footprints[index];
+        }
+
+        layout.emplace_back(variant.GlobalBindings[index], std::move(footprint));
     }
 
     return layout;
@@ -178,19 +220,34 @@ void SortBindingsByLocation(std::span<ReflectedBinding> bindings) noexcept
     std::ranges::sort(bindings,
                       [](const ReflectedBinding& lhs, const ReflectedBinding& rhs)
                       {
-                          if (lhs.Group != rhs.Group)
-                          {
-                              return lhs.Group < rhs.Group;
-                          }
-                          return lhs.Binding < rhs.Binding;
+                          return PlacementLess(lhs.Placement, rhs.Placement);
                       });
+}
+
+std::string DescribeFootprint(const ResourceFootprint& footprint)
+{
+    if (const BufferFootprint* buffer = std::get_if<BufferFootprint>(&footprint))
+    {
+        return std::format(" count={} [{}]", buffer->ElementCount, buffer->Expression);
+    }
+
+    if (const TextureFootprint* texture = std::get_if<TextureFootprint>(&footprint))
+    {
+        return std::format(" extent={}x{}x{} [{}]",
+                           texture->ExtentX,
+                           texture->ExtentY,
+                           texture->ExtentZ,
+                           texture->Expression);
+    }
+
+    return {};
 }
 
 std::string DescribeBinding(const ReflectedBinding& binding)
 {
     std::string description = std::format("@group({}) @binding({}) {} : {}",
-                                          binding.Group,
-                                          binding.Binding,
+                                          GroupOf(binding),
+                                          BindingOf(binding),
                                           binding.Name,
                                           ToString(binding.Kind));
 
@@ -217,18 +274,6 @@ std::string DescribeBinding(const ReflectedBinding& binding)
     if (binding.ArrayCount > 1u)
     {
         description += std::format(" array={}", binding.ArrayCount);
-    }
-
-    if (binding.Derived.HasElementCount)
-    {
-        description +=
-            std::format(" count={} [{}]", binding.Derived.ElementCount, binding.Derived.Expression);
-    }
-
-    if (binding.Derived.HasExtent)
-    {
-        description += std::format(
-            " extent={}x{}x{}", binding.Derived.ExtentX, binding.Derived.ExtentY, binding.Derived.ExtentZ);
     }
 
     return description;

@@ -3,7 +3,10 @@
     "module": "OceanFft",
     "spaceSize": 56,
     "sourceCount": 77,
-    "layoutCount": 21,
+    "resourceCount": 4,
+    "resourceListCount": 1,
+    "footprintListCount": 7,
+    "visibilityListCount": 2,
     "rasterStateCount": 1,
     "variantCount": 35,
     "entryPoints": [
@@ -407,2756 +410,337 @@
             "contentHash": 8979497836019921204
         }
     ],
-    "layouts": [
+    "resources": [
         {
             "index": 0,
-            "contentHash": 2964928071796165112,
-            "bindings": [
+            "contentHash": 14580765458023374781,
+            "resource": {
+                "name": "IfftInput",
+                "placementKind": "bound",
+                "group": 0,
+                "binding": 0,
+                "kind": "StorageBuffer",
+                "elementStride": 8,
+                "byteSize": 0,
+                "arrayCount": 1,
+                "shape": "Buffer",
+                "sampleType": "Invalid",
+                "storageFormat": "Invalid",
+                "storageAccess": "Invalid",
+                "samplerType": "Invalid",
+                "uniformMembers": []
+            }
+        },
+        {
+            "index": 1,
+            "contentHash": 7392106793333846213,
+            "resource": {
+                "name": "IfftParams",
+                "placementKind": "bound",
+                "group": 0,
+                "binding": 1,
+                "kind": "UniformBuffer",
+                "elementStride": 0,
+                "byteSize": 16,
+                "arrayCount": 1,
+                "shape": "Invalid",
+                "sampleType": "Invalid",
+                "storageFormat": "Invalid",
+                "storageAccess": "Invalid",
+                "samplerType": "Invalid",
+                "uniformMembers": [
+                    {
+                        "name": "Transpose",
+                        "offset": 0,
+                        "size": 4,
+                        "arrayCount": 1
+                    },
+                    {
+                        "name": "WaveSize",
+                        "offset": 4,
+                        "size": 4,
+                        "arrayCount": 1
+                    },
+                    {
+                        "name": "Log4WaveSize",
+                        "offset": 8,
+                        "size": 4,
+                        "arrayCount": 1
+                    },
+                    {
+                        "name": "Pad0",
+                        "offset": 12,
+                        "size": 4,
+                        "arrayCount": 1
+                    }
+                ]
+            }
+        },
+        {
+            "index": 2,
+            "contentHash": 6754580485546897063,
+            "resource": {
+                "name": "IfftSinCosLUT",
+                "placementKind": "bound",
+                "group": 0,
+                "binding": 2,
+                "kind": "SampledTexture",
+                "elementStride": 0,
+                "byteSize": 0,
+                "arrayCount": 1,
+                "shape": "Texture1D",
+                "sampleType": "Float",
+                "storageFormat": "Invalid",
+                "storageAccess": "Invalid",
+                "samplerType": "Invalid",
+                "uniformMembers": []
+            }
+        },
+        {
+            "index": 3,
+            "contentHash": 10676897991120521469,
+            "resource": {
+                "name": "IfftLUTSampler",
+                "placementKind": "bound",
+                "group": 0,
+                "binding": 3,
+                "kind": "Sampler",
+                "elementStride": 0,
+                "byteSize": 0,
+                "arrayCount": 1,
+                "shape": "Invalid",
+                "sampleType": "Invalid",
+                "storageFormat": "Invalid",
+                "storageAccess": "Invalid",
+                "samplerType": "Filtering",
+                "uniformMembers": []
+            }
+        }
+    ],
+    "resourceLists": [
+        {
+            "index": 0,
+            "contentHash": 11229258448519728018,
+            "indices": [
+                0,
+                1,
+                2,
+                3
+            ]
+        }
+    ],
+    "footprintLists": [
+        {
+            "index": 0,
+            "contentHash": 10047062039617584142,
+            "footprints": [
                 {
-                    "name": "IfftInput",
-                    "group": 0,
-                    "binding": 0,
-                    "kind": "StorageBuffer",
-                    "entryPointUsageMask": 1,
-                    "elementStride": 8,
-                    "byteSize": 0,
-                    "arrayCount": 1,
-                    "shape": "Buffer",
-                    "sampleType": "Invalid",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Invalid",
-                    "derived": {
-                        "expression": "IFFT_SIZE * IFFT_SIZE * IFFT_NUM_WAVE_CASCADES",
-                        "hasElementCount": true,
+                    "footprint": {
+                        "kind": "buffer",
                         "elementCount": 65536,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": []
+                        "expression": "IFFT_SIZE * IFFT_SIZE * IFFT_NUM_WAVE_CASCADES"
+                    }
                 },
                 {
-                    "name": "IfftParams",
-                    "group": 0,
-                    "binding": 1,
-                    "kind": "UniformBuffer",
-                    "entryPointUsageMask": 1,
-                    "elementStride": 0,
-                    "byteSize": 16,
-                    "arrayCount": 1,
-                    "shape": "Invalid",
-                    "sampleType": "Invalid",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Invalid",
-                    "derived": {
-                        "expression": "",
-                        "hasElementCount": false,
-                        "elementCount": 0,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": [
-                        {
-                            "name": "Transpose",
-                            "offset": 0,
-                            "size": 4,
-                            "arrayCount": 1
-                        },
-                        {
-                            "name": "WaveSize",
-                            "offset": 4,
-                            "size": 4,
-                            "arrayCount": 1
-                        },
-                        {
-                            "name": "Log4WaveSize",
-                            "offset": 8,
-                            "size": 4,
-                            "arrayCount": 1
-                        },
-                        {
-                            "name": "Pad0",
-                            "offset": 12,
-                            "size": 4,
-                            "arrayCount": 1
-                        }
-                    ]
+                    "footprint": {
+                        "kind": "none"
+                    }
                 },
                 {
-                    "name": "IfftSinCosLUT",
-                    "group": 0,
-                    "binding": 2,
-                    "kind": "SampledTexture",
-                    "entryPointUsageMask": 0,
-                    "elementStride": 0,
-                    "byteSize": 0,
-                    "arrayCount": 1,
-                    "shape": "Texture1D",
-                    "sampleType": "Float",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Invalid",
-                    "derived": {
-                        "expression": "",
-                        "hasElementCount": false,
-                        "elementCount": 0,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": []
+                    "footprint": {
+                        "kind": "none"
+                    }
                 },
                 {
-                    "name": "IfftLUTSampler",
-                    "group": 0,
-                    "binding": 3,
-                    "kind": "Sampler",
-                    "entryPointUsageMask": 0,
-                    "elementStride": 0,
-                    "byteSize": 0,
-                    "arrayCount": 1,
-                    "shape": "Invalid",
-                    "sampleType": "Invalid",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Filtering",
-                    "derived": {
-                        "expression": "",
-                        "hasElementCount": false,
-                        "elementCount": 0,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": []
+                    "footprint": {
+                        "kind": "none"
+                    }
                 }
             ]
         },
         {
             "index": 1,
-            "contentHash": 11047669844853379236,
-            "bindings": [
+            "contentHash": 10142233814455029471,
+            "footprints": [
                 {
-                    "name": "IfftInput",
-                    "group": 0,
-                    "binding": 0,
-                    "kind": "StorageBuffer",
-                    "entryPointUsageMask": 2,
-                    "elementStride": 8,
-                    "byteSize": 0,
-                    "arrayCount": 1,
-                    "shape": "Buffer",
-                    "sampleType": "Invalid",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Invalid",
-                    "derived": {
-                        "expression": "IFFT_SIZE * IFFT_SIZE * IFFT_NUM_WAVE_CASCADES",
-                        "hasElementCount": true,
-                        "elementCount": 65536,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": []
+                    "footprint": {
+                        "kind": "buffer",
+                        "elementCount": 262144,
+                        "expression": "IFFT_SIZE * IFFT_SIZE * IFFT_NUM_WAVE_CASCADES"
+                    }
                 },
                 {
-                    "name": "IfftParams",
-                    "group": 0,
-                    "binding": 1,
-                    "kind": "UniformBuffer",
-                    "entryPointUsageMask": 2,
-                    "elementStride": 0,
-                    "byteSize": 16,
-                    "arrayCount": 1,
-                    "shape": "Invalid",
-                    "sampleType": "Invalid",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Invalid",
-                    "derived": {
-                        "expression": "",
-                        "hasElementCount": false,
-                        "elementCount": 0,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": [
-                        {
-                            "name": "Transpose",
-                            "offset": 0,
-                            "size": 4,
-                            "arrayCount": 1
-                        },
-                        {
-                            "name": "WaveSize",
-                            "offset": 4,
-                            "size": 4,
-                            "arrayCount": 1
-                        },
-                        {
-                            "name": "Log4WaveSize",
-                            "offset": 8,
-                            "size": 4,
-                            "arrayCount": 1
-                        },
-                        {
-                            "name": "Pad0",
-                            "offset": 12,
-                            "size": 4,
-                            "arrayCount": 1
-                        }
-                    ]
+                    "footprint": {
+                        "kind": "none"
+                    }
                 },
                 {
-                    "name": "IfftSinCosLUT",
-                    "group": 0,
-                    "binding": 2,
-                    "kind": "SampledTexture",
-                    "entryPointUsageMask": 0,
-                    "elementStride": 0,
-                    "byteSize": 0,
-                    "arrayCount": 1,
-                    "shape": "Texture1D",
-                    "sampleType": "Float",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Invalid",
-                    "derived": {
-                        "expression": "",
-                        "hasElementCount": false,
-                        "elementCount": 0,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": []
+                    "footprint": {
+                        "kind": "none"
+                    }
                 },
                 {
-                    "name": "IfftLUTSampler",
-                    "group": 0,
-                    "binding": 3,
-                    "kind": "Sampler",
-                    "entryPointUsageMask": 0,
-                    "elementStride": 0,
-                    "byteSize": 0,
-                    "arrayCount": 1,
-                    "shape": "Invalid",
-                    "sampleType": "Invalid",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Filtering",
-                    "derived": {
-                        "expression": "",
-                        "hasElementCount": false,
-                        "elementCount": 0,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": []
+                    "footprint": {
+                        "kind": "none"
+                    }
                 }
             ]
         },
         {
             "index": 2,
-            "contentHash": 1858459909394393932,
-            "bindings": [
+            "contentHash": 12086228948107662483,
+            "footprints": [
                 {
-                    "name": "IfftInput",
-                    "group": 0,
-                    "binding": 0,
-                    "kind": "StorageBuffer",
-                    "entryPointUsageMask": 4,
-                    "elementStride": 8,
-                    "byteSize": 0,
-                    "arrayCount": 1,
-                    "shape": "Buffer",
-                    "sampleType": "Invalid",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Invalid",
-                    "derived": {
-                        "expression": "IFFT_SIZE * IFFT_SIZE * IFFT_NUM_WAVE_CASCADES",
-                        "hasElementCount": true,
-                        "elementCount": 65536,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": []
+                    "footprint": {
+                        "kind": "buffer",
+                        "elementCount": 1048576,
+                        "expression": "IFFT_SIZE * IFFT_SIZE * IFFT_NUM_WAVE_CASCADES"
+                    }
                 },
                 {
-                    "name": "IfftParams",
-                    "group": 0,
-                    "binding": 1,
-                    "kind": "UniformBuffer",
-                    "entryPointUsageMask": 0,
-                    "elementStride": 0,
-                    "byteSize": 16,
-                    "arrayCount": 1,
-                    "shape": "Invalid",
-                    "sampleType": "Invalid",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Invalid",
-                    "derived": {
-                        "expression": "",
-                        "hasElementCount": false,
-                        "elementCount": 0,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": [
-                        {
-                            "name": "Transpose",
-                            "offset": 0,
-                            "size": 4,
-                            "arrayCount": 1
-                        },
-                        {
-                            "name": "WaveSize",
-                            "offset": 4,
-                            "size": 4,
-                            "arrayCount": 1
-                        },
-                        {
-                            "name": "Log4WaveSize",
-                            "offset": 8,
-                            "size": 4,
-                            "arrayCount": 1
-                        },
-                        {
-                            "name": "Pad0",
-                            "offset": 12,
-                            "size": 4,
-                            "arrayCount": 1
-                        }
-                    ]
+                    "footprint": {
+                        "kind": "none"
+                    }
                 },
                 {
-                    "name": "IfftSinCosLUT",
-                    "group": 0,
-                    "binding": 2,
-                    "kind": "SampledTexture",
-                    "entryPointUsageMask": 0,
-                    "elementStride": 0,
-                    "byteSize": 0,
-                    "arrayCount": 1,
-                    "shape": "Texture1D",
-                    "sampleType": "Float",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Invalid",
-                    "derived": {
-                        "expression": "",
-                        "hasElementCount": false,
-                        "elementCount": 0,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": []
+                    "footprint": {
+                        "kind": "none"
+                    }
                 },
                 {
-                    "name": "IfftLUTSampler",
-                    "group": 0,
-                    "binding": 3,
-                    "kind": "Sampler",
-                    "entryPointUsageMask": 0,
-                    "elementStride": 0,
-                    "byteSize": 0,
-                    "arrayCount": 1,
-                    "shape": "Invalid",
-                    "sampleType": "Invalid",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Filtering",
-                    "derived": {
-                        "expression": "",
-                        "hasElementCount": false,
-                        "elementCount": 0,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": []
+                    "footprint": {
+                        "kind": "none"
+                    }
                 }
             ]
         },
         {
             "index": 3,
-            "contentHash": 16017730534300916633,
-            "bindings": [
+            "contentHash": 10158123664372411235,
+            "footprints": [
                 {
-                    "name": "IfftInput",
-                    "group": 0,
-                    "binding": 0,
-                    "kind": "StorageBuffer",
-                    "entryPointUsageMask": 1,
-                    "elementStride": 8,
-                    "byteSize": 0,
-                    "arrayCount": 1,
-                    "shape": "Buffer",
-                    "sampleType": "Invalid",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Invalid",
-                    "derived": {
-                        "expression": "IFFT_SIZE * IFFT_SIZE * IFFT_NUM_WAVE_CASCADES",
-                        "hasElementCount": true,
-                        "elementCount": 262144,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": []
+                    "footprint": {
+                        "kind": "buffer",
+                        "elementCount": 4194304,
+                        "expression": "IFFT_SIZE * IFFT_SIZE * IFFT_NUM_WAVE_CASCADES"
+                    }
                 },
                 {
-                    "name": "IfftParams",
-                    "group": 0,
-                    "binding": 1,
-                    "kind": "UniformBuffer",
-                    "entryPointUsageMask": 1,
-                    "elementStride": 0,
-                    "byteSize": 16,
-                    "arrayCount": 1,
-                    "shape": "Invalid",
-                    "sampleType": "Invalid",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Invalid",
-                    "derived": {
-                        "expression": "",
-                        "hasElementCount": false,
-                        "elementCount": 0,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": [
-                        {
-                            "name": "Transpose",
-                            "offset": 0,
-                            "size": 4,
-                            "arrayCount": 1
-                        },
-                        {
-                            "name": "WaveSize",
-                            "offset": 4,
-                            "size": 4,
-                            "arrayCount": 1
-                        },
-                        {
-                            "name": "Log4WaveSize",
-                            "offset": 8,
-                            "size": 4,
-                            "arrayCount": 1
-                        },
-                        {
-                            "name": "Pad0",
-                            "offset": 12,
-                            "size": 4,
-                            "arrayCount": 1
-                        }
-                    ]
+                    "footprint": {
+                        "kind": "none"
+                    }
                 },
                 {
-                    "name": "IfftSinCosLUT",
-                    "group": 0,
-                    "binding": 2,
-                    "kind": "SampledTexture",
-                    "entryPointUsageMask": 0,
-                    "elementStride": 0,
-                    "byteSize": 0,
-                    "arrayCount": 1,
-                    "shape": "Texture1D",
-                    "sampleType": "Float",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Invalid",
-                    "derived": {
-                        "expression": "",
-                        "hasElementCount": false,
-                        "elementCount": 0,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": []
+                    "footprint": {
+                        "kind": "none"
+                    }
                 },
                 {
-                    "name": "IfftLUTSampler",
-                    "group": 0,
-                    "binding": 3,
-                    "kind": "Sampler",
-                    "entryPointUsageMask": 0,
-                    "elementStride": 0,
-                    "byteSize": 0,
-                    "arrayCount": 1,
-                    "shape": "Invalid",
-                    "sampleType": "Invalid",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Filtering",
-                    "derived": {
-                        "expression": "",
-                        "hasElementCount": false,
-                        "elementCount": 0,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": []
+                    "footprint": {
+                        "kind": "none"
+                    }
                 }
             ]
         },
         {
             "index": 4,
-            "contentHash": 2039259665200886125,
-            "bindings": [
+            "contentHash": 5011674144991177448,
+            "footprints": [
                 {
-                    "name": "IfftInput",
-                    "group": 0,
-                    "binding": 0,
-                    "kind": "StorageBuffer",
-                    "entryPointUsageMask": 2,
-                    "elementStride": 8,
-                    "byteSize": 0,
-                    "arrayCount": 1,
-                    "shape": "Buffer",
-                    "sampleType": "Invalid",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Invalid",
-                    "derived": {
-                        "expression": "IFFT_SIZE * IFFT_SIZE * IFFT_NUM_WAVE_CASCADES",
-                        "hasElementCount": true,
-                        "elementCount": 262144,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": []
+                    "footprint": {
+                        "kind": "buffer",
+                        "elementCount": 16777216,
+                        "expression": "IFFT_SIZE * IFFT_SIZE * IFFT_NUM_WAVE_CASCADES"
+                    }
                 },
                 {
-                    "name": "IfftParams",
-                    "group": 0,
-                    "binding": 1,
-                    "kind": "UniformBuffer",
-                    "entryPointUsageMask": 2,
-                    "elementStride": 0,
-                    "byteSize": 16,
-                    "arrayCount": 1,
-                    "shape": "Invalid",
-                    "sampleType": "Invalid",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Invalid",
-                    "derived": {
-                        "expression": "",
-                        "hasElementCount": false,
-                        "elementCount": 0,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": [
-                        {
-                            "name": "Transpose",
-                            "offset": 0,
-                            "size": 4,
-                            "arrayCount": 1
-                        },
-                        {
-                            "name": "WaveSize",
-                            "offset": 4,
-                            "size": 4,
-                            "arrayCount": 1
-                        },
-                        {
-                            "name": "Log4WaveSize",
-                            "offset": 8,
-                            "size": 4,
-                            "arrayCount": 1
-                        },
-                        {
-                            "name": "Pad0",
-                            "offset": 12,
-                            "size": 4,
-                            "arrayCount": 1
-                        }
-                    ]
+                    "footprint": {
+                        "kind": "none"
+                    }
                 },
                 {
-                    "name": "IfftSinCosLUT",
-                    "group": 0,
-                    "binding": 2,
-                    "kind": "SampledTexture",
-                    "entryPointUsageMask": 0,
-                    "elementStride": 0,
-                    "byteSize": 0,
-                    "arrayCount": 1,
-                    "shape": "Texture1D",
-                    "sampleType": "Float",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Invalid",
-                    "derived": {
-                        "expression": "",
-                        "hasElementCount": false,
-                        "elementCount": 0,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": []
+                    "footprint": {
+                        "kind": "none"
+                    }
                 },
                 {
-                    "name": "IfftLUTSampler",
-                    "group": 0,
-                    "binding": 3,
-                    "kind": "Sampler",
-                    "entryPointUsageMask": 0,
-                    "elementStride": 0,
-                    "byteSize": 0,
-                    "arrayCount": 1,
-                    "shape": "Invalid",
-                    "sampleType": "Invalid",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Filtering",
-                    "derived": {
-                        "expression": "",
-                        "hasElementCount": false,
-                        "elementCount": 0,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": []
+                    "footprint": {
+                        "kind": "none"
+                    }
                 }
             ]
         },
         {
             "index": 5,
-            "contentHash": 16260479891233739781,
-            "bindings": [
+            "contentHash": 7460766068241709735,
+            "footprints": [
                 {
-                    "name": "IfftInput",
-                    "group": 0,
-                    "binding": 0,
-                    "kind": "StorageBuffer",
-                    "entryPointUsageMask": 4,
-                    "elementStride": 8,
-                    "byteSize": 0,
-                    "arrayCount": 1,
-                    "shape": "Buffer",
-                    "sampleType": "Invalid",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Invalid",
-                    "derived": {
-                        "expression": "IFFT_SIZE * IFFT_SIZE * IFFT_NUM_WAVE_CASCADES",
-                        "hasElementCount": true,
-                        "elementCount": 262144,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": []
+                    "footprint": {
+                        "kind": "buffer",
+                        "elementCount": 67108864,
+                        "expression": "IFFT_SIZE * IFFT_SIZE * IFFT_NUM_WAVE_CASCADES"
+                    }
                 },
                 {
-                    "name": "IfftParams",
-                    "group": 0,
-                    "binding": 1,
-                    "kind": "UniformBuffer",
-                    "entryPointUsageMask": 0,
-                    "elementStride": 0,
-                    "byteSize": 16,
-                    "arrayCount": 1,
-                    "shape": "Invalid",
-                    "sampleType": "Invalid",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Invalid",
-                    "derived": {
-                        "expression": "",
-                        "hasElementCount": false,
-                        "elementCount": 0,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": [
-                        {
-                            "name": "Transpose",
-                            "offset": 0,
-                            "size": 4,
-                            "arrayCount": 1
-                        },
-                        {
-                            "name": "WaveSize",
-                            "offset": 4,
-                            "size": 4,
-                            "arrayCount": 1
-                        },
-                        {
-                            "name": "Log4WaveSize",
-                            "offset": 8,
-                            "size": 4,
-                            "arrayCount": 1
-                        },
-                        {
-                            "name": "Pad0",
-                            "offset": 12,
-                            "size": 4,
-                            "arrayCount": 1
-                        }
-                    ]
+                    "footprint": {
+                        "kind": "none"
+                    }
                 },
                 {
-                    "name": "IfftSinCosLUT",
-                    "group": 0,
-                    "binding": 2,
-                    "kind": "SampledTexture",
-                    "entryPointUsageMask": 0,
-                    "elementStride": 0,
-                    "byteSize": 0,
-                    "arrayCount": 1,
-                    "shape": "Texture1D",
-                    "sampleType": "Float",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Invalid",
-                    "derived": {
-                        "expression": "",
-                        "hasElementCount": false,
-                        "elementCount": 0,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": []
+                    "footprint": {
+                        "kind": "none"
+                    }
                 },
                 {
-                    "name": "IfftLUTSampler",
-                    "group": 0,
-                    "binding": 3,
-                    "kind": "Sampler",
-                    "entryPointUsageMask": 0,
-                    "elementStride": 0,
-                    "byteSize": 0,
-                    "arrayCount": 1,
-                    "shape": "Invalid",
-                    "sampleType": "Invalid",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Filtering",
-                    "derived": {
-                        "expression": "",
-                        "hasElementCount": false,
-                        "elementCount": 0,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": []
+                    "footprint": {
+                        "kind": "none"
+                    }
                 }
             ]
         },
         {
             "index": 6,
-            "contentHash": 11474456423952499877,
-            "bindings": [
+            "contentHash": 631700477119780403,
+            "footprints": [
                 {
-                    "name": "IfftInput",
-                    "group": 0,
-                    "binding": 0,
-                    "kind": "StorageBuffer",
-                    "entryPointUsageMask": 1,
-                    "elementStride": 8,
-                    "byteSize": 0,
-                    "arrayCount": 1,
-                    "shape": "Buffer",
-                    "sampleType": "Invalid",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Invalid",
-                    "derived": {
-                        "expression": "IFFT_SIZE * IFFT_SIZE * IFFT_NUM_WAVE_CASCADES",
-                        "hasElementCount": true,
-                        "elementCount": 1048576,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": []
-                },
-                {
-                    "name": "IfftParams",
-                    "group": 0,
-                    "binding": 1,
-                    "kind": "UniformBuffer",
-                    "entryPointUsageMask": 1,
-                    "elementStride": 0,
-                    "byteSize": 16,
-                    "arrayCount": 1,
-                    "shape": "Invalid",
-                    "sampleType": "Invalid",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Invalid",
-                    "derived": {
-                        "expression": "",
-                        "hasElementCount": false,
-                        "elementCount": 0,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": [
-                        {
-                            "name": "Transpose",
-                            "offset": 0,
-                            "size": 4,
-                            "arrayCount": 1
-                        },
-                        {
-                            "name": "WaveSize",
-                            "offset": 4,
-                            "size": 4,
-                            "arrayCount": 1
-                        },
-                        {
-                            "name": "Log4WaveSize",
-                            "offset": 8,
-                            "size": 4,
-                            "arrayCount": 1
-                        },
-                        {
-                            "name": "Pad0",
-                            "offset": 12,
-                            "size": 4,
-                            "arrayCount": 1
-                        }
-                    ]
-                },
-                {
-                    "name": "IfftSinCosLUT",
-                    "group": 0,
-                    "binding": 2,
-                    "kind": "SampledTexture",
-                    "entryPointUsageMask": 0,
-                    "elementStride": 0,
-                    "byteSize": 0,
-                    "arrayCount": 1,
-                    "shape": "Texture1D",
-                    "sampleType": "Float",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Invalid",
-                    "derived": {
-                        "expression": "",
-                        "hasElementCount": false,
-                        "elementCount": 0,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": []
-                },
-                {
-                    "name": "IfftLUTSampler",
-                    "group": 0,
-                    "binding": 3,
-                    "kind": "Sampler",
-                    "entryPointUsageMask": 0,
-                    "elementStride": 0,
-                    "byteSize": 0,
-                    "arrayCount": 1,
-                    "shape": "Invalid",
-                    "sampleType": "Invalid",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Filtering",
-                    "derived": {
-                        "expression": "",
-                        "hasElementCount": false,
-                        "elementCount": 0,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": []
-                }
-            ]
-        },
-        {
-            "index": 7,
-            "contentHash": 12925859473375359785,
-            "bindings": [
-                {
-                    "name": "IfftInput",
-                    "group": 0,
-                    "binding": 0,
-                    "kind": "StorageBuffer",
-                    "entryPointUsageMask": 2,
-                    "elementStride": 8,
-                    "byteSize": 0,
-                    "arrayCount": 1,
-                    "shape": "Buffer",
-                    "sampleType": "Invalid",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Invalid",
-                    "derived": {
-                        "expression": "IFFT_SIZE * IFFT_SIZE * IFFT_NUM_WAVE_CASCADES",
-                        "hasElementCount": true,
-                        "elementCount": 1048576,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": []
-                },
-                {
-                    "name": "IfftParams",
-                    "group": 0,
-                    "binding": 1,
-                    "kind": "UniformBuffer",
-                    "entryPointUsageMask": 2,
-                    "elementStride": 0,
-                    "byteSize": 16,
-                    "arrayCount": 1,
-                    "shape": "Invalid",
-                    "sampleType": "Invalid",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Invalid",
-                    "derived": {
-                        "expression": "",
-                        "hasElementCount": false,
-                        "elementCount": 0,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": [
-                        {
-                            "name": "Transpose",
-                            "offset": 0,
-                            "size": 4,
-                            "arrayCount": 1
-                        },
-                        {
-                            "name": "WaveSize",
-                            "offset": 4,
-                            "size": 4,
-                            "arrayCount": 1
-                        },
-                        {
-                            "name": "Log4WaveSize",
-                            "offset": 8,
-                            "size": 4,
-                            "arrayCount": 1
-                        },
-                        {
-                            "name": "Pad0",
-                            "offset": 12,
-                            "size": 4,
-                            "arrayCount": 1
-                        }
-                    ]
-                },
-                {
-                    "name": "IfftSinCosLUT",
-                    "group": 0,
-                    "binding": 2,
-                    "kind": "SampledTexture",
-                    "entryPointUsageMask": 0,
-                    "elementStride": 0,
-                    "byteSize": 0,
-                    "arrayCount": 1,
-                    "shape": "Texture1D",
-                    "sampleType": "Float",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Invalid",
-                    "derived": {
-                        "expression": "",
-                        "hasElementCount": false,
-                        "elementCount": 0,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": []
-                },
-                {
-                    "name": "IfftLUTSampler",
-                    "group": 0,
-                    "binding": 3,
-                    "kind": "Sampler",
-                    "entryPointUsageMask": 0,
-                    "elementStride": 0,
-                    "byteSize": 0,
-                    "arrayCount": 1,
-                    "shape": "Invalid",
-                    "sampleType": "Invalid",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Filtering",
-                    "derived": {
-                        "expression": "",
-                        "hasElementCount": false,
-                        "elementCount": 0,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": []
-                }
-            ]
-        },
-        {
-            "index": 8,
-            "contentHash": 6709139709551790649,
-            "bindings": [
-                {
-                    "name": "IfftInput",
-                    "group": 0,
-                    "binding": 0,
-                    "kind": "StorageBuffer",
-                    "entryPointUsageMask": 4,
-                    "elementStride": 8,
-                    "byteSize": 0,
-                    "arrayCount": 1,
-                    "shape": "Buffer",
-                    "sampleType": "Invalid",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Invalid",
-                    "derived": {
-                        "expression": "IFFT_SIZE * IFFT_SIZE * IFFT_NUM_WAVE_CASCADES",
-                        "hasElementCount": true,
-                        "elementCount": 1048576,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": []
-                },
-                {
-                    "name": "IfftParams",
-                    "group": 0,
-                    "binding": 1,
-                    "kind": "UniformBuffer",
-                    "entryPointUsageMask": 0,
-                    "elementStride": 0,
-                    "byteSize": 16,
-                    "arrayCount": 1,
-                    "shape": "Invalid",
-                    "sampleType": "Invalid",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Invalid",
-                    "derived": {
-                        "expression": "",
-                        "hasElementCount": false,
-                        "elementCount": 0,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": [
-                        {
-                            "name": "Transpose",
-                            "offset": 0,
-                            "size": 4,
-                            "arrayCount": 1
-                        },
-                        {
-                            "name": "WaveSize",
-                            "offset": 4,
-                            "size": 4,
-                            "arrayCount": 1
-                        },
-                        {
-                            "name": "Log4WaveSize",
-                            "offset": 8,
-                            "size": 4,
-                            "arrayCount": 1
-                        },
-                        {
-                            "name": "Pad0",
-                            "offset": 12,
-                            "size": 4,
-                            "arrayCount": 1
-                        }
-                    ]
-                },
-                {
-                    "name": "IfftSinCosLUT",
-                    "group": 0,
-                    "binding": 2,
-                    "kind": "SampledTexture",
-                    "entryPointUsageMask": 0,
-                    "elementStride": 0,
-                    "byteSize": 0,
-                    "arrayCount": 1,
-                    "shape": "Texture1D",
-                    "sampleType": "Float",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Invalid",
-                    "derived": {
-                        "expression": "",
-                        "hasElementCount": false,
-                        "elementCount": 0,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": []
-                },
-                {
-                    "name": "IfftLUTSampler",
-                    "group": 0,
-                    "binding": 3,
-                    "kind": "Sampler",
-                    "entryPointUsageMask": 0,
-                    "elementStride": 0,
-                    "byteSize": 0,
-                    "arrayCount": 1,
-                    "shape": "Invalid",
-                    "sampleType": "Invalid",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Filtering",
-                    "derived": {
-                        "expression": "",
-                        "hasElementCount": false,
-                        "elementCount": 0,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": []
-                }
-            ]
-        },
-        {
-            "index": 9,
-            "contentHash": 9714429381653134581,
-            "bindings": [
-                {
-                    "name": "IfftInput",
-                    "group": 0,
-                    "binding": 0,
-                    "kind": "StorageBuffer",
-                    "entryPointUsageMask": 1,
-                    "elementStride": 8,
-                    "byteSize": 0,
-                    "arrayCount": 1,
-                    "shape": "Buffer",
-                    "sampleType": "Invalid",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Invalid",
-                    "derived": {
-                        "expression": "IFFT_SIZE * IFFT_SIZE * IFFT_NUM_WAVE_CASCADES",
-                        "hasElementCount": true,
-                        "elementCount": 4194304,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": []
-                },
-                {
-                    "name": "IfftParams",
-                    "group": 0,
-                    "binding": 1,
-                    "kind": "UniformBuffer",
-                    "entryPointUsageMask": 1,
-                    "elementStride": 0,
-                    "byteSize": 16,
-                    "arrayCount": 1,
-                    "shape": "Invalid",
-                    "sampleType": "Invalid",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Invalid",
-                    "derived": {
-                        "expression": "",
-                        "hasElementCount": false,
-                        "elementCount": 0,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": [
-                        {
-                            "name": "Transpose",
-                            "offset": 0,
-                            "size": 4,
-                            "arrayCount": 1
-                        },
-                        {
-                            "name": "WaveSize",
-                            "offset": 4,
-                            "size": 4,
-                            "arrayCount": 1
-                        },
-                        {
-                            "name": "Log4WaveSize",
-                            "offset": 8,
-                            "size": 4,
-                            "arrayCount": 1
-                        },
-                        {
-                            "name": "Pad0",
-                            "offset": 12,
-                            "size": 4,
-                            "arrayCount": 1
-                        }
-                    ]
-                },
-                {
-                    "name": "IfftSinCosLUT",
-                    "group": 0,
-                    "binding": 2,
-                    "kind": "SampledTexture",
-                    "entryPointUsageMask": 0,
-                    "elementStride": 0,
-                    "byteSize": 0,
-                    "arrayCount": 1,
-                    "shape": "Texture1D",
-                    "sampleType": "Float",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Invalid",
-                    "derived": {
-                        "expression": "",
-                        "hasElementCount": false,
-                        "elementCount": 0,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": []
-                },
-                {
-                    "name": "IfftLUTSampler",
-                    "group": 0,
-                    "binding": 3,
-                    "kind": "Sampler",
-                    "entryPointUsageMask": 0,
-                    "elementStride": 0,
-                    "byteSize": 0,
-                    "arrayCount": 1,
-                    "shape": "Invalid",
-                    "sampleType": "Invalid",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Filtering",
-                    "derived": {
-                        "expression": "",
-                        "hasElementCount": false,
-                        "elementCount": 0,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": []
-                }
-            ]
-        },
-        {
-            "index": 10,
-            "contentHash": 14847396341408874617,
-            "bindings": [
-                {
-                    "name": "IfftInput",
-                    "group": 0,
-                    "binding": 0,
-                    "kind": "StorageBuffer",
-                    "entryPointUsageMask": 2,
-                    "elementStride": 8,
-                    "byteSize": 0,
-                    "arrayCount": 1,
-                    "shape": "Buffer",
-                    "sampleType": "Invalid",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Invalid",
-                    "derived": {
-                        "expression": "IFFT_SIZE * IFFT_SIZE * IFFT_NUM_WAVE_CASCADES",
-                        "hasElementCount": true,
-                        "elementCount": 4194304,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": []
-                },
-                {
-                    "name": "IfftParams",
-                    "group": 0,
-                    "binding": 1,
-                    "kind": "UniformBuffer",
-                    "entryPointUsageMask": 2,
-                    "elementStride": 0,
-                    "byteSize": 16,
-                    "arrayCount": 1,
-                    "shape": "Invalid",
-                    "sampleType": "Invalid",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Invalid",
-                    "derived": {
-                        "expression": "",
-                        "hasElementCount": false,
-                        "elementCount": 0,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": [
-                        {
-                            "name": "Transpose",
-                            "offset": 0,
-                            "size": 4,
-                            "arrayCount": 1
-                        },
-                        {
-                            "name": "WaveSize",
-                            "offset": 4,
-                            "size": 4,
-                            "arrayCount": 1
-                        },
-                        {
-                            "name": "Log4WaveSize",
-                            "offset": 8,
-                            "size": 4,
-                            "arrayCount": 1
-                        },
-                        {
-                            "name": "Pad0",
-                            "offset": 12,
-                            "size": 4,
-                            "arrayCount": 1
-                        }
-                    ]
-                },
-                {
-                    "name": "IfftSinCosLUT",
-                    "group": 0,
-                    "binding": 2,
-                    "kind": "SampledTexture",
-                    "entryPointUsageMask": 0,
-                    "elementStride": 0,
-                    "byteSize": 0,
-                    "arrayCount": 1,
-                    "shape": "Texture1D",
-                    "sampleType": "Float",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Invalid",
-                    "derived": {
-                        "expression": "",
-                        "hasElementCount": false,
-                        "elementCount": 0,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": []
-                },
-                {
-                    "name": "IfftLUTSampler",
-                    "group": 0,
-                    "binding": 3,
-                    "kind": "Sampler",
-                    "entryPointUsageMask": 0,
-                    "elementStride": 0,
-                    "byteSize": 0,
-                    "arrayCount": 1,
-                    "shape": "Invalid",
-                    "sampleType": "Invalid",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Filtering",
-                    "derived": {
-                        "expression": "",
-                        "hasElementCount": false,
-                        "elementCount": 0,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": []
-                }
-            ]
-        },
-        {
-            "index": 11,
-            "contentHash": 12025709617656889385,
-            "bindings": [
-                {
-                    "name": "IfftInput",
-                    "group": 0,
-                    "binding": 0,
-                    "kind": "StorageBuffer",
-                    "entryPointUsageMask": 4,
-                    "elementStride": 8,
-                    "byteSize": 0,
-                    "arrayCount": 1,
-                    "shape": "Buffer",
-                    "sampleType": "Invalid",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Invalid",
-                    "derived": {
-                        "expression": "IFFT_SIZE * IFFT_SIZE * IFFT_NUM_WAVE_CASCADES",
-                        "hasElementCount": true,
-                        "elementCount": 4194304,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": []
-                },
-                {
-                    "name": "IfftParams",
-                    "group": 0,
-                    "binding": 1,
-                    "kind": "UniformBuffer",
-                    "entryPointUsageMask": 0,
-                    "elementStride": 0,
-                    "byteSize": 16,
-                    "arrayCount": 1,
-                    "shape": "Invalid",
-                    "sampleType": "Invalid",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Invalid",
-                    "derived": {
-                        "expression": "",
-                        "hasElementCount": false,
-                        "elementCount": 0,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": [
-                        {
-                            "name": "Transpose",
-                            "offset": 0,
-                            "size": 4,
-                            "arrayCount": 1
-                        },
-                        {
-                            "name": "WaveSize",
-                            "offset": 4,
-                            "size": 4,
-                            "arrayCount": 1
-                        },
-                        {
-                            "name": "Log4WaveSize",
-                            "offset": 8,
-                            "size": 4,
-                            "arrayCount": 1
-                        },
-                        {
-                            "name": "Pad0",
-                            "offset": 12,
-                            "size": 4,
-                            "arrayCount": 1
-                        }
-                    ]
-                },
-                {
-                    "name": "IfftSinCosLUT",
-                    "group": 0,
-                    "binding": 2,
-                    "kind": "SampledTexture",
-                    "entryPointUsageMask": 0,
-                    "elementStride": 0,
-                    "byteSize": 0,
-                    "arrayCount": 1,
-                    "shape": "Texture1D",
-                    "sampleType": "Float",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Invalid",
-                    "derived": {
-                        "expression": "",
-                        "hasElementCount": false,
-                        "elementCount": 0,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": []
-                },
-                {
-                    "name": "IfftLUTSampler",
-                    "group": 0,
-                    "binding": 3,
-                    "kind": "Sampler",
-                    "entryPointUsageMask": 0,
-                    "elementStride": 0,
-                    "byteSize": 0,
-                    "arrayCount": 1,
-                    "shape": "Invalid",
-                    "sampleType": "Invalid",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Filtering",
-                    "derived": {
-                        "expression": "",
-                        "hasElementCount": false,
-                        "elementCount": 0,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": []
-                }
-            ]
-        },
-        {
-            "index": 12,
-            "contentHash": 13784784276632026482,
-            "bindings": [
-                {
-                    "name": "IfftInput",
-                    "group": 0,
-                    "binding": 0,
-                    "kind": "StorageBuffer",
-                    "entryPointUsageMask": 1,
-                    "elementStride": 8,
-                    "byteSize": 0,
-                    "arrayCount": 1,
-                    "shape": "Buffer",
-                    "sampleType": "Invalid",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Invalid",
-                    "derived": {
-                        "expression": "IFFT_SIZE * IFFT_SIZE * IFFT_NUM_WAVE_CASCADES",
-                        "hasElementCount": true,
-                        "elementCount": 16777216,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": []
-                },
-                {
-                    "name": "IfftParams",
-                    "group": 0,
-                    "binding": 1,
-                    "kind": "UniformBuffer",
-                    "entryPointUsageMask": 1,
-                    "elementStride": 0,
-                    "byteSize": 16,
-                    "arrayCount": 1,
-                    "shape": "Invalid",
-                    "sampleType": "Invalid",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Invalid",
-                    "derived": {
-                        "expression": "",
-                        "hasElementCount": false,
-                        "elementCount": 0,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": [
-                        {
-                            "name": "Transpose",
-                            "offset": 0,
-                            "size": 4,
-                            "arrayCount": 1
-                        },
-                        {
-                            "name": "WaveSize",
-                            "offset": 4,
-                            "size": 4,
-                            "arrayCount": 1
-                        },
-                        {
-                            "name": "Log4WaveSize",
-                            "offset": 8,
-                            "size": 4,
-                            "arrayCount": 1
-                        },
-                        {
-                            "name": "Pad0",
-                            "offset": 12,
-                            "size": 4,
-                            "arrayCount": 1
-                        }
-                    ]
-                },
-                {
-                    "name": "IfftSinCosLUT",
-                    "group": 0,
-                    "binding": 2,
-                    "kind": "SampledTexture",
-                    "entryPointUsageMask": 0,
-                    "elementStride": 0,
-                    "byteSize": 0,
-                    "arrayCount": 1,
-                    "shape": "Texture1D",
-                    "sampleType": "Float",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Invalid",
-                    "derived": {
-                        "expression": "",
-                        "hasElementCount": false,
-                        "elementCount": 0,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": []
-                },
-                {
-                    "name": "IfftLUTSampler",
-                    "group": 0,
-                    "binding": 3,
-                    "kind": "Sampler",
-                    "entryPointUsageMask": 0,
-                    "elementStride": 0,
-                    "byteSize": 0,
-                    "arrayCount": 1,
-                    "shape": "Invalid",
-                    "sampleType": "Invalid",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Filtering",
-                    "derived": {
-                        "expression": "",
-                        "hasElementCount": false,
-                        "elementCount": 0,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": []
-                }
-            ]
-        },
-        {
-            "index": 13,
-            "contentHash": 7369074288777462142,
-            "bindings": [
-                {
-                    "name": "IfftInput",
-                    "group": 0,
-                    "binding": 0,
-                    "kind": "StorageBuffer",
-                    "entryPointUsageMask": 2,
-                    "elementStride": 8,
-                    "byteSize": 0,
-                    "arrayCount": 1,
-                    "shape": "Buffer",
-                    "sampleType": "Invalid",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Invalid",
-                    "derived": {
-                        "expression": "IFFT_SIZE * IFFT_SIZE * IFFT_NUM_WAVE_CASCADES",
-                        "hasElementCount": true,
-                        "elementCount": 16777216,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": []
-                },
-                {
-                    "name": "IfftParams",
-                    "group": 0,
-                    "binding": 1,
-                    "kind": "UniformBuffer",
-                    "entryPointUsageMask": 2,
-                    "elementStride": 0,
-                    "byteSize": 16,
-                    "arrayCount": 1,
-                    "shape": "Invalid",
-                    "sampleType": "Invalid",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Invalid",
-                    "derived": {
-                        "expression": "",
-                        "hasElementCount": false,
-                        "elementCount": 0,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": [
-                        {
-                            "name": "Transpose",
-                            "offset": 0,
-                            "size": 4,
-                            "arrayCount": 1
-                        },
-                        {
-                            "name": "WaveSize",
-                            "offset": 4,
-                            "size": 4,
-                            "arrayCount": 1
-                        },
-                        {
-                            "name": "Log4WaveSize",
-                            "offset": 8,
-                            "size": 4,
-                            "arrayCount": 1
-                        },
-                        {
-                            "name": "Pad0",
-                            "offset": 12,
-                            "size": 4,
-                            "arrayCount": 1
-                        }
-                    ]
-                },
-                {
-                    "name": "IfftSinCosLUT",
-                    "group": 0,
-                    "binding": 2,
-                    "kind": "SampledTexture",
-                    "entryPointUsageMask": 0,
-                    "elementStride": 0,
-                    "byteSize": 0,
-                    "arrayCount": 1,
-                    "shape": "Texture1D",
-                    "sampleType": "Float",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Invalid",
-                    "derived": {
-                        "expression": "",
-                        "hasElementCount": false,
-                        "elementCount": 0,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": []
-                },
-                {
-                    "name": "IfftLUTSampler",
-                    "group": 0,
-                    "binding": 3,
-                    "kind": "Sampler",
-                    "entryPointUsageMask": 0,
-                    "elementStride": 0,
-                    "byteSize": 0,
-                    "arrayCount": 1,
-                    "shape": "Invalid",
-                    "sampleType": "Invalid",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Filtering",
-                    "derived": {
-                        "expression": "",
-                        "hasElementCount": false,
-                        "elementCount": 0,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": []
-                }
-            ]
-        },
-        {
-            "index": 14,
-            "contentHash": 8653722336779047274,
-            "bindings": [
-                {
-                    "name": "IfftInput",
-                    "group": 0,
-                    "binding": 0,
-                    "kind": "StorageBuffer",
-                    "entryPointUsageMask": 4,
-                    "elementStride": 8,
-                    "byteSize": 0,
-                    "arrayCount": 1,
-                    "shape": "Buffer",
-                    "sampleType": "Invalid",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Invalid",
-                    "derived": {
-                        "expression": "IFFT_SIZE * IFFT_SIZE * IFFT_NUM_WAVE_CASCADES",
-                        "hasElementCount": true,
-                        "elementCount": 16777216,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": []
-                },
-                {
-                    "name": "IfftParams",
-                    "group": 0,
-                    "binding": 1,
-                    "kind": "UniformBuffer",
-                    "entryPointUsageMask": 0,
-                    "elementStride": 0,
-                    "byteSize": 16,
-                    "arrayCount": 1,
-                    "shape": "Invalid",
-                    "sampleType": "Invalid",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Invalid",
-                    "derived": {
-                        "expression": "",
-                        "hasElementCount": false,
-                        "elementCount": 0,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": [
-                        {
-                            "name": "Transpose",
-                            "offset": 0,
-                            "size": 4,
-                            "arrayCount": 1
-                        },
-                        {
-                            "name": "WaveSize",
-                            "offset": 4,
-                            "size": 4,
-                            "arrayCount": 1
-                        },
-                        {
-                            "name": "Log4WaveSize",
-                            "offset": 8,
-                            "size": 4,
-                            "arrayCount": 1
-                        },
-                        {
-                            "name": "Pad0",
-                            "offset": 12,
-                            "size": 4,
-                            "arrayCount": 1
-                        }
-                    ]
-                },
-                {
-                    "name": "IfftSinCosLUT",
-                    "group": 0,
-                    "binding": 2,
-                    "kind": "SampledTexture",
-                    "entryPointUsageMask": 0,
-                    "elementStride": 0,
-                    "byteSize": 0,
-                    "arrayCount": 1,
-                    "shape": "Texture1D",
-                    "sampleType": "Float",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Invalid",
-                    "derived": {
-                        "expression": "",
-                        "hasElementCount": false,
-                        "elementCount": 0,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": []
-                },
-                {
-                    "name": "IfftLUTSampler",
-                    "group": 0,
-                    "binding": 3,
-                    "kind": "Sampler",
-                    "entryPointUsageMask": 0,
-                    "elementStride": 0,
-                    "byteSize": 0,
-                    "arrayCount": 1,
-                    "shape": "Invalid",
-                    "sampleType": "Invalid",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Filtering",
-                    "derived": {
-                        "expression": "",
-                        "hasElementCount": false,
-                        "elementCount": 0,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": []
-                }
-            ]
-        },
-        {
-            "index": 15,
-            "contentHash": 906894603694589777,
-            "bindings": [
-                {
-                    "name": "IfftInput",
-                    "group": 0,
-                    "binding": 0,
-                    "kind": "StorageBuffer",
-                    "entryPointUsageMask": 1,
-                    "elementStride": 8,
-                    "byteSize": 0,
-                    "arrayCount": 1,
-                    "shape": "Buffer",
-                    "sampleType": "Invalid",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Invalid",
-                    "derived": {
-                        "expression": "IFFT_SIZE * IFFT_SIZE * IFFT_NUM_WAVE_CASCADES",
-                        "hasElementCount": true,
-                        "elementCount": 67108864,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": []
-                },
-                {
-                    "name": "IfftParams",
-                    "group": 0,
-                    "binding": 1,
-                    "kind": "UniformBuffer",
-                    "entryPointUsageMask": 1,
-                    "elementStride": 0,
-                    "byteSize": 16,
-                    "arrayCount": 1,
-                    "shape": "Invalid",
-                    "sampleType": "Invalid",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Invalid",
-                    "derived": {
-                        "expression": "",
-                        "hasElementCount": false,
-                        "elementCount": 0,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": [
-                        {
-                            "name": "Transpose",
-                            "offset": 0,
-                            "size": 4,
-                            "arrayCount": 1
-                        },
-                        {
-                            "name": "WaveSize",
-                            "offset": 4,
-                            "size": 4,
-                            "arrayCount": 1
-                        },
-                        {
-                            "name": "Log4WaveSize",
-                            "offset": 8,
-                            "size": 4,
-                            "arrayCount": 1
-                        },
-                        {
-                            "name": "Pad0",
-                            "offset": 12,
-                            "size": 4,
-                            "arrayCount": 1
-                        }
-                    ]
-                },
-                {
-                    "name": "IfftSinCosLUT",
-                    "group": 0,
-                    "binding": 2,
-                    "kind": "SampledTexture",
-                    "entryPointUsageMask": 0,
-                    "elementStride": 0,
-                    "byteSize": 0,
-                    "arrayCount": 1,
-                    "shape": "Texture1D",
-                    "sampleType": "Float",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Invalid",
-                    "derived": {
-                        "expression": "",
-                        "hasElementCount": false,
-                        "elementCount": 0,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": []
-                },
-                {
-                    "name": "IfftLUTSampler",
-                    "group": 0,
-                    "binding": 3,
-                    "kind": "Sampler",
-                    "entryPointUsageMask": 0,
-                    "elementStride": 0,
-                    "byteSize": 0,
-                    "arrayCount": 1,
-                    "shape": "Invalid",
-                    "sampleType": "Invalid",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Filtering",
-                    "derived": {
-                        "expression": "",
-                        "hasElementCount": false,
-                        "elementCount": 0,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": []
-                }
-            ]
-        },
-        {
-            "index": 16,
-            "contentHash": 8196020158186996901,
-            "bindings": [
-                {
-                    "name": "IfftInput",
-                    "group": 0,
-                    "binding": 0,
-                    "kind": "StorageBuffer",
-                    "entryPointUsageMask": 2,
-                    "elementStride": 8,
-                    "byteSize": 0,
-                    "arrayCount": 1,
-                    "shape": "Buffer",
-                    "sampleType": "Invalid",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Invalid",
-                    "derived": {
-                        "expression": "IFFT_SIZE * IFFT_SIZE * IFFT_NUM_WAVE_CASCADES",
-                        "hasElementCount": true,
-                        "elementCount": 67108864,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": []
-                },
-                {
-                    "name": "IfftParams",
-                    "group": 0,
-                    "binding": 1,
-                    "kind": "UniformBuffer",
-                    "entryPointUsageMask": 2,
-                    "elementStride": 0,
-                    "byteSize": 16,
-                    "arrayCount": 1,
-                    "shape": "Invalid",
-                    "sampleType": "Invalid",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Invalid",
-                    "derived": {
-                        "expression": "",
-                        "hasElementCount": false,
-                        "elementCount": 0,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": [
-                        {
-                            "name": "Transpose",
-                            "offset": 0,
-                            "size": 4,
-                            "arrayCount": 1
-                        },
-                        {
-                            "name": "WaveSize",
-                            "offset": 4,
-                            "size": 4,
-                            "arrayCount": 1
-                        },
-                        {
-                            "name": "Log4WaveSize",
-                            "offset": 8,
-                            "size": 4,
-                            "arrayCount": 1
-                        },
-                        {
-                            "name": "Pad0",
-                            "offset": 12,
-                            "size": 4,
-                            "arrayCount": 1
-                        }
-                    ]
-                },
-                {
-                    "name": "IfftSinCosLUT",
-                    "group": 0,
-                    "binding": 2,
-                    "kind": "SampledTexture",
-                    "entryPointUsageMask": 0,
-                    "elementStride": 0,
-                    "byteSize": 0,
-                    "arrayCount": 1,
-                    "shape": "Texture1D",
-                    "sampleType": "Float",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Invalid",
-                    "derived": {
-                        "expression": "",
-                        "hasElementCount": false,
-                        "elementCount": 0,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": []
-                },
-                {
-                    "name": "IfftLUTSampler",
-                    "group": 0,
-                    "binding": 3,
-                    "kind": "Sampler",
-                    "entryPointUsageMask": 0,
-                    "elementStride": 0,
-                    "byteSize": 0,
-                    "arrayCount": 1,
-                    "shape": "Invalid",
-                    "sampleType": "Invalid",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Filtering",
-                    "derived": {
-                        "expression": "",
-                        "hasElementCount": false,
-                        "elementCount": 0,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": []
-                }
-            ]
-        },
-        {
-            "index": 17,
-            "contentHash": 8711999161926019189,
-            "bindings": [
-                {
-                    "name": "IfftInput",
-                    "group": 0,
-                    "binding": 0,
-                    "kind": "StorageBuffer",
-                    "entryPointUsageMask": 4,
-                    "elementStride": 8,
-                    "byteSize": 0,
-                    "arrayCount": 1,
-                    "shape": "Buffer",
-                    "sampleType": "Invalid",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Invalid",
-                    "derived": {
-                        "expression": "IFFT_SIZE * IFFT_SIZE * IFFT_NUM_WAVE_CASCADES",
-                        "hasElementCount": true,
-                        "elementCount": 67108864,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": []
-                },
-                {
-                    "name": "IfftParams",
-                    "group": 0,
-                    "binding": 1,
-                    "kind": "UniformBuffer",
-                    "entryPointUsageMask": 0,
-                    "elementStride": 0,
-                    "byteSize": 16,
-                    "arrayCount": 1,
-                    "shape": "Invalid",
-                    "sampleType": "Invalid",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Invalid",
-                    "derived": {
-                        "expression": "",
-                        "hasElementCount": false,
-                        "elementCount": 0,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": [
-                        {
-                            "name": "Transpose",
-                            "offset": 0,
-                            "size": 4,
-                            "arrayCount": 1
-                        },
-                        {
-                            "name": "WaveSize",
-                            "offset": 4,
-                            "size": 4,
-                            "arrayCount": 1
-                        },
-                        {
-                            "name": "Log4WaveSize",
-                            "offset": 8,
-                            "size": 4,
-                            "arrayCount": 1
-                        },
-                        {
-                            "name": "Pad0",
-                            "offset": 12,
-                            "size": 4,
-                            "arrayCount": 1
-                        }
-                    ]
-                },
-                {
-                    "name": "IfftSinCosLUT",
-                    "group": 0,
-                    "binding": 2,
-                    "kind": "SampledTexture",
-                    "entryPointUsageMask": 0,
-                    "elementStride": 0,
-                    "byteSize": 0,
-                    "arrayCount": 1,
-                    "shape": "Texture1D",
-                    "sampleType": "Float",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Invalid",
-                    "derived": {
-                        "expression": "",
-                        "hasElementCount": false,
-                        "elementCount": 0,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": []
-                },
-                {
-                    "name": "IfftLUTSampler",
-                    "group": 0,
-                    "binding": 3,
-                    "kind": "Sampler",
-                    "entryPointUsageMask": 0,
-                    "elementStride": 0,
-                    "byteSize": 0,
-                    "arrayCount": 1,
-                    "shape": "Invalid",
-                    "sampleType": "Invalid",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Filtering",
-                    "derived": {
-                        "expression": "",
-                        "hasElementCount": false,
-                        "elementCount": 0,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": []
-                }
-            ]
-        },
-        {
-            "index": 18,
-            "contentHash": 7228097375166303173,
-            "bindings": [
-                {
-                    "name": "IfftInput",
-                    "group": 0,
-                    "binding": 0,
-                    "kind": "StorageBuffer",
-                    "entryPointUsageMask": 1,
-                    "elementStride": 8,
-                    "byteSize": 0,
-                    "arrayCount": 1,
-                    "shape": "Buffer",
-                    "sampleType": "Invalid",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Invalid",
-                    "derived": {
-                        "expression": "IFFT_SIZE * IFFT_SIZE * IFFT_NUM_WAVE_CASCADES",
-                        "hasElementCount": true,
+                    "footprint": {
+                        "kind": "buffer",
                         "elementCount": 268435456,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": []
+                        "expression": "IFFT_SIZE * IFFT_SIZE * IFFT_NUM_WAVE_CASCADES"
+                    }
                 },
                 {
-                    "name": "IfftParams",
-                    "group": 0,
-                    "binding": 1,
-                    "kind": "UniformBuffer",
-                    "entryPointUsageMask": 1,
-                    "elementStride": 0,
-                    "byteSize": 16,
-                    "arrayCount": 1,
-                    "shape": "Invalid",
-                    "sampleType": "Invalid",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Invalid",
-                    "derived": {
-                        "expression": "",
-                        "hasElementCount": false,
-                        "elementCount": 0,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": [
-                        {
-                            "name": "Transpose",
-                            "offset": 0,
-                            "size": 4,
-                            "arrayCount": 1
-                        },
-                        {
-                            "name": "WaveSize",
-                            "offset": 4,
-                            "size": 4,
-                            "arrayCount": 1
-                        },
-                        {
-                            "name": "Log4WaveSize",
-                            "offset": 8,
-                            "size": 4,
-                            "arrayCount": 1
-                        },
-                        {
-                            "name": "Pad0",
-                            "offset": 12,
-                            "size": 4,
-                            "arrayCount": 1
-                        }
-                    ]
+                    "footprint": {
+                        "kind": "none"
+                    }
                 },
                 {
-                    "name": "IfftSinCosLUT",
-                    "group": 0,
-                    "binding": 2,
-                    "kind": "SampledTexture",
-                    "entryPointUsageMask": 0,
-                    "elementStride": 0,
-                    "byteSize": 0,
-                    "arrayCount": 1,
-                    "shape": "Texture1D",
-                    "sampleType": "Float",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Invalid",
-                    "derived": {
-                        "expression": "",
-                        "hasElementCount": false,
-                        "elementCount": 0,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": []
+                    "footprint": {
+                        "kind": "none"
+                    }
                 },
                 {
-                    "name": "IfftLUTSampler",
-                    "group": 0,
-                    "binding": 3,
-                    "kind": "Sampler",
-                    "entryPointUsageMask": 0,
-                    "elementStride": 0,
-                    "byteSize": 0,
-                    "arrayCount": 1,
-                    "shape": "Invalid",
-                    "sampleType": "Invalid",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Filtering",
-                    "derived": {
-                        "expression": "",
-                        "hasElementCount": false,
-                        "elementCount": 0,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": []
+                    "footprint": {
+                        "kind": "none"
+                    }
                 }
+            ]
+        }
+    ],
+    "visibilityLists": [
+        {
+            "index": 0,
+            "contentHash": 13471632709542108467,
+            "indices": [
+                0,
+                1
             ]
         },
         {
-            "index": 19,
-            "contentHash": 14154691199785286089,
-            "bindings": [
-                {
-                    "name": "IfftInput",
-                    "group": 0,
-                    "binding": 0,
-                    "kind": "StorageBuffer",
-                    "entryPointUsageMask": 2,
-                    "elementStride": 8,
-                    "byteSize": 0,
-                    "arrayCount": 1,
-                    "shape": "Buffer",
-                    "sampleType": "Invalid",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Invalid",
-                    "derived": {
-                        "expression": "IFFT_SIZE * IFFT_SIZE * IFFT_NUM_WAVE_CASCADES",
-                        "hasElementCount": true,
-                        "elementCount": 268435456,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": []
-                },
-                {
-                    "name": "IfftParams",
-                    "group": 0,
-                    "binding": 1,
-                    "kind": "UniformBuffer",
-                    "entryPointUsageMask": 2,
-                    "elementStride": 0,
-                    "byteSize": 16,
-                    "arrayCount": 1,
-                    "shape": "Invalid",
-                    "sampleType": "Invalid",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Invalid",
-                    "derived": {
-                        "expression": "",
-                        "hasElementCount": false,
-                        "elementCount": 0,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": [
-                        {
-                            "name": "Transpose",
-                            "offset": 0,
-                            "size": 4,
-                            "arrayCount": 1
-                        },
-                        {
-                            "name": "WaveSize",
-                            "offset": 4,
-                            "size": 4,
-                            "arrayCount": 1
-                        },
-                        {
-                            "name": "Log4WaveSize",
-                            "offset": 8,
-                            "size": 4,
-                            "arrayCount": 1
-                        },
-                        {
-                            "name": "Pad0",
-                            "offset": 12,
-                            "size": 4,
-                            "arrayCount": 1
-                        }
-                    ]
-                },
-                {
-                    "name": "IfftSinCosLUT",
-                    "group": 0,
-                    "binding": 2,
-                    "kind": "SampledTexture",
-                    "entryPointUsageMask": 0,
-                    "elementStride": 0,
-                    "byteSize": 0,
-                    "arrayCount": 1,
-                    "shape": "Texture1D",
-                    "sampleType": "Float",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Invalid",
-                    "derived": {
-                        "expression": "",
-                        "hasElementCount": false,
-                        "elementCount": 0,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": []
-                },
-                {
-                    "name": "IfftLUTSampler",
-                    "group": 0,
-                    "binding": 3,
-                    "kind": "Sampler",
-                    "entryPointUsageMask": 0,
-                    "elementStride": 0,
-                    "byteSize": 0,
-                    "arrayCount": 1,
-                    "shape": "Invalid",
-                    "sampleType": "Invalid",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Filtering",
-                    "derived": {
-                        "expression": "",
-                        "hasElementCount": false,
-                        "elementCount": 0,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": []
-                }
-            ]
-        },
-        {
-            "index": 20,
-            "contentHash": 7668179896083296889,
-            "bindings": [
-                {
-                    "name": "IfftInput",
-                    "group": 0,
-                    "binding": 0,
-                    "kind": "StorageBuffer",
-                    "entryPointUsageMask": 4,
-                    "elementStride": 8,
-                    "byteSize": 0,
-                    "arrayCount": 1,
-                    "shape": "Buffer",
-                    "sampleType": "Invalid",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Invalid",
-                    "derived": {
-                        "expression": "IFFT_SIZE * IFFT_SIZE * IFFT_NUM_WAVE_CASCADES",
-                        "hasElementCount": true,
-                        "elementCount": 268435456,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": []
-                },
-                {
-                    "name": "IfftParams",
-                    "group": 0,
-                    "binding": 1,
-                    "kind": "UniformBuffer",
-                    "entryPointUsageMask": 0,
-                    "elementStride": 0,
-                    "byteSize": 16,
-                    "arrayCount": 1,
-                    "shape": "Invalid",
-                    "sampleType": "Invalid",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Invalid",
-                    "derived": {
-                        "expression": "",
-                        "hasElementCount": false,
-                        "elementCount": 0,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": [
-                        {
-                            "name": "Transpose",
-                            "offset": 0,
-                            "size": 4,
-                            "arrayCount": 1
-                        },
-                        {
-                            "name": "WaveSize",
-                            "offset": 4,
-                            "size": 4,
-                            "arrayCount": 1
-                        },
-                        {
-                            "name": "Log4WaveSize",
-                            "offset": 8,
-                            "size": 4,
-                            "arrayCount": 1
-                        },
-                        {
-                            "name": "Pad0",
-                            "offset": 12,
-                            "size": 4,
-                            "arrayCount": 1
-                        }
-                    ]
-                },
-                {
-                    "name": "IfftSinCosLUT",
-                    "group": 0,
-                    "binding": 2,
-                    "kind": "SampledTexture",
-                    "entryPointUsageMask": 0,
-                    "elementStride": 0,
-                    "byteSize": 0,
-                    "arrayCount": 1,
-                    "shape": "Texture1D",
-                    "sampleType": "Float",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Invalid",
-                    "derived": {
-                        "expression": "",
-                        "hasElementCount": false,
-                        "elementCount": 0,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": []
-                },
-                {
-                    "name": "IfftLUTSampler",
-                    "group": 0,
-                    "binding": 3,
-                    "kind": "Sampler",
-                    "entryPointUsageMask": 0,
-                    "elementStride": 0,
-                    "byteSize": 0,
-                    "arrayCount": 1,
-                    "shape": "Invalid",
-                    "sampleType": "Invalid",
-                    "storageFormat": "Invalid",
-                    "storageAccess": "Invalid",
-                    "samplerType": "Filtering",
-                    "derived": {
-                        "expression": "",
-                        "hasElementCount": false,
-                        "elementCount": 0,
-                        "hasExtent": false,
-                        "extentX": 0,
-                        "extentY": 0,
-                        "extentZ": 0
-                    },
-                    "uniformMembers": []
-                }
+            "index": 1,
+            "contentHash": 738105163963679954,
+            "indices": [
+                0
             ]
         }
     ],
@@ -3188,15 +772,17 @@
                     "value": "16"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 0,
             "sourceIndices": [
                 0,
                 1,
                 2
             ],
-            "layoutIndices": [
+            "visibilityIndices": [
                 0,
-                1,
-                2
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -3239,15 +825,17 @@
                     "value": "16"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 0,
             "sourceIndices": [
                 3,
                 4,
                 2
             ],
-            "layoutIndices": [
+            "visibilityIndices": [
                 0,
-                1,
-                2
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -3290,15 +878,17 @@
                     "value": "32"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 0,
             "sourceIndices": [
                 5,
                 6,
                 2
             ],
-            "layoutIndices": [
+            "visibilityIndices": [
                 0,
-                1,
-                2
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -3341,15 +931,17 @@
                     "value": "64"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 0,
             "sourceIndices": [
                 7,
                 8,
                 2
             ],
-            "layoutIndices": [
+            "visibilityIndices": [
                 0,
-                1,
-                2
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -3392,15 +984,17 @@
                     "value": "128"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 0,
             "sourceIndices": [
                 9,
                 10,
                 2
             ],
-            "layoutIndices": [
+            "visibilityIndices": [
                 0,
-                1,
-                2
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -3443,15 +1037,17 @@
                     "value": "16"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 1,
             "sourceIndices": [
                 11,
                 12,
                 13
             ],
-            "layoutIndices": [
-                3,
-                4,
-                5
+            "visibilityIndices": [
+                0,
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -3494,15 +1090,17 @@
                     "value": "16"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 1,
             "sourceIndices": [
                 14,
                 15,
                 13
             ],
-            "layoutIndices": [
-                3,
-                4,
-                5
+            "visibilityIndices": [
+                0,
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -3545,15 +1143,17 @@
                     "value": "32"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 1,
             "sourceIndices": [
                 16,
                 17,
                 13
             ],
-            "layoutIndices": [
-                3,
-                4,
-                5
+            "visibilityIndices": [
+                0,
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -3596,15 +1196,17 @@
                     "value": "64"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 1,
             "sourceIndices": [
                 18,
                 19,
                 13
             ],
-            "layoutIndices": [
-                3,
-                4,
-                5
+            "visibilityIndices": [
+                0,
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -3647,15 +1249,17 @@
                     "value": "128"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 1,
             "sourceIndices": [
                 20,
                 21,
                 13
             ],
-            "layoutIndices": [
-                3,
-                4,
-                5
+            "visibilityIndices": [
+                0,
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -3698,15 +1302,17 @@
                     "value": "16"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 2,
             "sourceIndices": [
                 22,
                 23,
                 24
             ],
-            "layoutIndices": [
-                6,
-                7,
-                8
+            "visibilityIndices": [
+                0,
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -3749,15 +1355,17 @@
                     "value": "16"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 2,
             "sourceIndices": [
                 25,
                 26,
                 24
             ],
-            "layoutIndices": [
-                6,
-                7,
-                8
+            "visibilityIndices": [
+                0,
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -3800,15 +1408,17 @@
                     "value": "32"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 2,
             "sourceIndices": [
                 27,
                 28,
                 24
             ],
-            "layoutIndices": [
-                6,
-                7,
-                8
+            "visibilityIndices": [
+                0,
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -3851,15 +1461,17 @@
                     "value": "64"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 2,
             "sourceIndices": [
                 29,
                 30,
                 24
             ],
-            "layoutIndices": [
-                6,
-                7,
-                8
+            "visibilityIndices": [
+                0,
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -3902,15 +1514,17 @@
                     "value": "128"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 2,
             "sourceIndices": [
                 31,
                 32,
                 24
             ],
-            "layoutIndices": [
-                6,
-                7,
-                8
+            "visibilityIndices": [
+                0,
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -3953,15 +1567,17 @@
                     "value": "16"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 3,
             "sourceIndices": [
                 33,
                 34,
                 35
             ],
-            "layoutIndices": [
-                9,
-                10,
-                11
+            "visibilityIndices": [
+                0,
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -4004,15 +1620,17 @@
                     "value": "16"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 3,
             "sourceIndices": [
                 36,
                 37,
                 35
             ],
-            "layoutIndices": [
-                9,
-                10,
-                11
+            "visibilityIndices": [
+                0,
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -4055,15 +1673,17 @@
                     "value": "32"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 3,
             "sourceIndices": [
                 38,
                 39,
                 35
             ],
-            "layoutIndices": [
-                9,
-                10,
-                11
+            "visibilityIndices": [
+                0,
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -4106,15 +1726,17 @@
                     "value": "64"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 3,
             "sourceIndices": [
                 40,
                 41,
                 35
             ],
-            "layoutIndices": [
-                9,
-                10,
-                11
+            "visibilityIndices": [
+                0,
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -4157,15 +1779,17 @@
                     "value": "128"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 3,
             "sourceIndices": [
                 42,
                 43,
                 35
             ],
-            "layoutIndices": [
-                9,
-                10,
-                11
+            "visibilityIndices": [
+                0,
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -4208,15 +1832,17 @@
                     "value": "16"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 4,
             "sourceIndices": [
                 44,
                 45,
                 46
             ],
-            "layoutIndices": [
-                12,
-                13,
-                14
+            "visibilityIndices": [
+                0,
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -4259,15 +1885,17 @@
                     "value": "16"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 4,
             "sourceIndices": [
                 47,
                 48,
                 46
             ],
-            "layoutIndices": [
-                12,
-                13,
-                14
+            "visibilityIndices": [
+                0,
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -4310,15 +1938,17 @@
                     "value": "32"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 4,
             "sourceIndices": [
                 49,
                 50,
                 46
             ],
-            "layoutIndices": [
-                12,
-                13,
-                14
+            "visibilityIndices": [
+                0,
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -4361,15 +1991,17 @@
                     "value": "64"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 4,
             "sourceIndices": [
                 51,
                 52,
                 46
             ],
-            "layoutIndices": [
-                12,
-                13,
-                14
+            "visibilityIndices": [
+                0,
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -4412,15 +2044,17 @@
                     "value": "128"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 4,
             "sourceIndices": [
                 53,
                 54,
                 46
             ],
-            "layoutIndices": [
-                12,
-                13,
-                14
+            "visibilityIndices": [
+                0,
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -4463,15 +2097,17 @@
                     "value": "16"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 5,
             "sourceIndices": [
                 55,
                 56,
                 57
             ],
-            "layoutIndices": [
-                15,
-                16,
-                17
+            "visibilityIndices": [
+                0,
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -4514,15 +2150,17 @@
                     "value": "16"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 5,
             "sourceIndices": [
                 58,
                 59,
                 57
             ],
-            "layoutIndices": [
-                15,
-                16,
-                17
+            "visibilityIndices": [
+                0,
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -4565,15 +2203,17 @@
                     "value": "32"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 5,
             "sourceIndices": [
                 60,
                 61,
                 57
             ],
-            "layoutIndices": [
-                15,
-                16,
-                17
+            "visibilityIndices": [
+                0,
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -4616,15 +2256,17 @@
                     "value": "64"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 5,
             "sourceIndices": [
                 62,
                 63,
                 57
             ],
-            "layoutIndices": [
-                15,
-                16,
-                17
+            "visibilityIndices": [
+                0,
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -4667,15 +2309,17 @@
                     "value": "128"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 5,
             "sourceIndices": [
                 64,
                 65,
                 57
             ],
-            "layoutIndices": [
-                15,
-                16,
-                17
+            "visibilityIndices": [
+                0,
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -4718,15 +2362,17 @@
                     "value": "16"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 6,
             "sourceIndices": [
                 66,
                 67,
                 68
             ],
-            "layoutIndices": [
-                18,
-                19,
-                20
+            "visibilityIndices": [
+                0,
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -4769,15 +2415,17 @@
                     "value": "16"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 6,
             "sourceIndices": [
                 69,
                 70,
                 68
             ],
-            "layoutIndices": [
-                18,
-                19,
-                20
+            "visibilityIndices": [
+                0,
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -4820,15 +2468,17 @@
                     "value": "32"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 6,
             "sourceIndices": [
                 71,
                 72,
                 68
             ],
-            "layoutIndices": [
-                18,
-                19,
-                20
+            "visibilityIndices": [
+                0,
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -4871,15 +2521,17 @@
                     "value": "64"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 6,
             "sourceIndices": [
                 73,
                 74,
                 68
             ],
-            "layoutIndices": [
-                18,
-                19,
-                20
+            "visibilityIndices": [
+                0,
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -4922,15 +2574,17 @@
                     "value": "128"
                 }
             ],
+            "resourceListIndex": 0,
+            "footprintListIndex": 6,
             "sourceIndices": [
                 75,
                 76,
                 68
             ],
-            "layoutIndices": [
-                18,
-                19,
-                20
+            "visibilityIndices": [
+                0,
+                0,
+                1
             ],
             "rasterIndices": [
                 0,
@@ -4965,13 +2619,37 @@
             "hashCollisions": 0,
             "byteComparisons": 28
         },
-        "layouts": {
+        "resources": {
+            "hashName": "fnv1a-64",
+            "dedupeEnabled": true,
+            "artifactsSeen": 140,
+            "uniqueEntries": 4,
+            "hashCollisions": 0,
+            "byteComparisons": 136
+        },
+        "resourceLists": {
+            "hashName": "fnv1a-64",
+            "dedupeEnabled": true,
+            "artifactsSeen": 35,
+            "uniqueEntries": 1,
+            "hashCollisions": 0,
+            "byteComparisons": 34
+        },
+        "footprintLists": {
+            "hashName": "fnv1a-64",
+            "dedupeEnabled": true,
+            "artifactsSeen": 35,
+            "uniqueEntries": 7,
+            "hashCollisions": 0,
+            "byteComparisons": 28
+        },
+        "visibility": {
             "hashName": "fnv1a-64",
             "dedupeEnabled": true,
             "artifactsSeen": 105,
-            "uniqueEntries": 21,
+            "uniqueEntries": 2,
             "hashCollisions": 0,
-            "byteComparisons": 84
+            "byteComparisons": 103
         },
         "rasterStates": {
             "hashName": "fnv1a-64",
