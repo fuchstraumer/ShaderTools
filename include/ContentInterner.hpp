@@ -73,6 +73,9 @@ public:
           hashName{ hash_name },
           dedupeEnabled{ true }
     {
+        uniqueEntries.reserve(1024);
+        origins.reserve(1024);
+        buckets.reserve(256);
     }
 
     /** Turns off collapsing. Every artifact then gets its own index, and the tables stay correct. */
@@ -93,7 +96,7 @@ public:
 
         if (!dedupeEnabled)
         {
-            return Append(std::forward<PayloadType>(payload), std::forward<ProvenanceRecord>(origin));
+            return Append(std::move(payload), std::move(origin));
         }
 
         const ContentHashValue hash = hashFunction(payload);
@@ -105,7 +108,7 @@ public:
             ++statistics.ByteComparisons;
             if (uniqueEntries[candidate] == payload)
             {
-                origins[candidate].push_back(std::move(origin));
+                origins[candidate].emplace_back(std::move(origin));
                 return InternResult{ candidate, false };
             }
 
@@ -151,11 +154,11 @@ public:
     }
 
 private:
-    InternResult Append(PayloadType payload, ProvenanceRecord origin)
+    InternResult Append(PayloadType&& payload, ProvenanceRecord&& origin)
     {
         const uint32_t index = static_cast<uint32_t>(uniqueEntries.size());
-        uniqueEntries.push_back(std::move(payload));
-        origins.push_back(std::vector<ProvenanceRecord>{ std::move(origin) });
+        uniqueEntries.emplace_back(std::forward<PayloadType>(payload));
+        origins.emplace_back(std::vector<ProvenanceRecord>{ std::forward<ProvenanceRecord>(origin) });
         statistics.UniqueEntries = static_cast<uint32_t>(uniqueEntries.size());
         return InternResult{ index, true };
     }
