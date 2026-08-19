@@ -155,10 +155,10 @@ namespace
         {
             writer.BeginObject();
             writer.KeyString("semanticName", input.SemanticName);
-            writer.KeyUInt("semanticIndex", input.SemanticIndex);
-            writer.KeyUInt("location", input.Location);
-            writer.KeyString("scalarType", magic_enum::enum_name(input.ScalarType));
-            writer.KeyUInt("componentCount", input.ComponentCount);
+            writer.KeyUInt("semanticIndex", input.Data.SemanticIndex);
+            writer.KeyUInt("location", input.Data.Location);
+            writer.KeyString("scalarType", magic_enum::enum_name(input.Data.ScalarType));
+            writer.KeyUInt("componentCount", input.Data.ComponentCount);
             writer.EndObject();
         }
         writer.EndArray();
@@ -213,7 +213,7 @@ namespace
             writer.BeginObject();
             writer.KeyUInt("index", i);
             writer.KeyUInt("byteLength", module.Sources[i].size());
-            writer.KeyUInt("contentHash", HashSourcePayload(module.Sources[i]));
+            writer.KeyUInt("contentHash", HashSourceString(module.Sources[i]));
             writer.EndObject();
         }
         writer.EndArray();
@@ -227,7 +227,7 @@ namespace
         {
             writer.BeginObject();
             writer.KeyUInt("index", i);
-            writer.KeyUInt("contentHash", HashResourcePayload(module.Resources[i]));
+            writer.KeyUInt("contentHash", HashReflectedBinding(module.Resources[i]));
             writer.Key("resource");
             WriteBinding(writer, module.Resources[i]);
             writer.EndObject();
@@ -245,7 +245,7 @@ namespace
         {
             writer.BeginObject();
             writer.KeyUInt("index", i);
-            writer.KeyUInt("contentHash", HashIndexListPayload(lists[i]));
+            writer.KeyUInt("contentHash", HashIndexList(lists[i]));
             WriteIndexArray(writer, "indices", lists[i]);
             writer.EndObject();
         }
@@ -260,7 +260,7 @@ namespace
         {
             writer.BeginObject();
             writer.KeyUInt("index", i);
-            writer.KeyUInt("contentHash", HashFootprintListPayload(module.FootprintLists[i]));
+            writer.KeyUInt("contentHash", HashFootprintList(module.FootprintLists[i]));
             writer.Key("footprints");
             writer.BeginArray();
             for (const ResourceFootprint& footprint : module.FootprintLists[i])
@@ -283,7 +283,7 @@ namespace
         {
             writer.BeginObject();
             writer.KeyUInt("index", i);
-            writer.KeyUInt("contentHash", HashRasterPayload(module.RasterStates[i]));
+            writer.KeyUInt("contentHash", HashReflectedRasterState(module.RasterStates[i]));
             WriteVertexInputs(writer, module.RasterStates[i]);
             WriteColorTargets(writer, module.RasterStates[i]);
             writer.KeyBool("writesFragDepth", module.RasterStates[i].WritesFragDepth);
@@ -477,7 +477,7 @@ namespace
             writer.KeyUInt("z", entryPoint.Workgroup.Z);
             writer.EndObject();
             writer.KeyUInt("targetTextByteLength", entryPoint.TargetText.size());
-            writer.KeyUInt("targetTextHash", HashSourcePayload(entryPoint.TargetText));
+            writer.KeyUInt("targetTextHash", HashSourceString(entryPoint.TargetText));
             WriteIndexArray(writer, "usedBindingIndices", entryPoint.UsedBindingIndices);
             WriteVertexInputs(writer, entryPoint.Raster);
             WriteColorTargets(writer, entryPoint.Raster);
@@ -645,7 +645,7 @@ std::string DumpResolvedModule(std::string_view module_name, std::span<const Com
             writer.KeyUInt("z", entryPoint.Reflection.Workgroup.Z);
             writer.EndObject();
             writer.KeyUInt("targetTextByteLength", entryPoint.Code.size());
-            writer.KeyUInt("targetTextHash", HashSourcePayload(entryPoint.Code));
+            writer.KeyUInt("targetTextHash", HashSourceString(entryPoint.Code));
             WriteIndexArray(writer, "usedBindingIndices", entryPoint.Reflection.UsedBindingIndices);
             WriteVertexInputs(writer, entryPoint.Reflection.Raster);
             WriteColorTargets(writer, entryPoint.Reflection.Raster);

@@ -97,8 +97,10 @@ enum class SamplerBindingType : uint8_t
     Comparison,
 };
 
-/** @brief The scalar type of one vertex attribute or one color target. */
-enum class VertexScalarType : uint8_t
+/** @brief The scalar type of one vertex attribute or one color target.
+ *  @note Widened to uint32_t so struct holding it is 16 bytes even vs 13
+*/
+enum class VertexScalarType : uint32_t
 {
     Invalid = 0,
     Float16,

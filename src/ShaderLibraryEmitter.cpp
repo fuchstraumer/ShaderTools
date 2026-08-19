@@ -92,10 +92,10 @@ namespace
                 emitted += std::format(
                     "    lodestone::VertexAttributeInfo{{ \"{}\", {}u, {}u, {}, {}u }},\n",
                     input.SemanticName,
-                    input.SemanticIndex,
-                    input.Location,
-                    EnumeratorFor("VertexScalarType", VertexScalarTypeEnumeratorName(input.ScalarType)),
-                    input.ComponentCount);
+                    input.Data.SemanticIndex,
+                    input.Data.Location,
+                    EnumeratorFor("VertexScalarType", VertexScalarTypeEnumeratorName(input.Data.ScalarType)),
+                    input.Data.ComponentCount);
             }
             emitted += "};\n";
             emitted += std::format(

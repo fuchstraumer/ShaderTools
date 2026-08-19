@@ -1,4 +1,5 @@
 #include "ShaderDataSchema.hpp"
+#include "ContentHash.hpp"
 #include "ShaderLibraryTypes.hpp"
 
 #include <algorithm>
@@ -124,11 +125,11 @@ std::string DescribeRasterState(const ReflectedRasterState& raster)
     for (const ReflectedVertexInput& input : raster.VertexInputs)
     {
         description += std::format("      @location({}) {}{} : {}x{}\n",
-                                   input.Location,
+                                   input.Data.Location,
                                    input.SemanticName,
-                                   input.SemanticIndex,
-                                   ToString(input.ScalarType),
-                                   input.ComponentCount);
+                                   input.Data.SemanticIndex,
+                                   ToString(input.Data.ScalarType),
+                                   input.Data.ComponentCount);
     }
 
     for (const ReflectedColorTarget& target : raster.ColorTargets)
@@ -294,6 +295,68 @@ std::string DescribeUniformMembers(const ReflectedBinding& binding)
     }
 
     return description;
+}
+
+uint64_t HashReflectedBinding(const ReflectedBinding& binding) noexcept
+{
+    thread_local StreamingHash compositeHasher;
+    compositeHasher.Reset(); // always reset at opening
+    // this replaces previous crappy xor fnv-1a combine hash stuff, with proper hashing
+    // should mean much better distribution and fewer collisions than the previous approach.
+    compositeHasher.Append(std::string_view{ binding.Name });
+    compositeHasher.Append(static_cast<uint64_t>(binding.Placement.index()));
+    // gather all our integral fields into one big run of uint64_t's. xxHash3 avalanches exceedingly well,
+    // so unlike with fnv-1a where we worry about repeated low bits having little effect on the output, 
+    // that's not true here. converting once to 64 bit uints before hashing is sufficient for good distribution.
+    const uint64_t scalarValues[]
+    {
+        static_cast<uint64_t>(binding.Kind),
+        static_cast<uint64_t>(binding.ElementStride),
+        binding.ByteSize,
+        static_cast<uint64_t>(binding.ArrayCount),
+        static_cast<uint64_t>(binding.Shape),
+        static_cast<uint64_t>(binding.SampleType),
+        static_cast<uint64_t>(binding.StorageFormat),
+        static_cast<uint64_t>(binding.StorageAccess),
+        static_cast<uint64_t>(binding.SamplerType)
+    };
+    compositeHasher.Append(std::span{ scalarValues, std::size(scalarValues) });
+
+    for (const ReflectedUniformMember& member : binding.UniformMembers)
+    {
+        compositeHasher.Append(std::string_view{ member.Name });
+        // todo: startlifetimeasarray or asbytes would probably work here
+        const uint64_t memberScalars[]
+        {
+            static_cast<uint64_t>(member.Offset),
+            static_cast<uint64_t>(member.Size),
+            static_cast<uint64_t>(member.ArrayCount)
+        };
+        compositeHasher.Append(std::span{ memberScalars, std::size(memberScalars) });
+    }
+
+    return compositeHasher.Finalize();
+}
+
+uint64_t HashReflectedRasterState(const ReflectedRasterState& rasterState) noexcept
+{
+    thread_local StreamingHash compositeHasher;
+    compositeHasher.Reset();
+    // we could probably reinterpret most of these as byte spans
+    for (const ReflectedVertexInput& vertexInput : rasterState.VertexInputs)
+    {
+        compositeHasher.Append(std::string_view{ vertexInput.SemanticName });
+        const std::span<const std::byte> vertexInputScalarsSpan = std::as_bytes(std::span{ &vertexInput, sizeof(vertexInput) });
+        compositeHasher.Append(vertexInputScalarsSpan);
+    }
+
+    for (const ReflectedColorTarget& colorTarget : rasterState.ColorTargets)
+    {
+        const std::span<const std::byte> colorTargetScalarsSpan = std::as_bytes(std::span{ &colorTarget, sizeof(colorTarget) });
+        compositeHasher.Append(colorTargetScalarsSpan);
+    }
+
+    return compositeHasher.Finalize();
 }
 
 } // namespace lodestone

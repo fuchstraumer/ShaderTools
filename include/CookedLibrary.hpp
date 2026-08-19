@@ -30,21 +30,6 @@ struct LibraryEntryPoint
     ShaderStageKind Stage{ ShaderStageKind::Invalid };
 };
 
-/**@brief Hashes one WGSL source. The interner compares bytes afterwards, so this only picks the bucket. */
-ContentHashValue HashSourcePayload(const std::string& source) noexcept;
-
-/**@brief Hashes one resource: what it is and where it lives. Not how much of it, and not who reads it. */
-ContentHashValue HashResourcePayload(const ReflectedBinding& resource) noexcept;
-
-/**@brief Hashes a run of indices. Used for a resource list and for a visibility list. */
-ContentHashValue HashIndexListPayload(const std::vector<uint32_t>& indices) noexcept;
-
-/**@brief Hashes the footprints of one variant, in resource order. */
-ContentHashValue HashFootprintListPayload(const std::vector<ResourceFootprint>& footprints) noexcept;
-
-/**@brief Hashes one raster state. A compute entry point gives an empty state. */
-ContentHashValue HashRasterPayload(const ReflectedRasterState& raster) noexcept;
-
 /**@brief One (module, permutation) pair.
  * `ResourceListIndex` and `FootprintListIndex` are per variant, and say what resources
  * the variant uses and the derived sizes/dims (footprints) of each. VisibilityIndices is
@@ -73,6 +58,12 @@ using FootprintList = std::vector<ResourceFootprint>;
 /**@brief What a caller gets for one entry point: the resources it reads, joined with their footprints. */
 using ShaderLayout = std::vector<ResolvedBinding>;
 
+ContentHashValue HashIndexList(const std::vector<uint32_t>& indices) noexcept;
+ContentHashValue HashSourceString(const std::string& source) noexcept;
+ContentHashValue HashResourceList(const ResourceList& resources) noexcept;
+ContentHashValue HashVisibilityList(const VisibilityList& visibility) noexcept;
+ContentHashValue HashFootprintList(const FootprintList& footprints) noexcept;
+
 /**@brief The hash that generated a table, whether or not it used dedupe logic,
  *  and the results of the process (regardless of if it ran dedupe or not) */
 struct TableStatistics
@@ -99,12 +90,12 @@ struct InternedModule
     std::vector<LibraryVariant> Variants;
     // todo-ship: Change the hash to xxHash3. This needs to actually reference
     // the "default" or "enabled" hash name for the library.
-    ContentInterner<std::string> SourceInterner{ &HashSourcePayload, "fnv1a-64" };
-    ContentInterner<ReflectedBinding> ResourceInterner{ &HashResourcePayload, "fnv1a-64" };
-    ContentInterner<ResourceList> ResourceListInterner{ &HashIndexListPayload, "fnv1a-64" };
-    ContentInterner<FootprintList> FootprintListInterner{ &HashFootprintListPayload, "fnv1a-64" };
-    ContentInterner<VisibilityList> VisibilityInterner{ &HashIndexListPayload, "fnv1a-64" };
-    ContentInterner<ReflectedRasterState> RasterInterner{ &HashRasterPayload, "fnv1a-64" };
+    ContentInterner<std::string> SourceInterner{ &HashSourceString, "xxHash3" };
+    ContentInterner<ReflectedBinding> ResourceInterner{ &HashReflectedBinding, "xxHash3" };
+    ContentInterner<ResourceList> ResourceListInterner{ &HashResourceList, "xxHash3" };
+    ContentInterner<FootprintList> FootprintListInterner{ &HashFootprintList, "xxHash3" };
+    ContentInterner<VisibilityList> VisibilityInterner{ &HashVisibilityList, "xxHash3" };
+    ContentInterner<ReflectedRasterState> RasterInterner{ &HashReflectedRasterState, "xxHash3" };
 };
 
 /**@brief Interned tables and information about how efficiently they were built. We store these

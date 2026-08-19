@@ -15,7 +15,10 @@
  *
  * The enums live in shader/ShaderLibraryTypes.hpp, because the graph reads the same vocabulary. This
  * schema adds only the parts that the offline tool needs: owning strings, and the raw expression text
- * that a diagnostic must quote. */
+ * that a diagnostic must quote. 
+ * 
+ * todo-ship: refactor this into a true C ABI. We have patterns from prev ShaderTools iteration for 
+ * passing data like strings across DLL boundary, so we can do this just fine.*/
 namespace lodestone
 {
 
@@ -138,11 +141,15 @@ std::string_view ToString(VertexScalarType scalar_type) noexcept;
  * and component count should be sufficient for all APIs to create vertex bindings. */
 struct ReflectedVertexInput
 {
+    struct Packed
+    {
+        uint32_t SemanticIndex{ 0u };
+        uint32_t Location{ 0u };
+        VertexScalarType ScalarType{ VertexScalarType::Invalid };
+        uint32_t ComponentCount{ 0u };
+        friend bool operator==(const Packed&, const Packed&) = default;
+    } Data;
     std::string SemanticName;
-    uint32_t SemanticIndex{ 0u };
-    uint32_t Location{ 0u };
-    VertexScalarType ScalarType{ VertexScalarType::Invalid };
-    uint32_t ComponentCount{ 0u };
 
     friend bool operator==(const ReflectedVertexInput&, const ReflectedVertexInput&) = default;
 };
@@ -150,12 +157,14 @@ struct ReflectedVertexInput
 /**@brief One fragment shader color target. The scalar type and component count describe the output, but the
  * actual format is determined by the client API being used, and what the actual runtime configuration is.
  * Most of the time, client gfx APIs just convert. One should not build assumptions on the format you can
- * interpret from this because of that */
-struct ReflectedColorTarget
+ * interpret from this because of that
+ * @note alignas(16) for some guarantees on memory layout and hashing */
+struct alignas(16) ReflectedColorTarget
 {
     uint32_t Location{ 0u };
     VertexScalarType ScalarType{ VertexScalarType::Invalid };
     uint32_t ComponentCount{ 0u };
+    uint32_t Padding{ 0u };
 
     friend bool operator==(const ReflectedColorTarget&, const ReflectedColorTarget&) = default;
 };
@@ -232,6 +241,9 @@ std::string DescribeBinding(const ReflectedBinding& binding);
 /** Empty when the shader declared no size for this resource. */
 std::string DescribeFootprint(const ResourceFootprint& footprint);
 std::string DescribeUniformMembers(const ReflectedBinding& binding);
+
+uint64_t HashReflectedBinding(const ReflectedBinding& binding) noexcept;
+uint64_t HashReflectedRasterState(const ReflectedRasterState& raster) noexcept;
 
 } // namespace lodestone
 

@@ -407,9 +407,9 @@ namespace
 
         ReflectedVertexInput input;
         input.SemanticName = std::string{ semantic };
-        input.SemanticIndex = static_cast<uint32_t>(var_layout->getSemanticIndex());
-        input.Location = location;
-        ReadVaryingShape(typeLayout, input.ScalarType, input.ComponentCount);
+        input.Data.SemanticIndex = static_cast<uint32_t>(var_layout->getSemanticIndex());
+        input.Data.Location = location;
+        ReadVaryingShape(typeLayout, input.Data.ScalarType, input.Data.ComponentCount);
 
         raster.VertexInputs.push_back(std::move(input));
     }

@@ -5,6 +5,7 @@
 #include "PermutationSpace.hpp"
 #include "ShaderDataSchema.hpp"
 
+#include <array>
 #include <cstdint>
 #include <cstdio>
 #include <expected>
@@ -17,97 +18,62 @@
 namespace lodestone
 {
 
-ContentHashValue HashSourcePayload(const std::string& source) noexcept
+ContentHashValue HashIndexList(const std::vector<uint32_t>& indices) noexcept
 {
-    return HashFnv1a64(source);
+    // this feels a little.... UB
+    std::span<const uint32_t> indicesSpan{ indices.data(), indices.size() };
+    std::span<const std::byte> indicesBytesSpan = std::as_bytes(indicesSpan);
+    return HashBytes(indicesBytesSpan);
 }
 
-ContentHashValue HashResourcePayload(const ReflectedBinding& resource) noexcept
+ContentHashValue HashSourceString(const std::string& source) noexcept
 {
-    ContentHashValue hash = HashFnv1a64("resource");
-    hash = CombineHash(hash, HashFnv1a64(resource.Name));
-    hash = CombineHash(hash, resource.Placement.index());
-    hash = CombineHash(hash, GroupOf(resource));
-    hash = CombineHash(hash, BindingOf(resource));
-    hash = CombineHash(hash, static_cast<uint64_t>(resource.Kind));
-    hash = CombineHash(hash, resource.ElementStride);
-    hash = CombineHash(hash, resource.ByteSize);
-    hash = CombineHash(hash, resource.ArrayCount);
-    hash = CombineHash(hash, static_cast<uint64_t>(resource.Shape));
-    hash = CombineHash(hash, static_cast<uint64_t>(resource.SampleType));
-    hash = CombineHash(hash, static_cast<uint64_t>(resource.StorageFormat));
-    hash = CombineHash(hash, static_cast<uint64_t>(resource.StorageAccess));
-    hash = CombineHash(hash, static_cast<uint64_t>(resource.SamplerType));
-
-    for (const ReflectedUniformMember& member : resource.UniformMembers)
-    {
-        hash = CombineHash(hash, HashFnv1a64(member.Name));
-        hash = CombineHash(hash, member.Offset);
-        hash = CombineHash(hash, member.Size);
-        hash = CombineHash(hash, member.ArrayCount);
-    }
-
-    return hash;
+    // make string_view from source first, then cast to std::span<const std::byte> for hashing
+    auto bytesSpan = std::as_bytes(std::span{ source.data(), source.length() });
+    return HashBytes(bytesSpan);
 }
 
-ContentHashValue HashIndexListPayload(const std::vector<uint32_t>& indices) noexcept
+ContentHashValue HashResourceList(const ResourceList& resources) noexcept
 {
-    ContentHashValue hash = HashFnv1a64("indices");
-
-    for (const uint32_t index : indices)
-    {
-        hash = CombineHash(hash, index);
-    }
-
-    return hash;
+    return HashIndexList(resources);
 }
 
-ContentHashValue HashFootprintListPayload(const std::vector<ResourceFootprint>& footprints) noexcept
+ContentHashValue HashVisibilityList(const std::vector<uint32_t>& visibility) noexcept
 {
-    ContentHashValue hash = HashFnv1a64("footprints");
+    return HashIndexList(visibility);
+}
 
+ContentHashValue HashFootprintList(const std::vector<ResourceFootprint>& footprints) noexcept
+{
+    thread_local StreamingHash compositeHasher;
+    compositeHasher.Reset(); // originally wanted to use local array
+    // reusable array for at most 4 scalar values per footprint
+    std::array<uint64_t, 4> footprintScalars;
+    // can we construct this using ranges?
     for (const ResourceFootprint& footprint : footprints)
     {
-        hash = CombineHash(hash, footprint.index());
+        footprintScalars[0] = static_cast<uint64_t>(footprint.index());
+        footprintScalars[1] = 0;
+        footprintScalars[2] = 0;
+        footprintScalars[3] = 0;
 
         if (const BufferFootprint* buffer = std::get_if<BufferFootprint>(&footprint))
         {
-            hash = CombineHash(hash, buffer->ElementCount);
-            hash = CombineHash(hash, HashFnv1a64(buffer->Expression));
+            footprintScalars[1] = static_cast<uint64_t>(buffer->ElementCount);
+            compositeHasher.Append(std::span{ footprintScalars.data(), 2 });
+            compositeHasher.Append(std::string_view{ buffer->Expression });
         }
         else if (const TextureFootprint* texture = std::get_if<TextureFootprint>(&footprint))
         {
-            hash = CombineHash(hash, texture->ExtentX);
-            hash = CombineHash(hash, texture->ExtentY);
-            hash = CombineHash(hash, texture->ExtentZ);
-            hash = CombineHash(hash, HashFnv1a64(texture->Expression));
+            footprintScalars[1] = static_cast<uint64_t>(texture->ExtentX);
+            footprintScalars[2] = static_cast<uint64_t>(texture->ExtentY);
+            footprintScalars[3] = static_cast<uint64_t>(texture->ExtentZ);
+            compositeHasher.Append(std::span{ footprintScalars.data(), 4 });
+            compositeHasher.Append(std::string_view{ texture->Expression });
         }
     }
 
-    return hash;
-}
-
-ContentHashValue HashRasterPayload(const ReflectedRasterState& raster) noexcept
-{
-    ContentHashValue hash = HashFnv1a64("raster");
-
-    for (const ReflectedVertexInput& input : raster.VertexInputs)
-    {
-        hash = CombineHash(hash, HashFnv1a64(input.SemanticName));
-        hash = CombineHash(hash, input.SemanticIndex);
-        hash = CombineHash(hash, input.Location);
-        hash = CombineHash(hash, static_cast<uint64_t>(input.ScalarType));
-        hash = CombineHash(hash, input.ComponentCount);
-    }
-
-    for (const ReflectedColorTarget& target : raster.ColorTargets)
-    {
-        hash = CombineHash(hash, target.Location);
-        hash = CombineHash(hash, static_cast<uint64_t>(target.ScalarType));
-        hash = CombineHash(hash, target.ComponentCount);
-    }
-
-    return CombineHash(hash, raster.WritesFragDepth ? 1u : 0u);
+    return compositeHasher.Finalize();
 }
 
 void DisableDedupe(InternedModule& module) noexcept
@@ -141,7 +107,7 @@ CookResult<void> AppendVariantToModule(InternedModule& module,
                                           .VariantDescription = variant.VariantDescription,
                                           .VariantIndex = variant.VariantIndex };
 
-    // Resources are per-variant (since that's the granularity we will build resources and bind 
+    // Resources are per-variant (since that's the granularity we will build resources and bind
     // models at, not entrypoints: this is one of the advantages of our system)
     ResourceList resources;
     resources.reserve(variant.GlobalBindings.size());
@@ -280,7 +246,8 @@ ShaderLayout ResolveLayout(const CookedModule& module,
             return {};
         }
 
-        ResourceFootprint footprint = localRsrcIndex < footprints.size() ? footprints[localRsrcIndex] : ResourceFootprint{};
+        ResourceFootprint footprint =
+            localRsrcIndex < footprints.size() ? footprints[localRsrcIndex] : ResourceFootprint{};
         layout.emplace_back(module.Resources[resources[localRsrcIndex]], footprint);
     }
 

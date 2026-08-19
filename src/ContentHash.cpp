@@ -1,5 +1,6 @@
 #include "ContentHash.hpp"
 
+#include <cassert>
 #include <cstdint>
 #include <string_view>
 #include <xxhash.h>
@@ -7,56 +8,81 @@
 namespace lodestone
 {
 
-namespace
-{
-
-    constexpr ContentHashValue k_Fnv1aOffsetBasis = 14695981039346656037ull;
-    constexpr ContentHashValue k_Fnv1aPrime = 1099511628211ull;
-
-} // namespace
-
-constexpr bool k_UseXXHash3 = false;
-
-ContentHashValue HashFnv1a64(std::string_view bytes) noexcept
-{
-    ContentHashValue hash = k_Fnv1aOffsetBasis;
-
-    for (char character : bytes)
+    ContentHashValue HashBytes(std::span<const std::byte> bytes) noexcept
     {
-        hash ^= static_cast<ContentHashValue>(static_cast<unsigned char>(character));
-        hash *= k_Fnv1aPrime;
+        return XXH3_64bits(bytes.data(), bytes.size());
     }
 
-    return hash;
-}
-
-ContentHashValue HashXXHash3(std::string_view bytes) noexcept
-{
-    return XXH3_64bits(bytes.data(), bytes.size());
-}
-
-ContentHashValue CombineHash(ContentHashValue seed, uint64_t value) noexcept
-{
-    if (!k_UseXXHash3)
+    StreamingHash::StreamingHash()
     {
-        for (uint32_t byteIndex = 0u; byteIndex < 8u; ++byteIndex)
-        {
-            seed ^= (value >> (byteIndex * 8u)) & 0xFFull;
-            seed *= k_Fnv1aPrime;
-        }
-
-        return seed;
-    }
-    else
-    {
-        return XXH3_64bits_withSeed(&value, sizeof(value), seed);
+        hashState = XXH3_createState();
+        XXH3_64bits_reset(hashState);
     }
 
-}
+    StreamingHash::~StreamingHash()
+    {
+        assert(hashState != nullptr);
+        XXH3_freeState(hashState);
+    }
 
-ContentHashFunction DefaultContentHashFunction() noexcept
-{
-    return ContentHashFunction{ "xxhash3_64", &HashXXHash3 };
-}
+    void StreamingHash::Append(std::span<const std::byte> values) noexcept
+    {
+        XXH3_64bits_update(hashState, values.data(), values.size());
+    }
+
+    void StreamingHash::Append(std::string_view bytes) noexcept
+    {
+        XXH3_64bits_update(hashState, bytes.data(), bytes.size());
+    }
+
+    void StreamingHash::Append(uint64_t value) noexcept
+    {
+        XXH3_64bits_update(hashState, &value, sizeof(value));
+    }
+
+    void StreamingHash::Append(int64_t value) noexcept
+    {
+        XXH3_64bits_update(hashState, &value, sizeof(value));
+    }
+
+    void StreamingHash::Append(uint32_t value) noexcept
+    {
+        XXH3_64bits_update(hashState, &value, sizeof(value));
+    }
+
+    void StreamingHash::Append(int32_t value) noexcept
+    {
+        XXH3_64bits_update(hashState, &value, sizeof(value));
+    }
+
+    void StreamingHash::Append(std::span<const uint64_t> values) noexcept
+    {
+        XXH3_64bits_update(hashState, values.data(), values.size() * sizeof(uint64_t));
+    }
+
+    void StreamingHash::Append(std::span<const int64_t> values) noexcept
+    {
+        XXH3_64bits_update(hashState, values.data(), values.size() * sizeof(int64_t));
+    }
+
+    void StreamingHash::Append(std::span<const uint32_t> values) noexcept
+    {
+        XXH3_64bits_update(hashState, values.data(), values.size() * sizeof(uint32_t));
+    }
+
+    void StreamingHash::Append(std::span<const int32_t> values) noexcept
+    {
+        XXH3_64bits_update(hashState, values.data(), values.size() * sizeof(int32_t));
+    }
+
+    void StreamingHash::Reset() noexcept
+    {
+        XXH3_64bits_reset(hashState);
+    }
+
+    ContentHashValue StreamingHash::Finalize() const noexcept
+    {
+        return XXH3_64bits_digest(hashState);
+    }
 
 } // namespace lodestone

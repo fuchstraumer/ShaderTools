@@ -369,10 +369,10 @@ namespace
             const ManifestVertexInput& readInput = read_inputs[inputIndex];
 
             if (view.String(readInput.SemanticNameString) != expectedInput.SemanticName ||
-                readInput.SemanticIndex != expectedInput.SemanticIndex ||
-                readInput.Location != expectedInput.Location ||
-                readInput.ScalarType != static_cast<uint32_t>(expectedInput.ScalarType) ||
-                readInput.ComponentCount != expectedInput.ComponentCount)
+                readInput.SemanticIndex != expectedInput.Data.SemanticIndex ||
+                readInput.Location != expectedInput.Data.Location ||
+                readInput.ScalarType != static_cast<uint32_t>(expectedInput.Data.ScalarType) ||
+                readInput.ComponentCount != expectedInput.Data.ComponentCount)
             {
                 std::println(stderr,
                              "[shader_cooker] manifest vertex input '{}' does not match the cook",
@@ -574,10 +574,10 @@ namespace
     {
         ManifestVertexInput record;
         record.SemanticNameString = strings.Add(input.SemanticName);
-        record.SemanticIndex = input.SemanticIndex;
-        record.Location = input.Location;
-        record.ScalarType = static_cast<uint32_t>(input.ScalarType);
-        record.ComponentCount = input.ComponentCount;
+        record.SemanticIndex = input.Data.SemanticIndex;
+        record.Location = input.Data.Location;
+        record.ScalarType = static_cast<uint32_t>(input.Data.ScalarType);
+        record.ComponentCount = input.Data.ComponentCount;
         return record;
     }
 

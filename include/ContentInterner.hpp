@@ -58,7 +58,6 @@ struct InternerStatistics
     /** Byte comparisons that a hash hit forced. A rising count means a worse hash, not a bug. */
     uint32_t ByteComparisons{ 0u };
 };
-
 /**@brief Note that this is templated on the payload type: that affects how equality and hashing can be
  * performed, and is another way we give ourselves flexibilty with output formats. This could be changed to be
  * SPIR-V, or GLSL, or DXIL, or any other format we want to support. The interner doesn't care, it just needs

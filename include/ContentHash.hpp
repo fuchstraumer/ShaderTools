@@ -1,8 +1,12 @@
 #pragma once
 #ifndef LODESTONE_SHADER_COOKER_CONTENT_HASH_HPP
 #define LODESTONE_SHADER_COOKER_CONTENT_HASH_HPP
+#include <cstddef>
 #include <cstdint>
+#include <span>
 #include <string_view>
+
+struct XXH3_state_s;
 
 /**
  * The hash the interner uses to find candidates.
@@ -20,22 +24,42 @@ namespace lodestone
 {
 
 using ContentHashValue = uint64_t;
+inline constexpr std::string_view k_HashName{ "xxHash3_64" };
+ContentHashValue HashBytes(std::span<const std::byte> values) noexcept;
 
-/**@brief A hash function, plus the name that identifies it in the report and in any stored output.
- * @note The name should be unique, as it is the only way to identify the function in a stored manifest. */
-struct ContentHashFunction
+/**@brief xxHash3 has a "streaming" hashing API that you can open with `XXH3_createState` and update
+ * incrementally, so we can use RAII to hide the fiddly bits and make it intuitive for users: create a
+ * streaming hash object, add your values to it in a {} block, and then finalize to close it and get your
+ * result (freeing memory while at it)
+ */
+struct StreamingHash
 {
-    std::string_view Name;
-    ContentHashValue (*Hash)(std::string_view bytes) noexcept;
+    StreamingHash();
+    ~StreamingHash();
+    // no rule of 5, create this locally and use it inline or don't use it
+    StreamingHash(const StreamingHash&) = delete;
+    StreamingHash& operator=(const StreamingHash&) = delete;
+    StreamingHash(StreamingHash&&) = delete;
+    StreamingHash& operator=(StreamingHash&&) = delete;
+    // this would've been easier with templates, but that's silly for this use case
+    // and means header bloat. booooo
+    void Append(std::span<const std::byte> values) noexcept;
+    void Append(std::string_view bytes) noexcept;
+    void Append(uint64_t value) noexcept;
+    void Append(int64_t value) noexcept;
+    void Append(uint32_t value) noexcept;
+    void Append(int32_t value) noexcept;
+    void Append(std::span<const uint64_t> values) noexcept;
+    void Append(std::span<const int64_t> values) noexcept;
+    void Append(std::span<const uint32_t> values) noexcept;
+    void Append(std::span<const int32_t> values) noexcept;
+    // resets the internal state without realloc: this is just some memsets()
+    // works great with our preserved thread-local state bc we avoid aligned alloc cost
+    void Reset() noexcept;
+    ContentHashValue Finalize() const noexcept;
+private:
+    XXH3_state_s* hashState{ nullptr };
 };
-
-ContentHashValue HashFnv1a64(std::string_view bytes) noexcept;
-ContentHashValue HashXXHash3(std::string_view bytes) noexcept;
-
-/**@brief Mixes one more value into a running hash. A layout hashes field by field, so it needs this. */
-ContentHashValue CombineHash(ContentHashValue seed, uint64_t value) noexcept;
-
-ContentHashFunction DefaultContentHashFunction() noexcept;
 
 } // namespace lodestone
 
