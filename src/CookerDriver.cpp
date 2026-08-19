@@ -484,7 +484,6 @@ namespace
                                            InternedModule& interned_module,
                                            RawModule& raw_module,
                                            std::vector<CompiledVariant>& out_module_variants,
-                                           std::vector<CompiledVariant>& out_variants,
                                            CookStatistics& statistics)
     {
         const bool keepRawVariants = IsStageDumpRequested(options, StageDumpKind::Raw);
@@ -541,8 +540,7 @@ namespace
                 return appendResult;
             }
 
-            out_module_variants.push_back(variant);
-            out_variants.push_back(std::move(variant));
+            out_module_variants.emplace_back(std::move(variant));
         }
 
         return {};
@@ -681,7 +679,6 @@ namespace
                                                               internedModule,
                                                               rawModule,
                                                               moduleVariants,
-                                                              out_variants,
                                                               statistics);
             !compiled)
         {
