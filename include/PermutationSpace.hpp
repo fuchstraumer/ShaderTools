@@ -23,6 +23,7 @@ using PermutationValue = std::variant<bool, uint32_t, int32_t>;
 struct PermutationAxis
 {
     std::string Name;
+    // todo-ship: sort values to obtain consistent ordering for more efficient usage of this vec
     std::vector<PermutationValue> Values;
     const PermutationAxis* Parent{ nullptr };
     PermutationValue RequiredParentValue{ false };

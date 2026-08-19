@@ -23,7 +23,7 @@
             "program": "${command:cmake.launchTargetPath}",
             "args": [ ],
             "cwd": "${command:cmake.getLaunchTargetDirectory}",
-            "console": "newExternalWindow"
+            "console": "integratedTerminal"
         },
         {
             "name": "[VSDBG] Launch Cooker Target",
@@ -32,7 +32,7 @@
             "program": "${command:cmake.launchTargetPath}",
             "args": [
                 "-o", "${workspaceFolder}/out/cooked.hpp",
-                "--O3",
+                "--O3", "--dump-stage=all",
                 "${workspaceFolder}/tests/assets/compute/Ocean/OceanFft.slang" ],
             "cwd": "${command:cmake.getLaunchTargetDirectory}",
             "console": "integratedTerminal"

@@ -16,24 +16,7 @@ import sys
 import numpy as np
 
 import vtf_support as vtf
-
-
-class Results:
-    def __init__(self) -> None:
-        self.passed = 0
-        self.failed = 0
-
-    def check(self, condition: bool, description: str, detail: str = "") -> bool:
-        if condition:
-            self.passed += 1
-            print(f"  PASS  {description}")
-        else:
-            self.failed += 1
-            print(f"  FAIL  {description}")
-            if detail:
-                print(f"        {detail}")
-        return condition
-
+from vtf_support import Results
 
 # ---------------------------------------------------------------------------------------------
 
@@ -512,51 +495,11 @@ def test_cluster_aabbs(ctx: vtf.VtfDevice, results: Results):
     """The cluster boxes must tile the frustum without a gap, and grow with depth."""
     print("\nVtfComputeClusterAABBs")
 
-    grid = (24, 16, 24)
-    cluster_count = grid[0] * grid[1] * grid[2]
-    near, far = 0.1, 500.0
-    # The exponential depth ratio that gives `grid[2]` slices between near and far.
-    near_k = (far / near) ** (1.0 / grid[2])
-
-    screen = (1920.0, 1080.0)
-    cluster_pixels = (screen[0] / grid[0], screen[1] / grid[1])
-
-    aspect = screen[0] / screen[1]
-    fov_y = np.radians(60.0)
-    focal = 1.0 / np.tan(fov_y * 0.5)
-    projection = np.zeros((4, 4), dtype=np.float32)
-    projection[0, 0] = focal / aspect
-    projection[1, 1] = focal
-    projection[2, 2] = far / (near - far)
-    projection[2, 3] = near * far / (near - far)
-    projection[3, 2] = -1.0
-    inverse_projection = np.linalg.inv(projection.astype(np.float64)).astype(np.float32)
-
-    identity = np.eye(4, dtype=np.float32)
-    matrices = np.concatenate([
-        identity.T.reshape(-1), projection.T.reshape(-1), identity.T.reshape(-1),
-        identity.T.reshape(-1), inverse_projection.T.reshape(-1), identity.T.reshape(-1),
-    ]).astype(np.float32)
-
-    out = ctx.buffer(np.zeros(cluster_count, dtype=vtf.AABB_DTYPE))
-    ctx.kernel("VtfComputeClusterAABBs").dispatch([cluster_count, 1, 1], {
-        "Clusters": {
-            "GridDim": grid,
-            "ViewNear": near,
-            "ClusterSizeInPixels": (int(cluster_pixels[0]), int(cluster_pixels[1])),
-            "NearK": near_k,
-            "LogGridDimY": 1.0 / np.log(near_k),
-        },
-        "Matrices": {"viewMatrix": identity, "projectionMatrix": projection,
-                     "viewProjectionMatrix": projection, "inverseViewMatrix": identity,
-                     "inverseProjectionMatrix": inverse_projection,
-                     "inverseViewProjectionMatrix": inverse_projection},
-        "ClusterAABBs": out,
-    })
-
-    boxes = ctx.read(out, vtf.AABB_DTYPE)
-    lower = boxes["Min"].astype(np.float64)
-    upper = boxes["Max"].astype(np.float64)
+    # ClusterGrid holds the grid and the camera together. vtf_leaf_overlap.py measures against the
+    # same object, so the boxes this test checks are the boxes that measurement counts.
+    cluster_grid = vtf.ClusterGrid()
+    grid = cluster_grid.grid
+    lower, upper = cluster_grid.cluster_aabbs(ctx)
 
     results.check(np.isfinite(lower).all() and np.isfinite(upper).all(),
                   "every cluster box is finite")

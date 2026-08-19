@@ -194,7 +194,7 @@ against a second opinion, and changes nothing. A validator gets a name and no nu
 number would state that every target must supply one. A target supplies a validator only when it can.
 
 1. **Declare.** `FindPermutationSpaceForModule(name)` finds the module's axes.
-   `VerifyAxisNamesAreDeclared` checks each axis name against the `extern const static` declarations
+   `VerifyAxisNamesAreDeclared` checks each axis name against the `extern static const` declarations
    in the Slang source texts. A module with no registered space gets an empty space and one variant.
 2. **Enumerate.** `EnumerateVariants` expands the space into a `VariantSet` of `VariantDescriptor`
    values. Each descriptor holds `Active` and `Canonical` (see below) and a dense index.
@@ -277,7 +277,7 @@ Break one of these and the cook can exit 0 with wrong content.
    That asymmetry is the only reason the cross-check finds real errors.
 5. **Every emitter reads one frozen model.** An emitter must not reach past `CookedLibrary` into
    `CompiledVariant` or into Slang.
-6. **An axis name must match the Slang `extern const static` name exactly.** A mismatch links a
+6. **An axis name must match the Slang `extern static const` name exactly.** A mismatch links a
    symbol that nobody references, leaves the shader on its default, and fails nowhere.
    `VerifyAxisNamesAreDeclared` exists for this reason.
 
@@ -294,7 +294,7 @@ gaps, and the design accepts them.
 ### Size expressions
 
 A size travels as a string, and this is not a style choice. Slang folds an attribute integer argument
-at compile time, but the permutation constants are `extern const static` and fold at link time.
+at compile time, but the permutation constants are `extern static const` and fold at link time.
 `[vx_element_count(IFFT_SIZE * 4)]` therefore fails to compile. A string argument reaches reflection
 untouched, and `EvaluateSizeExpression` does the arithmetic once for each variant.
 
@@ -309,7 +309,7 @@ the top of `src/PermutationSpace.cpp`. Add an axis, a space, a policy, and a tab
 `OceanFft` has an entry today.
 
 This table is compiled in. Replacing it is phase E, and
-`docs/phase-e-data-driven-permutations.md` plans it: the axis moves onto the `extern const static`
+`docs/phase-e-data-driven-permutations.md` plans it: the axis moves onto the `extern static const`
 declaration as an attribute, and the policy moves into a data file a tech artist owns. Do not start
 that work as a side effect of another task.
 

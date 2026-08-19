@@ -18,4 +18,5 @@ docs/
 third_party/magic_enum
 out/
 *.pyc
+*.png
 __pycache__/

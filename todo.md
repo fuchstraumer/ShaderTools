@@ -15,3 +15,6 @@
 # Permutation system
 - Given the above, we'll also want a way to flag the "domain" of a parameter and it's optionality? Rootness? How important it is to the output, and if we expect it to depend on device properties.
   This could accelerate queries and allow for internal optimizations to help section data into platform/scalability presets perhaps.
+
+# Found in review
+- SlangCompiler.cpp, Line 1234: We extract the raw global bindings not once, but individually for each variant. We should be able to do this at a higher level, even if this specific variant doesn't actually use all of the entrypoints. We will need to identify further axes for data reuse like this to scale to much higher variant counts without terrible performance.

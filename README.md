@@ -138,4 +138,7 @@ In the future, I plan to remove this default-resolve and make it a harder requir
 #### Step 2. Enumerate and expand the active permutation space
 
 ##### Actions
-- Call `EnumerateActiveCombinations` to perform a 
+- Call `EnumerateActiveCombinations` to perform a breadth-first traversal of the permutation space, doing classic backtrack-based constraint solving
+    - This runs as a fold-left operation, for now. It will be improved in time
+- After expansion completes and we've evaluated our space, we then perform canonicalization: we fill in the empty spaces in the evaluated concrete
+  variants array to equalize (literally, canonicalize) the variant permutations for uniformity even with variants that have whole axes disabled
