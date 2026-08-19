@@ -192,14 +192,12 @@ namespace
     const CompiledVariant* FindCompiledVariant(std::span<const CompiledVariant> compiled,
                                                uint32_t variant_index) noexcept
     {
-        for (const CompiledVariant& candidate : compiled)
+        // `compiled` is sorted in ascending order already: we can use lower_bound to find variant idx in log2(n)
+        auto candidateIter = std::ranges::lower_bound(compiled, variant_index, {}, &CompiledVariant::VariantIndex);
+        if (candidateIter != compiled.end() && candidateIter->VariantIndex == variant_index)
         {
-            if (candidate.VariantIndex == variant_index)
-            {
-                return &candidate;
-            }
+            return std::to_address(candidateIter);
         }
-
         return nullptr;
     }
 
