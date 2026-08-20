@@ -52,24 +52,27 @@ ContentHashValue HashFootprintList(const std::vector<ResourceFootprint>& footpri
     // can we construct this using ranges?
     for (const ResourceFootprint& footprint : footprints)
     {
-        footprintScalars[0] = static_cast<uint64_t>(footprint.index());
-        footprintScalars[1] = 0;
-        footprintScalars[2] = 0;
-        footprintScalars[3] = 0;
+        footprintScalars.fill(0u);
 
         if (const BufferFootprint* buffer = std::get_if<BufferFootprint>(&footprint))
         {
+            footprintScalars[0] = static_cast<uint64_t>(footprint.index());
             footprintScalars[1] = static_cast<uint64_t>(buffer->ElementCount);
-            compositeHasher.Append(std::span{ footprintScalars.data(), 2 });
+            compositeHasher.Append(std::span{ footprintScalars.data(), 2u });
             compositeHasher.Append(std::string_view{ buffer->Expression });
         }
         else if (const TextureFootprint* texture = std::get_if<TextureFootprint>(&footprint))
         {
+            footprintScalars[0] = static_cast<uint64_t>(footprint.index());
             footprintScalars[1] = static_cast<uint64_t>(texture->ExtentX);
             footprintScalars[2] = static_cast<uint64_t>(texture->ExtentY);
             footprintScalars[3] = static_cast<uint64_t>(texture->ExtentZ);
-            compositeHasher.Append(std::span{ footprintScalars.data(), 4 });
+            compositeHasher.Append(std::span{ footprintScalars.data(), footprintScalars.size() });
             compositeHasher.Append(std::string_view{ texture->Expression });
+        }
+        else
+        {
+            compositeHasher.Append(static_cast<uint64_t>(footprint.index()));
         }
     }
 
@@ -121,7 +124,7 @@ CookResult<void> AppendVariantToModule(InternedModule& module,
     record.Suffix = variant.VariantSuffix;
     record.Description = variant.VariantDescription;
     record.Canonical = canonical;
-    record.ResourceListIndex = module.ResourceListInterner.Intern(std::move(resources), variantOrigin).Index;
+    record.ResourceListIndex = module.ResourceListInterner.Intern(resources), variantOrigin).Index;
     record.FootprintListIndex = module.FootprintListInterner.Intern(variant.Footprints, variantOrigin).Index;
     record.SourceIndices.reserve(variant.EntryPoints.size());
     record.VisibilityIndices.reserve(variant.EntryPoints.size());
@@ -177,12 +180,12 @@ CookedModule FreezeModuleTables(InternedModule&& interned)
     module.EntryPoints = std::move(interned.EntryPoints);
     module.Variants = std::move(interned.Variants);
 
-    module.Sources = std::move(interned.SourceInterner.ConsumeTable());
-    module.Resources = std::move(interned.ResourceInterner.ConsumeTable());
-    module.ResourceLists = std::move(interned.ResourceListInterner.ConsumeTable());
-    module.FootprintLists = std::move(interned.FootprintListInterner.ConsumeTable());
-    module.VisibilityLists = std::move(interned.VisibilityInterner.ConsumeTable());
-    module.RasterStates = std::move(interned.RasterInterner.ConsumeTable());
+    module.Sources = interned.SourceInterner.ConsumeTable();
+    module.Resources = interned.ResourceInterner.ConsumeTable();
+    module.ResourceLists = interned.ResourceListInterner.ConsumeTable();
+    module.FootprintLists = interned.FootprintListInterner.ConsumeTable();
+    module.VisibilityLists = interned.VisibilityInterner.ConsumeTable();
+    module.RasterStates = interned.RasterInterner.ConsumeTable();
 
     module.SourceTable = DescribeTable(interned.SourceInterner);
     module.ResourceTable = DescribeTable(interned.ResourceInterner);
