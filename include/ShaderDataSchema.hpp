@@ -142,12 +142,19 @@ struct ResolvedBindingView
 {
     const ReflectedBinding* Resource{ nullptr };
     const ResourceFootprint* Footprint{ nullptr };
-    // we should actually value-compare the contents of these two: in cases of things like
-    // ResolveLayoutView vs EntryPointLayoutView, they are stored separately but have same contents
+    // account for potential `nullptr` values: resources having no footprint
+    // is a relatively common case, for unannotated resources
     // todo-ship: shouldn't we just intern that still lol
     constexpr bool operator==(const ResolvedBindingView& rhs) const noexcept
     {
-        return (*Resource == *rhs.Resource) && (*Footprint == *rhs.Footprint);
+        const bool resourcesAgree =
+            (Resource == rhs.Resource) ||
+            (Resource != nullptr && rhs.Resource != nullptr && *Resource == *rhs.Resource);
+        const bool footprintsAgree =
+            (Footprint == rhs.Footprint) ||
+            (Footprint != nullptr && rhs.Footprint != nullptr && *Footprint == *rhs.Footprint);
+
+        return resourcesAgree && footprintsAgree;
     }
     constexpr bool operator!=(const ResolvedBindingView& rhs) const noexcept
     {
