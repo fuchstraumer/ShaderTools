@@ -38,16 +38,15 @@ public:
      * rather than a field of the create info because a sink cannot be absent: a compiler that has
      * nowhere to report is a compiler that fails in silence. */
     CookResult<void> Initialize(const SlangCompilerCreateInfo& create_info, DiagnosticSink& sink);
-    /** Defaults of the extern constants no axis drives. A size expression may name them, so they must
-     * be resolved before the first CompileVariant call. */
-    CookResult<void> ResolveExternConstantDefaults(const PermutationSpace& space);
+    /** Stage 3, once for each module. Returns the module facts stage 4 needs and only Slang can
+     * supply, the defaults of the extern constants no axis drives among them. A size expression may
+     * name one, so call this before the first `CompileVariantRaw`. */
+    CookResult<RawModule> PrepareRawModule(const PermutationSpace& space);
 
-    /** Stage 3. Links, generates the target text, and reads reflection. Every `[vx_*]` argument comes
-     * back as the string the author wrote, because evaluating one is stage 4's job. */
+    /** Stage 3, once for each variant. Links, generates the target text, and reads reflection. Every
+     * `[vx_*]` argument comes back as the string the author wrote, because evaluating one is stage
+     * 4's job. */
     CookResult<RawVariant> CompileVariantRaw(const VariantDescriptor& descriptor);
-
-    /** Everything stage 4 needs that only Slang can supply. Filled by `ResolveExternConstantDefaults`. */
-    std::span<const ExternConstantDefault> GetExternConstantDefaults() const noexcept;
 
     std::string_view GetModuleName() const noexcept;
     std::span<const std::string> GetEntryPointNames() const noexcept;

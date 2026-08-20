@@ -428,7 +428,7 @@ namespace
 
         ReportUndrivenExternConstants(*out_space, compiler.GetModuleSourceTexts(), moduleName);
 
-        return compiler.ResolveExternConstantDefaults(*out_space);
+        return {};
     }
 
     /** Everything the cook measures for one compiled variant, before it reaches the tables. */
@@ -499,8 +499,7 @@ namespace
                 return std::unexpected(rawResult.error());
             }
 
-            const ResolveContext context =
-                MakeResolveContext(descriptor.Canonical, compiler.GetExternConstantDefaults());
+            const ResolveContext context = MakeResolveContext(descriptor.Canonical, raw_module.ExternDefaults);
             CookResult<CompiledVariant> variantResult = ResolveVariant(rawResult.value(), context);
             if (!variantResult)
             {
@@ -664,12 +663,13 @@ namespace
         std::vector<CompiledVariant> moduleVariants;
         moduleVariants.reserve(variantSet.value().Variants.size());
 
-        RawModule rawModule;
-        rawModule.Name = moduleName;
-        rawModule.EntryPointNames.assign(compiler.GetEntryPointNames().begin(),
-                                         compiler.GetEntryPointNames().end());
-        rawModule.ExternDefaults.assign(compiler.GetExternConstantDefaults().begin(),
-                                        compiler.GetExternConstantDefaults().end());
+        CookResult<RawModule> rawModuleResult = compiler.PrepareRawModule(*space);
+        if (!rawModuleResult)
+        {
+            return std::unexpected(rawModuleResult.error());
+        }
+
+        RawModule rawModule = std::move(rawModuleResult.value());
 
         if (CookResult<void> compiled = CompileModuleVariants(options,
                                                               *target,

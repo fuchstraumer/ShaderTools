@@ -609,9 +609,6 @@ struct SlangCompiler::Impl
     std::vector<std::string> EntryPointNames;
     std::vector<slang::CompilerOptionEntry> CompilerOptions;
     std::vector<std::string> ModuleSourceTexts;
-    /** The declared default of every `extern static const` constant no axis drives. Only Slang knows
-     * these, and stage 4 may not call Slang, so they leave this file on `RawModule::ExternDefaults`. */
-    std::vector<ExternConstantDefault> ExternDefaults;
     std::string ModuleName;
     bool MultithreadEntryPointCodegen{ true };
     /** Set once, by `Initialize`, and never null after that. A pointer rather than a reference only
@@ -1187,7 +1184,7 @@ CookResult<void> SlangCompiler::Initialize(const SlangCompilerCreateInfo& create
     return impl->CollectEntryPoints();
 }
 
-CookResult<void> SlangCompiler::ResolveExternConstantDefaults(const PermutationSpace& space)
+CookResult<RawModule> SlangCompiler::PrepareRawModule(const PermutationSpace& space)
 {
     if (impl == nullptr)
     {
@@ -1201,8 +1198,11 @@ CookResult<void> SlangCompiler::ResolveExternConstantDefaults(const PermutationS
         return std::unexpected(defaults.error());
     }
 
-    impl->ExternDefaults = std::move(defaults.value());
-    return {};
+    RawModule module;
+    module.Name = impl->ModuleName;
+    module.EntryPointNames = impl->EntryPointNames;
+    module.ExternDefaults = std::move(defaults.value());
+    return module;
 }
 
 CookResult<RawVariant> SlangCompiler::CompileVariantRaw(const VariantDescriptor& descriptor)
@@ -1263,16 +1263,6 @@ CookResult<RawVariant> SlangCompiler::CompileVariantRaw(const VariantDescriptor&
     }
 
     return variant;
-}
-
-std::span<const ExternConstantDefault> SlangCompiler::GetExternConstantDefaults() const noexcept
-{
-    if (impl == nullptr)
-    {
-        return {};
-    }
-
-    return impl->ExternDefaults;
 }
 
 std::string_view SlangCompiler::GetModuleName() const noexcept

@@ -18,7 +18,7 @@ struct XXH3_state_s;
  * The name reaches the output, so a new hash needs a new name. Take it from `k_HashName` and never
  * spell it out again: the two spellings drifted apart once.
  *
- * todo-ship: measure this on mobile. No number here comes from a phone.
+ * todo-ship: measure this on mobile
  */
 namespace lodestone
 {
