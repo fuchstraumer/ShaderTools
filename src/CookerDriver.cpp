@@ -5,6 +5,7 @@
 #include "DedupeReport.hpp"
 #include "OutputSink.hpp"
 #include "PermutationSpace.hpp"
+#include "RawLibrary.hpp"
 #include "ResolveStage.hpp"
 #include "ShaderDataSchema.hpp"
 #include "ShaderLibraryEmitter.hpp"

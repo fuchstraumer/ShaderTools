@@ -1,4 +1,5 @@
 #include "DedupeReport.hpp"
+#include "ContentHash.hpp"
 #include "ContentInterner.hpp"
 #include "CookedLibrary.hpp"
 #include "CookerErrors.hpp"
@@ -11,8 +12,10 @@
 #include <cstdio>
 #include <expected>
 #include <format>
+#include <numeric>
 #include <optional>
 #include <print>
+#include <span>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -24,91 +27,104 @@ namespace lodestone
 namespace
 {
 
-    const PermutationBinding* FindBinding(const PermutationAssignment& assignment,
-                                          const PermutationAxis* axis) noexcept
+    struct SourceHashTable
     {
-        auto foundIter = std::ranges::find_if(assignment,
-                                              [axis](const PermutationBinding& binding)
-                                              {
-                                                  return binding.first == axis;
-                                              });
-        return foundIter != assignment.end() ? &(*foundIter) : nullptr;
+
+        SourceHashTable(size_t num_sources, size_t num_entry_points)
+            : numEntryPoints(num_entry_points)
+        {
+            // its semantically easier to still emplace_back new entries,
+            // rather than pre-allocating and indexing into the vector.
+            // but reserving here exactly should make that cost the same anyways
+            sourceStrHashes.reserve(num_sources * num_entry_points);
+        }
+
+        void Add(ContentHashValue hash) noexcept
+        {
+            sourceStrHashes.emplace_back(hash);
+        }
+
+        [[nodiscard]] ContentHashValue At(size_t variant_index, size_t entry_point_index) const noexcept
+        {
+            // indices are strided by numEntryPoints
+            return sourceStrHashes[(variant_index * numEntryPoints) + entry_point_index];
+        }
+
+    private:
+        std::vector<ContentHashValue> sourceStrHashes;
+        size_t numEntryPoints;
+    };
+
+    SourceHashTable BuildSourceHashTable(const CookedModule& module)
+    {
+        SourceHashTable table(module.Variants.size(), module.EntryPoints.size());
+        for (const LibraryVariant& variant : module.Variants)
+        {
+            for (size_t i = 0; i < module.EntryPoints.size(); ++i)
+            {
+                const std::string_view sourceStr = ResolveSource(module, variant, i);
+                const ContentHashValue hash =
+                    HashBytes(std::as_bytes(std::span{ sourceStr.data(), sourceStr.size() }));
+                table.Add(hash);
+            }
+        }
+        return table;
     }
 
-    /** True when two assignments agree on every axis except the one under test. */
-    bool DiffersOnlyInAxis(const PermutationAssignment& left,
-                           const PermutationAssignment& right,
-                           const PermutationAxis* axis) noexcept
+    bool AssignmentComparatorExcludingAxis(const PermutationAssignment& lhs,
+                                           const PermutationAssignment& rhs,
+                                           size_t excluded_axis_index) noexcept
     {
-        for (const PermutationBinding& binding : left)
+        for (size_t k = 0; k < lhs.size(); ++k)
         {
-            if (binding.first == axis)
+            if (k != excluded_axis_index && lhs[k].second != rhs[k].second)
             {
-                continue;
+                return lhs[k].second < rhs[k].second;
             }
+        }
+        return false;
+    }
 
-            const PermutationBinding* other = FindBinding(right, binding.first);
-            if (other == nullptr || other->second != binding.second)
+    std::vector<uint32_t> OrderByOtherAxes(const CookedModule& module, const size_t axis_index)
+    {
+        std::vector<uint32_t> order(module.Variants.size());
+        std::ranges::iota(order, 0u);
+        std::ranges::stable_sort(order,
+                                 [&](uint32_t lhs, uint32_t rhs)
+                                 {
+                                     return AssignmentComparatorExcludingAxis(module.Variants[lhs].Canonical,
+                                                                              module.Variants[rhs].Canonical,
+                                                                              axis_index);
+                                 });
+        return order;
+    }
+
+    // for each group of variants, check if they all share the same source for the given entry point.
+    bool GroupSharesOneSource(const CookedModule& module,
+                              const SourceHashTable& hashes,
+                              std::span<const uint32_t> group,
+                              size_t entry_point)
+    {
+        const ContentHashValue firstHash = hashes.At(group.front(), entry_point);
+        for (size_t i = 1; i < group.size(); ++i)
+        {
+            if (hashes.At(group[i], entry_point) != firstHash)
             {
                 return false;
             }
         }
-
-        const PermutationBinding* leftValue = FindBinding(left, axis);
-        const PermutationBinding* rightValue = FindBinding(right, axis);
-        if (leftValue == nullptr || rightValue == nullptr)
-        {
-            return false;
-        }
-
-        return leftValue->second != rightValue->second;
-    }
-
-    /** Compares the text, never the index.
-     *
-     * An index is what the interner assigned, not what the shader says. `--no-dedupe` gives every
-     * artifact its own index, so an index comparison then reports every axis Active and every module
-     * with a declared inert axis fails its policy. The escape hatch is the A/B control arm, so a
-     * measurement that only works in one arm is not a measurement.
-     *
-     * With dedup on the two comparisons agree by construction: equal text takes one entry, so equal
-     * text and equal index are the same fact. */
-    bool EntryPointTextIsEqual(const CookedModule& module,
-                               const LibraryVariant& left,
-                               const LibraryVariant& right,
-                               size_t entry_point_index) noexcept
-    {
-        return ResolveSource(module, left, entry_point_index) ==
-               ResolveSource(module, right, entry_point_index);
-    }
-
-    AxisInfluence InfluenceOfAxis(const CookedModule& module,
-                                  size_t entry_point_index,
-                                  const PermutationAxis* axis)
-    {
-        bool foundPair = false;
-
-        for (size_t i = 0u; i < module.Variants.size(); ++i)
-        {
-            for (size_t j = i + 1u; j < module.Variants.size(); ++j)
+        // as with the rest of our library: equal hashes don't prove anything. now we will fallback
+        // to actual string comparisons. with xxhash3 though, our chance of a collision is miniscule.
+        // like something on the order of 1 in 2^128 for xxhash3.
+        // (again, we shouldn't hit this, and this is for a statistical tool, but it's still important to be
+        // thorough)
+        const std::string_view text = ResolveSource(module, module.Variants[group.front()], entry_point);
+        return std::ranges::all_of(
+            group.subspan(1u),
+            [&module, &entry_point, &text](uint32_t variant_index)
             {
-                const LibraryVariant& left = module.Variants[i];
-                const LibraryVariant& right = module.Variants[j];
-
-                if (!DiffersOnlyInAxis(left.Canonical, right.Canonical, axis))
-                {
-                    continue;
-                }
-
-                foundPair = true;
-                if (!EntryPointTextIsEqual(module, left, right, entry_point_index))
-                {
-                    return AxisInfluence::Active;
-                }
-            }
-        }
-
-        return foundPair ? AxisInfluence::Inert : AxisInfluence::Undetermined;
+                return ResolveSource(module, module.Variants[variant_index], entry_point) == text;
+            });
     }
 
     /** The single character the influence table prints for one axis. The heading above the table
@@ -177,8 +193,7 @@ namespace
         {
             const uint32_t sourceIndex = variant.SourceIndices[entry_point_index];
 
-            const std::vector<SourceCollapse>::iterator found =
-                std::ranges::find(collapses, sourceIndex, &SourceCollapse::SourceIndex);
+            const auto found = std::ranges::find(collapses, sourceIndex, &SourceCollapse::SourceIndex);
 
             if (found != collapses.end())
             {
@@ -186,8 +201,7 @@ namespace
                 continue;
             }
 
-            collapses.push_back(SourceCollapse{
-                .SourceIndex = sourceIndex, .MappedCount = 1u, .FirstDescription = variant.Description });
+            collapses.emplace_back(sourceIndex, 1u, variant.Description);
         }
 
         return collapses;
@@ -253,20 +267,63 @@ ModuleInfluence ComputeAxisInfluence(const CookedModule& module)
         return influence;
     }
 
-    influence.EntryPoints.reserve(module.EntryPoints.size());
+    const size_t axisCount = module.Space->size();
+    const size_t entryPointCount = module.EntryPoints.size();
 
-    for (size_t entryPointIndex = 0u; entryPointIndex < module.EntryPoints.size(); ++entryPointIndex)
+    influence.EntryPoints.reserve(entryPointCount);
+    for (const LibraryEntryPoint& entryPoint : module.EntryPoints)
     {
-        EntryPointInfluence entry;
-        entry.EntryPointName = module.EntryPoints[entryPointIndex].Name;
-        entry.Axes.reserve(module.Space->size());
+        influence.EntryPoints.emplace_back(entryPoint.Name,
+                                           std::vector<AxisInfluence>(axisCount, AxisInfluence::Inert));
+    }
 
-        for (const PermutationAxis* axis : *module.Space)
+    const SourceHashTable hashes = BuildSourceHashTable(module);
+
+    for (size_t k = 0u; k < axisCount; ++k)
+    {
+        const std::vector<uint32_t> orderedIndices = OrderByOtherAxes(module, k);
+        bool foundPair = false;
+        for (size_t begin = 0u; begin < orderedIndices.size(); ++begin)
         {
-            entry.Axes.push_back(InfluenceOfAxis(module, entryPointIndex, axis));
+            size_t end = begin + 1;
+            const auto& beginCanonical = module.Variants[orderedIndices[begin]].Canonical;
+            // using a pointer so this isn't one psychotic long expression in the while() body :'(
+            const auto* endCanonical = &module.Variants[orderedIndices[end]].Canonical;
+            while (end < orderedIndices.size() &&
+                   !AssignmentComparatorExcludingAxis(beginCanonical, *endCanonical, k))
+            {
+                ++end;
+                endCanonical = &module.Variants[orderedIndices[end % orderedIndices.size()]].Canonical;
+            }
+
+            const std::span<const uint32_t> group{orderedIndices.data() + begin, end - begin};
+            // push up begin
+            begin = end;
+
+            if (group.size() < 2u)
+            {
+                continue;
+            }
+
+            foundPair = true;
+
+            for (size_t entryPointIndex = 0u; entryPointIndex < entryPointCount; ++entryPointIndex)
+            {
+                if (influence.EntryPoints[entryPointIndex].Axes[k] != AxisInfluence::Active &&
+                    !GroupSharesOneSource(module, hashes, group, entryPointIndex))
+                {
+                    influence.EntryPoints[entryPointIndex].Axes[k] = AxisInfluence::Active;
+                }
+            }
         }
 
-        influence.EntryPoints.push_back(std::move(entry));
+        if (!foundPair)
+        {
+            for (EntryPointInfluence& epInfluence : influence.EntryPoints)
+            {
+                epInfluence.Axes[k] = AxisInfluence::Undetermined;
+            }
+        }
     }
 
     return influence;
@@ -426,7 +483,8 @@ std::string GenerateDedupeReport(const CookedLibrary& library)
 
     report += "Shader cooker dedup report\n";
     report += "Generated by tools/shader_cooker. Do not edit by hand.\n\n";
-    report += "Note: The dedupe ratio indicates how many artifacts were seen for each unique entry. A higher ratio means more effective deduplication.\n\n";
+    report += "Note: The dedupe ratio indicates how many artifacts were seen for each unique entry. A higher "
+              "ratio means more effective deduplication.\n\n";
 
     for (const CookedModule& module : library.Modules)
     {
@@ -480,5 +538,5 @@ std::string GenerateDedupeReport(const CookedLibrary& library)
 
     return report;
 }
-
+// ttb: 764.5ms
 } // namespace lodestone
