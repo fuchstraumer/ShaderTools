@@ -89,14 +89,15 @@ struct InternedModule
     uint32_t SpaceSize{ 0u };
     std::vector<LibraryEntryPoint> EntryPoints;
     std::vector<LibraryVariant> Variants;
-    // todo-ship: Change the hash to xxHash3. This needs to actually reference
-    // the "default" or "enabled" hash name for the library.
-    ContentInterner<std::string> SourceInterner{ &HashSourceString, "xxHash3" };
-    ContentInterner<ReflectedBinding> ResourceInterner{ &HashReflectedBinding, "xxHash3" };
-    ContentInterner<ResourceList> ResourceListInterner{ &HashResourceList, "xxHash3" };
-    ContentInterner<FootprintList> FootprintListInterner{ &HashFootprintList, "xxHash3" };
-    ContentInterner<VisibilityList> VisibilityInterner{ &HashVisibilityList, "xxHash3" };
-    ContentInterner<ReflectedRasterState> RasterInterner{ &HashReflectedRasterState, "xxHash3" };
+    // Every interner takes the name from `k_HashName`, because the name reaches the output and a new
+    // hash needs a new name. A literal here is a second place to change, and the two spellings drifted
+    // apart once already.
+    ContentInterner<std::string> SourceInterner{ &HashSourceString, k_HashName };
+    ContentInterner<ReflectedBinding> ResourceInterner{ &HashReflectedBinding, k_HashName };
+    ContentInterner<ResourceList> ResourceListInterner{ &HashResourceList, k_HashName };
+    ContentInterner<FootprintList> FootprintListInterner{ &HashFootprintList, k_HashName };
+    ContentInterner<VisibilityList> VisibilityInterner{ &HashVisibilityList, k_HashName };
+    ContentInterner<ReflectedRasterState> RasterInterner{ &HashReflectedRasterState, k_HashName };
 };
 
 /**@brief Interned tables and information about how efficiently they were built. We store these

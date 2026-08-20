@@ -14,11 +14,11 @@ struct XXH3_state_s;
  * A hash never decides that two artifacts are equal. The interner compares the bytes on every hash
  * hit. A collision is a normal outcome: the interner keeps both entries, counts the event, and
  * reports it. A weaker hash therefore costs one extra comparison. It cannot ship the wrong shader.
- * todo-ship: We should still replace this with a stronger hash, because while we handle
- * collisions we can avoid them and options are *very* easy to install. xxHash recommended:
- * check mobile performance though
  *
- * If changing hash functions, make sure it has a new name as the name reaches the output
+ * The name reaches the output, so a new hash needs a new name. Take it from `k_HashName` and never
+ * spell it out again: the two spellings drifted apart once.
+ *
+ * todo-ship: measure this on mobile. No number here comes from a phone.
  */
 namespace lodestone
 {
