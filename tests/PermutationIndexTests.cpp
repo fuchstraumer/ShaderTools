@@ -177,5 +177,17 @@ int main()
 
     runner.Check(matchesRealVariant, "the partial assignment names a variant the cook produced");
 
+    runner.BeginSection("a module with no registered space still cooks");
+    const PermutationSpace emptySpace{};
+    const CookResult<VariantSet> emptyVariants = lodestone::EnumerateVariants(emptySpace);
+
+    runner.Check(emptyVariants.has_value(), "an empty space enumerates rather than fails");
+    if (emptyVariants)
+    {
+        runner.Check(emptyVariants.value().Variants.size() == 1u, "an empty space gives exactly one variant");
+        runner.Check(emptyVariants.value().SpaceSize == 1, "an empty space has an index range of one");
+        runner.Check(emptyVariants.value().Variants.front().Index == 0, "that one variant takes index zero");
+    }
+
     return runner.Report();
 }

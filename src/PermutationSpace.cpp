@@ -324,8 +324,9 @@ namespace
 // woman
 CookResult<std::vector<PermutationAssignment>> EnumerateActiveCombinations(const PermutationSpace& space)
 {
+    // A module with no registered space enumerates to the one empty assignment, so there is no first
+    // axis to size against. `partials` is replaced by `expanded` on every pass anyway.
     std::vector<PermutationAssignment> partials{ PermutationAssignment{} };
-    partials.reserve(space.front()->Values.size());
     for (const PermutationAxis* axis : space)
     {
         // Despite having to do recursive work here, we can at least reserve the right amount of space. I
