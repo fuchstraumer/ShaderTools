@@ -19,6 +19,7 @@
 // contributes values when its parent takes the enabling value.
 
 using lodestone::CanonicalizeAssignment;
+using lodestone::CanonicalAssignment;
 using lodestone::ComputeVariantIndex;
 using lodestone::CookResult;
 using lodestone::PermutationAssignment;
@@ -117,7 +118,7 @@ int main()
     bool everyRoundTripAgrees = true;
     for (const VariantDescriptor& descriptor : variants.Variants)
     {
-        const PermutationAssignment canonical = CanonicalizeAssignment(k_TestSpace, descriptor.Active);
+        const CanonicalAssignment canonical = CanonicalizeAssignment(k_TestSpace, descriptor.Active);
         if (ComputeVariantIndex(k_TestSpace, canonical) != descriptor.Index)
         {
             everyRoundTripAgrees = false;
@@ -160,7 +161,7 @@ int main()
     PermutationAssignment partial;
     partial.emplace_back(&k_SizeAxis, PermutationValue{ uint32_t{ 512u } });
 
-    const PermutationAssignment filled = CanonicalizeAssignment(k_TestSpace, partial);
+    const CanonicalAssignment filled = CanonicalizeAssignment(k_TestSpace, partial);
     runner.Check(filled.size() == k_TestSpace.size(), "a partial assignment canonicalizes to every axis");
 
     const int32_t partialIndex = ComputeVariantIndex(k_TestSpace, filled);

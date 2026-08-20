@@ -28,6 +28,7 @@ namespace
 
 constexpr std::string_view k_ActiveEntryPoint = "ActiveCS";
 constexpr std::string_view k_InertEntryPoint = "InertCS";
+constexpr std::string_view k_ConditionalEntryPoint = "ConditionalCS";
 
 PermutationAxis MakeBoolAxis(std::string name)
 {
@@ -90,13 +91,37 @@ CompiledVariant MakeSingleEntryPointVariant(uint32_t index, bool first_axis_valu
     return variant;
 }
 
-PermutationAssignment MakeAssignment(const PermutationAxis& first_axis,
-                                     const PermutationAxis& second_axis,
-                                     bool first_axis_value,
-                                     bool second_axis_value)
+/** `AppendVariantToModule` takes a `CanonicalAssignment`, so the test reaches it the way the cooker
+ * does. */
+CanonicalAssignment MakeAssignment(const PermutationSpace& space,
+                                   const PermutationAxis& first_axis,
+                                   const PermutationAxis& second_axis,
+                                   bool first_axis_value,
+                                   bool second_axis_value)
 {
-    return PermutationAssignment{ PermutationBinding{ &first_axis, PermutationValue{ first_axis_value } },
-                                  PermutationBinding{ &second_axis, PermutationValue{ second_axis_value } } };
+    const PermutationAssignment active{
+        PermutationBinding{ &first_axis, PermutationValue{ first_axis_value } },
+        PermutationBinding{ &second_axis, PermutationValue{ second_axis_value } }
+    };
+
+    return CanonicalizeAssignment(space, active);
+}
+
+/** `ConditionalCS` reads the first axis only when the second axis is true. So the variants that hold
+ * the second axis false all share one source, and only the other group can find the first axis
+ * Active. A measurement that reads one group and drops the next reports Inert here. */
+CompiledVariant MakeConditionalVariant(uint32_t index, bool first_axis_value, bool second_axis_value)
+{
+    CompiledVariant variant;
+    variant.VariantIndex = index;
+    variant.VariantSuffix = std::format("_{}_{}", first_axis_value, second_axis_value);
+    variant.VariantDescription = std::format("AXIS_A={} AXIS_B={}", first_axis_value, second_axis_value);
+    variant.GlobalBindings.push_back(MakeSharedBinding());
+    variant.EntryPoints.push_back(
+        MakeEntryPoint(k_ConditionalEntryPoint,
+                       second_axis_value ? std::format("// AXIS_A is {}\n", first_axis_value)
+                                         : std::string{ "// AXIS_A does not reach this text\n" }));
+    return variant;
 }
 
 CookedModule BuildModule(const PermutationSpace& space, bool dedupe_enabled)
@@ -121,8 +146,8 @@ CookedModule BuildModule(const PermutationSpace& space, bool dedupe_enabled)
         for (const bool secondAxisValue : { false, true })
         {
             const CompiledVariant variant = MakeVariant(index, firstAxisValue, secondAxisValue);
-            const PermutationAssignment canonical =
-                MakeAssignment(*space[0], *space[1], firstAxisValue, secondAxisValue);
+            const CanonicalAssignment canonical =
+                MakeAssignment(space, *space[0], *space[1], firstAxisValue, secondAxisValue);
 
             const CookResult<void> appended = AppendVariantToModule(module, variant, canonical);
             if (!appended)
@@ -156,8 +181,10 @@ CookedModule BuildSingleEntryPointModule(const PermutationSpace& space, bool ded
     for (const bool firstAxisValue : { false, true })
     {
         const CompiledVariant variant = MakeSingleEntryPointVariant(index, firstAxisValue);
-        const PermutationAssignment canonical =
-            PermutationAssignment{ PermutationBinding{ space[0], PermutationValue{ firstAxisValue } } };
+        // Only the first axis is named. Canonicalization supplies the second.
+        const CanonicalAssignment canonical = CanonicalizeAssignment(
+            space,
+            PermutationAssignment{ PermutationBinding{ space[0], PermutationValue{ firstAxisValue } } });
 
         const CookResult<void> appended = AppendVariantToModule(module, variant, canonical);
         if (!appended)
@@ -167,6 +194,38 @@ CookedModule BuildSingleEntryPointModule(const PermutationSpace& space, bool ded
         }
 
         ++index;
+    }
+
+    return FreezeModuleTables(std::move(module));
+}
+
+CookedModule BuildConditionalModule(const PermutationSpace& space)
+{
+    InternedModule module;
+    module.Name = "ConditionalModule";
+    module.Space = &space;
+    module.SpaceSize = 4u;
+    module.EntryPoints.push_back(
+        LibraryEntryPoint{ .Name = std::string{ k_ConditionalEntryPoint }, .Stage = ShaderStageKind::Compute });
+
+    uint32_t index = 0u;
+    for (const bool firstAxisValue : { false, true })
+    {
+        for (const bool secondAxisValue : { false, true })
+        {
+            const CompiledVariant variant = MakeConditionalVariant(index, firstAxisValue, secondAxisValue);
+            const CanonicalAssignment canonical =
+                MakeAssignment(space, *space[0], *space[1], firstAxisValue, secondAxisValue);
+
+            const CookResult<void> appended = AppendVariantToModule(module, variant, canonical);
+            if (!appended)
+            {
+                module.Variants.clear();
+                return FreezeModuleTables(std::move(module));
+            }
+
+            ++index;
+        }
     }
 
     return FreezeModuleTables(std::move(module));
@@ -274,6 +333,20 @@ void CheckSharedLayoutRejectsADifference(lodestone::tests::TestRunner& runner, c
     runner.Check(!AllVariantsShareOneLayout(module), "one variant with a different layout ends the claim");
 }
 
+/** The measurement must read every group of variants, not the first one it finds. */
+void CheckEveryGroupIsMeasured(lodestone::tests::TestRunner& runner, const PermutationSpace& space)
+{
+    runner.BeginSection("influence reads every group");
+
+    const CookedModule module = BuildConditionalModule(space);
+    const ModuleInfluence influence = ComputeAxisInfluence(module);
+
+    runner.Check(InfluenceOf(influence, k_ConditionalEntryPoint, 0u) == AxisInfluence::Active,
+                 "the first axis is Active, and only the second group of variants says so");
+    runner.Check(InfluenceOf(influence, k_ConditionalEntryPoint, 1u) == AxisInfluence::Active,
+                 "the second axis decides whether the text changes, so it is Active as well");
+}
+
 } // namespace
 
 int main()
@@ -291,6 +364,7 @@ int main()
     CheckInfluenceAgrees(runner, deduped, raw);
     CheckSharedLayoutAgrees(runner, space);
     CheckSharedLayoutRejectsADifference(runner, space);
+    CheckEveryGroupIsMeasured(runner, space);
 
     return runner.Report();
 }

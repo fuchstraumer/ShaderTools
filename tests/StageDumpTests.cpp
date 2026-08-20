@@ -1,5 +1,6 @@
 #include "TestHarness.hpp"
 
+#include "ContentHash.hpp"
 #include "CookedLibrary.hpp"
 #include "CookerOptions.hpp"
 #include "PermutationSpace.hpp"
@@ -11,6 +12,7 @@
 #include <array>
 #include <cstdint>
 #include <cstdio>
+#include <format>
 #include <print>
 #include <string>
 #include <string_view>
@@ -60,6 +62,9 @@ CompiledVariant MakeVariant(uint32_t index, const std::string& suffix, std::stri
     return variant;
 }
 
+/** This module registers no axis, so every variant canonicalizes against a space with no axes. */
+const PermutationSpace k_EmptySpace{};
+
 /** Two variants with different text and one shared layout. The cooked dump must therefore report two
  * sources and one layout, which is the collapse the interner performed. */
 InternedModule BuildTinyInternedModule()
@@ -74,7 +79,10 @@ InternedModule BuildTinyInternedModule()
 
     for (const CompiledVariant& variant : variants)
     {
-        const CookResult<void> appended = AppendVariantToModule(module, variant, PermutationAssignment{});
+        const CookResult<void> appended =
+            AppendVariantToModule(module,
+                                  variant,
+                                  CanonicalizeAssignment(k_EmptySpace, PermutationAssignment{}));
         if (!appended)
         {
             module.Variants.clear();
@@ -386,7 +394,9 @@ void CheckCookedDump(lodestone::tests::TestRunner& runner)
                  "the size expression survives, because a diagnostic must quote what the author wrote");
     runner.Check(Contains(dump, R"("kind": "buffer")"), "a footprint names which kind it is");
     runner.Check(Contains(dump, R"("elementCount": 1024)"), "the evaluated size reaches the dump");
-    runner.Check(Contains(dump, R"("hashName": "fnv1a-64")"),
+    // Read the name from `k_HashName`. A literal here fails on the next hash swap rather than
+    // proving the swap arrived.
+    runner.Check(Contains(dump, std::format(R"("hashName": "{}")", k_HashName)),
                  "the dump names the hash, because the name reaches the output");
     runner.Check(Contains(dump, R"("hashCollisions": 0)"), "the interner reports its collision count");
 
@@ -410,7 +420,7 @@ void CheckInternedDump(lodestone::tests::TestRunner& runner)
 
     runner.Check(Contains(dump, R"("stage": "interned")"), "the dump names its stage");
     runner.Check(Contains(dump, R"("module": "TinyModule")"), "the dump names its module");
-    runner.Check(Contains(dump, R"("hashName": "fnv1a-64")"),
+    runner.Check(Contains(dump, std::format(R"("hashName": "{}")", k_HashName)),
                  "the dump names the hash, because the name reaches the output");
 
     // The reason this dump exists. `FreezeModuleTables` copies the unique entries out and leaves the
