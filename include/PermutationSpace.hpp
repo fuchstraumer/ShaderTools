@@ -2,6 +2,7 @@
 #ifndef LODESTONE_SHADER_COOKER_PERMUTATION_SPACE_HPP
 #define LODESTONE_SHADER_COOKER_PERMUTATION_SPACE_HPP
 #include "CookerErrors.hpp"
+#include <cstddef>
 #include <cstdint>
 #include <span>
 #include <string>
@@ -33,6 +34,42 @@ using PermutationSpace = std::vector<const PermutationAxis*>;
 using PermutationBinding = std::pair<const PermutationAxis*, PermutationValue>;
 using PermutationAssignment = std::vector<PermutationBinding>;
 
+/** An assignment that holds every axis of one space, in declaration order. Only
+ * `CanonicalizeAssignment` builds one, so a partial assignment cannot reach `ComputeVariantIndex` and
+ * return a plausible wrong index. The conversion to `PermutationAssignment` runs one way only. */
+class CanonicalAssignment final
+{
+public:
+    CanonicalAssignment() = default;
+
+    // NOLINTNEXTLINE(google-explicit-constructor)
+    [[nodiscard]] operator const PermutationAssignment&() const noexcept
+    {
+        return values;
+    }
+
+    [[nodiscard]] std::size_t size() const noexcept
+    {
+        return values.size();
+    }
+
+    [[nodiscard]] const PermutationBinding& operator[](std::size_t index) const noexcept
+    {
+        return values[index];
+    }
+
+private:
+    friend CanonicalAssignment CanonicalizeAssignment(const PermutationSpace& space,
+                                                      const PermutationAssignment& assignment);
+
+    explicit CanonicalAssignment(PermutationAssignment&& canonical) noexcept
+        : values{ std::move(canonical) }
+    {
+    }
+
+    PermutationAssignment values;
+};
+
 /**
  * One variant's identity.
  *
@@ -58,7 +95,7 @@ using PermutationAssignment = std::vector<PermutationBinding>;
 struct VariantDescriptor
 {
     PermutationAssignment Active;
-    PermutationAssignment Canonical;
+    CanonicalAssignment Canonical;
     int32_t Index{ 0 };
 };
 
@@ -75,8 +112,8 @@ struct VariantSet
 CookResult<std::vector<PermutationAssignment>> EnumerateActiveCombinations(const PermutationSpace& space);
 CookResult<VariantSet> EnumerateVariants(const PermutationSpace& space);
 
-PermutationAssignment CanonicalizeAssignment(const PermutationSpace& space, const PermutationAssignment& assignment);
-int32_t ComputeVariantIndex(const PermutationSpace& space, const PermutationAssignment& canonical);
+CanonicalAssignment CanonicalizeAssignment(const PermutationSpace& space, const PermutationAssignment& assignment);
+int32_t ComputeVariantIndex(const PermutationSpace& space, const CanonicalAssignment& canonical);
 int32_t ComputeVariantSpaceSize(const PermutationSpace& space) noexcept;
 
 /**Every axis name must match an `extern static const` declaration in the shader. A mismatch links a

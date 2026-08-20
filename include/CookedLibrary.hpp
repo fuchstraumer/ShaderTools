@@ -39,7 +39,7 @@ struct LibraryVariant
     uint32_t Index{ 0u };
     std::string Suffix;
     std::string Description;
-    PermutationAssignment Canonical;
+    CanonicalAssignment Canonical;
     uint32_t ResourceListIndex{ 0u };
     uint32_t FootprintListIndex{ 0u };
     std::vector<uint32_t> SourceIndices;
@@ -139,7 +139,7 @@ void DisableDedupe(InternedModule& module) noexcept;
 /** Adds one compiled variant to the module, interning each source, layout, and raster state. */
 CookResult<void> AppendVariantToModule(InternedModule& module,
                                        const CompiledVariant& variant,
-                                       const PermutationAssignment& canonical);
+                                       const CanonicalAssignment& canonical);
 
 /**@brief "Freezes" the module by *consuming* `InternedModule`. CookedModule takes the results, gathering
  * all the data so far in one place. The intent was that CookedModule is a bundle of data, it doesn't hold

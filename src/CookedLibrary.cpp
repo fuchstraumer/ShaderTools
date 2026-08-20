@@ -93,7 +93,7 @@ void DisableDedupe(InternedModule& module) noexcept
 
 CookResult<void> AppendVariantToModule(InternedModule& module,
                                        const CompiledVariant& variant,
-                                       const PermutationAssignment& canonical)
+                                       const CanonicalAssignment& canonical)
 {
     if (variant.EntryPoints.size() != module.EntryPoints.size())
     {

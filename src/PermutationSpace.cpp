@@ -391,8 +391,8 @@ CookResult<std::vector<PermutationAssignment>> EnumerateActiveCombinations(const
 // value of it bound in *this* assignment. If the axis is not present in the assignment, we will
 // retrieve the default value (the first value) of the axis. This equalizes each assignment to the
 // same length, and allows us to compute a unique index for each assignment.
-PermutationAssignment CanonicalizeAssignment(const PermutationSpace& space,
-                                             const PermutationAssignment& assignment)
+CanonicalAssignment CanonicalizeAssignment(const PermutationSpace& space,
+                                           const PermutationAssignment& assignment)
 {
     PermutationAssignment canonical;
     canonical.reserve(space.size());
@@ -407,10 +407,10 @@ PermutationAssignment CanonicalizeAssignment(const PermutationSpace& space,
         canonical.emplace_back(axis, value);
     }
     // And bam, the canonical assignment is just a fully "concrete" instance of the *actual* active assignment
-    return canonical;
+    return CanonicalAssignment{ std::move(canonical) };
 }
 
-int32_t ComputeVariantIndex(const PermutationSpace& space, const PermutationAssignment& canonical)
+int32_t ComputeVariantIndex(const PermutationSpace& space, const CanonicalAssignment& canonical)
 {
     std::ptrdiff_t index = 0;
 
@@ -457,7 +457,7 @@ CookResult<VariantSet> EnumerateVariants(const PermutationSpace& space)
 
     for (PermutationAssignment& assignment : active)
     {
-        PermutationAssignment canonical = CanonicalizeAssignment(space, assignment);
+        CanonicalAssignment canonical = CanonicalizeAssignment(space, assignment);
         const int32_t index = ComputeVariantIndex(space, canonical);
         variantSet.Variants.emplace_back(std::move(assignment), std::move(canonical), index);
     }

@@ -283,21 +283,26 @@ ModuleInfluence ComputeAxisInfluence(const CookedModule& module)
     {
         const std::vector<uint32_t> orderedIndices = OrderByOtherAxes(module, k);
         bool foundPair = false;
-        for (size_t begin = 0u; begin < orderedIndices.size(); ++begin)
+        // A while, not a for: `begin` already moves to the next group, and a for header would then
+        // increment past that group's first element and drop the group.
+        size_t begin = 0u;
+        while (begin < orderedIndices.size())
         {
-            size_t end = begin + 1;
-            const auto& beginCanonical = module.Variants[orderedIndices[begin]].Canonical;
-            // using a pointer so this isn't one psychotic long expression in the while() body :'(
-            const auto* endCanonical = &module.Variants[orderedIndices[end]].Canonical;
+            const PermutationAssignment& beginCanonical = module.Variants[orderedIndices[begin]].Canonical;
+
+            // The order puts variants that agree on every other axis next to each other, so a group
+            // ends at the first one that disagrees. Read `end` inside the condition: on the last
+            // group it is out of range until the range test runs.
+            size_t end = begin + 1u;
             while (end < orderedIndices.size() &&
-                   !AssignmentComparatorExcludingAxis(beginCanonical, *endCanonical, k))
+                   !AssignmentComparatorExcludingAxis(beginCanonical,
+                                                      module.Variants[orderedIndices[end]].Canonical,
+                                                      k))
             {
                 ++end;
-                endCanonical = &module.Variants[orderedIndices[end % orderedIndices.size()]].Canonical;
             }
 
-            const std::span<const uint32_t> group{orderedIndices.data() + begin, end - begin};
-            // push up begin
+            const std::span<const uint32_t> group{ orderedIndices.data() + begin, end - begin };
             begin = end;
 
             if (group.size() < 2u)
