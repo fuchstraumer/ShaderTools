@@ -196,6 +196,7 @@ std::vector<ResolvedBinding> BuildEntryPointLayout(const CompiledVariant& varian
     }
 
     std::vector<ResolvedBinding> layout;
+    layout.reserve(variant.EntryPoints[entry_point_index].Reflection.UsedBindingIndices.size());
 
     for (const uint32_t index : variant.EntryPoints[entry_point_index].Reflection.UsedBindingIndices)
     {
@@ -211,6 +212,32 @@ std::vector<ResolvedBinding> BuildEntryPointLayout(const CompiledVariant& varian
         }
 
         layout.emplace_back(variant.GlobalBindings[index], std::move(footprint));
+    }
+
+    return layout;
+}
+
+std::vector<ResolvedBindingView> BuildEntryPointLayoutView(const CompiledVariant& variant, size_t entry_point_index)
+{
+    if (entry_point_index >= variant.EntryPoints.size())
+    {
+        return {};
+    }
+
+    std::vector<ResolvedBindingView> layout;
+    layout.reserve(variant.EntryPoints[entry_point_index].Reflection.UsedBindingIndices.size());
+
+    for (const uint32_t index : variant.EntryPoints[entry_point_index].Reflection.UsedBindingIndices)
+    {
+        if (index >= variant.GlobalBindings.size())
+        {
+            continue;
+        }
+
+        const ReflectedBinding* resource = &variant.GlobalBindings[index];
+        const ResourceFootprint* footprint = index < variant.Footprints.size() ? &variant.Footprints[index] : nullptr;
+
+        layout.emplace_back(resource, footprint);
     }
 
     return layout;

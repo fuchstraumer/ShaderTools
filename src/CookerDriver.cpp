@@ -70,14 +70,14 @@ namespace
                      entryPoint.Reflection.Workgroup.Y,
                      entryPoint.Reflection.Workgroup.Z);
 
-        for (const ResolvedBinding& resolved : BuildEntryPointLayout(variant, entry_point_index))
+        for (const ResolvedBindingView& resolved : BuildEntryPointLayoutView(variant, entry_point_index))
         {
             std::println(stderr,
                          "[shader_cooker]     {}{}",
-                         DescribeBinding(resolved.Resource),
-                         DescribeFootprint(resolved.Footprint));
+                         DescribeBinding(*resolved.Resource),
+                         DescribeFootprint(*resolved.Footprint));
 
-            const std::string members = DescribeUniformMembers(resolved.Resource);
+            const std::string members = DescribeUniformMembers(*resolved.Resource);
             if (!members.empty())
             {
                 std::print(stderr, "{}", members);
@@ -223,7 +223,7 @@ namespace
 
             for (size_t i = 0u; i < origin->EntryPoints.size(); ++i)
             {
-                if (ResolveLayout(module, variant, i) == BuildEntryPointLayout(*origin, i))
+                if (ResolveLayoutView(module, variant, i) == BuildEntryPointLayoutView(*origin, i))
                 {
                     continue;
                 }

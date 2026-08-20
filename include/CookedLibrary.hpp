@@ -57,6 +57,7 @@ using VisibilityList = std::vector<uint32_t>;
 using FootprintList = std::vector<ResourceFootprint>;
 /**@brief What a caller gets for one entry point: the resources it reads, joined with their footprints. */
 using ShaderLayout = std::vector<ResolvedBinding>;
+using ShaderLayoutView = std::vector<ResolvedBindingView>;
 
 ContentHashValue HashIndexList(const std::vector<uint32_t>& indices) noexcept;
 ContentHashValue HashSourceString(const std::string& source) noexcept;
@@ -155,6 +156,11 @@ std::string_view ResolveSource(const CookedModule& module,
 ShaderLayout ResolveLayout(const CookedModule& module,
                            const LibraryVariant& variant,
                            size_t entry_point_index);
+
+
+ShaderLayoutView ResolveLayoutView(const CookedModule& module,
+                                   const LibraryVariant& variant,
+                                   size_t entry_point_index);
 
 } // namespace lodestone
 

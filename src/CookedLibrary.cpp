@@ -124,7 +124,7 @@ CookResult<void> AppendVariantToModule(InternedModule& module,
     record.Suffix = variant.VariantSuffix;
     record.Description = variant.VariantDescription;
     record.Canonical = canonical;
-    record.ResourceListIndex = module.ResourceListInterner.Intern(resources), variantOrigin).Index;
+    record.ResourceListIndex = module.ResourceListInterner.Intern(resources, variantOrigin).Index;
     record.FootprintListIndex = module.FootprintListInterner.Intern(variant.Footprints, variantOrigin).Index;
     record.SourceIndices.reserve(variant.EntryPoints.size());
     record.VisibilityIndices.reserve(variant.EntryPoints.size());
@@ -255,6 +255,44 @@ ShaderLayout ResolveLayout(const CookedModule& module,
     }
 
     return layout;
+}
+
+ShaderLayoutView ResolveLayoutView(const CookedModule& module,
+                                   const LibraryVariant& variant,
+                                   size_t entry_point_index)
+{
+    if (entry_point_index >= variant.VisibilityIndices.size() ||
+        variant.ResourceListIndex >= module.ResourceLists.size() ||
+        variant.FootprintListIndex >= module.FootprintLists.size()) [[unlikely]]
+    {
+        return {};
+    }
+
+    const uint32_t visibilityIndex = variant.VisibilityIndices[entry_point_index];
+    if (visibilityIndex >= module.VisibilityLists.size()) [[unlikely]]
+    {
+        return {};
+    }
+
+    const ResourceList& resources = module.ResourceLists[variant.ResourceListIndex];
+    const FootprintList& footprints = module.FootprintLists[variant.FootprintListIndex];
+
+    std::vector<ResolvedBindingView> layoutView;
+    layoutView.reserve(module.VisibilityLists[visibilityIndex].size());
+    for (const uint32_t localRsrcIndex : module.VisibilityLists[visibilityIndex])
+    {
+        if (localRsrcIndex >= resources.size() || resources[localRsrcIndex] >= module.Resources.size())
+            [[unlikely]]
+        {
+            return {};
+        }
+
+        const ResourceFootprint* footprint =
+            localRsrcIndex < footprints.size() ? &footprints[localRsrcIndex] : nullptr;
+        layoutView.emplace_back(&module.Resources[resources[localRsrcIndex]], footprint);
+    }
+
+    return layoutView;
 }
 
 } // namespace lodestone

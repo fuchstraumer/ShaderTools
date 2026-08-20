@@ -290,19 +290,23 @@ namespace
                                          const LibraryVariant& variant,
                                          size_t entry_point_index)
     {
-        auto readVariantIter = std::ranges::find_if(view.Variants(),
-                                                    [&](const ManifestVariant& candidate)
-                                                    {
-                                                        return candidate.Index == variant.Index;
-                                                    });
-        if (readVariantIter == view.Variants().end())
+        auto readVariantIter = std::ranges::lower_bound(view.Variants(),
+                                                        variant.Index,
+                                                        {},
+                                                        [](const ManifestVariant& candidate)
+                                                        {
+                                                            return candidate.Index;
+                                                        });
+        // failed lookup returns next bigger index , need inequality check, oops i almost missed this lol
+        if (readVariantIter == view.Variants().end() ||
+            readVariantIter->Index != variant.Index)
         {
             std::println(stderr, "[shader_cooker] manifest holds no variant {}", variant.Index);
             return std::unexpected(CookError::LibraryRoundTripFailed);
         }
 
         const ManifestVariant& readVariant = *readVariantIter;
-        const ShaderLayout expectedLayout = ResolveLayout(module, variant, entry_point_index);
+        const ShaderLayoutView expectedLayout = ResolveLayoutView(module, variant, entry_point_index);
 
         const std::span<const uint32_t> resources = view.ResourceList(readVariant.ResourceListIndex);
         const std::span<const ManifestFootprint> footprints =
@@ -335,7 +339,7 @@ namespace
 
         for (size_t i = 0u; i < expectedLayout.size(); ++i)
         {
-            const ResolvedBinding& expected = expectedLayout[i];
+            const ResolvedBindingView expected = expectedLayout[i];
             const uint32_t local = visible[i];
 
             if (local >= resources.size() || resources[local] >= view.Bindings().size() ||
@@ -350,14 +354,14 @@ namespace
 
             const ManifestBinding& read = view.Bindings()[resources[local]];
 
-            if (view.String(read.NameString) != expected.Resource.Name ||
-                !RecordMatchesBinding(read, expected.Resource) ||
-                !RecordMatchesFootprint(footprints[local], expected.Footprint) ||
-                !ManifestUniformMembersMatch(view, read, expected.Resource))
+            if (view.String(read.NameString) != expected.Resource->Name ||
+                !RecordMatchesBinding(read, *expected.Resource) ||
+                !RecordMatchesFootprint(footprints[local], *expected.Footprint) ||
+                !ManifestUniformMembersMatch(view, read, *expected.Resource))
             {
                 std::println(stderr,
                              "[shader_cooker] manifest binding '{}' of variant {} does not match the cook",
-                             expected.Resource.Name,
+                             expected.Resource->Name,
                              variant.Index);
                 return std::unexpected(CookError::LibraryRoundTripFailed);
             }

@@ -580,6 +580,9 @@ namespace
 
             for (size_t i = 0u; i < variant.VisibilityIndices.size(); ++i)
             {
+                // todo-asap: convert this to view format, and generally flatten this
+                // This is an interner implemented as a linear scan: we're just deduplicating.
+                // but also... this is a deprecated path. the C++ output is just for debug/legacy
                 ShaderLayout layout = ResolveLayout(module, variant, i);
                 const auto found = std::ranges::find(projection.Layouts, layout);
 

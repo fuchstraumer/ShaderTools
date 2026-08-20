@@ -538,5 +538,5 @@ std::string GenerateDedupeReport(const CookedLibrary& library)
 
     return report;
 }
-// ttb: 764.5ms
+
 } // namespace lodestone

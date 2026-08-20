@@ -135,6 +135,26 @@ struct ResolvedBinding
     friend bool operator==(const ResolvedBinding&, const ResolvedBinding&) = default;
 };
 
+/**@brief View into a ResolvedBinding: ReflectiedBinding and ResourceFootprint both hold large 
+ * amounts of data, and there are many locations we're copying the values when the backing data
+ * would otherwise be alive and persisted safely. So, view time! */
+struct ResolvedBindingView
+{
+    const ReflectedBinding* Resource{ nullptr };
+    const ResourceFootprint* Footprint{ nullptr };
+    // we should actually value-compare the contents of these two: in cases of things like
+    // ResolveLayoutView vs EntryPointLayoutView, they are stored separately but have same contents
+    // todo-ship: shouldn't we just intern that still lol
+    constexpr bool operator==(const ResolvedBindingView& rhs) const noexcept
+    {
+        return (*Resource == *rhs.Resource) && (*Footprint == *rhs.Footprint);
+    }
+    constexpr bool operator!=(const ResolvedBindingView& rhs) const noexcept
+    {
+        return !(*this == rhs);
+    }
+};
+
 std::string_view ToString(VertexScalarType scalar_type) noexcept;
 
 /**@brief One vertex shader input/attribute. Retrieving location, scalar type,
@@ -234,6 +254,7 @@ struct CompiledVariant
  * This is the subset the entry point reads, not every binding of the variant. A compute pass that
  * touches no lookup table must not declare one. */
 std::vector<ResolvedBinding> BuildEntryPointLayout(const CompiledVariant& variant, size_t entry_point_index);
+std::vector<ResolvedBindingView> BuildEntryPointLayoutView(const CompiledVariant& variant, size_t entry_point_index);
 
 bool SameBindingLocation(const ReflectedBinding& lhs, const ReflectedBinding& rhs) noexcept;
 void SortBindingsByLocation(std::span<ReflectedBinding> bindings) noexcept;
