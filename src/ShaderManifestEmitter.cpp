@@ -37,6 +37,14 @@ namespace
     // will rapidly become a huge cost as variant count increases
     class StringTableBuilder
     {
+        struct StringViewHash
+        {
+            std::size_t operator()(std::string_view text) const noexcept
+            {
+                return std::hash<std::string_view>{}(text);
+            }
+            using is_transparent = void;
+        };
     public:
         StringTableBuilder()
         {
@@ -47,8 +55,7 @@ namespace
 
         uint32_t Add(std::string_view text)
         {
-            // todo: having to build a string to search seems wasteful. must be a better way
-            const auto found = lookup.find(std::string{ text });
+            const auto found = lookup.find(text);
             if (found != lookup.end())
             {
                 return found->second;
@@ -72,7 +79,7 @@ namespace
         }
 
     private:
-        std::unordered_map<std::string, uint32_t> lookup;
+        std::unordered_map<std::string, uint32_t, StringViewHash, std::equal_to<>> lookup;
         std::vector<ManifestStringRef> references;
         std::string blob;
     };
