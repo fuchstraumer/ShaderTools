@@ -1,8 +1,8 @@
-#include "CookedLibrary.hpp"
-#include "ShaderDataSchema.hpp"
+#include "model/CookedLibrary.hpp"
+#include "model/ShaderDataSchema.hpp"
 #include "ShaderLibraryTypes.hpp"
 #include "ShaderManifest.hpp"
-#include "ShaderManifestEmitter.hpp"
+#include "model/ShaderManifestEmitter.hpp"
 #include "TestHarness.hpp"
 
 #include <cstddef>

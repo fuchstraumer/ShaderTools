@@ -1,5 +1,5 @@
 #include "CookerErrors.hpp"
-#include "PermutationSpace.hpp"
+#include "permute/PermutationSpace.hpp"
 #include "TestHarness.hpp"
 
 #include <cstdint>

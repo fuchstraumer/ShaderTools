@@ -1,13 +1,13 @@
 #include "TestHarness.hpp"
 
-#include "ContentHash.hpp"
-#include "CookedLibrary.hpp"
-#include "CookerOptions.hpp"
-#include "PermutationSpace.hpp"
-#include "RawLibrary.hpp"
-#include "ShaderDataSchema.hpp"
+#include "model/ContentHash.hpp"
+#include "model/CookedLibrary.hpp"
+#include "driver/CookerOptions.hpp"
+#include "permute/PermutationSpace.hpp"
+#include "compile/RawLibrary.hpp"
+#include "model/ShaderDataSchema.hpp"
 #include "ShaderLibraryTypes.hpp"
-#include "StageDump.hpp"
+#include "emit/StageDump.hpp"
 
 #include <array>
 #include <cstdint>

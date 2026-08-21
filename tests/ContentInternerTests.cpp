@@ -1,5 +1,5 @@
-#include "ContentHash.hpp"
-#include "ContentInterner.hpp"
+#include "model/ContentHash.hpp"
+#include "model/ContentInterner.hpp"
 #include "TestHarness.hpp"
 
 #include <cstdint>

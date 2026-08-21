@@ -1,5 +1,5 @@
-#include "RawLibrary.hpp"
-#include "ResolveStage.hpp"
+#include "compile/RawLibrary.hpp"
+#include "model/ResolveStage.hpp"
 #include "TestHarness.hpp"
 #include <array>
 #include <expected>

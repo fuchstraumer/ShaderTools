@@ -1,8 +1,8 @@
-#include "ShaderDataSchema.hpp"
+#include "model/ShaderDataSchema.hpp"
 #include "ShaderLibraryTypes.hpp"
-#include "TargetProfile.hpp"
+#include "target/TargetProfile.hpp"
 #include "TestHarness.hpp"
-#include "WgslBindingScanner.hpp"
+#include "target/WgslBindingScanner.hpp"
 
 #include <cstdint>
 #include <string>

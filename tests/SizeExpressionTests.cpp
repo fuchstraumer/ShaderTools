@@ -1,4 +1,4 @@
-#include "SizeExpression.hpp"
+#include "permute/SizeExpression.hpp"
 #include "TestHarness.hpp"
 #include <array>
 

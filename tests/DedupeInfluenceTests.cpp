@@ -1,9 +1,9 @@
 #include "TestHarness.hpp"
 
-#include "CookedLibrary.hpp"
-#include "DedupeReport.hpp"
-#include "PermutationSpace.hpp"
-#include "ShaderDataSchema.hpp"
+#include "model/CookedLibrary.hpp"
+#include "emit/DedupeReport.hpp"
+#include "permute/PermutationSpace.hpp"
+#include "model/ShaderDataSchema.hpp"
 #include "ShaderLibraryTypes.hpp"
 
 #include <array>

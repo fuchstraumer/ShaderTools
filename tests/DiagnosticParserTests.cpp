@@ -1,5 +1,5 @@
-#include "Diagnostics.hpp"
-#include "SlangDiagnosticParser.hpp"
+#include "compile/Diagnostics.hpp"
+#include "compile/SlangDiagnosticParser.hpp"
 #include "TestHarness.hpp"
 #include <string>
 #include <string_view>
