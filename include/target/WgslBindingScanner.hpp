@@ -1,6 +1,6 @@
 #pragma once
-#ifndef LODESTONE_SHADER_COOKER_WGSL_BINDING_SCANNER_HPP
-#define LODESTONE_SHADER_COOKER_WGSL_BINDING_SCANNER_HPP
+#ifndef LODESTONE_WGSL_BINDING_SCANNER_HPP
+#define LODESTONE_WGSL_BINDING_SCANNER_HPP
 #include "model/ShaderDataSchema.hpp"
 #include "TargetProfile.hpp"
 #include <span>
@@ -56,4 +56,4 @@ std::string_view ToString(WgslAddressSpace address_space) noexcept;
 
 } // namespace lodestone
 
-#endif // !LODESTONE_SHADER_COOKER_WGSL_BINDING_SCANNER_HPP
+#endif // !LODESTONE_WGSL_BINDING_SCANNER_HPP

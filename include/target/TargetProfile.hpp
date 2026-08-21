@@ -1,6 +1,6 @@
 #pragma once
-#ifndef LODESTONE_SHADER_COOKER_TARGET_PROFILE_HPP
-#define LODESTONE_SHADER_COOKER_TARGET_PROFILE_HPP
+#ifndef LODESTONE_TARGET_PROFILE_HPP
+#define LODESTONE_TARGET_PROFILE_HPP
 #include "model/ShaderDataSchema.hpp"
 #include <cstdint>
 #include <span>
@@ -79,4 +79,4 @@ std::span<const std::string_view> GetTargetProfileNames() noexcept;
 
 } // namespace lodestone
 
-#endif // !LODESTONE_SHADER_COOKER_TARGET_PROFILE_HPP
+#endif // !LODESTONE_TARGET_PROFILE_HPP

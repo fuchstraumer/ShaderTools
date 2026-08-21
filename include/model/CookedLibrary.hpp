@@ -1,6 +1,6 @@
 #pragma once
-#ifndef LODESTONE_SHADER_COOKER_COOKED_LIBRARY_HPP
-#define LODESTONE_SHADER_COOKER_COOKED_LIBRARY_HPP
+#ifndef LODESTONE_COOKED_LIBRARY_HPP
+#define LODESTONE_COOKED_LIBRARY_HPP
 #include "ContentHash.hpp"
 #include "ContentInterner.hpp"
 #include "CookerErrors.hpp"
@@ -165,4 +165,4 @@ ShaderLayoutView ResolveLayoutView(const CookedModule& module,
 
 } // namespace lodestone
 
-#endif // !LODESTONE_SHADER_COOKER_COOKED_LIBRARY_HPP
+#endif // !LODESTONE_COOKED_LIBRARY_HPP

@@ -1,6 +1,6 @@
 #pragma once
-#ifndef LODESTONE_SHADER_COOKER_DIAGNOSTICS_HPP
-#define LODESTONE_SHADER_COOKER_DIAGNOSTICS_HPP
+#ifndef LODESTONE_DIAGNOSTICS_HPP
+#define LODESTONE_DIAGNOSTICS_HPP
 #include <cstdint>
 #include <string>
 #include <string_view>
@@ -126,4 +126,4 @@ private:
 
 } // namespace lodestone
 
-#endif // !LODESTONE_SHADER_COOKER_DIAGNOSTICS_HPP
+#endif // !LODESTONE_DIAGNOSTICS_HPP

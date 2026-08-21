@@ -1,6 +1,6 @@
 #pragma once
-#ifndef LODESTONE_SHADER_COOKER_OUTPUT_SINK_HPP
-#define LODESTONE_SHADER_COOKER_OUTPUT_SINK_HPP
+#ifndef LODESTONE_OUTPUT_SINK_HPP
+#define LODESTONE_OUTPUT_SINK_HPP
 #include "CookerErrors.hpp"
 #include <filesystem>
 #include <map>
@@ -74,4 +74,4 @@ private:
 
 } // namespace lodestone
 
-#endif // !LODESTONE_SHADER_COOKER_OUTPUT_SINK_HPP
+#endif // !LODESTONE_OUTPUT_SINK_HPP

@@ -1,6 +1,6 @@
 #pragma once
-#ifndef LODESTONE_SHADER_COOKER_OPTIONS_HPP
-#define LODESTONE_SHADER_COOKER_OPTIONS_HPP
+#ifndef LODESTONE_OPTIONS_HPP
+#define LODESTONE_OPTIONS_HPP
 #include "CookerErrors.hpp"
 #include <cstdint>
 #include <filesystem>
@@ -67,4 +67,4 @@ std::string_view GetUsageText() noexcept;
 
 } // namespace lodestone
 
-#endif // !LODESTONE_SHADER_COOKER_OPTIONS_HPP
+#endif // !LODESTONE_OPTIONS_HPP

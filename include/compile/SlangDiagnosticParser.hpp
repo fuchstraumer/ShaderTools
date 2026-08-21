@@ -1,6 +1,6 @@
 #pragma once
-#ifndef LODESTONE_SHADER_COOKER_SLANG_DIAGNOSTIC_PARSER_HPP
-#define LODESTONE_SHADER_COOKER_SLANG_DIAGNOSTIC_PARSER_HPP
+#ifndef LODESTONE_SLANG_DIAGNOSTIC_PARSER_HPP
+#define LODESTONE_SLANG_DIAGNOSTIC_PARSER_HPP
 #include <string_view>
 
 /** Turns Slang's machine-readable diagnostic text into records.
@@ -25,4 +25,4 @@ void ParseSlangDiagnostics(std::string_view text, std::string_view context, Diag
 
 } // namespace lodestone
 
-#endif // !LODESTONE_SHADER_COOKER_SLANG_DIAGNOSTIC_PARSER_HPP
+#endif // !LODESTONE_SLANG_DIAGNOSTIC_PARSER_HPP

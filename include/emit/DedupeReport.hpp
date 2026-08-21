@@ -1,6 +1,6 @@
 #pragma once
-#ifndef LODESTONE_SHADER_COOKER_DEDUPE_REPORT_HPP
-#define LODESTONE_SHADER_COOKER_DEDUPE_REPORT_HPP
+#ifndef LODESTONE_DEDUPE_REPORT_HPP
+#define LODESTONE_DEDUPE_REPORT_HPP
 #include "model/CookedLibrary.hpp"
 #include <string>
 #include <vector>
@@ -62,4 +62,4 @@ std::string_view ToString(AxisInfluence influence) noexcept;
 
 } // namespace lodestone
 
-#endif // !LODESTONE_SHADER_COOKER_DEDUPE_REPORT_HPP
+#endif // !LODESTONE_DEDUPE_REPORT_HPP

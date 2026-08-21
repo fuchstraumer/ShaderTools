@@ -1,6 +1,6 @@
 #pragma once
-#ifndef LODESTONE_SHADER_COOKER_CONTENT_INTERNER_HPP
-#define LODESTONE_SHADER_COOKER_CONTENT_INTERNER_HPP
+#ifndef LODESTONE_CONTENT_INTERNER_HPP
+#define LODESTONE_CONTENT_INTERNER_HPP
 #include "ContentHash.hpp"
 #include <cstdint>
 #include <span>
@@ -174,4 +174,4 @@ private:
 
 } // namespace lodestone
 
-#endif // !LODESTONE_SHADER_COOKER_CONTENT_INTERNER_HPP
+#endif // !LODESTONE_CONTENT_INTERNER_HPP

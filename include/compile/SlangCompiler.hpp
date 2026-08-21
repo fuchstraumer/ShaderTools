@@ -1,6 +1,6 @@
 #pragma once
-#ifndef LODESTONE_SHADER_COOKER_SLANG_COMPILER_HPP
-#define LODESTONE_SHADER_COOKER_SLANG_COMPILER_HPP
+#ifndef LODESTONE_SLANG_COMPILER_HPP
+#define LODESTONE_SLANG_COMPILER_HPP
 #include "CookerErrors.hpp"
 #include "Diagnostics.hpp"
 #include "permute/PermutationSpace.hpp"
@@ -60,4 +60,4 @@ private:
 
 } // namespace lodestone
 
-#endif // !LODESTONE_SHADER_COOKER_SLANG_COMPILER_HPP
+#endif // !LODESTONE_SLANG_COMPILER_HPP

@@ -1,6 +1,6 @@
 #pragma once
-#ifndef LODESTONE_SHADER_COOKER_RESOLVE_STAGE_HPP
-#define LODESTONE_SHADER_COOKER_RESOLVE_STAGE_HPP
+#ifndef LODESTONE_RESOLVE_STAGE_HPP
+#define LODESTONE_RESOLVE_STAGE_HPP
 #include "CookerErrors.hpp"
 #include "permute/PermutationSpace.hpp"
 #include "compile/RawLibrary.hpp"
@@ -46,4 +46,4 @@ CookResult<CompiledVariant> ResolveVariant(const RawVariant& raw, const ResolveC
 
 } // namespace lodestone
 
-#endif // !LODESTONE_SHADER_COOKER_RESOLVE_STAGE_HPP
+#endif // !LODESTONE_RESOLVE_STAGE_HPP

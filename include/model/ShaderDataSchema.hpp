@@ -1,6 +1,6 @@
 #pragma once
-#ifndef LODESTONE_SHADER_COOKER_DATA_SCHEMA_HPP
-#define LODESTONE_SHADER_COOKER_DATA_SCHEMA_HPP
+#ifndef LODESTONE_DATA_SCHEMA_HPP
+#define LODESTONE_DATA_SCHEMA_HPP
 #include "ShaderLibraryTypes.hpp"
 #include <cstdint>
 #include <span>
@@ -275,4 +275,4 @@ uint64_t HashReflectedRasterState(const ReflectedRasterState& raster) noexcept;
 
 } // namespace lodestone
 
-#endif // !LODESTONE_SHADER_COOKER_DATA_SCHEMA_HPP
+#endif // !LODESTONE_DATA_SCHEMA_HPP

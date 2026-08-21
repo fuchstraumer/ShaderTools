@@ -1,6 +1,6 @@
 #pragma once
-#ifndef LODESTONE_SHADER_COOKER_RAW_LIBRARY_HPP
-#define LODESTONE_SHADER_COOKER_RAW_LIBRARY_HPP
+#ifndef LODESTONE_RAW_LIBRARY_HPP
+#define LODESTONE_RAW_LIBRARY_HPP
 #include "permute/PermutationSpace.hpp"
 #include "model/ShaderDataSchema.hpp"
 #include "ShaderLibraryTypes.hpp"
@@ -124,4 +124,4 @@ struct RawLibrary
 
 } // namespace lodestone
 
-#endif // !LODESTONE_SHADER_COOKER_RAW_LIBRARY_HPP
+#endif // !LODESTONE_RAW_LIBRARY_HPP

@@ -1,6 +1,6 @@
 #pragma once
-#ifndef LODESTONE_SHADER_COOKER_SIZE_EXPRESSION_HPP
-#define LODESTONE_SHADER_COOKER_SIZE_EXPRESSION_HPP
+#ifndef LODESTONE_SIZE_EXPRESSION_HPP
+#define LODESTONE_SIZE_EXPRESSION_HPP
 #include "CookerErrors.hpp"
 #include <cstdint>
 #include <span>
@@ -39,4 +39,4 @@ CookResult<int64_t> EvaluateSizeExpression(std::string_view expression, std::spa
 
 } // namespace lodestone
 
-#endif // !LODESTONE_SHADER_COOKER_SIZE_EXPRESSION_HPP
+#endif // !LODESTONE_SIZE_EXPRESSION_HPP

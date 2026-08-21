@@ -1,6 +1,6 @@
 #pragma once
-#ifndef LODESTONE_SHADER_COOKER_PERMUTATION_SPACE_HPP
-#define LODESTONE_SHADER_COOKER_PERMUTATION_SPACE_HPP
+#ifndef LODESTONE_PERMUTATION_SPACE_HPP
+#define LODESTONE_PERMUTATION_SPACE_HPP
 #include "CookerErrors.hpp"
 #include <cstddef>
 #include <cstdint>
@@ -181,4 +181,4 @@ const PermutationSpace* FindPermutationSpaceForModule(std::string_view module_na
 
 } // namespace lodestone
 
-#endif // !LODESTONE_SHADER_COOKER_PERMUTATION_SPACE_HPP
+#endif // !LODESTONE_PERMUTATION_SPACE_HPP

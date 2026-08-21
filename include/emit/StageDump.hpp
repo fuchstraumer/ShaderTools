@@ -1,6 +1,6 @@
 #pragma once
-#ifndef LODESTONE_SHADER_COOKER_STAGE_DUMP_HPP
-#define LODESTONE_SHADER_COOKER_STAGE_DUMP_HPP
+#ifndef LODESTONE_STAGE_DUMP_HPP
+#define LODESTONE_STAGE_DUMP_HPP
 #include "model/CookedLibrary.hpp"
 #include "driver/CookerOptions.hpp"
 #include "permute/PermutationSpace.hpp"
@@ -49,4 +49,4 @@ std::string DumpCookedModule(const CookedModule& module);
 
 } // namespace lodestone
 
-#endif // !LODESTONE_SHADER_COOKER_STAGE_DUMP_HPP
+#endif // !LODESTONE_STAGE_DUMP_HPP
