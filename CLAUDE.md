@@ -54,8 +54,8 @@ Each test target is also a standalone executable. Run it directly to debug it:
 There is no test framework. `tests/TestHarness.hpp` gives a counter, `Check(condition, description)`,
 and a nonzero exit code.
 
-Eight test targets exist. Seven are unit tests, and each one proves a claim the repository makes. None
-of them needs Slang, a compiler, or an asset, and all seven together run in under one second.
+Ten test targets exist. Nine are unit tests, and each one proves a claim the repository makes. None of
+them needs Slang, a compiler, or an asset, and all nine together run in under one second.
 
 | Target | Proves |
 |---|---|
@@ -65,11 +65,13 @@ of them needs Slang, a compiler, or an asset, and all seven together run in unde
 | `ShaderManifestRejectTest` | The manifest reader rejects a short, misaligned, or damaged file, and opens a real one. |
 | `WgslBindingScannerTest` | The cross-check reads the emitted WGSL correctly, and fails on a real mismatch. |
 | `StageDumpTest` | A stage dump holds the model and no target text, it names itself the way `--dump-stage` names it, and two dumps of one input agree byte for byte. |
-| `DedupeInfluenceTest` | Dedup changes what the tables cost and never what the cook measures. It builds one module in both arms and checks that the axis influence agrees. |
+| `DedupeInfluenceTest` | Dedup changes what the tables cost and never what the cook measures. It builds one module in both arms and checks that the axis influence agrees, and that the measurement reads every group of variants. |
+| `DiagnosticParserTest` | The parser reads Slang's machine-readable diagnostic form into a record. It names no Slang type, so it needs no compiler. |
+| `ResolveStageTest` | Stage 4 resolves a hand-built `RawVariant` with no Slang present. This test is the proof that the stage 3 and stage 4 split worked, and before phase D step D5 it could not be written at all. |
 
 An error check prints a diagnostic to `stderr` on purpose. Read the last line for the result.
 
-`CookTest` is the eighth, and it is different. It is the cooker driver, not an assertion suite.
+`CookTest` is the tenth, and it is different. It is the cooker driver, not an assertion suite.
 `tests/CMakeLists.txt` gives it a command line through `TEST_ARGS`, so `ctest` runs a real cook of
 `OceanFft.slang` with `--verify-deterministic`. It takes about 18 seconds, and it is the only
 end-to-end coverage. Exit code 0 there is a real statement: every variant compiled, every reflection
@@ -81,11 +83,19 @@ when the test needs a command line.
 
 ## Running the cooker
 
-The cooker has no dedicated CLI target today. `lodestone` is a static library, and `CookTest.cpp`
-holds the only `main` that drives a cook. Callers build `CookerOptions`, build an `OutputSink`, and
-call `RunCook`. `ParseCommandLine` in `src/CookerOptions.cpp` parses the flags, and `GetUsageText`
-prints them: `--output/-o`, `--cache-dir`, `--O0` to `--O3`, `--no-validate`, `--quiet`,
-`--single-threaded`, `--no-dedupe`, `--verify-deterministic`.
+`tools/cooker_console` is the CLI. It builds `lodestone_cooker_console`, and phase D step D1b added
+it. `lodestone` itself stays a static library: the tool parses a command line, builds a
+`FileOutputSink`, and calls `RunCook`. `CookTest.cpp` drives the same three calls with a command line
+that `tests/CMakeLists.txt` supplies.
+
+`ParseCommandLine` in `src/CookerOptions.cpp` parses the flags, and `GetUsageText` prints them:
+`--output/-o`, `--cache-dir`, `--O0` to `--O3`, `--target=<name>`, `--no-validate`, `--quiet`,
+`--single-threaded`, `--no-dedupe`, `--verify-deterministic`, and `--dump-stage=<name>`.
+
+A value flag is a row in `k_ValueFlags`, beside `k_SwitchFlags`. Add a row, not a branch.
+
+`--target` is rejected at the command line and never in the driver, so a name that reaches
+`CookerOptions` is a name `FindTargetProfile` accepts. `wgsl` is the only name this build has.
 
 `lodestone` must stay `STATIC`. No header marks a symbol `dllexport`, so a DLL build of this target
 exports nothing and every consumer fails to link. A `SHARED` build is for instrumented performance
@@ -159,12 +169,22 @@ type. `manifest_dump` links only the client half, and that link line is the proo
 free of the compiler. When a dependency arrives, it goes behind a facade in one translation unit.
 
 **Author for people, cook for machines.** Authoring wants flexible shaders and fast edits. Runtime
-wants small data and no stalls. The reason to keep them apart is may be elegant: but it also stops a
+wants small data and no stalls. The reason to keep them apart may be elegant: but it also stops a
 performance engineer and a content author from having to win the same argument in a planning meeting.
 Policy that a tech artist owns belongs in a data file. Structure that an engineer owns belongs in code.
 Each gets to accomplish their work and solve the problems they're tasked with as they see fit: this
 pipeline transforms between those domains to maintain that capability. Software as a people management
 tool.
+
+**Use the invariant the data already has**. CanonicalizeAssignment walks the space in order, so slot k
+of Canonical is always axis k. FindBinding searched it anyway. The search cost O(K) where O(1) was available,
+and that was the small part. The larger part is that a search states there is no order, so every later
+reader believed there was none. When you add a helper, name the invariant it relies on. If it relies on
+none, find out whether the data really has none.
+
+**A nested loop over one container is usually a missing key.** InfluenceOfAxis tested every pair of variants
+to find the pairs that differ in one axis. That is an equivalence relation, and a key finds every class in
+one pass. Before you write a loop inside a loop over the same data, ask which key makes the inner loop unnecessary.
 
 ### Working with this author
 
@@ -198,20 +218,28 @@ number would state that every target must supply one. A target supplies a valida
    in the Slang source texts. A module with no registered space gets an empty space and one variant.
 2. **Enumerate.** `EnumerateVariants` expands the space into a `VariantSet` of `VariantDescriptor`
    values. Each descriptor holds `Active` and `Canonical` (see below) and a dense index.
-3. **Compile.** `SlangCompiler::CompileVariant` links and generates. It builds one synthetic Slang
+3. **Compile.** Stage 3 has two entry points. `SlangCompiler::PrepareRawModule` runs once for each
+   module and returns the module facts only Slang can supply: the name, the entry point names, and
+   the declared default of every `extern static const` constant no axis drives. A size expression may
+   name one of those defaults, so it must run before the first variant.
+   `SlangCompiler::CompileVariantRaw` then runs once for each variant. It links and generates. It builds one synthetic Slang
    module for each active axis value, composites those with the base module, links, then asks Slang
-   for WGSL for each entry point. Entry point codegen runs on `std::async` unless
-   `MultithreadEntryPointCodegen` is false. Output is `CompiledVariant`.
-4. **Resolve.** The same call extracts reflection, reads the `[vx_*]` attributes, and evaluates each
-   size expression against the axis values. Output is the reflection part of `CompiledVariant`.
-   Stage 3 and stage 4 are fused inside `SlangCompiler.cpp` today. `docs/shader-cooker-handoff.md`
-   asks for the split, because the split is what makes a second target language possible.
-   `docs/phase-d-stage-separation-plan.md` plans it, and it is the next work.
+   for target text for each entry point. Entry point codegen runs on `std::async` unless
+   `MultithreadEntryPointCodegen` is false. Output is `RawVariant`. Every `[vx_*]` argument comes back
+   as the string the author wrote, because evaluating one is stage 4's job.
+4. **Resolve.** `ResolveVariant` in `ResolveStage.cpp` reads the `[vx_*]` attributes and evaluates each
+   size expression against a `ResolveContext`. Output is `CompiledVariant`.
+   **`SlangCompiler.cpp` names no size expression and no `[vx_*]` attribute, and `ResolveStage.cpp`
+   names no Slang type.** Phase D step D5 made that true, and it is what lets a second target language
+   exist. Do not undo it.
 5. **Normalize.** Empty on purpose. The dedup report says `normalization passes active: (none)`. A
    whitespace pass with no stage boundary hides the difference between a true collapse and an effect
    of the stripping.
-6. **Intern.** `AppendVariantToModule` gives each source, each layout, and each raster state to a
-   `ContentInterner`. `FreezeModuleTables` copies the unique entries into the `CookedModule`.
+6. **Intern.** `AppendVariantToModule` gives each source, each resource, each resource list, each
+   footprint list, each visibility list, and each raster state to a `ContentInterner`. The six
+   interners live on `InternedModule`, which is the stage 6 boundary type. `FreezeModuleTables` takes
+   that builder by value and returns a `CookedModule`, so nothing after the freeze can reach an
+   interner.
 7. **Key.** Each `LibraryVariant` holds only indices into those tables, plus its dense index.
 8. **Emit.** `EmitLibraryArtifacts` writes through the `OutputSink`:
    - the C++ header, `sink.PrimaryName()`, from `EmitShaderLibraryHeader`
@@ -219,18 +247,24 @@ number would state that every target must supply one. A target supplies a valida
    - one binary manifest for each module, `<Module>.ldshaders`, plus `VerifyManifestRoundTrip`
    - `ShaderLibrary.dedupe.txt`, from `GenerateDedupeReport`
 
-Three validators run inside that loop. None of them is a stage.
+Four validators run inside that loop. None of them is a stage.
 
-- **The reflection cross-check**, after stage 4. `ValidateVariantReflection` scans `@group`/`@binding`
-  back out of the emitted WGSL with `WgslBindingScanner`, then compares that against the bindings the
-  entry point uses. A mismatch increments a counter, and a nonzero counter fails the cook with
-  `CookError::ReflectionMismatch`. This validator is target specific by construction, and phase D
-  step D7 gives it the name `ValidateResolvedLibrary` and an interface.
+- **The reflection cross-check**, after stage 4. `ValidateResolvedLibrary` asks the target profile for
+  a validator. The WGSL profile scans `@group`/`@binding` back out of the emitted text with
+  `WgslBindingScanner`, then compares that against the bindings the entry point uses. A mismatch
+  increments a counter, and a nonzero counter fails the cook with `CookError::ReflectionMismatch`. A
+  target that supplies no validator skips this, and the cook says which of the three happened.
 - **The library round trip**, after stage 7. `VerifyLibraryRoundTrip` replays every variant through
-  the finished tables and compares the result against the text the compiler produced.
-  `EnforceModulePolicy` then checks the measured axis influence against `ModulePolicy`.
+  the finished tables and compares the result against the text the compiler produced. It covers the
+  **source text** only.
+- **The layout round trip**, after stage 7. `VerifyLayoutRoundTrip` replays every (variant, entry
+  point) through the resource, footprint, and visibility tables and compares the result against
+  `BuildEntryPointLayout`. Phase D step D8b built it, because the step that collapses the layout
+  tables owes the repository a check that a collapse was correct. `EnforceModulePolicy` then checks
+  the measured axis influence against `ModulePolicy`.
 - **The manifest round trip**, inside stage 8. `VerifyManifestRoundTrip` reads each manifest back and
-  compares it against the module it came from.
+  compares it against the module it came from. `CheckManifestLayout` walks the manifest the way a
+  consumer walks it, from variant to resource list to footprint list to visibility list.
 
 `--verify-deterministic` runs stages 1 to 8 twice into two `MemoryOutputSink` objects, compares every
 artifact byte for byte, then writes the first result to the real sink. A difference means an
@@ -244,17 +278,25 @@ unordered container reached the output.
 | `OutputSink` | `OutputSink.hpp` | Where artifacts go. `FileOutputSink` and `MemoryOutputSink`. The seam a live cooker will use. |
 | `PermutationAxis`, `PermutationSpace` | `PermutationSpace.hpp` | One axis of variation, and the list of axes for a module. |
 | `VariantDescriptor` | `PermutationSpace.hpp` | One variant identity. `Active` and `Canonical`. |
+| `CanonicalAssignment` | `PermutationSpace.hpp` | An assignment that holds every axis of one space. Only `CanonicalizeAssignment` builds one, so `ComputeVariantIndex` cannot be given a partial assignment. |
 | `ModulePolicy` | `PermutationSpace.hpp` | A variant budget, plus the axis influence the author expects. |
 | `CompiledVariant`, `CompiledEntryPoint` | `ShaderDataSchema.hpp` | Compiler output: WGSL text plus reflection. Owns its strings. |
 | `ReflectedBinding` | `ShaderDataSchema.hpp` | What the shader states about one resource. The CPU side never writes any of it. |
+| `RawVariant`, `RawModule` | `RawLibrary.hpp` | Stage 3 output. Everything Slang says, with no opinion about any of it. A `[vx_*]` argument is still the string the author wrote. |
+| `ResolveContext` | `ResolveStage.hpp` | Stage 4 input. The axis values of one variant, plus the extern constant defaults that stage 3 carried out. |
+| `TargetProfile` | `TargetProfile.hpp` | A target name, an access model, and an optional validator. `--target` names one. |
+| `DiagnosticRecord`, `DiagnosticSink` | `Diagnostics.hpp` | One compiler message as a record, and where it goes. Compilation never formats a string. |
 | `ContentInterner<T>` | `ContentInterner.hpp` | Collapses equal payloads, keeps provenance, counts collisions. |
+| `InternedModule` | `CookedLibrary.hpp` | The stage 6 builder. It holds the six interners, and it is the only place the provenance of a collapse survives. |
 | `CookedModule`, `CookedLibrary` | `CookedLibrary.hpp` | The frozen model. Every emitter reads this and nothing earlier. |
 | `ShaderManifestView` | `client/include/ShaderManifest.hpp` | Read-only spans over the manifest bytes. Allocates nothing to open. |
 | `ShaderSourceProvider` | `client/include/ShaderLibraryTypes.hpp` | Where a renderer gets source, bindings, and workgroup size. `Generation()` is the hot-reload hook. |
 
-`ContentHashValue` is FNV-1a 64 today. The hash name reaches the output, so a new hash needs a new
-name. xxHash has been added as a submodule, but has not been implemented as a hasher yet - it's not
-currently a priority, and is so trivial as to not be worth thinking much about.
+`ContentHashValue` is xxHash3, 64 bit. `ContentHash.hpp` holds the streaming form as well, which the
+composite keys use. The hash name reaches the output, so a new hash needs a new name, and
+`k_HashName` is the only place that name is written. Every interner takes it from there. The name was
+once spelled out a second time in `CookedLibrary.hpp`, the two copies drifted, and the dump then
+reported a name that no constant held.
 
 ## Rules the code depends on
 
@@ -266,13 +308,14 @@ Break one of these and the cook can exit 0 with wrong content.
    and both must reach the same conclusions about the shader. So a measurement of the content reads
    the content, never an interner index. An index is what the interner assigned, and `--no-dedupe`
    gives every artifact its own. `DedupeInfluenceTest` holds this line.
-3. **The round trip checks are never optional.** `VerifyLibraryRoundTrip` and
-   `VerifyManifestRoundTrip` run on every cook. Know what each one covers, because it is less than the
-   names suggest. `VerifyLibraryRoundTrip` replays the **source text** only. `CheckManifestLayout`
-   compares the manifest against `module.Layouts[index]`, which is the table it was written from, so
-   it proves the serialization is faithful and cannot see a bad collapse. **The layout table has no
-   second opinion.** So every field a consumer reads must take part in the layout key, and a field
-   cannot leave the key while it stays in the type. See `docs/phase-d-stage-separation-plan.md` §4b.
+3. **The round trip checks are never optional.** `VerifyLibraryRoundTrip`, `VerifyLayoutRoundTrip`,
+   and `VerifyManifestRoundTrip` run on every cook. Know what each one covers, because it is less than
+   the names suggest. `VerifyLibraryRoundTrip` replays the **source text** only.
+   `VerifyLayoutRoundTrip` replays the layout, and phase D step D8b built it for exactly this reason:
+   the four binding tables collapse hard, and a bad collapse has to be found by comparison rather than
+   trusted. `CheckManifestLayout` walks the manifest the way a consumer walks it, so it proves the
+   serialization is faithful. Every field a consumer reads must still take part in a key, and a field
+   cannot leave a key while it stays in the type. See `docs/phase-d-stage-separation-plan.md` §4b.
 4. **The emitted artifact decides group and binding numbers. Reflection decides sizes and types.**
    That asymmetry is the only reason the cross-check finds real errors.
 5. **Every emitter reads one frozen model.** An emitter must not reach past `CookedLibrary` into
@@ -287,6 +330,12 @@ Break one of these and the cook can exit 0 with wrong content.
 emitted text. `Canonical` holds every axis in declaration order, with the first value filled in for a
 disabled axis. It drives the dense mixed-radix index only. Canonicalization therefore can never
 change shader output, and a caller can find a variant with a partial set of values.
+
+`Canonical` has its own type, `CanonicalAssignment`, and only `CanonicalizeAssignment` builds one.
+`PermutationAssignment` named four different things: an active assignment, a partial one, a canonical
+one, and the parameter of every function that takes any of them. `ComputeVariantIndex` needs the
+canonical form, and it stated that in a parameter name alone. A partial assignment now fails to
+compile. The type holds the same vector and costs nothing at run time.
 
 `SpaceSize` counts the dense index range with the holes included. A disabled dependent axis leaves
 gaps, and the design accepts them.
@@ -354,9 +403,12 @@ Phases D, E, and F are a **sequence**. Each depends on the one before it. The to
 beside them.
 
 - `docs/phase-d-stage-separation-plan.md` — separate stage 3 from stage 4, and add `--dump-stage`.
-  Build the dump first and use it as the regression harness for the split. **This is the next work.**
+  **Complete.** Read it for the reasoning behind the shape of the pipeline, and for §4b, which states
+  why a binding record is four tables and not one.
 - `docs/phase-e-data-driven-permutations.md` — axis declarations in the shader, policy in a data file,
-  constraint expressions, and a ranking index in place of mixed radix.
+  constraint expressions, and a ranking index in place of mixed radix. **This is the next work.**
+  §9 lists what phase D was asked to leave behind. One item is open: the space dump does not yet
+  carry the axis fields that E2 adds.
 - `docs/phase-f-vocabulary.md` — **read this before proposing anything about targets or bindings.**
   It defines axis kind, binding time, and access model, and it divides the work between Slang's
   capability system and this repository. It is a vocabulary, not a plan.

@@ -128,6 +128,7 @@ target_include_directories(lodestone PRIVATE
     "${CMAKE_CURRENT_SOURCE_DIR}/third_party/slang/include"
     "${CMAKE_CURRENT_SOURCE_DIR}/third_party/magic_enum/include")
 target_link_libraries(lodestone PRIVATE slang lodestone::client_internal xxHash::xxhash lodestone::json)
+target_compile_options(lodestone PUBLIC "$<$<CONFIG:RelWithDebInfo>:/Ob2;/arch:AVX2>")
 if (NOT CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
     target_compile_definitions(lodestone PRIVATE "_HAS_CXX23=1")
     # No sanitizer here. AddressSanitizer on Windows does not support the debug CRT: it intercepts
