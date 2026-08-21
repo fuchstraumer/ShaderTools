@@ -71,6 +71,20 @@ std::vector<ReflectedBinding> MakeAgreeingReflection()
     return reflected;
 }
 
+// `CompareBindings` takes a span of mutable pointers, and a span cannot bind a temporary. Each
+// caller must keep the result in a named object that is not const.
+std::vector<const ReflectedBinding*> PointersTo(const std::vector<ReflectedBinding>& reflected)
+{
+    std::vector<const ReflectedBinding*> pointers;
+    pointers.reserve(reflected.size());
+    for (const ReflectedBinding& binding : reflected)
+    {
+        pointers.push_back(&binding);
+    }
+
+    return pointers;
+}
+
 const WgslDeclaredBinding* FindDeclared(const std::vector<WgslDeclaredBinding>& declared,
                                         uint32_t group,
                                         uint32_t binding) noexcept
@@ -131,7 +145,8 @@ int main()
 
     runner.BeginSection("agreeing reflection passes the cross-check");
     const std::vector<ReflectedBinding> agreeing = MakeAgreeingReflection();
-    const BindingComparison match = CompareBindings(declared, agreeing);
+    std::vector<const ReflectedBinding*> agreeingPointers = PointersTo(agreeing);
+    const BindingComparison match = CompareBindings(declared, agreeingPointers);
     runner.Check(match.Matches, "reflection that agrees with the emitted text passes");
     runner.Check(match.Report.empty(), "a passing comparison reports nothing");
 
@@ -140,25 +155,29 @@ int main()
     // the bind group layout at run time, so this check is the only place the error is findable.
     std::vector<ReflectedBinding> wrongKind = MakeAgreeingReflection();
     wrongKind[0].Kind = BindingKind::StorageBuffer;
-    const BindingComparison kindMismatch = CompareBindings(declared, wrongKind);
+    std::vector<const ReflectedBinding*> wrongKindPointers = PointersTo(wrongKind);
+    const BindingComparison kindMismatch = CompareBindings(declared, wrongKindPointers);
     runner.Check(!kindMismatch.Matches, "a uniform declared as a storage buffer fails");
     runner.Check(!kindMismatch.Report.empty(), "a failing comparison says what disagreed");
 
     runner.BeginSection("a name mismatch fails the cross-check");
     std::vector<ReflectedBinding> wrongName = MakeAgreeingReflection();
     wrongName[1].Name = "SomeOtherBuffer";
-    const BindingComparison nameMismatch = CompareBindings(declared, wrongName);
+    std::vector<const ReflectedBinding*> wrongNamePointers = PointersTo(wrongName);
+    const BindingComparison nameMismatch = CompareBindings(declared, wrongNamePointers);
     runner.Check(!nameMismatch.Matches, "a binding whose name disagrees fails");
 
     runner.BeginSection("a binding that only one side knows fails the cross-check");
     std::vector<ReflectedBinding> missing = MakeAgreeingReflection();
     missing.pop_back();
-    const BindingComparison missingBinding = CompareBindings(declared, missing);
+    std::vector<const ReflectedBinding*> missingPointers = PointersTo(missing);
+    const BindingComparison missingBinding = CompareBindings(declared, missingPointers);
     runner.Check(!missingBinding.Matches, "a declaration with no reflection record fails");
 
     std::vector<ReflectedBinding> extra = MakeAgreeingReflection();
     extra.push_back(MakeReflected("GhostBuffer", 3u, 0u, BindingKind::StorageBuffer));
-    const BindingComparison extraBinding = CompareBindings(declared, extra);
+    std::vector<const ReflectedBinding*> extraPointers = PointersTo(extra);
+    const BindingComparison extraBinding = CompareBindings(declared, extraPointers);
     runner.Check(!extraBinding.Matches, "a reflection record the WGSL never declares fails");
 
     // D7 moved the cross-check behind `ResolvedLibraryValidator` so a second target can supply its
@@ -177,15 +196,15 @@ int main()
 
     if (wgslProfile != nullptr && wgslProfile->Validator != nullptr)
     {
-        const std::vector<ReflectedBinding> agreeing = MakeAgreeingReflection();
         const BindingComparison throughInterface =
-            wgslProfile->Validator->ValidateEntryPoint(k_Wgsl, agreeing);
-        const BindingComparison direct = CompareBindings(ScanWgslBindings(k_Wgsl), agreeing);
+            wgslProfile->Validator->ValidateEntryPoint(k_Wgsl, agreeingPointers);
+        const std::vector<WgslDeclaredBinding> rescanned = ScanWgslBindings(k_Wgsl);
+        const BindingComparison direct = CompareBindings(rescanned, agreeingPointers);
         runner.Check(throughInterface.Matches == direct.Matches,
                      "the validator agrees with the scanner on output that matches");
 
         const BindingComparison mismatchThroughInterface =
-            wgslProfile->Validator->ValidateEntryPoint(k_Wgsl, extra);
+            wgslProfile->Validator->ValidateEntryPoint(k_Wgsl, extraPointers);
         runner.Check(mismatchThroughInterface.Matches == extraBinding.Matches &&
                          mismatchThroughInterface.Report == extraBinding.Report,
                      "the validator agrees with the scanner on output that does not, report included");
