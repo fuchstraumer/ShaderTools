@@ -29,10 +29,10 @@ namespace
  * of that golden is that a person can read it and see the whole format at once. */
 PermutationAxis MakeBoolAxis(std::string name)
 {
-    PermutationAxis axis;
-    axis.Name = std::move(name);
-    axis.Values = { PermutationValue{ false }, PermutationValue{ true } };
-    return axis;
+    return PermutationAxis{ std::move(name),
+                            { PermutationValue{ false }, PermutationValue{ true } },
+                            PermutationAxis::k_NoParent,
+                            PermutationValue{} };
 }
 
 CompiledVariant MakeVariant(uint32_t index, const std::string& suffix, std::string code)
@@ -65,7 +65,7 @@ CompiledVariant MakeVariant(uint32_t index, const std::string& suffix, std::stri
 }
 
 /** This module registers no axis, so every variant canonicalizes against a space with no axes. */
-const PermutationSpace k_EmptySpace{};
+const PermutationSpace k_EmptySpace{ "", {} };
 
 /** Two variants with different text and one shared layout. The cooked dump must therefore report two
  * sources and one layout, which is the collapse the interner performed. */
@@ -84,7 +84,7 @@ InternedModule BuildTinyInternedModule()
         const CookResult<void> appended =
             AppendVariantToModule(module,
                                   variant,
-                                  CanonicalizeAssignment(k_EmptySpace, PermutationAssignment{}));
+                                  k_EmptySpace.CanonicalizeAssignment(PermutationAssignment{}));
         if (!appended)
         {
             module.Variants.clear();
@@ -243,8 +243,7 @@ void CheckSpaceDump(lodestone::tests::TestRunner& runner)
 {
     runner.BeginSection("space dump");
 
-    const PermutationAxis axis = MakeBoolAxis("USE_FOO");
-    const PermutationSpace space{ &axis };
+    const PermutationSpace space{ "TinyModule", { MakeBoolAxis("USE_FOO") } };
 
     const std::string expected = R"({
     "stage": "space",
@@ -276,12 +275,11 @@ void CheckDependentAxisDump(lodestone::tests::TestRunner& runner)
 {
     runner.BeginSection("dependent axis");
 
-    const PermutationAxis parent = MakeBoolAxis("USE_FOO");
     PermutationAxis child = MakeBoolAxis("FOO_DETAIL");
-    child.Parent = &parent;
+    child.ParentIndex = 0;
     child.RequiredParentValue = PermutationValue{ true };
 
-    const PermutationSpace space{ &parent, &child };
+    const PermutationSpace space{ "TinyModule", { MakeBoolAxis("USE_FOO"), std::move(child) } };
     const std::string dump = DumpPermutationSpace("TinyModule", space);
 
     runner.Check(Contains(dump, R"("parent": "USE_FOO")"), "a dependent axis names its parent");
@@ -295,10 +293,9 @@ void CheckVariantDump(lodestone::tests::TestRunner& runner)
 {
     runner.BeginSection("variants dump");
 
-    const PermutationAxis axis = MakeBoolAxis("USE_FOO");
-    const PermutationSpace space{ &axis };
+    const PermutationSpace space{ "TinyModule", { MakeBoolAxis("USE_FOO") } };
 
-    const CookResult<VariantSet> variantSet = EnumerateVariants(space);
+    const CookResult<VariantSet> variantSet = space.EnumerateVariants();
     runner.Check(variantSet.has_value(), "the space enumerates");
     if (!variantSet)
     {

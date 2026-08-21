@@ -18,10 +18,10 @@ namespace lodestone
 
 PermutationAxis::PermutationAxis(std::string _name,
                                  std::span<const PermutationValue> _values,
-                                 const PermutationAxis* _parent,
+                                 int32_t _parentIndex,
                                  PermutationValue _requiredParentValue) noexcept
     : Name(std::move(_name)),
-      Parent(_parent),
+      ParentIndex(_parentIndex),
       RequiredParentValue(_requiredParentValue)
 {
     numValues = static_cast<int64_t>(std::min(_values.size(), values.size()));
@@ -30,11 +30,11 @@ PermutationAxis::PermutationAxis(std::string _name,
 
 PermutationAxis::PermutationAxis(std::string _name,
                                  std::initializer_list<PermutationValue> _values,
-                                 const PermutationAxis* _parent,
+                                 int32_t _parentIndex,
                                  PermutationValue _requiredParentValue) noexcept
     : PermutationAxis(std::move(_name),
                       std::span<const PermutationValue>{ _values.begin(), _values.size() },
-                      _parent,
+                      _parentIndex,
                       _requiredParentValue)
 {
 }
@@ -52,6 +52,11 @@ std::span<const PermutationValue> PermutationAxis::GetValues() const noexcept
 const PermutationValue& PermutationAxis::GetDefault() const noexcept
 {
     return values.front();
+}
+
+bool PermutationAxis::HasParent() const noexcept
+{
+    return ParentIndex != k_NoParent;
 }
 
 } // namespace lodestone

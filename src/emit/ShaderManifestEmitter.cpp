@@ -706,16 +706,16 @@ namespace
             return tables;
         }
 
-        tables.Axes.reserve(module.Space->size());
+        tables.Axes.reserve(module.Space->AxisCount());
 
-        for (const PermutationAxis* axis : *module.Space)
+        for (const PermutationAxis& axis : module.Space->Axes())
         {
             ManifestAxis record;
-            record.NameString = strings.Add(axis->Name);
+            record.NameString = strings.Add(axis.Name);
             record.FirstValue = static_cast<uint32_t>(tables.Values.size());
-            record.ValueCount = static_cast<uint32_t>(axis->NumValues());
+            record.ValueCount = static_cast<uint32_t>(axis.NumValues());
             tables.Axes.push_back(record);
-            for (const PermutationValue& value : axis->GetValues())
+            for (const PermutationValue& value : axis.GetValues())
             {
                 tables.Values.emplace_back(PermutationValueToInt64(value));
             }

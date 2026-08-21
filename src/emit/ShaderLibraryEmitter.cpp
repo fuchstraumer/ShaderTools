@@ -258,10 +258,10 @@ namespace
             module.Name,
             typeName);
 
-        for (const PermutationAxis* axis : *module.Space)
+        for (const PermutationAxis& axis : module.Space->Axes())
         {
-            const std::string field = MakeFieldIdentifier(axis->Name);
-            const PermutationValue& first = axis->GetDefault();
+            const std::string field = MakeFieldIdentifier(axis.Name);
+            const PermutationValue& first = axis.GetDefault();
             switch (first.GetType())
             {
             case PermutationValue::Type::Bool:
@@ -362,19 +362,20 @@ namespace
         std::string emitted =
             std::format("constexpr {} Canonicalize({} permutation) noexcept\n{{\n", typeName, typeName);
 
-        for (const PermutationAxis* axis : *module.Space)
+        for (const PermutationAxis& axis : module.Space->Axes())
         {
-            if (axis->Parent == nullptr)
+            const PermutationAxis* parent = module.Space->ParentOf(axis);
+            if (parent == nullptr)
             {
                 continue;
             }
 
             emitted += std::format("    if (permutation.{} != {})\n    {{\n        permutation.{} = {};\n"
                                    "    }}\n",
-                                   MakeFieldIdentifier(axis->Parent->Name),
-                                   ValueToCppLiteral(axis->RequiredParentValue),
-                                   MakeFieldIdentifier(axis->Name),
-                                   ValueToCppLiteral(axis->GetDefault()));
+                                   MakeFieldIdentifier(parent->Name),
+                                   ValueToCppLiteral(axis.RequiredParentValue),
+                                   MakeFieldIdentifier(axis.Name),
+                                   ValueToCppLiteral(axis.GetDefault()));
         }
 
         emitted += "\n    return permutation;\n}\n\n";
@@ -392,12 +393,12 @@ namespace
                         "    permutation = Canonicalize(permutation);\n    uint32_t index = 0u;\n",
                         typeName);
 
-        for (const PermutationAxis* axis : *module.Space)
+        for (const PermutationAxis& axis : module.Space->Axes())
         {
             emitted += std::format("    index = index * {}u + IndexOf{}{}(permutation);\n",
-                                   axis->NumValues(),
+                                   axis.NumValues(),
                                    moduleType,
-                                   MakeFieldIdentifier(axis->Name));
+                                   MakeFieldIdentifier(axis.Name));
         }
 
         emitted += "    return index;\n}\n\n";
@@ -468,9 +469,9 @@ std::string EmitShaderLibraryHeader(const CookedLibrary& library)
     {
         header += EmitPermutationStruct(module);
 
-        for (const PermutationAxis* axis : *module.Space)
+        for (const PermutationAxis& axis : module.Space->Axes())
         {
-            header += EmitAxisIndexHelper(module, *axis);
+            header += EmitAxisIndexHelper(module, axis);
         }
 
         header += EmitCanonicalize(module);

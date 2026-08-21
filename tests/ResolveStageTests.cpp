@@ -33,6 +33,9 @@ using lodestone::ExternConstantDefault;
 using lodestone::MakeResolveContext;
 using lodestone::PermutationAssignment;
 using lodestone::PermutationAxis;
+using lodestone::PermutationBinding;
+using lodestone::PermutationSpace;
+using lodestone::PermutationValue;
 using lodestone::RawBinding;
 using lodestone::RawEntryPoint;
 using lodestone::RawSizeAttribute;
@@ -50,15 +53,27 @@ namespace
 
 // The axes and the defaults are file scope because `ResolveContext` holds `std::string_view` names.
 // The strings must outlive every context this file builds.
-const PermutationAxis k_SizeAxis{ .Name = "IFFT_SIZE", .Values = { 256u, 512u } };
-const PermutationAxis k_WaveOpsAxis{ .Name = "IFFT_USE_WAVE_OPS", .Values = { false, true } };
+const PermutationSpace k_Space{ "IfftTest",
+                                { PermutationAxis{ "IFFT_SIZE",
+                                                   { PermutationValue{ 256u }, PermutationValue{ 512u } },
+                                                   PermutationAxis::k_NoParent,
+                                                   PermutationValue{} },
+                                  PermutationAxis{ "IFFT_USE_WAVE_OPS",
+                                                   { PermutationValue{ false }, PermutationValue{ true } },
+                                                   PermutationAxis::k_NoParent,
+                                                   PermutationValue{} } } };
+const PermutationAxis& k_SizeAxis = k_Space.Axes()[0];
+const PermutationAxis& k_WaveOpsAxis = k_Space.Axes()[1];
 
 const std::array<ExternConstantDefault, 1> k_ExternDefaults{ ExternConstantDefault{
     .Name = "IFFT_NUM_WAVE_CASCADES", .Value = 4 } };
 
 PermutationAssignment MakeAssignment()
 {
-    return PermutationAssignment{ { &k_SizeAxis, 512u }, { &k_WaveOpsAxis, true } };
+    return PermutationAssignment{
+        PermutationBinding{ .Axis = &k_SizeAxis, .Value = PermutationValue{ 512u } },
+        PermutationBinding{ .Axis = &k_WaveOpsAxis, .Value = PermutationValue{ true } }
+    };
 }
 
 ResolveContext MakeContext()

@@ -243,7 +243,7 @@ ResolveContext MakeResolveContext(const PermutationAssignment& canonical,
     for (const PermutationBinding& binding : canonical)
     {
         context.Symbols.push_back(
-            SizeSymbol{ .Name = binding.first->Name, .Value = PermutationValueToInt64(binding.second) });
+            SizeSymbol{ .Name = binding.Axis->Name, .Value = PermutationValueToInt64(binding.Value) });
     }
 
     return context;

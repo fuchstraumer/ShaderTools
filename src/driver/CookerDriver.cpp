@@ -1,17 +1,19 @@
 #include "driver/CookerDriver.hpp"
-#include "model/CookedLibrary.hpp"
 #include "CookerErrors.hpp"
+#include "compile/Diagnostics.hpp"
+#include "compile/RawLibrary.hpp"
+#include "compile/SlangCompiler.hpp"
 #include "driver/CookerOptions.hpp"
 #include "emit/DedupeReport.hpp"
 #include "emit/OutputSink.hpp"
-#include "permute/PermutationSpace.hpp"
-#include "compile/RawLibrary.hpp"
-#include "model/ResolveStage.hpp"
-#include "model/ShaderDataSchema.hpp"
 #include "emit/ShaderLibraryEmitter.hpp"
 #include "emit/ShaderManifestEmitter.hpp"
-#include "compile/SlangCompiler.hpp"
 #include "emit/StageDump.hpp"
+#include "model/CookedLibrary.hpp"
+#include "model/ResolveStage.hpp"
+#include "model/ShaderDataSchema.hpp"
+#include "permute/PermutationAssignment.hpp"
+#include "permute/PermutationSpace.hpp"
 #include "target/TargetProfile.hpp"
 
 #include <algorithm>
@@ -20,9 +22,12 @@
 #include <cstdio>
 #include <expected>
 #include <filesystem>
+#include <functional>
+#include <iterator>
+#include <memory>
 #include <print>
-#include <ratio>
 #include <ranges>
+#include <ratio>
 #include <span>
 #include <string>
 #include <string_view>
@@ -95,7 +100,7 @@ namespace
     /** Slang emits only the bindings an entry point actually references, so the WGSL for one entry
      * point is compared against the subset of program-scope bindings that entry point uses. */
     std::vector<const ReflectedBinding*> SelectBindingsUsedByEntryPoint(const CompiledVariant& variant,
-                                                                 size_t entry_point_index)
+                                                                        size_t entry_point_index)
     {
         auto extractBinding = [&variant](uint32_t bindingIndex) -> const ReflectedBinding*
         {
@@ -113,10 +118,8 @@ namespace
         {
             return entry_point.Reflection.UsedBindingIndices;
         };
-        auto allUsedBindingIndices = variant.EntryPoints |
-                                     std::views::transform(extractUsedBindingIndices) |
-                                     std::views::join |
-                                     std::ranges::to<std::vector<uint32_t>>();
+        auto allUsedBindingIndices = variant.EntryPoints | std::views::transform(extractUsedBindingIndices) |
+                                     std::views::join | std::ranges::to<std::vector<uint32_t>>();
 
         std::ranges::sort(allUsedBindingIndices);
         // clear out duplicates
@@ -194,8 +197,10 @@ namespace
     const CompiledVariant* FindCompiledVariant(std::span<const CompiledVariant> compiled,
                                                uint32_t variant_index) noexcept
     {
-        // `compiled` is sorted in ascending order already: we can use lower_bound to find variant idx in log2(n)
-        auto candidateIter = std::ranges::lower_bound(compiled, variant_index, std::less{}, &CompiledVariant::VariantIndex);
+        // `compiled` is sorted in ascending order already: we can use lower_bound to find variant idx in
+        // log2(n)
+        auto candidateIter =
+            std::ranges::lower_bound(compiled, variant_index, std::less{}, &CompiledVariant::VariantIndex);
         if (candidateIter != compiled.end() && candidateIter->VariantIndex == variant_index)
         {
             return std::to_address(candidateIter);
@@ -420,14 +425,17 @@ namespace
 
         out_space = FindPermutationSpaceForModule(moduleName);
 
-        if (CookError axisResult =
-                VerifyAxisNamesAreDeclared(*out_space, compiler.GetModuleSourceTexts(), moduleName);
+        const std::span<const std::string> sourceTexts = compiler.GetModuleSourceTexts();
+        const std::vector<std::string_view> sourceViews{ sourceTexts.begin(), sourceTexts.end() };
+
+        if (const CookError axisResult = out_space->VerifyAxisNamesAreDeclared(sourceViews, moduleName);
             axisResult != CookError::Success)
         {
             return std::unexpected(axisResult);
         }
 
-        ReportUndrivenExternConstants(*out_space, compiler.GetModuleSourceTexts(), moduleName);
+        // No error checking needed as ReportUndrivenExternConstants now returns void
+        out_space->ReportUndrivenExternConstants(sourceViews, moduleName);
 
         return {};
     }
@@ -500,7 +508,8 @@ namespace
                 return std::unexpected(rawResult.error());
             }
 
-            const ResolveContext context = MakeResolveContext(descriptor.Canonical, raw_module.ExternDefaults);
+            const ResolveContext context =
+                MakeResolveContext(descriptor.Canonical, raw_module.ExternDefaults);
             CookResult<CompiledVariant> variantResult = ResolveVariant(rawResult.value(), context);
             if (!variantResult)
             {
@@ -582,7 +591,6 @@ namespace
                                 const std::filesystem::path& module_path,
                                 OutputSink& sink,
                                 DiagnosticSink& diagnostics,
-                                std::vector<CompiledVariant>& out_variants,
                                 CookedLibrary& out_library,
                                 CookStatistics& statistics)
     {
@@ -611,7 +619,7 @@ namespace
                      ToString(target->Access),
                      DescribeCrossCheckState(*target, options));
 
-        const CookResult<VariantSet> variantSet = EnumerateVariants(*space);
+        const CookResult<VariantSet> variantSet = space->EnumerateVariants();
         if (!variantSet)
         {
             return std::unexpected(variantSet.error());
@@ -759,7 +767,7 @@ namespace
 CookResult<CookStatistics> RunCookOnce(const CookerOptions& options, OutputSink& sink)
 {
     const std::chrono::steady_clock::time_point startTime = std::chrono::steady_clock::now();
-    std::expected<std::filesystem::path, std::error_code> cacheDirectoryResult =
+    const std::expected<std::filesystem::path, std::error_code> cacheDirectoryResult =
         EnsureModuleCacheDirectory(options.ModuleCacheDirectory);
 
     if (!cacheDirectoryResult)
@@ -768,7 +776,6 @@ CookResult<CookStatistics> RunCookOnce(const CookerOptions& options, OutputSink&
     }
 
     CookStatistics statistics;
-    std::vector<CompiledVariant> variants;
     CookedLibrary library;
     // One sink for the whole cook, so a failure count spans every module rather than resetting at
     // each one.
@@ -778,7 +785,7 @@ CookResult<CookStatistics> RunCookOnce(const CookerOptions& options, OutputSink&
     {
         std::println(stderr, "[shader_cooker] cooking {}", modulePath.string());
         const CookResult<void> moduleResult =
-            CookModule(options, modulePath, sink, diagnostics, variants, library, statistics);
+            CookModule(options, modulePath, sink, diagnostics, library, statistics);
         if (!moduleResult)
         {
             return std::unexpected(moduleResult.error());

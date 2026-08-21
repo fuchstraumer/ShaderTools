@@ -2,6 +2,8 @@
 #ifndef LODESTONE_PERMUTATION_VALUE_HPP
 #define LODESTONE_PERMUTATION_VALUE_HPP
 #include <cstdint>
+#include <string>
+#include <string_view>
 
 namespace lodestone
 {
@@ -45,6 +47,15 @@ private:
     };
     //NOLINTEND(readability-identifier-naming)
 };
+
+/** Widens any axis value to the integer type the size-expression evaluator works in. A `bool` axis
+ * becomes 0 or 1, which is what a shader comparing it against a constant would see. */
+int64_t PermutationValueToInt64(const PermutationValue& value) noexcept;
+std::string ValueToSlangLiteral(const PermutationValue& value);
+std::string ValueToSlangTypeName(const PermutationValue& value);
+std::string MakeExportedConstantSource(std::string_view axis_name, const PermutationValue& value);
+std::string MakeVariantModuleName(std::string_view axis_name, const PermutationValue& value);
+std::string MakeVariantModulePath(std::string_view axis_name, const PermutationValue& value);
 
 }
 

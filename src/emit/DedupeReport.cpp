@@ -77,9 +77,9 @@ namespace
     {
         for (size_t k = 0; k < lhs.size(); ++k)
         {
-            if (k != excluded_axis_index && lhs[k].second != rhs[k].second)
+            if (k != excluded_axis_index && lhs[k].Value != rhs[k].Value)
             {
-                return lhs[k].second < rhs[k].second;
+                return lhs[k].Value < rhs[k].Value;
             }
         }
         return false;
@@ -153,9 +153,9 @@ namespace
         }
 
         table += std::format("  {:<{}}", "", nameWidth);
-        for (const PermutationAxis* axis : *module.Space)
+        for (const PermutationAxis& axis : module.Space->Axes())
         {
-            table += std::format("{:<24}", axis->Name);
+            table += std::format("{:<24}", axis.Name);
         }
         table += "\n";
 
@@ -267,7 +267,7 @@ ModuleInfluence ComputeAxisInfluence(const CookedModule& module)
         return influence;
     }
 
-    const size_t axisCount = module.Space->size();
+    const size_t axisCount = module.Space->AxisCount();
     const size_t entryPointCount = module.EntryPoints.size();
 
     influence.EntryPoints.reserve(entryPointCount);
@@ -383,9 +383,9 @@ namespace
     /** Position of an axis in the space. The influence vector runs parallel to it. */
     std::optional<size_t> FindAxisIndex(const PermutationSpace& space, std::string_view axis_name) noexcept
     {
-        for (size_t i = 0u; i < space.size(); ++i)
+        for (size_t i = 0u; i < space.AxisCount(); ++i)
         {
-            if (space[i]->Name == axis_name)
+            if (space.Axes()[i].Name == axis_name)
             {
                 return i;
             }

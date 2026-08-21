@@ -50,15 +50,15 @@ namespace
         for (const PermutationBinding& binding : assignment)
         {
             writer.BeginObject();
-            writer.KeyString("axis", binding.first != nullptr ? binding.first->Name : std::string{});
+            writer.KeyString("axis", binding.Axis != nullptr ? binding.Axis->Name : std::string{});
             writer.Key("value");
-            WriteAxisValue(writer, binding.second);
+            WriteAxisValue(writer, binding.Value);
             writer.EndObject();
         }
         writer.EndArray();
     }
 
-    void WriteAxis(JsonWriter& writer, const PermutationAxis& axis)
+    void WriteAxis(JsonWriter& writer, const PermutationSpace& space, const PermutationAxis& axis)
     {
         writer.BeginObject();
         writer.KeyString("name", axis.Name);
@@ -71,9 +71,10 @@ namespace
         }
         writer.EndArray();
 
-        if (axis.Parent != nullptr)
+        const PermutationAxis* parent = space.ParentOf(axis);
+        if (parent != nullptr)
         {
-            writer.KeyString("parent", axis.Parent->Name);
+            writer.KeyString("parent", parent->Name);
             writer.Key("requiredParentValue");
             WriteAxisValue(writer, axis.RequiredParentValue);
         }
@@ -522,19 +523,14 @@ std::string DumpPermutationSpace(std::string_view module_name, const Permutation
     writer.BeginObject();
     writer.KeyString("stage", "space");
     writer.KeyString("module", module_name);
-    writer.KeyUInt("axisCount", space.size());
-    writer.KeyUInt("spaceSize", static_cast<uint64_t>(ComputeVariantSpaceSize(space)));
+    writer.KeyUInt("axisCount", space.AxisCount());
+    writer.KeyUInt("spaceSize", static_cast<uint64_t>(space.ComputeVariantSpaceSize()));
 
     writer.Key("axes");
     writer.BeginArray();
-    for (const PermutationAxis* axis : space)
+    for (const PermutationAxis& axis : space.Axes())
     {
-        if (axis == nullptr)
-        {
-            continue;
-        }
-
-        WriteAxis(writer, *axis);
+        WriteAxis(writer, space, axis);
     }
     writer.EndArray();
 

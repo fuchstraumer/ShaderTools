@@ -2,44 +2,27 @@
 #ifndef LODESTONE_PERMUTATION_SPACE_HPP
 #define LODESTONE_PERMUTATION_SPACE_HPP
 #include "CookerErrors.hpp"
-#include "permute/PermutationValue.hpp"
+#include "permute/PermutationAssignment.hpp"
 #include "permute/PermutationAxis.hpp"
 #include "permute/PermutationPolicy.hpp"
 
 #include <cstddef>
 #include <cstdint>
+#include <initializer_list>
 #include <span>
 #include <string>
 #include <string_view>
-#include <utility>
 #include <vector>
-
 
 namespace lodestone
 {
 
-using PermutationSpace = std::vector<const PermutationAxis*>;
-using PermutationBinding = std::pair<const PermutationAxis*, PermutationValue>;
-using PermutationAssignment = std::vector<PermutationBinding>;
+class PermutationSpace;
 
-/** An assignment that holds every axis of one space, in declaration order. Only
- * `CanonicalizeAssignment` builds one, so a partial assignment cannot reach `ComputeVariantIndex` and
- * return a plausible wrong index. The conversion to `PermutationAssignment` runs one way only. */
-class CanonicalAssignment
+struct ExternConstantDefault
 {
-public:
-    CanonicalAssignment() noexcept = default;
-
-    [[nodiscard]] operator const PermutationAssignment&() const noexcept;
-    [[nodiscard]] std::size_t size() const noexcept; //NOLINT(readability-identifier-naming)
-    [[nodiscard]] const PermutationBinding& operator[](std::size_t index) const noexcept;
-
-private:
-    friend CanonicalAssignment CanonicalizeAssignment(const PermutationSpace& space,
-                                                      const PermutationAssignment& assignment);
-    explicit CanonicalAssignment(PermutationAssignment&& canonical) noexcept;
-
-    PermutationAssignment values;
+    std::string Name;
+    int64_t Value{ 0 };
 };
 
 /**
@@ -78,51 +61,54 @@ struct VariantSet
     int32_t SpaceSize{ 0u };
 };
 
-CookResult<std::vector<PermutationAssignment>> EnumerateActiveCombinations(const PermutationSpace& space);
-CookResult<VariantSet> EnumerateVariants(const PermutationSpace& space);
-
-CanonicalAssignment CanonicalizeAssignment(const PermutationSpace& space, const PermutationAssignment& assignment);
-int32_t ComputeVariantIndex(const PermutationSpace& space, const CanonicalAssignment& canonical);
-int32_t ComputeVariantSpaceSize(const PermutationSpace& space) noexcept;
-
-/**Every axis name must match an `extern static const` declaration in the shader. A mismatch links a
- * symbol nobody references, leaves the shader on its default, and errors nowhere -- this will result in
- * a set of variants with duplicate source code and behavior, when we explicitly don't want that. */
-[[nodiscard]] CookError VerifyAxisNamesAreDeclared(const PermutationSpace& space,
-                                                   std::span<const std::string> source_texts,
-                                                   std::string_view module_name);
-
-/**The other direction: an `extern` constant that no axis drives keeps its default in every variant.
- * This is what our resource sizing annotations rely on, in the Slang compiler machinery (though they
- * don't actually affect source code: they just carry through to the data we extract still) */
-void ReportUndrivenExternConstants(const PermutationSpace& space,
-                                   std::span<const std::string> source_texts,
-                                   std::string_view module_name);
-
-struct ExternConstantDefault
+class PermutationSpace
 {
-    std::string Name;
-    int64_t Value{ 0 };
+public:
+    PermutationSpace(std::string _name,
+                     std::span<const PermutationAxis> _axes) noexcept;
+    // same as permutation axis: this is just to keep our nasty gross internal constructors
+    // alive until we complete the next round of work to get data-driven permutations
+    PermutationSpace(std::string _name,
+                     std::initializer_list<PermutationAxis> _axes) noexcept;
+    ~PermutationSpace() noexcept = default;
+
+    /** The space owns its axes, and `PermutationBinding` points into them. A copy would leave every
+     * binding of the original aimed at a different object, so a space is moved and never copied. A
+     * move keeps the vector's buffer, so the axis addresses survive it. */
+    PermutationSpace(const PermutationSpace&) = delete;
+    PermutationSpace& operator=(const PermutationSpace&) = delete;
+    PermutationSpace(PermutationSpace&&) noexcept = default;
+    PermutationSpace& operator=(PermutationSpace&&) noexcept = default;
+
+    [[nodiscard]] std::string_view Name() const noexcept;
+    [[nodiscard]] std::span<const PermutationAxis> Axes() const noexcept;
+    [[nodiscard]] std::size_t AxisCount() const noexcept;
+    [[nodiscard]] bool IsEmpty() const noexcept;
+    /** The parent of `axis`, or null when it has none. Resolves `PermutationAxis::ParentIndex`
+     * against this space, which is the only space the index means anything in. */
+    [[nodiscard]] const PermutationAxis* ParentOf(const PermutationAxis& axis) const noexcept;
+
+    [[nodiscard]] CookResult<std::vector<PermutationAssignment>> EnumerateActiveCombinations() const;
+    [[nodiscard]] CookResult<VariantSet> EnumerateVariants() const;
+    [[nodiscard]] CanonicalAssignment CanonicalizeAssignment(const PermutationAssignment& assignment) const;
+    [[nodiscard]] int32_t ComputeVariantIndex(const CanonicalAssignment& canonical) const;
+    [[nodiscard]] int32_t ComputeVariantSpaceSize() const noexcept;
+    /**Every axis name must match an `extern static const` declaration in the shader. A mismatch links a
+     * symbol nobody references, leaves the shader on its default, and errors nowhere -- this will result in
+     * a set of variants with duplicate source code and behavior, when we explicitly don't want that. */
+    [[nodiscard]] CookError VerifyAxisNamesAreDeclared(std::span<const std::string_view> source_texts,
+                                                       std::string_view module_name) const;
+    /**The other direction: an `extern` constant that no axis drives keeps its default in every variant.
+     * This is what our resource sizing annotations rely on, in the Slang compiler machinery (though they
+     * don't actually affect source code: they just carry through to the data we extract still) */
+    void ReportUndrivenExternConstants(std::span<const std::string_view> source_texts,
+                                       std::string_view module_name) const;
+    [[nodiscard]] CookResult<std::vector<ExternConstantDefault>> CollectUndrivenExternDefaults(
+        std::span<const std::string_view> source_texts) const;
+private:
+    std::string name;
+    std::vector<PermutationAxis> axes;
 };
-
-/**The declared default of every `extern` constant no axis drives. A size expression may name these,
- * and the value it gets is the one the shader really compiled with, because nothing overrode it.
- * Axis-driven constants are excluded: their value is per-variant and comes from the assignment. */
-CookResult<std::vector<ExternConstantDefault>> CollectUndrivenExternDefaults(
-    const PermutationSpace& space, std::span<const std::string> source_texts);
-
-/** Widens any axis value to the integer type the size-expression evaluator works in. A `bool` axis
- * becomes 0 or 1, which is what a shader comparing it against a constant would see. */
-int64_t PermutationValueToInt64(const PermutationValue& value) noexcept;
-
-std::string ValueToSlangLiteral(const PermutationValue& value);
-std::string ValueToSlangTypeName(const PermutationValue& value);
-std::string MakeExportedConstantSource(std::string_view axis_name, const PermutationValue& value);
-std::string MakeVariantModuleName(std::string_view axis_name, const PermutationValue& value);
-std::string MakeVariantModulePath(std::string_view axis_name, const PermutationValue& value);
-
-std::string MakeAssignmentSuffix(const PermutationAssignment& assignment);
-std::string DescribeAssignment(const PermutationAssignment& assignment);
 
 const ModulePolicy* FindPolicyForModule(std::string_view module_name) noexcept;
 const PermutationSpace* FindPermutationSpaceForModule(std::string_view module_name) noexcept;

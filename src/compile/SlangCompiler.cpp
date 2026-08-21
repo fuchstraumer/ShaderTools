@@ -803,9 +803,9 @@ CookResult<Slang::ComPtr<slang::IComponentType>> SlangCompiler::Impl::LinkVarian
 
     for (const PermutationBinding& binding : assignment)
     {
-        const std::string variantModuleName = MakeVariantModuleName(binding.first->Name, binding.second);
-        const std::string variantModulePath = MakeVariantModulePath(binding.first->Name, binding.second);
-        const std::string variantSource = MakeExportedConstantSource(binding.first->Name, binding.second);
+        const std::string variantModuleName = MakeVariantModuleName(binding.Axis->Name, binding.Value);
+        const std::string variantModulePath = MakeVariantModulePath(binding.Axis->Name, binding.Value);
+        const std::string variantSource = MakeExportedConstantSource(binding.Axis->Name, binding.Value);
 
         Slang::ComPtr<slang::IBlob> diagnostics;
         slang::IModule* variantModule = Session->loadModuleFromSourceString(variantModuleName.c_str(),
@@ -1225,8 +1225,10 @@ CookResult<RawModule> SlangCompiler::PrepareRawModule(const PermutationSpace& sp
         return std::unexpected(CookError::CompilerNotInitialized);
     }
 
+    const std::vector<std::string_view> sourceViews{ impl->ModuleSourceTexts.begin(),
+                                                     impl->ModuleSourceTexts.end() };
     CookResult<std::vector<ExternConstantDefault>> defaults =
-        CollectUndrivenExternDefaults(space, impl->ModuleSourceTexts);
+        space.CollectUndrivenExternDefaults(sourceViews);
     if (!defaults)
     {
         return std::unexpected(defaults.error());

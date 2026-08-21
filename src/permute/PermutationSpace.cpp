@@ -1,5 +1,6 @@
 #include "permute/PermutationSpace.hpp"
 #include "CookerErrors.hpp"
+#include "permute/PermutationAssignment.hpp"
 #include "permute/PermutationAxis.hpp"
 #include "permute/PermutationPolicy.hpp"
 #include "permute/PermutationValue.hpp"
@@ -14,6 +15,7 @@
 #include <expected>
 #include <format>
 #include <functional>
+#include <initializer_list>
 #include <iterator>
 #include <memory>
 #include <print>
@@ -30,33 +32,33 @@ namespace lodestone
 namespace
 {
 
-    const PermutationAxis k_IfftSizeAxis{ "IFFT_SIZE",
-                                          { PermutationValue{ 128u },
-                                            PermutationValue{ 256u },
-                                            PermutationValue{ 512u },
-                                            PermutationValue{ 1024u },
-                                            PermutationValue{ 2048u },
-                                            PermutationValue{ 4096u },
-                                            PermutationValue{ 8192u } },
-                                          nullptr,
-                                          PermutationValue{} };
+    // Axis order is the declaration order, and `ParentIndex` is a position in this list.
+    // IFFT_WAVE_SIZE names index 1, which is IFFT_USE_WAVE_OPS.
+    const PermutationSpace k_OceanFftSpace{
+        "OceanFft",
+        { PermutationAxis{ "IFFT_SIZE",
+                           { PermutationValue{ 128u },
+                             PermutationValue{ 256u },
+                             PermutationValue{ 512u },
+                             PermutationValue{ 1024u },
+                             PermutationValue{ 2048u },
+                             PermutationValue{ 4096u },
+                             PermutationValue{ 8192u } },
+                           PermutationAxis::k_NoParent,
+                           PermutationValue{} },
+          PermutationAxis{ "IFFT_USE_WAVE_OPS",
+                           { PermutationValue{ false }, PermutationValue{ true } },
+                           PermutationAxis::k_NoParent,
+                           PermutationValue{} },
+          PermutationAxis{ "IFFT_WAVE_SIZE",
+                           { PermutationValue{ 16u },
+                             PermutationValue{ 32u },
+                             PermutationValue{ 64u },
+                             PermutationValue{ 128u } },
+                           1,
+                           PermutationValue{ true } } } };
 
-    const PermutationAxis k_IfftUseWaveOpsAxis{ "IFFT_USE_WAVE_OPS",
-                                                { PermutationValue{ false }, PermutationValue{ true } },
-                                                nullptr,
-                                                PermutationValue{} };
-
-    const PermutationAxis k_IfftWaveSizeAxis{ "IFFT_WAVE_SIZE",
-                                              { PermutationValue{ 16u },
-                                                PermutationValue{ 32u },
-                                                PermutationValue{ 64u },
-                                                PermutationValue{ 128u } },
-                                              &k_IfftUseWaveOpsAxis,
-                                              PermutationValue{ true } };
-
-    const PermutationSpace k_OceanFftSpace{ &k_IfftSizeAxis, &k_IfftUseWaveOpsAxis, &k_IfftWaveSizeAxis };
-
-    const PermutationSpace k_EmptySpace{};
+    const PermutationSpace k_EmptySpace{ "", {} };
 
     // IfftPermuteCS reorders data and never reads a wave-op symbol, so both wave axes must stay inert
     // for it. If that ever changes, the entry point started paying for a permutation it does not use.
@@ -87,7 +89,7 @@ namespace
         auto bindingIter = std::ranges::find_if(assignment,
                                                 [axis](const PermutationBinding& binding)
                                                 {
-                                                    return binding.first == axis;
+                                                    return binding.Axis == axis;
                                                 });
         if (bindingIter != assignment.end())
         {
@@ -249,7 +251,7 @@ namespace
                 continue;
             }
 
-            size_t valueStart = assignIndex + 1u;
+            const size_t valueStart = assignIndex + 1u;
             size_t valueEnd = line.find(';', valueStart);
             if (valueEnd == std::string_view::npos)
             {
@@ -294,10 +296,10 @@ namespace
 
     bool SpaceDrivesAxisNamed(const PermutationSpace& space, std::string_view name) noexcept
     {
-        return std::ranges::any_of(space,
-                                   [name](const PermutationAxis* axis)
+        return std::ranges::any_of(space.Axes(),
+                                   [name](const PermutationAxis& axis)
                                    {
-                                       return axis->Name == name;
+                                       return axis.Name == name;
                                    });
     }
 
@@ -329,41 +331,63 @@ namespace
 
 } // namespace
 
-CanonicalAssignment::operator const PermutationAssignment&() const noexcept
+PermutationSpace::PermutationSpace(std::string _name, std::span<const PermutationAxis> _axes) noexcept
+    : name{ std::move(_name) },
+      axes{ _axes.begin(), _axes.end() }
 {
-    return values;
 }
 
-std::size_t CanonicalAssignment::size() const noexcept
+PermutationSpace::PermutationSpace(std::string _name, std::initializer_list<PermutationAxis> _axes) noexcept
+    : name{ std::move(_name) },
+      axes{ _axes }
 {
-    return values.size();
 }
 
-const PermutationBinding& CanonicalAssignment::operator[](std::size_t index) const noexcept
+std::string_view PermutationSpace::Name() const noexcept
 {
-    return values[index];
+    return name;
 }
 
-CanonicalAssignment::CanonicalAssignment(PermutationAssignment&& canonical) noexcept
-    : values{ std::move(canonical) }
+std::span<const PermutationAxis> PermutationSpace::Axes() const noexcept
 {
+    return axes;
+}
+
+std::size_t PermutationSpace::AxisCount() const noexcept
+{
+    return axes.size();
+}
+
+bool PermutationSpace::IsEmpty() const noexcept
+{
+    return axes.empty();
+}
+
+const PermutationAxis* PermutationSpace::ParentOf(const PermutationAxis& axis) const noexcept
+{
+    if (!axis.HasParent())
+    {
+        return nullptr;
+    }
+
+    return &axes[static_cast<size_t>(axis.ParentIndex)];
 }
 
 // perform CCSP with classic backtracking, but skip any axis whose parent is not active
 // this is a somewhat embarassing amount of commenting for me, but I have not done constraint satisfaction
 // formally *ever* before, and I want to make sure I understand it. these are notes for me. i am not a learned
 // woman
-CookResult<std::vector<PermutationAssignment>> EnumerateActiveCombinations(const PermutationSpace& space)
+CookResult<std::vector<PermutationAssignment>> PermutationSpace::EnumerateActiveCombinations() const
 {
     // A module with no registered space enumerates to the one empty assignment, so there is no first
     // axis to size against. `partials` is replaced by `expanded` on every pass anyway.
     std::vector<PermutationAssignment> partials{ PermutationAssignment{} };
-    for (const PermutationAxis* axis : space)
+    for (const PermutationAxis& axis : axes)
     {
         // Despite having to do recursive work here, we can at least reserve the right amount of space. I
         // guess.
         std::vector<PermutationAssignment> expanded;
-        expanded.reserve(partials.size() * static_cast<size_t>(axis->NumValues()));
+        expanded.reserve(partials.size() * static_cast<size_t>(axis.NumValues()));
         // For the current axis, we need to traverse every partial assignment (incomplete combination) we have
         // thus far and expand/evaluate it for the current axis. This is a breadth-first search of the
         // combination space, and we will continue to expand the partials until we have a complete assignment
@@ -372,12 +396,13 @@ CookResult<std::vector<PermutationAssignment>> EnumerateActiveCombinations(const
         {
             // If an axis has a parent, we must check that parent to know whether to expand this current axis
             // If there is no parent, we proceed to just expand the axis as normal
-            if (axis->Parent != nullptr)
+            const PermutationAxis* parentAxis = ParentOf(axis);
+            if (parentAxis != nullptr)
             {
                 // Read the current list of active axes to see if the parent is active, and retrieve
                 // it if it is. If the parent is not active (present), there is an axis declaration
                 // order error.
-                const PermutationBinding* parentBinding = FindBindingForAxis(partial, axis->Parent);
+                const PermutationBinding* parentBinding = FindBindingForAxis(partial, parentAxis);
                 if (parentBinding == nullptr)
                 {
                     // todo-ship: This is a user error, and should be evaluated during initial load when we're
@@ -387,7 +412,7 @@ CookResult<std::vector<PermutationAssignment>> EnumerateActiveCombinations(const
                 }
                 // If the parent is active, but not set to the required value, close partial off
                 // for this current partial (where parent axis was evaluated to the wrong value)
-                if (parentBinding->second != axis->RequiredParentValue)
+                if (parentBinding->Value != axis.RequiredParentValue)
                 {
                     expanded.push_back(partial);
                     continue;
@@ -398,12 +423,12 @@ CookResult<std::vector<PermutationAssignment>> EnumerateActiveCombinations(const
             // We store the axis (the abstract half) and the *value* (the concrete half). This
             // defines a *Binding* or unique instantiation of the axis for this current partial.
             // (thus a binding is just {abstract [axis*], concrete [value]})
-            for (const PermutationValue& value : axis->GetValues())
+            for (const PermutationValue& value : axis.GetValues())
             {
                 // at each depth, we take the current partial as our starting point (as that's how
                 // breadth-first constraint satisfaction like this works best for our data)
                 PermutationAssignment next = partial;
-                next.emplace_back(axis, value);
+                next.push_back(PermutationBinding{ .Axis = &axis, .Value = value });
                 // note: we need expanded separate as we are using partials as the source of truth for
                 // the current depth, and we don't want to modify it while iterating. the overwrite
                 // has to come at the end
@@ -423,36 +448,33 @@ CookResult<std::vector<PermutationAssignment>> EnumerateActiveCombinations(const
 // value of it bound in *this* assignment. If the axis is not present in the assignment, we will
 // retrieve the default value (the first value) of the axis. This equalizes each assignment to the
 // same length, and allows us to compute a unique index for each assignment.
-CanonicalAssignment CanonicalizeAssignment(const PermutationSpace& space,
-                                           const PermutationAssignment& assignment)
+CanonicalAssignment PermutationSpace::CanonicalizeAssignment(const PermutationAssignment& assignment) const
 {
     PermutationAssignment canonical;
-    canonical.reserve(space.size());
+    canonical.reserve(axes.size());
     // So, as mentioned above: step through each axis.
-    for (const PermutationAxis* axis : space)
+    for (const PermutationAxis& axis : axes)
     {
         // Get the binding (concrete instantiation) of the current axis for *this* assignment.
-        const PermutationBinding* binding = FindBindingForAxis(assignment, axis);
+        const PermutationBinding* binding = FindBindingForAxis(assignment, &axis);
         // Now check: did we fail to find the binding? That means it was folded out of the assignment,
         // because one of it's dependent axes values was not set as needed. Thus, default value assigned.
-        const PermutationValue value = binding != nullptr ? binding->second : axis->GetDefault();
-        canonical.emplace_back(axis, value);
+        const PermutationValue value = binding != nullptr ? binding->Value : axis.GetDefault();
+        canonical.push_back(PermutationBinding{ .Axis = &axis, .Value = value });
     }
     // And bam, the canonical assignment is just a fully "concrete" instance of the *actual* active assignment
     return CanonicalAssignment{ std::move(canonical) };
 }
 
-int32_t ComputeVariantIndex(const PermutationSpace& space, const CanonicalAssignment& canonical)
+int32_t PermutationSpace::ComputeVariantIndex(const CanonicalAssignment& canonical) const
 {
     std::ptrdiff_t index = 0;
 
-    for (size_t i = 0; i < space.size(); ++i)
+    for (size_t i = 0; i < axes.size(); ++i)
     {
         // in canonical, the i-th element corresponds to the i-th axis in the space.
-        const PermutationBinding& binding = canonical[i];
-        const PermutationAxis* axis = binding.first;
-        const PermutationValue& value = binding.second;
-        const std::span<const PermutationValue> values = axis->GetValues();
+        const PermutationValue& value = canonical[i].Value;
+        const std::span<const PermutationValue> values = axes[i].GetValues();
         const auto found = std::ranges::find(values, value);
         const std::ptrdiff_t valueIndex = std::distance(values.begin(), found);
         index = (index * std::ssize(values)) + valueIndex;
@@ -461,21 +483,21 @@ int32_t ComputeVariantIndex(const PermutationSpace& space, const CanonicalAssign
     return static_cast<int32_t>(index);
 }
 
-int32_t ComputeVariantSpaceSize(const PermutationSpace& space) noexcept
+int32_t PermutationSpace::ComputeVariantSpaceSize() const noexcept
 {
     int32_t size = 1;
 
-    for (const PermutationAxis* axis : space)
+    for (const PermutationAxis& axis : axes)
     {
-        size *= static_cast<int32_t>(axis->NumValues());
+        size *= static_cast<int32_t>(axis.NumValues());
     }
 
     return size;
 }
 
-CookResult<VariantSet> EnumerateVariants(const PermutationSpace& space)
+CookResult<VariantSet> PermutationSpace::EnumerateVariants() const
 {
-    CookResult<std::vector<PermutationAssignment>> enumerateActiveResult = EnumerateActiveCombinations(space);
+    CookResult<std::vector<PermutationAssignment>> enumerateActiveResult = EnumerateActiveCombinations();
     if (!enumerateActiveResult)
     {
         return std::unexpected(enumerateActiveResult.error());
@@ -484,14 +506,14 @@ CookResult<VariantSet> EnumerateVariants(const PermutationSpace& space)
     std::vector<PermutationAssignment> active{ std::move(enumerateActiveResult.value()) };
 
     VariantSet variantSet;
-    variantSet.Space = &space;
-    variantSet.SpaceSize = ComputeVariantSpaceSize(space);
+    variantSet.Space = this;
+    variantSet.SpaceSize = ComputeVariantSpaceSize();
     variantSet.Variants.reserve(active.size());
 
     for (PermutationAssignment& assignment : active)
     {
-        CanonicalAssignment canonical = CanonicalizeAssignment(space, assignment);
-        const int32_t index = ComputeVariantIndex(space, canonical);
+        CanonicalAssignment canonical = CanonicalizeAssignment(assignment);
+        const int32_t index = ComputeVariantIndex(canonical);
         variantSet.Variants.emplace_back(std::move(assignment), std::move(canonical), index);
     }
 
@@ -507,18 +529,17 @@ CookResult<VariantSet> EnumerateVariants(const PermutationSpace& space)
     return variantSet;
 }
 
-CookError VerifyAxisNamesAreDeclared(const PermutationSpace& space,
-                                     std::span<const std::string> source_texts,
-                                     std::string_view module_name)
+CookError PermutationSpace::VerifyAxisNamesAreDeclared(std::span<const std::string_view> source_texts,
+                                                       std::string_view module_name) const
 {
-    int32_t undeclaredCount = -1;
+    int32_t undeclaredCount = 0;
 
-    for (const PermutationAxis* axis : space)
+    for (const PermutationAxis& axis : axes)
     {
         bool declared = false;
-        for (const std::string& source : source_texts)
+        for (const std::string_view source : source_texts)
         {
-            if (ContainsExternDeclarationOf(source, axis->Name))
+            if (ContainsExternDeclarationOf(source, axis.Name))
             {
                 declared = true;
                 break;
@@ -532,7 +553,7 @@ CookError VerifyAxisNamesAreDeclared(const PermutationSpace& space,
                          "[shader_cooker] axis '{}' has no matching `extern static const` declaration "
                          "in module {}. Slang links this symbol, nothing references it, the shader "
                          "keeps its default, and every variant cooks identical output.",
-                         axis->Name,
+                         axis.Name,
                          module_name);
         }
     }
@@ -545,15 +566,14 @@ CookError VerifyAxisNamesAreDeclared(const PermutationSpace& space,
     return CookError::Success;
 }
 
-void ReportUndrivenExternConstants(const PermutationSpace& space,
-                                   std::span<const std::string> source_texts,
-                                   std::string_view module_name)
+void PermutationSpace::ReportUndrivenExternConstants(std::span<const std::string_view> source_texts,
+                                                     std::string_view module_name) const
 {
-    for (const std::string& source : source_texts)
+    for (const std::string_view source : source_texts)
     {
-        for (std::string_view name : CollectExternConstantNames(source))
+        for (std::string_view constantName : CollectExternConstantNames(source))
         {
-            if (SpaceDrivesAxisNamed(space, name))
+            if (SpaceDrivesAxisNamed(*this, constantName))
             {
                 continue;
             }
@@ -561,22 +581,23 @@ void ReportUndrivenExternConstants(const PermutationSpace& space,
             std::println(stderr,
                          "[shader_cooker] '{}' in module {} is declared extern but no axis drives it. "
                          "It keeps its declared default in every variant.",
-                         name,
+                         constantName,
                          module_name);
         }
     }
+
 }
 
-CookResult<std::vector<ExternConstantDefault>> CollectUndrivenExternDefaults(
-    const PermutationSpace& space, std::span<const std::string> source_texts)
+CookResult<std::vector<ExternConstantDefault>> PermutationSpace::CollectUndrivenExternDefaults(
+    std::span<const std::string_view> source_texts) const
 {
     std::vector<ExternConstantDefault> defaults;
 
-    for (const std::string& source : source_texts)
+    for (const std::string_view source : source_texts)
     {
-        for (const auto& [name, valueText] : CollectExternConstantDefinitions(source))
+        for (const auto& [constName, valueText] : CollectExternConstantDefinitions(source))
         {
-            if (SpaceDrivesAxisNamed(space, name))
+            if (SpaceDrivesAxisNamed(*this, constName))
             {
                 continue;
             }
@@ -584,7 +605,7 @@ CookResult<std::vector<ExternConstantDefault>> CollectUndrivenExternDefaults(
             const std::string_view trimmed = TrimWhitespace(valueText);
             if (trimmed == "true" || trimmed == "false")
             {
-                defaults.emplace_back(std::string{ name }, trimmed == "true" ? 1 : 0);
+                defaults.emplace_back(std::string{ constName }, trimmed == "true" ? 1 : 0);
                 continue;
             }
 
@@ -595,110 +616,16 @@ CookResult<std::vector<ExternConstantDefault>> CollectUndrivenExternDefaults(
                 std::println(stderr,
                              "[shader_cooker] could not read the default of extern constant '{}' from "
                              "'{}'. A size expression naming it would silently disagree with the shader.",
-                             name,
+                             constName,
                              trimmed);
                 return std::unexpected(value.error());
             }
 
-            defaults.emplace_back(std::string{ name }, value.value());
+            defaults.emplace_back(std::string{ constName }, value.value());
         }
     }
 
     return defaults;
-}
-
-int64_t PermutationValueToInt64(const PermutationValue& value) noexcept
-{
-    switch (value.GetType())
-    {
-    case PermutationValue::Type::Bool:
-        return value.AsBool() ? 1 : 0;
-    case PermutationValue::Type::UInt:
-        return static_cast<int64_t>(value.AsUInt());
-    case PermutationValue::Type::SInt:
-        return static_cast<int64_t>(value.AsSInt());
-    case PermutationValue::Type::Invalid:
-        return -1;
-    }
-}
-
-std::string ValueToSlangLiteral(const PermutationValue& value)
-{
-    switch (value.GetType())
-    {
-    case PermutationValue::Type::Bool:
-        return value.AsBool() ? "true" : "false";
-    case PermutationValue::Type::UInt:
-        return std::to_string(value.AsUInt());
-    case PermutationValue::Type::SInt:
-        return std::to_string(value.AsSInt());
-    case PermutationValue::Type::Invalid:
-        return "invalid";
-    }
-}
-
-std::string ValueToSlangTypeName(const PermutationValue& value)
-{
-    switch (value.GetType())
-    {
-    case PermutationValue::Type::Bool:
-        return "bool";
-    case PermutationValue::Type::UInt:
-        return "uint";
-    case PermutationValue::Type::SInt:
-    case PermutationValue::Type::Invalid:
-        return "int";
-    }
-
-    return "int";
-}
-
-std::string MakeExportedConstantSource(std::string_view axis_name, const PermutationValue& value)
-{
-    return std::format("export static const {} {} = {};\n",
-                       ValueToSlangTypeName(value),
-                       axis_name,
-                       ValueToSlangLiteral(value));
-}
-
-std::string MakeVariantModuleName(std::string_view axis_name, const PermutationValue& value)
-{
-    return std::format("{}_{}", axis_name, ValueToSlangLiteral(value));
-}
-
-std::string MakeVariantModulePath(std::string_view axis_name, const PermutationValue& value)
-{
-    return std::format("{}_{}.slang", axis_name, ValueToSlangLiteral(value));
-}
-
-std::string MakeAssignmentSuffix(const PermutationAssignment& assignment)
-{
-    std::string suffix;
-    suffix.reserve(8u * assignment.size());
-
-    for (const PermutationBinding& binding : assignment)
-    {
-        suffix += std::format("_{}", ValueToSlangLiteral(binding.second));
-    }
-
-    return suffix;
-}
-
-std::string DescribeAssignment(const PermutationAssignment& assignment)
-{
-    std::string description;
-    description.reserve(24u * assignment.size());
-
-    for (const PermutationBinding& binding : assignment)
-    {
-        if (!description.empty())
-        {
-            description += ", ";
-        }
-        description += std::format("{}={}", binding.first->Name, ValueToSlangLiteral(binding.second));
-    }
-
-    return description;
 }
 
 const ModulePolicy* FindPolicyForModule(std::string_view module_name) noexcept

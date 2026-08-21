@@ -19,12 +19,11 @@
 // The space below has the shape of the OceanFft space: two independent axes, and one axis that only
 // contributes values when its parent takes the enabling value.
 
-using lodestone::CanonicalizeAssignment;
 using lodestone::CanonicalAssignment;
-using lodestone::ComputeVariantIndex;
 using lodestone::CookResult;
 using lodestone::PermutationAssignment;
 using lodestone::PermutationAxis;
+using lodestone::PermutationBinding;
 using lodestone::PermutationSpace;
 using lodestone::PermutationValue;
 using lodestone::VariantDescriptor;
@@ -33,24 +32,30 @@ using lodestone::VariantSet;
 namespace
 {
 
-const PermutationAxis k_SizeAxis{
-    .Name = "TEST_SIZE",
-    .Values = { uint32_t{ 128u }, uint32_t{ 256u }, uint32_t{ 512u }, uint32_t{ 1024u } },
-    .Parent = nullptr,
-    .RequiredParentValue = false
-};
+// The space owns its axes, so every axis reference below names a position in it. `ParentIndex` 1 is
+// TEST_USE_WAVE_OPS.
+const PermutationSpace k_TestSpace{
+    "TestSpace",
+    { PermutationAxis{ "TEST_SIZE",
+                       { PermutationValue{ 128u },
+                         PermutationValue{ 256u },
+                         PermutationValue{ 512u },
+                         PermutationValue{ 1024u } },
+                       PermutationAxis::k_NoParent,
+                       PermutationValue{} },
+      PermutationAxis{ "TEST_USE_WAVE_OPS",
+                       { PermutationValue{ false }, PermutationValue{ true } },
+                       PermutationAxis::k_NoParent,
+                       PermutationValue{} },
+      /** Only contributes values when TEST_USE_WAVE_OPS took the value true. */
+      PermutationAxis{ "TEST_WAVE_SIZE",
+                       { PermutationValue{ 16u }, PermutationValue{ 32u }, PermutationValue{ 64u } },
+                       1,
+                       PermutationValue{ true } } } };
 
-const PermutationAxis k_UseWaveOpsAxis{
-    .Name = "TEST_USE_WAVE_OPS", .Values = { false, true }, .Parent = nullptr, .RequiredParentValue = false
-};
-
-/** Only contributes values when TEST_USE_WAVE_OPS took the value true. */
-const PermutationAxis k_WaveSizeAxis{ .Name = "TEST_WAVE_SIZE",
-                                      .Values = { uint32_t{ 16u }, uint32_t{ 32u }, uint32_t{ 64u } },
-                                      .Parent = &k_UseWaveOpsAxis,
-                                      .RequiredParentValue = true };
-
-const PermutationSpace k_TestSpace{ &k_SizeAxis, &k_UseWaveOpsAxis, &k_WaveSizeAxis };
+const PermutationAxis& k_SizeAxis = k_TestSpace.Axes()[0];
+const PermutationAxis& k_UseWaveOpsAxis = k_TestSpace.Axes()[1];
+const PermutationAxis& k_WaveSizeAxis = k_TestSpace.Axes()[2];
 
 /** 4 sizes, times 2 wave-op settings, times 3 wave sizes. The dependent axis leaves holes in it. */
 constexpr int32_t k_ExpectedSpaceSize = 24;
@@ -62,7 +67,7 @@ const lodestone::PermutationBinding* FindBinding(const PermutationAssignment& as
 {
     for (const lodestone::PermutationBinding& binding : assignment)
     {
-        if (binding.first == axis)
+        if (binding.Axis == axis)
         {
             return &binding;
         }
@@ -77,7 +82,7 @@ int main()
 {
     lodestone::tests::TestRunner runner{ "PermutationIndexTests" };
 
-    const CookResult<VariantSet> enumerated = lodestone::EnumerateVariants(k_TestSpace);
+    const CookResult<VariantSet> enumerated = k_TestSpace.EnumerateVariants();
     if (!enumerated)
     {
         runner.Check(false, "the test space enumerates");
@@ -119,8 +124,8 @@ int main()
     bool everyRoundTripAgrees = true;
     for (const VariantDescriptor& descriptor : variants.Variants)
     {
-        const CanonicalAssignment canonical = CanonicalizeAssignment(k_TestSpace, descriptor.Active);
-        if (ComputeVariantIndex(k_TestSpace, canonical) != descriptor.Index)
+        const CanonicalAssignment canonical = k_TestSpace.CanonicalizeAssignment(descriptor.Active);
+        if (k_TestSpace.ComputeVariantIndex(canonical) != descriptor.Index)
         {
             everyRoundTripAgrees = false;
         }
@@ -134,7 +139,7 @@ int main()
     for (const VariantDescriptor& descriptor : variants.Variants)
     {
         const lodestone::PermutationBinding* useWaveOps = FindBinding(descriptor.Active, &k_UseWaveOpsAxis);
-        if (useWaveOps != nullptr && useWaveOps->second == PermutationValue{ false })
+        if (useWaveOps != nullptr && useWaveOps->Value == PermutationValue{ false })
         {
             waveOpsOff = &descriptor;
             break;
@@ -147,25 +152,26 @@ int main()
         runner.Check(FindBinding(waveOpsOff->Active, &k_WaveSizeAxis) == nullptr,
                      "a disabled axis is absent from Active, so it cannot reach the linker");
         runner.Check(waveOpsOff->Active.size() == 2u, "Active holds only the axes the variant uses");
-        runner.Check(waveOpsOff->Canonical.size() == k_TestSpace.size(),
+        runner.Check(waveOpsOff->Canonical.size() == k_TestSpace.AxisCount(),
                      "Canonical holds every axis in the space");
 
         const lodestone::PermutationBinding* canonicalWaveSize =
             FindBinding(waveOpsOff->Canonical, &k_WaveSizeAxis);
         runner.Check(canonicalWaveSize != nullptr &&
-                         canonicalWaveSize->second == k_WaveSizeAxis.Values.front(),
+                         canonicalWaveSize->Value == k_WaveSizeAxis.GetDefault(),
                      "a disabled axis takes its first value in Canonical");
     }
 
     runner.BeginSection("a partial assignment resolves to one variant");
     // The design claim: name only the axes you care about, and canonicalization supplies the rest.
     PermutationAssignment partial;
-    partial.emplace_back(&k_SizeAxis, PermutationValue{ uint32_t{ 512u } });
+    partial.push_back(PermutationBinding{ .Axis = &k_SizeAxis, .Value = PermutationValue{ 512u } });
 
-    const CanonicalAssignment filled = CanonicalizeAssignment(k_TestSpace, partial);
-    runner.Check(filled.size() == k_TestSpace.size(), "a partial assignment canonicalizes to every axis");
+    const CanonicalAssignment filled = k_TestSpace.CanonicalizeAssignment(partial);
+    runner.Check(filled.size() == k_TestSpace.AxisCount(),
+                 "a partial assignment canonicalizes to every axis");
 
-    const int32_t partialIndex = ComputeVariantIndex(k_TestSpace, filled);
+    const int32_t partialIndex = k_TestSpace.ComputeVariantIndex(filled);
 
     bool matchesRealVariant = false;
     for (const VariantDescriptor& descriptor : variants.Variants)
@@ -179,8 +185,8 @@ int main()
     runner.Check(matchesRealVariant, "the partial assignment names a variant the cook produced");
 
     runner.BeginSection("a module with no registered space still cooks");
-    const PermutationSpace emptySpace{};
-    const CookResult<VariantSet> emptyVariants = lodestone::EnumerateVariants(emptySpace);
+    const PermutationSpace emptySpace{ "", {} };
+    const CookResult<VariantSet> emptyVariants = emptySpace.EnumerateVariants();
 
     runner.Check(emptyVariants.has_value(), "an empty space enumerates rather than fails");
     if (emptyVariants)

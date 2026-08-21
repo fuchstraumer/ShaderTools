@@ -33,10 +33,10 @@ constexpr std::string_view k_ConditionalEntryPoint = "ConditionalCS";
 
 PermutationAxis MakeBoolAxis(std::string name)
 {
-    PermutationAxis axis;
-    axis.Name = std::move(name);
-    axis.Values = { PermutationValue{ false }, PermutationValue{ true } };
-    return axis;
+    return PermutationAxis{ std::move(name),
+                            { PermutationValue{ false }, PermutationValue{ true } },
+                            PermutationAxis::k_NoParent,
+                            PermutationValue{} };
 }
 
 ReflectedBinding MakeSharedBinding()
@@ -101,11 +101,11 @@ CanonicalAssignment MakeAssignment(const PermutationSpace& space,
                                    bool second_axis_value)
 {
     const PermutationAssignment active{
-        PermutationBinding{ &first_axis, PermutationValue{ first_axis_value } },
-        PermutationBinding{ &second_axis, PermutationValue{ second_axis_value } }
+        PermutationBinding{ .Axis = &first_axis, .Value = PermutationValue{ first_axis_value } },
+        PermutationBinding{ .Axis = &second_axis, .Value = PermutationValue{ second_axis_value } }
     };
 
-    return CanonicalizeAssignment(space, active);
+    return space.CanonicalizeAssignment(active);
 }
 
 /** `ConditionalCS` reads the first axis only when the second axis is true. So the variants that hold
@@ -148,7 +148,7 @@ CookedModule BuildModule(const PermutationSpace& space, bool dedupe_enabled)
         {
             const CompiledVariant variant = MakeVariant(index, firstAxisValue, secondAxisValue);
             const CanonicalAssignment canonical =
-                MakeAssignment(space, *space[0], *space[1], firstAxisValue, secondAxisValue);
+                MakeAssignment(space, space.Axes()[0], space.Axes()[1], firstAxisValue, secondAxisValue);
 
             const CookResult<void> appended = AppendVariantToModule(module, variant, canonical);
             if (!appended)
@@ -183,9 +183,9 @@ CookedModule BuildSingleEntryPointModule(const PermutationSpace& space, bool ded
     {
         const CompiledVariant variant = MakeSingleEntryPointVariant(index, firstAxisValue);
         // Only the first axis is named. Canonicalization supplies the second.
-        const CanonicalAssignment canonical = CanonicalizeAssignment(
-            space,
-            PermutationAssignment{ PermutationBinding{ space[0], PermutationValue{ firstAxisValue } } });
+        const CanonicalAssignment canonical =
+            space.CanonicalizeAssignment(PermutationAssignment{ PermutationBinding{
+                .Axis = &space.Axes()[0], .Value = PermutationValue{ firstAxisValue } } });
 
         const CookResult<void> appended = AppendVariantToModule(module, variant, canonical);
         if (!appended)
@@ -216,7 +216,7 @@ CookedModule BuildConditionalModule(const PermutationSpace& space)
         {
             const CompiledVariant variant = MakeConditionalVariant(index, firstAxisValue, secondAxisValue);
             const CanonicalAssignment canonical =
-                MakeAssignment(space, *space[0], *space[1], firstAxisValue, secondAxisValue);
+                MakeAssignment(space, space.Axes()[0], space.Axes()[1], firstAxisValue, secondAxisValue);
 
             const CookResult<void> appended = AppendVariantToModule(module, variant, canonical);
             if (!appended)
@@ -354,9 +354,7 @@ int main()
 {
     lodestone::tests::TestRunner runner{ "DedupeInfluence" };
 
-    const PermutationAxis firstAxis = MakeBoolAxis("AXIS_A");
-    const PermutationAxis secondAxis = MakeBoolAxis("AXIS_B");
-    const PermutationSpace space{ &firstAxis, &secondAxis };
+    const PermutationSpace space{ "TestSpace", { MakeBoolAxis("AXIS_A"), MakeBoolAxis("AXIS_B") } };
 
     const CookedModule deduped = BuildModule(space, true);
     const CookedModule raw = BuildModule(space, false);
