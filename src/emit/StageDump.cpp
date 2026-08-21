@@ -1,18 +1,20 @@
 #include "emit/StageDump.hpp"
-#include "model/ContentHash.hpp"
+#include "compile/RawLibrary.hpp"
 #include "model/ContentInterner.hpp"
 #include "model/CookedLibrary.hpp"
 #include "driver/CookerOptions.hpp"
 #include "JsonWriter.hpp"
+#include "permute/PermutationAxis.hpp"
 #include "permute/PermutationSpace.hpp"
 #include "model/ShaderDataSchema.hpp"
 #include "ShaderLibraryTypes.hpp"
+#include "permute/PermutationValue.hpp"
 
 #include <magic_enum/magic_enum.hpp>
 
 #include <cstddef>
 #include <cstdint>
-#include <expected>
+#include <span>
 #include <string>
 #include <string_view>
 #include <variant>
@@ -63,7 +65,7 @@ namespace
 
         writer.Key("values");
         writer.BeginArray();
-        for (const PermutationValue& value : axis.Values)
+        for (const PermutationValue& value : axis.GetValues())
         {
             WriteAxisValue(writer, value);
         }
@@ -183,7 +185,7 @@ namespace
     {
         writer.Key(key);
         writer.BeginArray();
-        for (uint32_t index : indices)
+        for (const uint32_t index : indices)
         {
             writer.UInt(index);
         }
@@ -521,7 +523,7 @@ std::string DumpPermutationSpace(std::string_view module_name, const Permutation
     writer.KeyString("stage", "space");
     writer.KeyString("module", module_name);
     writer.KeyUInt("axisCount", space.size());
-    writer.KeyUInt("spaceSize", ComputeVariantSpaceSize(space));
+    writer.KeyUInt("spaceSize", static_cast<uint64_t>(ComputeVariantSpaceSize(space)));
 
     writer.Key("axes");
     writer.BeginArray();
@@ -547,14 +549,14 @@ std::string DumpVariantSet(std::string_view module_name, const VariantSet& varia
     writer.KeyString("stage", "variants");
     writer.KeyString("module", module_name);
     writer.KeyUInt("variantCount", variant_set.Variants.size());
-    writer.KeyUInt("spaceSize", variant_set.SpaceSize);
+    writer.KeyUInt("spaceSize", static_cast<uint64_t>(variant_set.SpaceSize));
 
     writer.Key("variants");
     writer.BeginArray();
     for (const VariantDescriptor& descriptor : variant_set.Variants)
     {
         writer.BeginObject();
-        writer.KeyUInt("index", descriptor.Index);
+        writer.KeyUInt("index", static_cast<uint64_t>(descriptor.Index));
         writer.KeyString("suffix", MakeAssignmentSuffix(descriptor.Active));
         writer.KeyString("description", DescribeAssignment(descriptor.Canonical));
         writer.Key("active");

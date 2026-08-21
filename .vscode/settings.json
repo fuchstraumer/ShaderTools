@@ -27,5 +27,6 @@
         "**/build": true,
         "**/third_party": true,
         "**/.git": true
-    }
+    },
+    "editor.rename.enablePreview": false
 }

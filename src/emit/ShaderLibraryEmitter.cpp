@@ -1,8 +1,10 @@
 #include "emit/ShaderLibraryEmitter.hpp"
 #include "model/CookedLibrary.hpp"
+#include "permute/PermutationAxis.hpp"
 #include "permute/PermutationSpace.hpp"
 #include "model/ShaderDataSchema.hpp"
 #include "ShaderLibraryTypes.hpp"
+#include "permute/PermutationValue.hpp"
 
 #include <cctype>
 #include <cstddef>
@@ -259,19 +261,20 @@ namespace
         for (const PermutationAxis* axis : *module.Space)
         {
             const std::string field = MakeFieldIdentifier(axis->Name);
-            const PermutationValue& first = axis->Values.front();
-
-            if (std::holds_alternative<bool>(first))
+            const PermutationValue& first = axis->GetDefault();
+            switch (first.GetType())
             {
-                emitted += std::format("    bool {}{{ {} }};\n", field, ToLiteral(std::get<bool>(first)));
-            }
-            else if (std::holds_alternative<uint32_t>(first))
-            {
-                emitted += std::format("    uint32_t {}{{ {}u }};\n", field, std::get<uint32_t>(first));
-            }
-            else
-            {
-                emitted += std::format("    int32_t {}{{ {} }};\n", field, std::get<int32_t>(first));
+            case PermutationValue::Type::Bool:
+                emitted += std::format("    bool {}{{ {} }};\n", field, ToLiteral(first.AsBool()));
+                break;
+            case PermutationValue::Type::UInt:
+                emitted += std::format("    uint32_t {}{{ {}u }};\n", field, first.AsUInt());
+                break;
+            case PermutationValue::Type::SInt:
+                emitted += std::format("    int32_t {}{{ {} }};\n", field, first.AsSInt());
+                break;
+            case PermutationValue::Type::Invalid:
+                break;
             }
         }
 
@@ -288,16 +291,18 @@ namespace
 
         // A two-value bool axis covers every case, so a switch with a default draws C4809. A ternary
         // says the same thing and keeps the generated code clean at /W4.
-        if (axis.Values.size() == 2u && std::holds_alternative<bool>(axis.Values.front()))
+        const PermutationValue& defaultAxisValue = axis.GetDefault();
+        if (axis.NumValues() == 2u && (defaultAxisValue.GetType() == PermutationValue::Type::Bool))
         {
+
             return std::format("constexpr uint32_t IndexOf{}{}(const {}& permutation) noexcept\n{{\n"
                                "    return permutation.{} ? {}u : {}u;\n}}\n\n",
                                MakeTypeIdentifier(module.Name),
                                field,
                                typeName,
                                field,
-                               std::get<bool>(axis.Values.front()) ? 0u : 1u,
-                               std::get<bool>(axis.Values.front()) ? 1u : 0u);
+                               defaultAxisValue.AsBool() ? 0u : 1u,
+                               defaultAxisValue.AsBool() ? 1u : 0u);
         }
 
         std::string emitted =
@@ -307,23 +312,25 @@ namespace
                         field,
                         typeName,
                         field);
-
-        for (size_t i = 0u; i < axis.Values.size(); ++i)
+        
+        size_t idx = 0u;
+        for (const PermutationValue& value : axis.GetValues())
         {
-            const PermutationValue& value = axis.Values[i];
-            if (std::holds_alternative<bool>(value))
+            switch (value.GetType())
             {
-                emitted +=
-                    std::format("    case {}:\n        return {}u;\n", ToLiteral(std::get<bool>(value)), i);
+            case PermutationValue::Type::Bool:
+                emitted += std::format("    case {}:\n        return {}u;\n", ToLiteral(value.AsBool()), idx);
+                break;
+            case PermutationValue::Type::UInt:
+                emitted += std::format("    case {}u:\n        return {}u;\n", value.AsUInt(), idx);
+                break;
+            case PermutationValue::Type::SInt:
+                emitted += std::format("    case {}:\n        return {}u;\n", value.AsSInt(), idx);
+                break;
+            case PermutationValue::Type::Invalid:
+                break;
             }
-            else if (std::holds_alternative<uint32_t>(value))
-            {
-                emitted += std::format("    case {}u:\n        return {}u;\n", std::get<uint32_t>(value), i);
-            }
-            else
-            {
-                emitted += std::format("    case {}:\n        return {}u;\n", std::get<int32_t>(value), i);
-            }
+            ++idx;
         }
 
         emitted += "    default:\n        return 0u;\n    }\n}\n\n";
@@ -332,17 +339,18 @@ namespace
 
     std::string ValueToCppLiteral(const PermutationValue& value)
     {
-        if (std::holds_alternative<bool>(value))
+        switch (value.GetType())
         {
-            return std::string{ ToLiteral(std::get<bool>(value)) };
+        case PermutationValue::Type::Bool:
+            return std::format("{}", ToLiteral(value.AsBool()));
+        case PermutationValue::Type::UInt:
+            return std::format("{}u", value.AsUInt());
+        case PermutationValue::Type::SInt:
+            return std::format("{}i", value.AsSInt());
+        case PermutationValue::Type::Invalid:
+            return std::string{ "Invalid" };
         }
-
-        if (std::holds_alternative<uint32_t>(value))
-        {
-            return std::format("{}u", std::get<uint32_t>(value));
-        }
-
-        return std::to_string(std::get<int32_t>(value));
+        return {};
     }
 
     /** Fills every disabled axis with its first value, so all values a caller could pass for a dead
@@ -366,7 +374,7 @@ namespace
                                    MakeFieldIdentifier(axis->Parent->Name),
                                    ValueToCppLiteral(axis->RequiredParentValue),
                                    MakeFieldIdentifier(axis->Name),
-                                   ValueToCppLiteral(axis->Values.front()));
+                                   ValueToCppLiteral(axis->GetDefault()));
         }
 
         emitted += "\n    return permutation;\n}\n\n";
@@ -387,7 +395,7 @@ namespace
         for (const PermutationAxis* axis : *module.Space)
         {
             emitted += std::format("    index = index * {}u + IndexOf{}{}(permutation);\n",
-                                   axis->Values.size(),
+                                   axis->NumValues(),
                                    moduleType,
                                    MakeFieldIdentifier(axis->Name));
         }

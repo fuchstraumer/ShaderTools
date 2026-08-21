@@ -2,33 +2,21 @@
 #ifndef LODESTONE_PERMUTATION_SPACE_HPP
 #define LODESTONE_PERMUTATION_SPACE_HPP
 #include "CookerErrors.hpp"
+#include "permute/PermutationValue.hpp"
+#include "permute/PermutationAxis.hpp"
+#include "permute/PermutationPolicy.hpp"
+
 #include <cstddef>
 #include <cstdint>
 #include <span>
 #include <string>
 #include <string_view>
 #include <utility>
-#include <variant>
 #include <vector>
 
 
 namespace lodestone
 {
-
-using PermutationValue = std::variant<bool, uint32_t, int32_t>;
-
-/** One axis of variation. `Parent`/`RequiredParentValue` express a dependent axis: the axis only
- * contributes values when its parent already took the enabling value. `Name` must match the
- * `extern static const` declaration in the Slang source exactly -- a mismatch links a symbol nobody
- * references and silently leaves the shader on its default value. */
-struct PermutationAxis
-{
-    std::string Name;
-    // todo-ship: sort values to obtain consistent ordering for more efficient usage of this vec
-    std::vector<PermutationValue> Values;
-    const PermutationAxis* Parent{ nullptr };
-    PermutationValue RequiredParentValue{ false };
-};
 
 using PermutationSpace = std::vector<const PermutationAxis*>;
 using PermutationBinding = std::pair<const PermutationAxis*, PermutationValue>;
@@ -37,35 +25,19 @@ using PermutationAssignment = std::vector<PermutationBinding>;
 /** An assignment that holds every axis of one space, in declaration order. Only
  * `CanonicalizeAssignment` builds one, so a partial assignment cannot reach `ComputeVariantIndex` and
  * return a plausible wrong index. The conversion to `PermutationAssignment` runs one way only. */
-class CanonicalAssignment final
+class CanonicalAssignment
 {
 public:
-    CanonicalAssignment() = default;
+    CanonicalAssignment() noexcept = default;
 
-    // NOLINTNEXTLINE(google-explicit-constructor)
-    [[nodiscard]] operator const PermutationAssignment&() const noexcept
-    {
-        return values;
-    }
-
-    [[nodiscard]] std::size_t size() const noexcept
-    {
-        return values.size();
-    }
-
-    [[nodiscard]] const PermutationBinding& operator[](std::size_t index) const noexcept
-    {
-        return values[index];
-    }
+    [[nodiscard]] operator const PermutationAssignment&() const noexcept;
+    [[nodiscard]] std::size_t size() const noexcept; //NOLINT(readability-identifier-naming)
+    [[nodiscard]] const PermutationBinding& operator[](std::size_t index) const noexcept;
 
 private:
     friend CanonicalAssignment CanonicalizeAssignment(const PermutationSpace& space,
                                                       const PermutationAssignment& assignment);
-
-    explicit CanonicalAssignment(PermutationAssignment&& canonical) noexcept
-        : values{ std::move(canonical) }
-    {
-    }
+    explicit CanonicalAssignment(PermutationAssignment&& canonical) noexcept;
 
     PermutationAssignment values;
 };
@@ -88,9 +60,6 @@ private:
  * know the fully evaluated "correct" value of each axis to retrieve it, we can just use our unique values
  * and the canonicalized values to retrieve the variant. Think how trivial that is: if you know just the
  * set of values you want to use, you can get your variant.
- *
- * And fwiw, this is just compiler canonicalization of the values, which is to say flattening a
- * multidimensional space into a single dimension.
  */
 struct VariantDescriptor
 {
@@ -155,28 +124,7 @@ std::string MakeVariantModulePath(std::string_view axis_name, const PermutationV
 std::string MakeAssignmentSuffix(const PermutationAssignment& assignment);
 std::string DescribeAssignment(const PermutationAssignment& assignment);
 
-/** One statement of what an axis is expected to do to an entry point's output.
- *
- * The cooker measures this and compares it against the declaration. A mismatch fails the cook, and
- * names the axis and the entry point. So a static branch that quadruples the variant count breaks the
- * build on the commit that adds it, instead of showing up later as a slow cook. */
-struct ExpectedAxisInfluence
-{
-    std::string_view EntryPointName;
-    std::string_view AxisName;
-    /** True when the axis must not change this entry point's output. */
-    bool IsInert{ false };
-};
-
-/** Limits a module's growth. `MaxVariants` of zero means no budget. */
-struct ModulePolicy
-{
-    uint32_t MaxVariants{ 0u };
-    std::span<const ExpectedAxisInfluence> ExpectedInfluence;
-};
-
 const ModulePolicy* FindPolicyForModule(std::string_view module_name) noexcept;
-
 const PermutationSpace* FindPermutationSpaceForModule(std::string_view module_name) noexcept;
 
 } // namespace lodestone

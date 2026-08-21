@@ -19,6 +19,9 @@ Checks: >
   -cppcoreguidelines-pro-bounds-avoid-unchecked-container-access,
   -cppcoreguidelines-pro-bounds-pointer-arithmetic,
   -bugprone-throwing-static-initialization,
+  -cppcoreguidelines-non-private-member-variables-in-classes,
+  -misc-non-private-member-variables-in-classes,
+  -cppcoreguidelines-pro-type-union-access
 
 WarningsAsErrors: ''
 HeaderFilterRegex: '.*(src|include|client|tests)/.*'

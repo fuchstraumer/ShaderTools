@@ -181,7 +181,7 @@ for valid paths and directories.
 - Headers carry **both** `#pragma once` and a traditional `#ifndef`/`#define`/`#endif` guard. This is
   intentional and consistent across the repo — do not "clean it up" to one or the other. Guard macros are
   screaming-snake-case derived from the path (`LODESTONE_ASYNC_FUTURE_HPP`,
-  `LODESTONE_SHADER_COOKER_ERRORS_HPP`), and the closing `#endif` carries a `// !GUARD_NAME` comment
+  `LODESTONE_ERRORS_HPP`), and the closing `#endif` carries a `// !GUARD_NAME` comment
 - Keep standard-library includes minimal and sorted within a group; a header should include what it
   names and nothing more. Prefer forward declarations across module boundaries (see how `Context.hpp`
   forward-declares `Scheduler`)

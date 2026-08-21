@@ -1,5 +1,8 @@
 #include "permute/PermutationSpace.hpp"
 #include "CookerErrors.hpp"
+#include "permute/PermutationAxis.hpp"
+#include "permute/PermutationPolicy.hpp"
+#include "permute/PermutationValue.hpp"
 #include "permute/SizeExpression.hpp"
 
 #include <algorithm>
@@ -19,7 +22,6 @@
 #include <string_view>
 #include <unordered_set>
 #include <utility>
-#include <variant>
 #include <vector>
 
 namespace lodestone
@@ -28,20 +30,29 @@ namespace lodestone
 namespace
 {
 
-    const PermutationAxis k_IfftSizeAxis{ .Name = "IFFT_SIZE",
-                                          .Values = { 128u, 256u, 512u, 1024u, 2048u, 4096u, 8192u },
-                                          .Parent = nullptr,
-                                          .RequiredParentValue = false };
+    const PermutationAxis k_IfftSizeAxis{ "IFFT_SIZE",
+                                          { PermutationValue{ 128u },
+                                            PermutationValue{ 256u },
+                                            PermutationValue{ 512u },
+                                            PermutationValue{ 1024u },
+                                            PermutationValue{ 2048u },
+                                            PermutationValue{ 4096u },
+                                            PermutationValue{ 8192u } },
+                                          nullptr,
+                                          PermutationValue{} };
 
-    const PermutationAxis k_IfftUseWaveOpsAxis{ .Name = "IFFT_USE_WAVE_OPS",
-                                                .Values = { false, true },
-                                                .Parent = nullptr,
-                                                .RequiredParentValue = false };
+    const PermutationAxis k_IfftUseWaveOpsAxis{ "IFFT_USE_WAVE_OPS",
+                                                { PermutationValue{ false }, PermutationValue{ true } },
+                                                nullptr,
+                                                PermutationValue{} };
 
-    const PermutationAxis k_IfftWaveSizeAxis{ .Name = "IFFT_WAVE_SIZE",
-                                              .Values = { 16u, 32u, 64u, 128u },
-                                              .Parent = &k_IfftUseWaveOpsAxis,
-                                              .RequiredParentValue = true };
+    const PermutationAxis k_IfftWaveSizeAxis{ "IFFT_WAVE_SIZE",
+                                              { PermutationValue{ 16u },
+                                                PermutationValue{ 32u },
+                                                PermutationValue{ 64u },
+                                                PermutationValue{ 128u } },
+                                              &k_IfftUseWaveOpsAxis,
+                                              PermutationValue{ true } };
 
     const PermutationSpace k_OceanFftSpace{ &k_IfftSizeAxis, &k_IfftUseWaveOpsAxis, &k_IfftWaveSizeAxis };
 
@@ -304,10 +315,10 @@ namespace
             // get variant that caused the collision
             const VariantDescriptor& duplicate = *firstDuplicateIter;
             std::println(stderr,
-                             "[shader_cooker] two variants share index {}: [{}] collides. The mixed-radix "
-                             "encoding and the enumerated set disagree.",
-                             duplicate.Index,
-                             DescribeAssignment(duplicate.Canonical));
+                         "[shader_cooker] two variants share index {}: [{}] collides. The mixed-radix "
+                         "encoding and the enumerated set disagree.",
+                         duplicate.Index,
+                         DescribeAssignment(duplicate.Canonical));
             return CookError::PermutationVariantIndexCollision;
         }
         else [[likely]]
@@ -317,6 +328,26 @@ namespace
     }
 
 } // namespace
+
+CanonicalAssignment::operator const PermutationAssignment&() const noexcept
+{
+    return values;
+}
+
+std::size_t CanonicalAssignment::size() const noexcept
+{
+    return values.size();
+}
+
+const PermutationBinding& CanonicalAssignment::operator[](std::size_t index) const noexcept
+{
+    return values[index];
+}
+
+CanonicalAssignment::CanonicalAssignment(PermutationAssignment&& canonical) noexcept
+    : values{ std::move(canonical) }
+{
+}
 
 // perform CCSP with classic backtracking, but skip any axis whose parent is not active
 // this is a somewhat embarassing amount of commenting for me, but I have not done constraint satisfaction
@@ -332,7 +363,7 @@ CookResult<std::vector<PermutationAssignment>> EnumerateActiveCombinations(const
         // Despite having to do recursive work here, we can at least reserve the right amount of space. I
         // guess.
         std::vector<PermutationAssignment> expanded;
-        expanded.reserve(partials.size() * axis->Values.size());
+        expanded.reserve(partials.size() * static_cast<size_t>(axis->NumValues()));
         // For the current axis, we need to traverse every partial assignment (incomplete combination) we have
         // thus far and expand/evaluate it for the current axis. This is a breadth-first search of the
         // combination space, and we will continue to expand the partials until we have a complete assignment
@@ -367,7 +398,7 @@ CookResult<std::vector<PermutationAssignment>> EnumerateActiveCombinations(const
             // We store the axis (the abstract half) and the *value* (the concrete half). This
             // defines a *Binding* or unique instantiation of the axis for this current partial.
             // (thus a binding is just {abstract [axis*], concrete [value]})
-            for (const PermutationValue& value : axis->Values)
+            for (const PermutationValue& value : axis->GetValues())
             {
                 // at each depth, we take the current partial as our starting point (as that's how
                 // breadth-first constraint satisfaction like this works best for our data)
@@ -404,7 +435,7 @@ CanonicalAssignment CanonicalizeAssignment(const PermutationSpace& space,
         const PermutationBinding* binding = FindBindingForAxis(assignment, axis);
         // Now check: did we fail to find the binding? That means it was folded out of the assignment,
         // because one of it's dependent axes values was not set as needed. Thus, default value assigned.
-        const PermutationValue value = binding != nullptr ? binding->second : axis->Values.front();
+        const PermutationValue value = binding != nullptr ? binding->second : axis->GetDefault();
         canonical.emplace_back(axis, value);
     }
     // And bam, the canonical assignment is just a fully "concrete" instance of the *actual* active assignment
@@ -421,9 +452,10 @@ int32_t ComputeVariantIndex(const PermutationSpace& space, const CanonicalAssign
         const PermutationBinding& binding = canonical[i];
         const PermutationAxis* axis = binding.first;
         const PermutationValue& value = binding.second;
-        const auto found = std::ranges::find(axis->Values, value);
-        const std::ptrdiff_t valueIndex = std::distance(axis->Values.begin(), found);
-        index = (index * std::ssize(axis->Values)) + valueIndex;
+        const std::span<const PermutationValue> values = axis->GetValues();
+        const auto found = std::ranges::find(values, value);
+        const std::ptrdiff_t valueIndex = std::distance(values.begin(), found);
+        index = (index * std::ssize(values)) + valueIndex;
     }
 
     return static_cast<int32_t>(index);
@@ -435,7 +467,7 @@ int32_t ComputeVariantSpaceSize(const PermutationSpace& space) noexcept
 
     for (const PermutationAxis* axis : space)
     {
-        size *= static_cast<int32_t>(std::ssize(axis->Values));
+        size *= static_cast<int32_t>(axis->NumValues());
     }
 
     return size;
@@ -577,49 +609,45 @@ CookResult<std::vector<ExternConstantDefault>> CollectUndrivenExternDefaults(
 
 int64_t PermutationValueToInt64(const PermutationValue& value) noexcept
 {
-    if (const bool* booleanValue = std::get_if<bool>(&value); booleanValue != nullptr)
+    switch (value.GetType())
     {
-        return *booleanValue ? 1 : 0;
+    case PermutationValue::Type::Bool:
+        return value.AsBool() ? 1 : 0;
+    case PermutationValue::Type::UInt:
+        return static_cast<int64_t>(value.AsUInt());
+    case PermutationValue::Type::SInt:
+        return static_cast<int64_t>(value.AsSInt());
+    case PermutationValue::Type::Invalid:
+        return -1;
     }
-
-    if (const uint32_t* unsignedValue = std::get_if<uint32_t>(&value); unsignedValue != nullptr)
-    {
-        return static_cast<int64_t>(*unsignedValue);
-    }
-
-    if (const int32_t* signedValue = std::get_if<int32_t>(&value); signedValue != nullptr)
-    {
-        return static_cast<int64_t>(*signedValue);
-    }
-
-    return 0;
 }
 
 std::string ValueToSlangLiteral(const PermutationValue& value)
 {
-    if (std::holds_alternative<bool>(value))
+    switch (value.GetType())
     {
-        return std::get<bool>(value) ? "true" : "false";
+    case PermutationValue::Type::Bool:
+        return value.AsBool() ? "true" : "false";
+    case PermutationValue::Type::UInt:
+        return std::to_string(value.AsUInt());
+    case PermutationValue::Type::SInt:
+        return std::to_string(value.AsSInt());
+    case PermutationValue::Type::Invalid:
+        return "invalid";
     }
-
-    if (std::holds_alternative<uint32_t>(value))
-    {
-        return std::to_string(std::get<uint32_t>(value));
-    }
-
-    return std::to_string(std::get<int32_t>(value));
 }
 
 std::string ValueToSlangTypeName(const PermutationValue& value)
 {
-    if (std::holds_alternative<bool>(value))
+    switch (value.GetType())
     {
+    case PermutationValue::Type::Bool:
         return "bool";
-    }
-
-    if (std::holds_alternative<uint32_t>(value))
-    {
+    case PermutationValue::Type::UInt:
         return "uint";
+    case PermutationValue::Type::SInt:
+    case PermutationValue::Type::Invalid:
+        return "int";
     }
 
     return "int";
