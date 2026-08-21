@@ -13,6 +13,7 @@
 #include "model/ResolveStage.hpp"
 #include "model/ShaderDataSchema.hpp"
 #include "permute/PermutationAssignment.hpp"
+#include "permute/PermutationRegistry.hpp"
 #include "permute/PermutationSpace.hpp"
 #include "target/TargetProfile.hpp"
 

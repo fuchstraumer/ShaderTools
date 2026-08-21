@@ -27,6 +27,7 @@ add_lodestone_unit_test(CookTest CookTest.cpp
     TEST_ARGS -o "${CMAKE_CURRENT_BINARY_DIR}/cook_test_output/ShaderLibrary.hpp"
               --verify-deterministic
               "${CMAKE_SOURCE_DIR}/tests/assets/compute/Ocean/OceanFft.slang")
+add_lodestone_unit_test(ExternConstantScannerTest ExternConstantScannerTests.cpp)
 add_lodestone_unit_test(SizeExpressionTest SizeExpressionTests.cpp)
 add_lodestone_unit_test(ContentInternerTest ContentInternerTests.cpp)
 add_lodestone_unit_test(PermutationIndexTest PermutationIndexTests.cpp)

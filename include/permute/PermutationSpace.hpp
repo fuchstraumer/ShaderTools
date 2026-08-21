@@ -110,9 +110,6 @@ private:
     std::vector<PermutationAxis> axes;
 };
 
-const ModulePolicy* FindPolicyForModule(std::string_view module_name) noexcept;
-const PermutationSpace* FindPermutationSpaceForModule(std::string_view module_name) noexcept;
-
 } // namespace lodestone
 
 #endif // !LODESTONE_PERMUTATION_SPACE_HPP

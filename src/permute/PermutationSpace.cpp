@@ -4,6 +4,7 @@
 #include "permute/PermutationAxis.hpp"
 #include "permute/PermutationPolicy.hpp"
 #include "permute/PermutationValue.hpp"
+#include "permute/ExternConstantScanner.hpp"
 #include "permute/SizeExpression.hpp"
 
 #include <algorithm>
@@ -32,57 +33,6 @@ namespace lodestone
 namespace
 {
 
-    // Axis order is the declaration order, and `ParentIndex` is a position in this list.
-    // IFFT_WAVE_SIZE names index 1, which is IFFT_USE_WAVE_OPS.
-    const PermutationSpace k_OceanFftSpace{
-        "OceanFft",
-        { PermutationAxis{ "IFFT_SIZE",
-                           { PermutationValue{ 128u },
-                             PermutationValue{ 256u },
-                             PermutationValue{ 512u },
-                             PermutationValue{ 1024u },
-                             PermutationValue{ 2048u },
-                             PermutationValue{ 4096u },
-                             PermutationValue{ 8192u } },
-                           PermutationAxis::k_NoParent,
-                           PermutationValue{} },
-          PermutationAxis{ "IFFT_USE_WAVE_OPS",
-                           { PermutationValue{ false }, PermutationValue{ true } },
-                           PermutationAxis::k_NoParent,
-                           PermutationValue{} },
-          PermutationAxis{ "IFFT_WAVE_SIZE",
-                           { PermutationValue{ 16u },
-                             PermutationValue{ 32u },
-                             PermutationValue{ 64u },
-                             PermutationValue{ 128u } },
-                           1,
-                           PermutationValue{ true } } } };
-
-    const PermutationSpace k_EmptySpace{ "", {} };
-
-    // IfftPermuteCS reorders data and never reads a wave-op symbol, so both wave axes must stay inert
-    // for it. If that ever changes, the entry point started paying for a permutation it does not use.
-    const std::array<ExpectedAxisInfluence, 2> k_OceanFftExpectedInfluence{
-        ExpectedAxisInfluence{
-            .EntryPointName = "IfftPermuteCS", .AxisName = "IFFT_USE_WAVE_OPS", .IsInert = true },
-        ExpectedAxisInfluence{
-            .EntryPointName = "IfftPermuteCS", .AxisName = "IFFT_WAVE_SIZE", .IsInert = true }
-    };
-
-    const ModulePolicy k_OceanFftPolicy{ .MaxVariants = 64u,
-                                         .ExpectedInfluence = k_OceanFftExpectedInfluence };
-    const ModulePolicy k_EmptyPolicy{};
-
-    struct ModuleSpaceEntry
-    {
-        std::string_view ModuleName;
-        const PermutationSpace* Space;
-        const ModulePolicy* Policy;
-    };
-
-    const std::array<ModuleSpaceEntry, 1> k_ModuleSpaces{ ModuleSpaceEntry{
-        .ModuleName = "OceanFft", .Space = &k_OceanFftSpace, .Policy = &k_OceanFftPolicy } };
-
     const PermutationBinding* FindBindingForAxis(const PermutationAssignment& assignment,
                                                  const PermutationAxis* axis) noexcept
     {
@@ -96,188 +46,6 @@ namespace
             return std::to_address(bindingIter);
         }
         return nullptr;
-    }
-
-    bool IsIdentifierCharacter(char character) noexcept
-    {
-        return std::isalnum(static_cast<unsigned char>(character)) != 0 || character == '_';
-    }
-
-    /** True when `name` appears as a whole identifier on a line that also declares `extern`. Text
-     * matching rather than reflection: link-time constants never reach a program layout, and the
-     * failure this guards against is a typo in the axis name, which the source text shows directly. */
-    bool ContainsExternDeclarationOf(std::string_view source, std::string_view name)
-    {
-        constexpr std::string_view k_ExternKeyword{ "extern" };
-
-        size_t lineStart = 0u;
-        while (lineStart < source.size())
-        {
-            size_t lineEnd = source.find('\n', lineStart);
-            if (lineEnd == std::string_view::npos)
-            {
-                lineEnd = source.size();
-            }
-
-            const std::string_view line = source.substr(lineStart, lineEnd - lineStart);
-            lineStart = lineEnd + 1u;
-
-            if (!line.contains(k_ExternKeyword))
-            {
-                continue;
-            }
-
-            size_t searchFrom = 0u;
-            while (true)
-            {
-                const size_t found = line.find(name, searchFrom);
-                if (found == std::string_view::npos)
-                {
-                    break;
-                }
-
-                const bool startIsBoundary = found == 0u || !IsIdentifierCharacter(line[found - 1u]);
-                const size_t afterIndex = found + name.size();
-                const bool endIsBoundary =
-                    afterIndex >= line.size() || !IsIdentifierCharacter(line[afterIndex]);
-
-                if (startIsBoundary && endIsBoundary)
-                {
-                    return true;
-                }
-
-                searchFrom = found + 1u;
-            }
-        }
-
-        return false;
-    }
-
-    /** Collects the identifier declared by every `extern ... <name> =` line. Each one is a knob the
-     * cooker is expected to drive; one without an axis silently keeps its default forever. */
-    std::vector<std::string_view> CollectExternConstantNames(std::string_view source)
-    {
-        constexpr static std::string_view k_ExternKeyword{ "extern" };
-        std::vector<std::string_view> names;
-
-        size_t lineStart = 0u;
-        while (lineStart < source.size())
-        {
-            size_t lineEnd = source.find('\n', lineStart);
-            if (lineEnd == std::string_view::npos)
-            {
-                lineEnd = source.size();
-            }
-
-            const std::string_view line = source.substr(lineStart, lineEnd - lineStart);
-            lineStart = lineEnd + 1u;
-
-            if (!line.contains(k_ExternKeyword))
-            {
-                continue;
-            }
-
-            const size_t assignIndex = line.find('=');
-            if (assignIndex == std::string_view::npos)
-            {
-                continue;
-            }
-
-            size_t nameEnd = assignIndex;
-            while (nameEnd > 0u && !IsIdentifierCharacter(line[nameEnd - 1u]))
-            {
-                --nameEnd;
-            }
-
-            size_t nameStart = nameEnd;
-            while (nameStart > 0u && IsIdentifierCharacter(line[nameStart - 1u]))
-            {
-                --nameStart;
-            }
-
-            if (nameEnd > nameStart)
-            {
-                names.push_back(line.substr(nameStart, nameEnd - nameStart));
-            }
-        }
-
-        return names;
-    }
-
-    /** The initializer text of every `extern ... <name> = <value>;` line, paired with the name. */
-    std::vector<std::pair<std::string_view, std::string_view>> CollectExternConstantDefinitions(
-        std::string_view source)
-    {
-        constexpr static std::string_view k_ExternKeyword{ "extern" };
-        std::vector<std::pair<std::string_view, std::string_view>> definitions;
-
-        size_t lineStart = 0u;
-        while (lineStart < source.size())
-        {
-            size_t lineEnd = source.find('\n', lineStart);
-            if (lineEnd == std::string_view::npos)
-            {
-                lineEnd = source.size();
-            }
-
-            const std::string_view line = source.substr(lineStart, lineEnd - lineStart);
-            lineStart = lineEnd + 1u;
-
-            if (!line.contains(k_ExternKeyword))
-            {
-                continue;
-            }
-
-            const size_t assignIndex = line.find('=');
-            if (assignIndex == std::string_view::npos)
-            {
-                continue;
-            }
-
-            size_t nameEnd = assignIndex;
-            while (nameEnd > 0u && !IsIdentifierCharacter(line[nameEnd - 1u]))
-            {
-                --nameEnd;
-            }
-
-            size_t nameStart = nameEnd;
-            while (nameStart > 0u && IsIdentifierCharacter(line[nameStart - 1u]))
-            {
-                --nameStart;
-            }
-
-            if (nameEnd <= nameStart)
-            {
-                continue;
-            }
-
-            const size_t valueStart = assignIndex + 1u;
-            size_t valueEnd = line.find(';', valueStart);
-            if (valueEnd == std::string_view::npos)
-            {
-                valueEnd = line.size();
-            }
-
-            definitions.emplace_back(line.substr(nameStart, nameEnd - nameStart),
-                                     line.substr(valueStart, valueEnd - valueStart));
-        }
-
-        return definitions;
-    }
-
-    std::string_view TrimWhitespace(std::string_view text) noexcept
-    {
-        while (!text.empty() && std::isspace(static_cast<unsigned char>(text.front())) != 0)
-        {
-            text.remove_prefix(1u);
-        }
-
-        while (!text.empty() && std::isspace(static_cast<unsigned char>(text.back())) != 0)
-        {
-            text.remove_suffix(1u);
-        }
-
-        return text;
     }
 
     /** Lets a later extern's default read an earlier one, which is how shaders usually derive them. */
@@ -539,7 +307,7 @@ CookError PermutationSpace::VerifyAxisNamesAreDeclared(std::span<const std::stri
         bool declared = false;
         for (const std::string_view source : source_texts)
         {
-            if (ContainsExternDeclarationOf(source, axis.Name))
+            if (DeclaresExternConstantNamed(source, axis.Name))
             {
                 declared = true;
                 break;
@@ -571,9 +339,9 @@ void PermutationSpace::ReportUndrivenExternConstants(std::span<const std::string
 {
     for (const std::string_view source : source_texts)
     {
-        for (std::string_view constantName : CollectExternConstantNames(source))
+        for (const ExternConstantDeclaration& declared : ScanExternConstants(source))
         {
-            if (SpaceDrivesAxisNamed(*this, constantName))
+            if (SpaceDrivesAxisNamed(*this, declared.Name))
             {
                 continue;
             }
@@ -581,7 +349,7 @@ void PermutationSpace::ReportUndrivenExternConstants(std::span<const std::string
             std::println(stderr,
                          "[shader_cooker] '{}' in module {} is declared extern but no axis drives it. "
                          "It keeps its declared default in every variant.",
-                         constantName,
+                         declared.Name,
                          module_name);
         }
     }
@@ -595,7 +363,7 @@ CookResult<std::vector<ExternConstantDefault>> PermutationSpace::CollectUndriven
 
     for (const std::string_view source : source_texts)
     {
-        for (const auto& [constName, valueText] : CollectExternConstantDefinitions(source))
+        for (const auto& [constName, valueText] : ScanExternConstants(source))
         {
             if (SpaceDrivesAxisNamed(*this, constName))
             {
@@ -626,32 +394,6 @@ CookResult<std::vector<ExternConstantDefault>> PermutationSpace::CollectUndriven
     }
 
     return defaults;
-}
-
-const ModulePolicy* FindPolicyForModule(std::string_view module_name) noexcept
-{
-    for (const ModuleSpaceEntry& entry : k_ModuleSpaces)
-    {
-        if (entry.ModuleName == module_name)
-        {
-            return entry.Policy;
-        }
-    }
-
-    return &k_EmptyPolicy;
-}
-
-const PermutationSpace* FindPermutationSpaceForModule(std::string_view module_name) noexcept
-{
-    for (const ModuleSpaceEntry& entry : k_ModuleSpaces)
-    {
-        if (entry.ModuleName == module_name)
-        {
-            return entry.Space;
-        }
-    }
-
-    return &k_EmptySpace;
 }
 
 } // namespace lodestone

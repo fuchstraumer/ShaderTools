@@ -112,11 +112,18 @@ set(LODESTONE_MODEL_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/src/model/ShaderDataSchema.cpp")
 
 set(LODESTONE_PERMUTE_SOURCES
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/permute/ExternConstantScanner.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/permute/PermutationAssignment.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/include/permute/PermutationAxis.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/permute/PermutationPolicy.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/permute/PermutationRegistry.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/include/permute/PermutationSpace.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/include/permute/PermutationValue.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/include/permute/SizeExpression.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/permute/ExternConstantScanner.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/permute/PermutationAssignment.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/permute/PermutationAxis.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/permute/PermutationRegistry.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/permute/PermutationSpace.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/permute/PermutationValue.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/src/permute/SizeExpression.cpp")
