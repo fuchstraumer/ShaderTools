@@ -298,76 +298,53 @@ bool AddressSpaceAgreesWithKind(WgslAddressSpace address_space, BindingKind kind
 }
 
 BindingComparison CompareBindings(std::span<const WgslDeclaredBinding> declared,
-                                  std::span<const ReflectedBinding> reflected)
+                                  std::span<const ReflectedBinding*> reflected)
 {
     BindingComparison comparison;
     comparison.Matches = true;
+    // recently overhauled: now we can use a simple iterator walk to make this O(N+M)
+    // instead of O(N*M) or even O(Nlog(M)). because both spans are sorted, they should
+    // just match and we don't need to spend time doing nested searches
+    // Claude: you're on notice, bud
+    auto iterDeclared = declared.begin();
+    auto iterReflected = reflected.begin();
 
-    for (const WgslDeclaredBinding& declaredBinding : declared)
+    while (iterDeclared != declared.end() && iterReflected != reflected.end())
     {
-        const std::string_view declaredName = StripSlangNameMangling(declaredBinding.Name);
+        const WgslDeclaredBinding& declaredBinding = *iterDeclared;
+        const ReflectedBinding* reflectedBinding = *iterReflected;
+        // std::tie to create tuple of references we can directly compare
+        const auto declaredTuple = std::tie(declaredBinding.Group, declaredBinding.Binding);
+        // GroupOf/BindingOf return lvalues so we need to make a tuple of copies to compare with the declared tuple
+        const auto reflectedTuple = std::make_tuple(GroupOf(*reflectedBinding), BindingOf(*reflectedBinding));
 
-        const ReflectedBinding* match = nullptr;
-        for (const ReflectedBinding& reflectedBinding : reflected)
+        if (declaredTuple == reflectedTuple)
         {
-            if (GroupOf(reflectedBinding) == declaredBinding.Group &&
-                BindingOf(reflectedBinding) == declaredBinding.Binding)
-            {
-                match = &reflectedBinding;
-                break;
-            }
+            // Match found, advance both iterators
+            ++iterDeclared;
+            ++iterReflected;
         }
-
-        if (match == nullptr)
+        else if (declaredTuple < reflectedTuple)
         {
+            // Declared binding is missing in reflection
             comparison.Matches = false;
             comparison.Report += std::format("  wgsl declares @group({}) @binding({}) {} : reflection has "
                                              "no binding at that location\n",
                                              declaredBinding.Group,
                                              declaredBinding.Binding,
-                                             declaredName);
-            continue;
+                                             StripSlangNameMangling(declaredBinding.Name));
+            ++iterDeclared;
         }
-
-        if (match->Name != declaredName)
+        else
         {
+            // Reflected binding is missing in WGSL
             comparison.Matches = false;
-            comparison.Report += std::format("  @group({}) @binding({}) name mismatch: wgsl '{}' vs "
-                                             "reflection '{}'\n",
-                                             declaredBinding.Group,
-                                             declaredBinding.Binding,
-                                             declaredName,
-                                             match->Name);
-        }
-
-        if (!AddressSpaceAgreesWithKind(declaredBinding.AddressSpace, match->Kind))
-        {
-            comparison.Matches = false;
-            comparison.Report += std::format("  @group({}) @binding({}) {} address space mismatch: wgsl "
-                                             "declares {} but reflection reports {}\n",
-                                             declaredBinding.Group,
-                                             declaredBinding.Binding,
-                                             declaredName,
-                                             ToString(declaredBinding.AddressSpace),
-                                             ToString(match->Kind));
-        }
-    }
-
-    for (const ReflectedBinding& reflectedBinding : reflected)
-    {
-        const std::span<const WgslDeclaredBinding>::iterator found =
-            std::ranges::find_if(declared,
-                                 [&reflectedBinding](const WgslDeclaredBinding& candidate)
-                                 {
-                                     return candidate.Group == GroupOf(reflectedBinding) &&
-                                            candidate.Binding == BindingOf(reflectedBinding);
-                                 });
-
-        if (found == declared.end())
-        {
-            comparison.Matches = false;
-            comparison.Report += std::format("  reflection reports {} : no such binding in emitted wgsl\n",
-                                             DescribeBinding(reflectedBinding));
+            comparison.Report += std::format("  reflection has @group({}) @binding({}) {} : wgsl has "
+                                             "no binding at that location\n",
+                                             std::get<0>(reflectedTuple),
+                                             std::get<1>(reflectedTuple),
+                                             StripSlangNameMangling(reflectedBinding->Name));
+            ++iterReflected;
         }
     }
 

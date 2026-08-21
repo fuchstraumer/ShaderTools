@@ -51,8 +51,8 @@ bool AddressSpaceAgreesWithKind(WgslAddressSpace address_space, BindingKind kind
 
 std::string_view ToString(WgslAddressSpace address_space) noexcept;
 
-BindingComparison CompareBindings(std::span<const WgslDeclaredBinding> declared,
-                                  std::span<const ReflectedBinding> reflected);
+[[nodiscard]] BindingComparison CompareBindings(std::span<const WgslDeclaredBinding> declared,
+                                                std::span<const ReflectedBinding*> reflected);
 
 } // namespace lodestone
 

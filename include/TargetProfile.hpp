@@ -56,7 +56,7 @@ public:
     /** `target_text` is what the backend emitted for one entry point. `used` is the subset of the
      * variant's bindings that this entry point references, which is what reflection claims. */
     [[nodiscard]] virtual BindingComparison ValidateEntryPoint(
-        std::string_view target_text, std::span<const ReflectedBinding> used) const = 0;
+        std::string_view target_text, std::span<const ReflectedBinding*> used) const = 0;
 };
 
 struct TargetProfile

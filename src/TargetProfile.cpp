@@ -6,12 +6,23 @@
 #include <span>
 #include <string_view>
 #include <vector>
+#include <algorithm>
 
 namespace lodestone
 {
 
 namespace
 {
+    constexpr bool BoundPlacementLess(const ReflectedBinding* lhs, const ReflectedBinding* rhs) noexcept
+    {
+        const BoundPlacement* lhsBinding = std::get_if<BoundPlacement>(&lhs->Placement);
+        const BoundPlacement* rhsBinding = std::get_if<BoundPlacement>(&rhs->Placement);
+        if (lhsBinding->Group != rhsBinding->Group)
+        {
+            return lhsBinding->Group < rhsBinding->Group;
+        }
+        return lhsBinding->Binding < rhsBinding->Binding;
+    }
 
     /**@brief The WGSL second opinion. First uses `ScanWgslBindings` to extract the bindings declared in the
      * WGSL source text, returned in `declared`. CompareBindings then uses the reflected binding information
@@ -20,9 +31,24 @@ namespace
     {
     public:
         [[nodiscard]] BindingComparison ValidateEntryPoint(
-            std::string_view target_text, std::span<const ReflectedBinding> used) const override
+            std::string_view target_text, std::span<const ReflectedBinding*> used) const override
         {
-            const std::vector<WgslDeclaredBinding> declared = ScanWgslBindings(target_text);
+            std::vector<WgslDeclaredBinding> declared = ScanWgslBindings(target_text);
+            // this is a WGSL binding validator: we can collapse these to BoundPlacement* pointers
+            // Copy "used" to sort, and sort `declared`: We will scan by location otherwise, wasting time
+            std::ranges::sort(declared,
+                              [](const WgslDeclaredBinding& a, const WgslDeclaredBinding& b)
+                              {
+                                // for descriptor layouts, sort first by group then by binding
+                                if (a.Group != b.Group)
+                                {
+                                    return a.Group < b.Group;
+                                }
+                                return a.Binding < b.Binding;
+                              });
+            // used comes to us unsorted, as the caller of this code is not supposed to know the 
+            // target (and thus, binding model) it is calling for validation.
+            std::ranges::sort(used, BoundPlacementLess);
             return CompareBindings(declared, used);
         }
     };
