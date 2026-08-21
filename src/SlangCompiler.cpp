@@ -146,10 +146,34 @@ namespace
         {
         case SLANG_STAGE_VERTEX:
             return ShaderStageKind::Vertex;
+        case SLANG_STAGE_HULL:
+            return ShaderStageKind::Hull;
+        case SLANG_STAGE_DOMAIN:
+            return ShaderStageKind::Domain;
         case SLANG_STAGE_FRAGMENT:
             return ShaderStageKind::Fragment;
         case SLANG_STAGE_COMPUTE:
             return ShaderStageKind::Compute;
+        case SLANG_STAGE_RAY_GENERATION:
+            return ShaderStageKind::RayGeneration;
+        case SLANG_STAGE_INTERSECTION:
+            return ShaderStageKind::Intersection;
+        case SLANG_STAGE_ANY_HIT:
+            return ShaderStageKind::AnyHit;
+        case SLANG_STAGE_CLOSEST_HIT:
+            return ShaderStageKind::ClosestHit;
+        case SLANG_STAGE_MISS:
+            return ShaderStageKind::Miss;
+        case SLANG_STAGE_CALLABLE:
+            return ShaderStageKind::Callable;
+        case SLANG_STAGE_MESH:
+            return ShaderStageKind::Mesh;
+        case SLANG_STAGE_AMPLIFICATION:
+            return ShaderStageKind::Amplification;
+        case SLANG_STAGE_DISPATCH:
+            return ShaderStageKind::Dispatch;
+        case SLANG_STAGE_NODE:
+            return ShaderStageKind::Node;
         default:
             return ShaderStageKind::Invalid;
         }
@@ -162,19 +186,29 @@ namespace
         case slang::BindingType::Sampler:
             return BindingKind::Sampler;
         case slang::BindingType::Texture:
-            return BindingKind::SampledTexture;
+            return BindingKind::Texture;
+        case slang::BindingType::ConstantBuffer:
+            return BindingKind::UniformBuffer;
+        case slang::BindingType::ParameterBlock:
+            return BindingKind::ParameterBlock;
+        case slang::BindingType::TypedBuffer:
+            return BindingKind::ReadOnlyStructuredBuffer;
+        case slang::BindingType::RawBuffer:
+            return BindingKind::ReadOnlyStructuredBuffer;
+        case slang::BindingType::CombinedTextureSampler:
+            return BindingKind::CombinedTextureSampler;
+        case slang::BindingType::InputRenderTarget:
+            return BindingKind::InputRenderTarget;
+        case slang::BindingType::InlineUniformData:
+            return BindingKind::InlineUniform;
+        case slang::BindingType::RayTracingAccelerationStructure:
+            return BindingKind::RayTracingAccelerationStructure;
+        case slang::BindingType::MutableTypedBuffer:
+            return BindingKind::StructuredBuffer;
+        case slang::BindingType::MutableRawBuffer:
+            return BindingKind::StorageBuffer;
         case slang::BindingType::MutableTexture:
             return BindingKind::StorageTexture;
-        case slang::BindingType::ConstantBuffer:
-        case slang::BindingType::ParameterBlock:
-        case slang::BindingType::InlineUniformData:
-            return BindingKind::UniformBuffer;
-        case slang::BindingType::RawBuffer:
-        case slang::BindingType::TypedBuffer:
-            return BindingKind::ReadOnlyStorageBuffer;
-        case slang::BindingType::MutableRawBuffer:
-        case slang::BindingType::MutableTypedBuffer:
-            return BindingKind::StorageBuffer;
         default:
             return BindingKind::Invalid;
         }

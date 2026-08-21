@@ -286,8 +286,10 @@ bool AddressSpaceAgreesWithKind(WgslAddressSpace address_space, BindingKind kind
         return address_space == WgslAddressSpace::StorageReadWrite;
     case BindingKind::ReadOnlyStorageBuffer:
         return address_space == WgslAddressSpace::StorageRead;
-    case BindingKind::SampledTexture:
+    case BindingKind::Texture:
+        [[fallthrough]];
     case BindingKind::StorageTexture:
+        [[fallthrough]];
     case BindingKind::Sampler:
         return address_space == WgslAddressSpace::Handle;
     case BindingKind::Invalid:

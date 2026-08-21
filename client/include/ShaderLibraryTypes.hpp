@@ -36,20 +36,39 @@ enum class FootprintKind : uint8_t
 enum class BindingKind : uint8_t
 {
     Invalid = 0,
-    UniformBuffer,
-    StorageBuffer,
-    ReadOnlyStorageBuffer,
-    SampledTexture,
-    StorageTexture,
     Sampler,
+    Texture,
+    UniformBuffer,
+    ParameterBlock,
+    ReadOnlyStructuredBuffer,
+    ReadOnlyStorageBuffer,
+    CombinedTextureSampler,
+    InputRenderTarget,
+    InlineUniform,
+    RayTracingAccelerationStructure,
+    StructuredBuffer,
+    StorageBuffer,
+    StorageTexture
 };
 
 enum class ShaderStageKind : uint8_t
 {
     Invalid = 0,
     Vertex,
+    Hull,
+    Domain,
     Fragment,
     Compute,
+    RayGeneration,
+    Intersection,
+    AnyHit,
+    ClosestHit,
+    Miss,
+    Callable,
+    Mesh,
+    Amplification,
+    Dispatch,
+    Node
 };
 
 /** @brief The shape of a bound resource, as the shader declares it. This should be viewed

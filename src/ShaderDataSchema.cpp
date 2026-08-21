@@ -15,18 +15,32 @@ std::string_view ToString(BindingKind kind) noexcept
 {
     switch (kind)
     {
-    case BindingKind::UniformBuffer:
-        return "UniformBuffer";
-    case BindingKind::StorageBuffer:
-        return "StorageBuffer";
-    case BindingKind::ReadOnlyStorageBuffer:
-        return "ReadOnlyStorageBuffer";
-    case BindingKind::SampledTexture:
-        return "SampledTexture";
-    case BindingKind::StorageTexture:
-        return "StorageTexture";
     case BindingKind::Sampler:
         return "Sampler";
+    case BindingKind::Texture:
+        return "Texture";
+    case BindingKind::UniformBuffer:
+        return "UniformBuffer";
+    case BindingKind::ParameterBlock:
+        return "ParameterBlock";
+    case BindingKind::ReadOnlyStructuredBuffer:
+        return "ReadOnlyStructuredBuffer";
+    case BindingKind::ReadOnlyStorageBuffer:
+        return "ReadOnlyStorageBuffer";
+    case BindingKind::CombinedTextureSampler:
+        return "CombinedTextureSampler";
+    case BindingKind::InputRenderTarget:
+        return "InputRenderTarget";
+    case BindingKind::InlineUniform:
+        return "InlineUniform";
+    case BindingKind::RayTracingAccelerationStructure:
+        return "RayTracingAccelerationStructure";
+    case BindingKind::StructuredBuffer:
+        return "StructuredBuffer";
+    case BindingKind::StorageBuffer:
+        return "StorageBuffer";
+    case BindingKind::StorageTexture:
+        return "StorageTexture";
     case BindingKind::Invalid:
         return "Invalid";
     }

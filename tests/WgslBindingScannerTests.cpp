@@ -65,7 +65,7 @@ std::vector<ReflectedBinding> MakeAgreeingReflection()
     reflected.push_back(MakeReflected("IfftParams", 0u, 0u, BindingKind::UniformBuffer));
     reflected.push_back(MakeReflected("InputSpectrum", 0u, 1u, BindingKind::ReadOnlyStorageBuffer));
     reflected.push_back(MakeReflected("OutputSpectrum", 0u, 2u, BindingKind::StorageBuffer));
-    reflected.push_back(MakeReflected("HeightTexture", 1u, 0u, BindingKind::SampledTexture));
+    reflected.push_back(MakeReflected("HeightTexture", 1u, 0u, BindingKind::Texture));
     reflected.push_back(MakeReflected("LinearSampler", 1u, 1u, BindingKind::Sampler));
     reflected.push_back(MakeReflected("DefaultAccess", 2u, 0u, BindingKind::ReadOnlyStorageBuffer));
     return reflected;

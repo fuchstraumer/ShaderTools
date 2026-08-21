@@ -76,13 +76,17 @@ const UniformMemberInfo* FindUniformMember(std::span<const UniformMemberInfo> me
 
 bool IsBufferBinding(BindingKind kind) noexcept
 {
-    return kind == BindingKind::UniformBuffer || kind == BindingKind::StorageBuffer ||
-           kind == BindingKind::ReadOnlyStorageBuffer;
+    return kind == BindingKind::UniformBuffer ||
+           kind == BindingKind::ReadOnlyStorageBuffer ||
+           kind == BindingKind::StorageBuffer ||
+           kind == BindingKind::StructuredBuffer;
 }
 
 bool IsTextureBinding(BindingKind kind) noexcept
 {
-    return kind == BindingKind::SampledTexture || kind == BindingKind::StorageTexture;
+    return kind == BindingKind::Texture ||
+           kind == BindingKind::CombinedTextureSampler ||
+           kind == BindingKind::StorageTexture;
 }
 
 } // namespace lodestone
