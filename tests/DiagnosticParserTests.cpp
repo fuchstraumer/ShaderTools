@@ -3,6 +3,7 @@
 #include "TestHarness.hpp"
 #include <string>
 #include <string_view>
+#include <vector>
 
 // The parser is the boundary between what Slang says and what the cooker knows. Everything after it
 // reads a record, so a field this file gets wrong is a field no later stage can question.

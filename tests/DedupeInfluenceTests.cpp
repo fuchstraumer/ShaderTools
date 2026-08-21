@@ -1,3 +1,4 @@
+#include "CookerErrors.hpp"
 #include "TestHarness.hpp"
 
 #include "model/CookedLibrary.hpp"
@@ -6,11 +7,11 @@
 #include "model/ShaderDataSchema.hpp"
 #include "ShaderLibraryTypes.hpp"
 
-#include <array>
 #include <cstdint>
 #include <format>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 /** Proves that dedup changes what the tables cost and never what the cook measures.

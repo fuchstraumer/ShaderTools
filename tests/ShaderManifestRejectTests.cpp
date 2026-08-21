@@ -2,7 +2,7 @@
 #include "model/ShaderDataSchema.hpp"
 #include "ShaderLibraryTypes.hpp"
 #include "ShaderManifest.hpp"
-#include "model/ShaderManifestEmitter.hpp"
+#include "emit/ShaderManifestEmitter.hpp"
 #include "TestHarness.hpp"
 
 #include <cstddef>
@@ -18,6 +18,13 @@
 //
 // The valid case comes from the real emitter rather than from a hand-written header. A hand-written
 // header can agree with a hand-written reader and still not match what the cooker writes.
+
+#ifdef __clang__
+#pragma clang diagnostic push
+// ignoring these because this is not shipping code
+#pragma clang diagnostic ignored "-Wunsafe-buffer-usage-in-libc-call"
+#pragma clang diagnostic ignored "-Wunsafe-buffer-usage"
+#endif
 
 using lodestone::CookedModule;
 using lodestone::EmitShaderManifest;
@@ -41,7 +48,7 @@ CookedModule MakeSmallModule()
     module.SpaceSize = 2u;
 
     module.EntryPoints.push_back(
-        lodestone::LibraryEntryPoint{ "MainCS", lodestone::ShaderStageKind::Compute });
+        lodestone::LibraryEntryPoint{ .Name="MainCS", .Stage=lodestone::ShaderStageKind::Compute });
 
     module.Sources.emplace_back("// wgsl for variant zero");
     module.Sources.emplace_back("// wgsl for variant one");
@@ -70,8 +77,8 @@ CookedModule MakeSmallModule()
         variant.SourceIndices.push_back(i);
         variant.VisibilityIndices.push_back(0u);
         variant.RasterIndices.push_back(0u);
-        variant.Workgroups.push_back(lodestone::WorkgroupSize{ 64u, 1u, 1u });
-        module.Variants.push_back(std::move(variant));
+        variant.Workgroups.emplace_back(lodestone::WorkgroupSize{ .X=64u, .Y=1u, .Z=1u });
+        module.Variants.emplace_back(std::move(variant));
     }
 
     return module;

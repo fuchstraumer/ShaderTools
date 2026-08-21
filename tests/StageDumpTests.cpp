@@ -1,3 +1,4 @@
+#include "CookerErrors.hpp"
 #include "TestHarness.hpp"
 
 #include "model/ContentHash.hpp"
@@ -16,6 +17,7 @@
 #include <print>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 using namespace lodestone;
@@ -56,9 +58,9 @@ CompiledVariant MakeVariant(uint32_t index, const std::string& suffix, std::stri
     variant.VariantIndex = index;
     variant.VariantSuffix = suffix;
     variant.VariantDescription = "USE_FOO=" + std::string{ index == 0u ? "false" : "true" };
-    variant.GlobalBindings.push_back(binding);
-    variant.Footprints.push_back(BufferFootprint{ .ElementCount = 1024u, .Expression = "IFFT_SIZE * 4" });
-    variant.EntryPoints.push_back(std::move(entryPoint));
+    variant.GlobalBindings.emplace_back(std::move(binding));
+    variant.Footprints.emplace_back(BufferFootprint{ .ElementCount = 1024u, .Expression = "IFFT_SIZE * 4" });
+    variant.EntryPoints.emplace_back(std::move(entryPoint));
     return variant;
 }
 

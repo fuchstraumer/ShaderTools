@@ -1,5 +1,4 @@
 #include "TestHarness.hpp"
-#include <cmath>
 #include <print>
 #include <string_view>
 
@@ -8,7 +7,6 @@ namespace lodestone::tests
 
 TestRunner::TestRunner(std::string_view suite_name) noexcept
     : suiteName{ suite_name },
-      currentSection{},
       sectionHeadingPrinted{ false },
       checksRun{ 0u },
       failures{ 0u }

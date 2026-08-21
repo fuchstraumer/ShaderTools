@@ -14,7 +14,7 @@
                 "--O3",
                 "${workspaceFolder}/tests/assets/compute/Ocean/OceanFft.slang" ],
             "cwd": "${command:cmake.getLaunchTargetDirectory}",
-            "console": "integratedTerminal"
+            "console": "internalConsole"
         },
         {
             "name": "[VSDBG] Launch Live Cooker Target",
@@ -32,7 +32,7 @@
             "program": "${command:cmake.launchTargetPath}",
             "args": [
                 "-o", "${workspaceFolder}/out/cooked.hpp",
-                "--O3", "--dump-stage=all",
+                "--O3",
                 "${workspaceFolder}/tests/assets/compute/Ocean/OceanFft.slang" ],
             "cwd": "${command:cmake.getLaunchTargetDirectory}",
             "console": "integratedTerminal"

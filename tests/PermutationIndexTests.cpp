@@ -2,6 +2,7 @@
 #include "permute/PermutationSpace.hpp"
 #include "TestHarness.hpp"
 
+#include <cstddef>
 #include <cstdint>
 #include <vector>
 
@@ -92,7 +93,7 @@ int main()
                  "a disabled dependent axis removes the variants it would have produced");
 
     runner.BeginSection("every index is unique and inside the range");
-    std::vector<bool> seen(variants.SpaceSize, false);
+    std::vector<bool> seen(static_cast<size_t>(variants.SpaceSize), false);
     bool everyIndexIsUnique = true;
     bool everyIndexIsInRange = true;
     for (const VariantDescriptor& descriptor : variants.Variants)
@@ -103,12 +104,12 @@ int main()
             continue;
         }
 
-        if (seen[descriptor.Index])
+        if (seen[static_cast<size_t>(descriptor.Index)])
         {
             everyIndexIsUnique = false;
         }
 
-        seen[descriptor.Index] = true;
+        seen[static_cast<size_t>(descriptor.Index)] = true;
     }
 
     runner.Check(everyIndexIsInRange, "no index reaches past the dense range");

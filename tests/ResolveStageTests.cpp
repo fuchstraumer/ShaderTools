@@ -1,9 +1,15 @@
+#include "CookerErrors.hpp"
+#include "ShaderLibraryTypes.hpp"
 #include "compile/RawLibrary.hpp"
 #include "model/ResolveStage.hpp"
 #include "TestHarness.hpp"
+#include "model/ShaderDataSchema.hpp"
+#include "permute/PermutationSpace.hpp"
 #include <array>
+#include <cstdint>
 #include <expected>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <variant>
 #include <vector>

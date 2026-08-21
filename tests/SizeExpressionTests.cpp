@@ -1,6 +1,10 @@
 #include "permute/SizeExpression.hpp"
+#include "CookerErrors.hpp"
 #include "TestHarness.hpp"
+
 #include <array>
+#include <cstdint>
+#include <string_view>
 
 // The cooker evaluates `[vx_element_count("...")]` itself, because Slang folds attribute integer
 // arguments at compile time and the permutation constants only fold at link time. That makes this
@@ -14,10 +18,10 @@ using lodestone::SizeSymbol;
 namespace
 {
 
-constexpr std::array<SizeSymbol, 4> k_Symbols{ SizeSymbol{ "IFFT_SIZE", 512 },
-                                               SizeSymbol{ "IFFT_NUM_WAVE_CASCADES", 4 },
-                                               SizeSymbol{ "IFFT_WAVE_SIZE", 32 },
-                                               SizeSymbol{ "IFFT_USE_WAVE_OPS", 1 } };
+constexpr std::array<SizeSymbol, 4> k_Symbols{ SizeSymbol{ .Name="IFFT_SIZE", .Value=512 },
+                                               SizeSymbol{ .Name="IFFT_NUM_WAVE_CASCADES", .Value=4 },
+                                               SizeSymbol{ .Name="IFFT_WAVE_SIZE", .Value=32 },
+                                               SizeSymbol{ .Name="IFFT_USE_WAVE_OPS", .Value=1 } };
 
 void CheckValue(lodestone::tests::TestRunner& runner,
                 std::string_view expression,
