@@ -22,6 +22,7 @@
 #include <filesystem>
 #include <print>
 #include <ratio>
+#include <ranges>
 #include <span>
 #include <string>
 #include <string_view>
@@ -93,47 +94,47 @@ namespace
 
     /** Slang emits only the bindings an entry point actually references, so the WGSL for one entry
      * point is compared against the subset of program-scope bindings that entry point uses. */
-    std::vector<ReflectedBinding> SelectBindingsUsedByEntryPoint(const CompiledVariant& variant,
+    std::vector<const ReflectedBinding*> SelectBindingsUsedByEntryPoint(const CompiledVariant& variant,
                                                                  size_t entry_point_index)
     {
-        const std::vector<uint32_t>& usedIndices =
-            variant.EntryPoints[entry_point_index].Reflection.UsedBindingIndices;
-
-        std::vector<ReflectedBinding> used;
-        used.reserve(usedIndices.size());
-
-        for (const uint32_t bindingIndex : usedIndices)
+        auto extractBinding = [&variant](uint32_t bindingIndex) -> const ReflectedBinding*
         {
-            used.push_back(variant.GlobalBindings[bindingIndex]);
-        }
-
-        return used;
-    }
-
-    bool AnyEntryPointReadsBinding(const CompiledVariant& variant, uint32_t binding_index) noexcept
-    {
-        return std::ranges::any_of(variant.EntryPoints,
-                                   [binding_index](const CompiledEntryPoint& entry_point)
-                                   {
-                                       return std::ranges::contains(entry_point.Reflection.UsedBindingIndices,
-                                                                    binding_index);
-                                   });
+            return &variant.GlobalBindings[bindingIndex];
+        };
+        return variant.EntryPoints[entry_point_index].Reflection.UsedBindingIndices |
+               std::views::transform(extractBinding) |
+               std::ranges::to<std::vector<const ReflectedBinding*>>();
     }
 
     void ReportUnreferencedBindings(const CompiledVariant& variant)
     {
-        for (size_t bindingIndex = 0u; bindingIndex < variant.GlobalBindings.size(); ++bindingIndex)
+        // i think we could flatten this even more with a vector of bools or bytes, but that's kinda ugly
+        auto extractUsedBindingIndices = [](const CompiledEntryPoint& entry_point)
         {
-            if (AnyEntryPointReadsBinding(variant, static_cast<uint32_t>(bindingIndex)))
-            {
-                continue;
-            }
+            return entry_point.Reflection.UsedBindingIndices;
+        };
+        auto allUsedBindingIndices = variant.EntryPoints |
+                                     std::views::transform(extractUsedBindingIndices) |
+                                     std::views::join |
+                                     std::ranges::to<std::vector<uint32_t>>();
 
+        std::ranges::sort(allUsedBindingIndices);
+        // clear out duplicates
+        auto [beginDuplicates, endDuplicates] = std::ranges::unique(allUsedBindingIndices);
+        allUsedBindingIndices.erase(beginDuplicates, endDuplicates);
+        std::vector<uint32_t> unusedBindingIndices;
+        std::ranges::set_difference(
+            std::views::iota(0u, static_cast<uint32_t>(variant.GlobalBindings.size())),
+            allUsedBindingIndices,
+            std::back_inserter(unusedBindingIndices));
+
+        for (const auto& unusedIndex : unusedBindingIndices)
+        {
             std::println(
                 stderr,
                 "[shader_cooker] unreferenced binding in [{}]: {} is declared but no entrypoint reads it",
                 variant.VariantDescription,
-                DescribeBinding(variant.GlobalBindings[bindingIndex]));
+                DescribeBinding(variant.GlobalBindings[unusedIndex]));
         }
     }
 
@@ -168,7 +169,7 @@ namespace
         for (size_t i = 0u; i < variant.EntryPoints.size(); ++i)
         {
             const CompiledEntryPoint& entryPoint = variant.EntryPoints[i];
-            const std::vector<ReflectedBinding> used = SelectBindingsUsedByEntryPoint(variant, i);
+            std::vector<const ReflectedBinding*> used = SelectBindingsUsedByEntryPoint(variant, i);
             const BindingComparison comparison = target.Validator->ValidateEntryPoint(entryPoint.Code, used);
 
             if (!comparison.Matches)
@@ -194,7 +195,7 @@ namespace
                                                uint32_t variant_index) noexcept
     {
         // `compiled` is sorted in ascending order already: we can use lower_bound to find variant idx in log2(n)
-        auto candidateIter = std::ranges::lower_bound(compiled, variant_index, {}, &CompiledVariant::VariantIndex);
+        auto candidateIter = std::ranges::lower_bound(compiled, variant_index, std::less{}, &CompiledVariant::VariantIndex);
         if (candidateIter != compiled.end() && candidateIter->VariantIndex == variant_index)
         {
             return std::to_address(candidateIter);
