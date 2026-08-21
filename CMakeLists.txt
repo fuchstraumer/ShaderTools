@@ -68,55 +68,68 @@ set(LODESTONE_CLIENT_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/client/src/ShaderLibraryTypes.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/client/src/ShaderManifest.cpp")
 
-set(LODESTONE_HEADERS
-    "${CMAKE_CURRENT_SOURCE_DIR}/include/CookerDriver.hpp"
+set(LODESTONE_COMMON_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/include/CookerErrors.hpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/include/CookerOptions.hpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/include/OutputSink.hpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/include/PermutationSpace.hpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/include/RawLibrary.hpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/include/ResolveStage.hpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/include/ContentHash.hpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/include/ContentInterner.hpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/include/CookedLibrary.hpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/include/DedupeReport.hpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/include/Diagnostics.hpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/include/ShaderDataSchema.hpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/include/ShaderLibraryEmitter.hpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/include/ShaderManifestEmitter.hpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/include/SizeExpression.hpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/include/SlangCompiler.hpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/include/SlangDiagnosticParser.hpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/include/StageDump.hpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/include/TargetProfile.hpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/include/WgslBindingScanner.hpp")
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/CookerErrors.cpp")
 
-set(LODESTONE_SOURCES
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/ContentHash.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/CookedLibrary.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/CookerDriver.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/DedupeReport.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/Diagnostics.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/CookerErrors.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/CookerOptions.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/OutputSink.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/PermutationSpace.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/RawLibrary.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/ResolveStage.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/ShaderDataSchema.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/ShaderLibraryEmitter.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/ShaderManifestEmitter.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/SizeExpression.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/SlangCompiler.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/SlangDiagnosticParser.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/StageDump.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/TargetProfile.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/src/WgslBindingScanner.cpp")
+set(LODESTONE_COMPILE_SOURCES
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/compile/Diagnostics.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/compile/RawLibrary.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/compile/SlangCompiler.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/compile/SlangDiagnosticParser.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/compile/Diagnostics.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/compile/RawLibrary.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/compile/SlangCompiler.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/compile/SlangDiagnosticParser.cpp")
+
+set(LODESTONE_DRIVER_SOURCES
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/driver/CookerDriver.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/driver/CookerOptions.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/driver/CookerDriver.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/driver/CookerOptions.cpp")
+
+set(LODESTONE_EMIT_SOURCES
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/emit/DedupeReport.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/emit/OutputSink.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/emit/ShaderLibraryEmitter.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/emit/ShaderManifestEmitter.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/emit/StageDump.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/emit/DedupeReport.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/emit/OutputSink.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/emit/ShaderLibraryEmitter.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/emit/ShaderManifestEmitter.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/emit/StageDump.cpp")
+
+set(LODESTONE_MODEL_SOURCES
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/model/ContentHash.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/model/ContentInterner.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/model/CookedLibrary.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/model/ResolveStage.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/model/ShaderDataSchema.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/model/ContentHash.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/model/CookedLibrary.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/model/ResolveStage.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/model/ShaderDataSchema.cpp")
+
+set(LODESTONE_PERMUTE_SOURCES
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/permute/PermutationSpace.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/permute/SizeExpression.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/permute/PermutationSpace.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/permute/SizeExpression.cpp")
+
+set(LODESTONE_TARGET_SOURCES
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/target/TargetProfile.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/target/WgslBindingScanner.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/target/TargetProfile.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/target/WgslBindingScanner.cpp")
+
 
 # Static on purpose. No header marks a symbol dllexport, so a Windows DLL build of this target exports
 # nothing and every consumer fails to link. A SHARED build is a temporary measure for instrumented
 # performance analysis only, and it needs WINDOWS_EXPORT_ALL_SYMBOLS to link at all.
-add_library(lodestone STATIC ${LODESTONE_SOURCES} ${LODESTONE_HEADERS})
+add_library(lodestone STATIC ${LODESTONE_COMMON_SOURCES} ${LODESTONE_COMPILE_SOURCES} ${LODESTONE_DRIVER_SOURCES}
+                             ${LODESTONE_EMIT_SOURCES} ${LODESTONE_MODEL_SOURCES} ${LODESTONE_PERMUTE_SOURCES}
+                             ${LODESTONE_TARGET_SOURCES})
 add_library(lodestone::lodestone ALIAS lodestone)
 set_target_properties(lodestone PROPERTIES CXX_STANDARD 23 CXX_STANDARD_REQUIRED ON CXX_EXTENSIONS OFF)
 # The engine include path carries shader/ShaderLibraryTypes.hpp and resource/ResourceFlags.hpp. The
@@ -138,8 +151,13 @@ if (NOT CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
     target_compile_options(lodestone PRIVATE "$<$<CONFIG:Debug>:-fcolor-diagnostics;-fansi-escape-codes;-fstandalone-debug;-fno-limit-debug-info;-fno-omit-frame-pointer>")
 endif()
 
-source_group("include" FILES ${LODESTONE_HEADERS})
-source_group("src" FILES ${LODESTONE_SOURCES})
+source_group("common" FILES ${LODESTONE_COMMON_SOURCES})
+source_group("compile" FILES ${LODESTONE_COMPILE_SOURCES})
+source_group("driver" FILES ${LODESTONE_DRIVER_SOURCES})
+source_group("emit" FILES ${LODESTONE_EMIT_SOURCES})
+source_group("model" FILES ${LODESTONE_MODEL_SOURCES})
+source_group("permute" FILES ${LODESTONE_PERMUTE_SOURCES})
+source_group("target" FILES ${LODESTONE_TARGET_SOURCES})
 source_group("client" FILES ${LODESTONE_CLIENT_HEADERS} ${LODESTONE_CLIENT_SOURCES})
 
 copy_slang_dlls_to_target(lodestone)

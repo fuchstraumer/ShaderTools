@@ -1,7 +1,7 @@
-#include "CookerDriver.hpp"
+#include "driver/CookerDriver.hpp"
 #include "CookerErrors.hpp"
-#include "CookerOptions.hpp"
-#include "OutputSink.hpp"
+#include "driver/CookerOptions.hpp"
+#include "emit/OutputSink.hpp"
 
 #include <cstddef>
 #include <cstdio>
