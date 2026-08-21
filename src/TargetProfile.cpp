@@ -15,6 +15,11 @@ namespace
 {
     constexpr bool BoundPlacementLess(const ReflectedBinding* lhs, const ReflectedBinding* rhs) noexcept
     {
+        if (lhs == nullptr || rhs == nullptr)
+        {
+            return lhs != nullptr;
+        }
+
         const BoundPlacement* lhsBinding = std::get_if<BoundPlacement>(&lhs->Placement);
         const BoundPlacement* rhsBinding = std::get_if<BoundPlacement>(&rhs->Placement);
         if (lhsBinding->Group != rhsBinding->Group)

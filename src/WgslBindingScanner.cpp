@@ -320,7 +320,28 @@ BindingComparison CompareBindings(std::span<const WgslDeclaredBinding> declared,
 
         if (declaredTuple == reflectedTuple)
         {
-            // Match found, advance both iterators
+
+            if (StripSlangNameMangling(declaredBinding.Name) != StripSlangNameMangling(reflectedBinding->Name))
+            {
+                comparison.Matches = false;
+                comparison.Report += std::format("  wgsl declares @group({}) @binding({}) {} : reflection has "
+                                                 "mismatched name\n",
+                                                 declaredBinding.Group,
+                                                 declaredBinding.Binding,
+                                                 StripSlangNameMangling(declaredBinding.Name));
+            }
+
+            if (!AddressSpaceAgreesWithKind(declaredBinding.AddressSpace,
+                                            reflectedBinding->Kind))
+            {
+                comparison.Matches = false;
+                comparison.Report += std::format("  wgsl declares @group({}) @binding({}) {} : reflection has "
+                                                 "mismatched address space\n",
+                                                 declaredBinding.Group,
+                                                 declaredBinding.Binding,
+                                                 StripSlangNameMangling(declaredBinding.Name));
+            }
+
             ++iterDeclared;
             ++iterReflected;
         }
@@ -346,6 +367,32 @@ BindingComparison CompareBindings(std::span<const WgslDeclaredBinding> declared,
                                              StripSlangNameMangling(reflectedBinding->Name));
             ++iterReflected;
         }
+    }
+
+    // Drain and report any remaining bindings that weren't matched
+
+    while (iterDeclared != declared.end())
+    {
+        const WgslDeclaredBinding& declaredBinding = *iterDeclared;
+        comparison.Matches = false;
+        comparison.Report += std::format("  wgsl declares @group({}) @binding({}) {} : reflection has "
+                                         "no binding at that location\n",
+                                         declaredBinding.Group,
+                                         declaredBinding.Binding,
+                                         StripSlangNameMangling(declaredBinding.Name));
+        ++iterDeclared;
+    }
+
+    while (iterReflected != reflected.end())
+    {
+        const ReflectedBinding* reflectedBinding = *iterReflected;
+        comparison.Matches = false;
+        comparison.Report += std::format("  reflection has @group({}) @binding({}) {} : wgsl has "
+                                         "no binding at that location\n",
+                                         GroupOf(*reflectedBinding),
+                                         BindingOf(*reflectedBinding),
+                                         StripSlangNameMangling(reflectedBinding->Name));
+        ++iterReflected;
     }
 
     return comparison;
