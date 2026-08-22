@@ -141,6 +141,8 @@ namespace
     {
         switch (level)
         {
+        case 0u:
+            return SLANG_OPTIMIZATION_LEVEL_NONE;
         case 1u:
             return SLANG_OPTIMIZATION_LEVEL_DEFAULT;
         case 2u:
