@@ -1,17 +1,14 @@
 #include "compile/SlangCompiler.hpp"
 #include "CookerErrors.hpp"
-#include "ResourceFlags.hpp"
-#include "ShaderLibraryTypes.hpp"
 #include "compile/Diagnostics.hpp"
 #include "compile/RawLibrary.hpp"
 #include "compile/SlangDiagnosticParser.hpp"
 #include "model/ShaderDataSchema.hpp"
 #include "permute/PermutationAssignment.hpp"
 #include "permute/PermutationSpace.hpp"
-
-#include <slang-com-helper.h>
-#include <slang-com-ptr.h>
-#include <slang.h>
+#include "permute/PermutationValue.hpp"
+#include "ResourceFlags.hpp"
+#include "ShaderLibraryTypes.hpp"
 
 #include <algorithm>
 #include <array>
@@ -32,6 +29,11 @@
 #include <string_view>
 #include <utility>
 #include <vector>
+
+#include <slang-com-helper.h>
+#include <slang-com-ptr.h>
+#include <slang.h>
+
 
 namespace lodestone
 {
@@ -56,6 +58,24 @@ namespace
     constexpr std::array<RawSizeAttributeKind, 3u> k_SizeAttributeKinds{ RawSizeAttributeKind::ElementCount,
                                                                          RawSizeAttributeKind::Extent2d,
                                                                          RawSizeAttributeKind::Extent3d };
+                                                         
+    std::string BlobToString(slang::IBlob* blob)
+    {
+        return std::string{ static_cast<const char*>(blob->getBufferPointer()), blob->getBufferSize() };
+    }
+
+    void ReportDiagnostics(DiagnosticSink& sink, std::string_view context, slang::IBlob* blob)
+    {
+        // this check is the point of this function: only report diagnostics if blob has content,
+        // but otherwise make it trivial to call inline in case we want to report diagnositcs from
+        // slang calls
+        if (blob == nullptr || blob->getBufferSize() == 0u)
+        {
+            return;
+        }
+
+        ParseSlangDiagnostics(BlobToString(blob), context, sink);
+    }
 
     /** Attribute string arguments reflect as a pointer plus a length, and a null return means the
      * argument was not a string literal after all. That is a cook error rather than a skip: the
@@ -84,36 +104,6 @@ namespace
         }
 
         return std::string{ value };
-    }
-
-    std::string BlobToString(slang::IBlob* blob)
-    {
-        if (blob == nullptr)
-        {
-            return {};
-        }
-
-        return std::string{ static_cast<const char*>(blob->getBufferPointer()), blob->getBufferSize() };
-    }
-
-    void ReportDiagnosticText(DiagnosticSink& sink, std::string_view context, std::string_view text)
-    {
-        if (text.empty())
-        {
-            return;
-        }
-
-        ParseSlangDiagnostics(text, context, sink);
-    }
-
-    void ReportDiagnostics(DiagnosticSink& sink, std::string_view context, slang::IBlob* blob)
-    {
-        if (blob == nullptr || blob->getBufferSize() == 0u)
-        {
-            return;
-        }
-
-        ReportDiagnosticText(sink, context, BlobToString(blob));
     }
 
     /** What one entry point's codegen produced. The diagnostic text travels with the code so that a
@@ -310,8 +300,8 @@ namespace
         }
     }
 
-    /** Splits one varying into a scalar type and a component count. A scalar counts as one component,
-     * so a caller never has to test the kind again. */
+    /** Splits one varying (shader input/output semantic) into a scalar type and a component count. A scalar
+     * counts as one component, so a caller never has to test the kind again. */
     void ReadVaryingShape(slang::TypeLayoutReflection* type_layout,
                           VertexScalarType& out_scalar_type,
                           uint32_t& out_component_count) noexcept
@@ -444,11 +434,10 @@ namespace
         return joined;
     }
 
-    /** Flattens one uniform block into rows of name, offset, and size. A nested field takes a dotted
-     * name, because the consumer compares offsets and a tree would only make that harder.
-     *
-     * The root is a struct type layout and not a var layout, so nothing roots the offset and each
-     * field of it counts from zero. */
+    /**Flattens one uniform block into rows of name, offset, and size. Nested fields take
+     * a dotted name to reflect the hierarchy. Offset is accumulated from the root of the
+     * struct, as slang structures offsets from zero based on recursive walks of all fields.
+     */
     void CollectUniformMembers(slang::TypeLayoutReflection* struct_layout,
                                std::vector<ReflectedUniformMember>& members)
     {
@@ -464,14 +453,13 @@ namespace
             {
                 return;
             }
+            const auto memberSize =
+                static_cast<uint32_t>(leaf.Type->getSize(SLANG_PARAMETER_CATEGORY_UNIFORM));
+            const auto arrayCount = leaf.Type->getKind() == slang::TypeReflection::Kind::Array
+                                        ? static_cast<uint32_t>(leaf.Type->getElementCount())
+                                        : 1u;
 
-            members.emplace_back(ReflectedUniformMember{
-                .Name = std::move(name),
-                .Offset = leaf.Offset,
-                .Size = static_cast<uint32_t>(leaf.Type->getSize(SLANG_PARAMETER_CATEGORY_UNIFORM)),
-                .ArrayCount = leaf.Type->getKind() == slang::TypeReflection::Kind::Array
-                                  ? static_cast<uint32_t>(leaf.Type->getElementCount())
-                                  : 1u });
+            members.emplace_back(std::move(name), leaf.Offset, memberSize, arrayCount);
         };
 
         std::vector<slang::VariableLayoutReflection*> path;
@@ -519,25 +507,24 @@ namespace
     /** Records every color target the fragment result declares, and whether it writes depth itself. */
     void CollectColorTargets(slang::VariableLayoutReflection* var_layout, ReflectedRasterState& raster)
     {
-        WalkVaryingTree(var_layout,
-                        SLANG_PARAMETER_CATEGORY_VARYING_OUTPUT,
-                        [&raster](const LeafVisit& leaf)
-                        {
-                            if (IsDepthSemantic(ReadSemanticName(leaf.Var)))
-                            {
-                                raster.WritesFragDepth = true;
-                                return;
-                            }
+        auto varyingVisitor = [&raster](const LeafVisit& leaf)
+        {
+            if (IsDepthSemantic(ReadSemanticName(leaf.Var)))
+            {
+                raster.WritesFragDepth = true;
+                return;
+            }
 
-                            ReflectedColorTarget target;
-                            target.Location = leaf.Offset;
-                            ReadVaryingShape(leaf.Type, target.ScalarType, target.ComponentCount);
+            ReflectedColorTarget target;
+            target.Location = leaf.Offset;
+            ReadVaryingShape(leaf.Type, target.ScalarType, target.ComponentCount);
 
-                            if (target.ComponentCount != 0u)
-                            {
-                                raster.ColorTargets.emplace_back(target);
-                            }
-                        });
+            if (target.ComponentCount != 0u)
+            {
+                raster.ColorTargets.emplace_back(target);
+            }
+        };
+        WalkVaryingTree(var_layout, SLANG_PARAMETER_CATEGORY_VARYING_OUTPUT, varyingVisitor);
     }
 
     /** A fragment shader can write depth through an `out` parameter rather than through its result,
@@ -1004,7 +991,10 @@ std::vector<std::string> SlangCompiler::Impl::GenerateEntryPointCode(
     for (size_t i = 0; i < entryPointCount; ++i)
     {
         GeneratedEntryPoint result = GenerateOneEntryPoint(linked_program, i);
-        ReportDiagnosticText(*Sink, "getEntryPointCode", result.Diagnostics);
+        if (!result.Diagnostics.empty())
+        {
+            ParseSlangDiagnostics(result.Diagnostics, "getEntryPointCode", *Sink);
+        }
         generated[i] = std::move(result.Code);
     }
 
