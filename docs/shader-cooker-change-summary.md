@@ -139,8 +139,8 @@ would reduce it, and no measurement asks for that yet.
 
 Report these only if you find more. They are on the list.
 
-1. **`k_UsageText` is stale.** `CookerOptions.cpp` lists neither `--no-dedupe` nor
-   `--verify-deterministic`. Both work.
+1. ~~**`k_UsageText` is stale.**~~ **Fixed.** `GetUsageText` now lists every flag, `--target` and
+   `--dump-stage` included.
 2. **The entry point identifier counts from one.** `EntryPointId::Invalid` is 0, so `FindSlot`
    subtracts one. A `todo-ship` in `ShaderLibraryTypes.hpp` records the fix: change to `int32_t` with
    `Invalid = -1` and count from zero.
@@ -148,15 +148,15 @@ Report these only if you find more. They are on the list.
    `OceanFft`, and `k_OceanFftPolicy` holds project data. A data-driven registry is future work.
 4. **`ShaderManifest.cpp` uses magic_enum for one `ToString`.** The runtime target should carry no
    third-party dependency. The repository hand-writes the same switch elsewhere.
-5. **Stage 3 and stage 4 are fused.** `SlangCompiler.cpp` both talks to Slang and resolves attributes,
-   size expressions, and the WGSL cross-check. The separation pass is the next planned work, and it is
-   what lets a target other than WGSL exist.
-6. **A stage gets bindings that it does not touch.** `GetBindings(entry_point, variant)` gives the
-   whole program-scope list, and `BindingInfo` holds no usage mask. `MainVS` therefore gets a layout
-   that holds `BaseColorTexture` and `BaseColorSampler`, which the vertex stage never reads. A caller
-   that builds a bind group layout from this over-declares, and WebGPU then demands resources that the
-   stage never touches. The fix moves `EntryPointUsageMask` and changes the interned layout key, so it
-   is a separate pass.
+5. ~~**Stage 3 and stage 4 are fused.**~~ **Fixed by phase D step D5.** Stage 3 is
+   `SlangCompiler::CompileVariantRaw` and returns `RawVariant`. Stage 4 is `ResolveVariant` in
+   `ResolveStage.cpp`. `SlangCompiler.cpp` names no size expression and no `[vx_*]` attribute, and
+   `ResolveStage.cpp` names no Slang type. `ResolveStageTest` resolves a hand-built variant with no
+   compiler present, which is the proof the split worked.
+6. ~~**A stage gets bindings that it does not touch.**~~ **Fixed by phase D steps D3 and D8b.** A
+   variant holds one `GlobalBindings` list, and each entry point holds its own visibility list. A
+   visibility list holds indices and not a mask, because a mask is undefined behaviour at 32 entry
+   points and a subset is a list.
 7. **`ReportUnreferencedBindings` has three faults.** Commit `1bba390` added it, before this change
    set. The call sits behind `options.ReportReflection`, so `--quiet` turns the check off. It costs
    O(bindings squared x entry points) for each variant, because the inner search re-finds an index
@@ -180,21 +180,41 @@ Ask these. They test the parts that matter.
 
 ## 7. Evidence from the last full run
 
+Measured after phase D. The earlier reading is in the second table, because a comparison against it is
+how each phase D step proved itself.
+
 | Measure | Value |
 |---|---|
 | Nominal permutations | 56 |
 | Permutations after canonicalization | 35 |
 | Artifacts | 105 |
 | Unique sources | 77 |
-| Unique layouts | 21 |
+| Unique resources | 4 |
+| Unique resource lists | 1 |
+| Unique footprint lists | 7 |
+| Unique visibility lists | 2 |
 | Hash collisions | 0 |
+| Byte comparisons forced by a hash hit | 329 |
+| Hash function | xxHash3_64 |
+| Manifest size against generated C++ | 653 KiB against 688 KiB |
+
+`IfftPermuteCS` is inert on both wave axes and collapses 35 sources to 7.
+
+**One layout table became four.** The old reading was 21 unique layouts, which is 3 entry points by 7
+sizes. One struct carried three concerns with three different keys, so the table was the Cartesian
+product of three tables. Phase D step D8b split them, and two of the three numbers turned out to count
+something other than what they claimed. Visibility is 2 and not 3, because two entry points read the
+same set of resources and only the mask bit separated them. A resource is 4 and not 1, because 1
+counted a layout and 4 counts the bindings in it. `docs/phase-d-stage-separation-plan.md` §4b and the
+D8b notes hold the reasoning.
+
+### The reading before phase D
+
+| Measure | Value |
+|---|---|
+| Unique layouts | 21 |
 | Byte comparisons forced by a hash hit | 112 |
 | A/B pairs identical, baked against manifest | 168 |
 | WGSL address space declarations checked | 231 |
 | Manifest size against generated C++ | 657 KiB against 708 KiB |
-
-`IfftPermuteCS` is inert on both wave axes and collapses 35 sources to 7.
-
-Layouts do not collapse to one. 21 is 3 entry points by 7 sizes, because `[vx_element_count]` makes a
-layout depend on the size. A consumer must hold a layout for each entry point and size, not one for
-each module.
+| Hash function | fnv1a-64 |

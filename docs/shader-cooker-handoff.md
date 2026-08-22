@@ -9,7 +9,8 @@ Read `docs/cooker-rendergraph-plan.md` first. It is the design document. This fi
 
 ## 1. State
 
-The agreed scope was Tier A, Tier B, and C1 to C4. All of it is complete. Tier D and item C5 were cut.
+The agreed scope was Tier A, Tier B, and C1 to C4. All of it is complete. Tier D was cut at the time
+and has since been built in full: see `docs/phase-d-stage-separation-plan.md`. Item C5 is still cut.
 
 | Tier | Result |
 |---|---|
@@ -23,9 +24,14 @@ The agreed scope was Tier A, Tier B, and C1 to C4. All of it is complete. Tier D
 Measured numbers on `OceanFft.slang`, for regression comparison:
 
 - 56 nominal permutations, 35 after canonicalization
-- 105 artifacts, 77 unique sources, 21 unique layouts
-- 0 hash collisions, 112 byte comparisons
-- 168 A/B pairs identical between the baked library and the manifest
+- 105 artifacts, 77 unique sources
+- 4 resources, 1 resource list, 7 footprint lists, 2 visibility lists
+- 0 hash collisions, 329 byte comparisons
+- 105 entry point variants identical between the baked library and the manifest
+
+The binding numbers changed with phase D step D8b, which replaced one layout table of 21 entries with
+four tables that each have their own key. The earlier reading was "21 unique layouts, 112 byte
+comparisons".
 
 ---
 
@@ -46,9 +52,15 @@ Start each change with these. A change that breaks one is wrong, even if the coo
 
 ---
 
-## 3. Next task: the stage separation pass
+## 3. The stage separation pass
 
-This is the key work. Do it first.
+**Done, as phase D.** `docs/phase-d-stage-separation-plan.md` is the record: it holds the method, the
+steps, the findings from each one, and the measured numbers at the end. Read this section for the
+reasoning that set the shape. Read that file for what was built.
+
+The next task is phase E. `docs/phase-e-data-driven-permutations.md` §9 lists what phase D was asked
+to leave behind for it. One item there is open: the stage 1 dump does not yet carry the axis fields
+that step E2 adds, so E2 cannot yet prove itself with a byte comparison.
 
 ### Why it matters
 
@@ -58,12 +70,17 @@ ready for a second target, because two jobs are fused.
 `SlangCompiler.cpp` does two different things today:
 
 - It talks to Slang and gets bytes and raw reflection. This is stage 3, Compile.
-- It evaluates size expressions, reads `[vx_*]` attributes, and cross-checks the emitted WGSL. This is
-  stage 4, Resolve.
+- It evaluates size expressions and reads `[vx_*]` attributes. This is stage 4, Resolve.
+
+A third job runs after stage 4, and it is **not** a stage. The cross-check reads the emitted WGSL and
+compares it against the reflection. **A stage transforms. A validator compares.** A validator gets a
+name and no number, because a number would state that every target must supply one. Phase D step D0
+settled this, and step D7 gives the cross-check the name `ValidateResolvedLibrary`.
 
 The cross-check is target specific by construction. `WgslBindingScanner` reads WGSL text. A SPIR-V
-target needs SPIRV-Reflect. A DXIL target needs DXC reflection. While stage 3 and stage 4 stay fused,
-each new target duplicates the compile path too.
+target needs SPIRV-Reflect. A DXIL target needs DXC reflection. A target that emits no readable text
+supplies no validator, and the pipeline still runs. While stage 3 and stage 4 stay fused, each new
+target duplicates the compile path too.
 
 **Separate stage 3 from stage 4, and the target language becomes a parameter.** Stages 5 to 8 stay
 shared, because they already read a model that names no Slang type and no WGSL text.
@@ -87,9 +104,9 @@ Four of the eight stage boundaries are real types. Do not rebuild them.
 1. Add a `RawLibrary` type. It holds compiled bytes and raw reflection. It names no `[vx_*]` attribute
    and no size expression.
 2. Move all Slang contact into stage 3. Stage 3 returns `RawLibrary`.
-3. Move size expressions, attribute reads, and the cross-check into stage 4. Stage 4 returns
-   `ResolvedLibrary`.
-4. Make the cross-check an interface. `WgslBindingScanner` becomes one implementation.
+3. Move size expressions and attribute reads into stage 4. Stage 4 returns `ResolvedLibrary`.
+4. Make the cross-check an interface, named `ValidateResolvedLibrary`. It stays a validator with no
+   stage number. `WgslBindingScanner` becomes one implementation.
 5. Leave stage 5 empty. The report says `normalization passes active: (none)`. This is correct. A
    whitespace pass without a stage boundary hides the difference between a true collapse and an effect
    of the stripping.
@@ -101,6 +118,14 @@ Four of the eight stage boundaries are real types. Do not rebuild them.
 Do these after the stage split, or before it if the user asks.
 
 ### A stage gets bindings that it does not touch
+
+**Done, as phase D steps D3 and D8b.** `CompiledVariant` holds one `GlobalBindings` list, an entry
+point holds its own visibility, and visibility left the key. Visibility is a list of indices and never
+a mask: `1u << entry_point_index` was undefined behaviour at 32 entry points, and a subset is a list.
+The prediction below was close and not exact. The layout table did not fall from 21 to 7; it became
+four tables of 4, 1, 7, and 2. The reasoning is in `docs/phase-d-stage-separation-plan.md` §4b.
+
+The rest of this entry is the original finding.
 
 **Correctness. Fix this before you show the tool to anyone.**
 
@@ -207,6 +232,14 @@ Nobody scheduled this work. Each part records a decision and gives the words to 
 
 ### Give diagnostics a structured sink
 
+**Done, as phase D step D5b.** `include/Diagnostics.hpp` holds the record and the sink.
+`include/SlangDiagnosticParser.hpp` reads Slang's machine-readable form, which the compiler option
+`EnableMachineReadableDiagnostics` turns on. Do not parse the block form: it is a layout for a person.
+`docs/phase-d-stage-separation-plan.md` §4c records what is still open, which is a source location for
+a check that this repository performs rather than one that Slang performs.
+
+The rest of this entry is the original design, kept because it states the reasoning.
+
 The cooker formats each error as text where the error happens. A live-edit session cannot use that.
 
 Do this instead:
@@ -228,6 +261,10 @@ Terms in space: diagnostic sink, diagnostic consumer, structured diagnostics, la
 diagnostic.
 
 ### Give each target a capability profile
+
+**Started, as phase D step D7.** `TargetProfile.hpp` holds a target name, an access model, and an
+optional validator, and `--target` names one. `wgsl` is the only name this build has, and the profile
+carries no capability mapping yet. The rest of this entry is the design that mapping should follow.
 
 `ShaderLibraryTypes` declares the union of every concept. One target supports a subset. State which.
 
