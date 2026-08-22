@@ -105,7 +105,7 @@ namespace
     {
         auto extractBinding = [&variant](uint32_t bindingIndex) -> const ReflectedBinding*
         {
-            return &variant.GlobalBindings[bindingIndex];
+            return &variant.Bindings[bindingIndex];
         };
         return variant.EntryPoints[entry_point_index].Reflection.UsedBindingIndices |
                std::views::transform(extractBinding) |
@@ -128,7 +128,7 @@ namespace
         allUsedBindingIndices.erase(beginDuplicates, endDuplicates);
         std::vector<uint32_t> unusedBindingIndices;
         std::ranges::set_difference(
-            std::views::iota(0u, static_cast<uint32_t>(variant.GlobalBindings.size())),
+            std::views::iota(0u, static_cast<uint32_t>(variant.Bindings.size())),
             allUsedBindingIndices,
             std::back_inserter(unusedBindingIndices));
 
@@ -138,7 +138,7 @@ namespace
                 stderr,
                 "[shader_cooker] unreferenced binding in [{}]: {} is declared but no entrypoint reads it",
                 variant.VariantDescription,
-                DescribeBinding(variant.GlobalBindings[unusedIndex]));
+                DescribeBinding(variant.Bindings[unusedIndex]));
         }
     }
 

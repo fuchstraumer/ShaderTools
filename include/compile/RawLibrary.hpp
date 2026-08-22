@@ -50,7 +50,7 @@ uint32_t ArgumentCountOf(RawSizeAttributeKind kind) noexcept;
  * reflection untouched, and stage 4 does the arithmetic once for each variant. */
 struct RawSizeAttribute
 {
-    /** Index into `RawVariant::GlobalBindings`. */
+    /** Index into `RawVariant::Bindings`. */
     uint32_t BindingIndex{ 0u };
     RawSizeAttributeKind Kind{ RawSizeAttributeKind::Invalid };
     std::vector<std::string> Arguments;
@@ -88,7 +88,7 @@ struct RawEntryPoint
     WorkgroupSize Workgroup;
     /** The text the target backend generated. Stage 3 does not read it. */
     std::string TargetText;
-    /** Indices into `RawVariant::GlobalBindings`, ascending. This is visibility. */
+    /** Indices into `RawVariant::Bindings`, ascending. This is visibility. */
     std::vector<uint32_t> UsedBindingIndices;
     ReflectedRasterState Raster;
 };
@@ -98,7 +98,7 @@ struct RawVariant
     std::string VariantSuffix;
     std::string VariantDescription;
     uint32_t VariantIndex{ 0u };
-    std::vector<RawBinding> GlobalBindings;
+    std::vector<RawBinding> Bindings;
     /** Unevaluated. Stage 4 turns these into numbers. */
     std::vector<RawSizeAttribute> SizeAttributes;
     std::vector<RawEntryPoint> EntryPoints;

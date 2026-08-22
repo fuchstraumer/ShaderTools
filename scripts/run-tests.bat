@@ -25,7 +25,7 @@ if not exist "%BIN%" (
 set "FAILED=0"
 
 for %%T in ("%BIN%\*Test.exe") do (
-    if /I not "%%~nT"=="CookTest" (
+    if /I not "%%~nT"=="CookTest" if /I not "%%~nT"=="EntryPointParamsCookTest" (
         "%%~fT" >nul 2>&1
         if errorlevel 1 (
             echo [FAIL] %%~nT
@@ -46,6 +46,15 @@ if errorlevel 1 (
     set "FAILED=1"
 ) else (
     echo [ ok ] CookTest
+)
+
+REM The same driver, on the probe module for the entry point parameter scope. It cooks one variant.
+"%BIN%\EntryPointParamsCookTest.exe" -o "%REPO%\build\%PRESET%\tests\entry_point_params_output\ShaderLibrary.hpp" --verify-deterministic "%REPO%\tests\assets\EntryPointParams.slang" >nul 2>&1
+if errorlevel 1 (
+    echo [FAIL] EntryPointParamsCookTest
+    set "FAILED=1"
+) else (
+    echo [ ok ] EntryPointParamsCookTest
 )
 
 if "%FAILED%"=="1" (

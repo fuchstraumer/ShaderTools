@@ -215,7 +215,7 @@ struct ReflectedRasterState
  *
  * The binding list is not here. Slang reports the program-scope bindings, so every entry point of one
  * variant sees the same set, and a copy for each entry point states the same fact three times. The set
- * lives once on `CompiledVariant::GlobalBindings`, and this record says only which of those bindings
+ * lives once on `CompiledVariant::Bindings`, and this record says only which of those bindings
  * this entry point reads.
  * todo-ship: That's not always going to be true, especially with entrypoint parameter blocks. This will
  * need revision.
@@ -249,8 +249,8 @@ struct CompiledVariant
      * rendergraph resolves a variant with. */
     uint32_t VariantIndex{ 0u };
     /** Every program-scope binding of this variant, once. It states where it is and what it is, that's it.*/
-    std::vector<ReflectedBinding> GlobalBindings;
-    /** One footprint for each entry of `GlobalBindings`. A size expression reads the axis values, so
+    std::vector<ReflectedBinding> Bindings;
+    /** One footprint for each entry of `Bindings`. A size expression reads the axis values, so
      * a footprint belongs to the variant and not to the entry point that happens to use it. */
     std::vector<ResourceFootprint> Footprints;
     std::vector<CompiledEntryPoint> EntryPoints;

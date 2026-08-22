@@ -142,6 +142,10 @@ int main()
     runner.Check(StripSlangNameMangling("IfftParams_12") == "IfftParams", "a multi digit suffix is removed");
     runner.Check(StripSlangNameMangling("Buffer0") == "Buffer0",
                  "a trailing digit with no underscore is part of the name");
+    runner.Check(StripSlangNameMangling("entryPointParams_albedoMap_0") == "albedoMap",
+                 "the entry point scope prefix comes off with the suffix");
+    runner.Check(StripSlangNameMangling("materialParams_albedoMap_0") == "materialParams_albedoMap",
+                 "only the one fixed prefix comes off");
 
     runner.BeginSection("agreeing reflection passes the cross-check");
     const std::vector<ReflectedBinding> agreeing = MakeAgreeingReflection();

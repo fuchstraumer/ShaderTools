@@ -27,6 +27,16 @@ add_lodestone_unit_test(CookTest CookTest.cpp
     TEST_ARGS -o "${CMAKE_CURRENT_BINARY_DIR}/cook_test_output/ShaderLibrary.hpp"
               --verify-deterministic
               "${CMAKE_SOURCE_DIR}/tests/assets/compute/Ocean/OceanFft.slang")
+# The same driver, on the probe module that phase E step E0a needed. `EntryPointParams.slang`
+# declares a `uniform` parameter on two of its three entry points. A cooker that reads the global
+# scope alone gives those parameters no binding, and the cross-check then fails the cook.
+#
+# The probe cooks on its own, and not beside OceanFft. One cook of two modules writes one shared
+# header and one shared dedupe report, so every OceanFft artifact would stop being byte identical.
+add_lodestone_unit_test(EntryPointParamsCookTest CookTest.cpp
+    TEST_ARGS -o "${CMAKE_CURRENT_BINARY_DIR}/entry_point_params_output/ShaderLibrary.hpp"
+              --verify-deterministic
+              "${CMAKE_SOURCE_DIR}/tests/assets/EntryPointParams.slang")
 add_lodestone_unit_test(ExternConstantScannerTest ExternConstantScannerTests.cpp)
 add_lodestone_unit_test(SizeExpressionTest SizeExpressionTests.cpp)
 add_lodestone_unit_test(ContentInternerTest ContentInternerTests.cpp)

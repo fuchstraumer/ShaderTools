@@ -93,7 +93,7 @@ RawVariant MakeVariantWithOneBuffer()
     RawVariant variant;
     variant.VariantSuffix = "_S512_W1";
     variant.VariantIndex = 3u;
-    variant.GlobalBindings.push_back(std::move(binding));
+    variant.Bindings.push_back(std::move(binding));
     return variant;
 }
 
@@ -269,7 +269,7 @@ void TestAttributeTargeting(TestRunner& runner)
     second.Name = "DisplacementBuffer";
     second.Placement = BoundPlacement{ .Group = 0u, .Binding = 1u };
     second.Kind = BindingKind::StorageBuffer;
-    variant.GlobalBindings.push_back(std::move(second));
+    variant.Bindings.push_back(std::move(second));
 
     RawSizeAttribute attribute = MakeAttribute(RawSizeAttributeKind::ElementCount, { "IFFT_SIZE" });
     attribute.BindingIndex = 1u;
@@ -295,13 +295,13 @@ void TestPlacementAndPassthrough(TestRunner& runner)
     runner.BeginSection("placement and passthrough");
 
     RawVariant variant = MakeVariantWithOneBuffer();
-    variant.GlobalBindings.front().Placement = BoundPlacement{ .Group = 2u, .Binding = 3u };
+    variant.Bindings.front().Placement = BoundPlacement{ .Group = 2u, .Binding = 3u };
 
     RawBinding unplaced;
     unplaced.Name = "PushConstants";
     unplaced.Kind = BindingKind::UniformBuffer;
     unplaced.ByteSize = 64u;
-    variant.GlobalBindings.push_back(std::move(unplaced));
+    variant.Bindings.push_back(std::move(unplaced));
 
     const CookResult<CompiledVariant> resolved = ResolveVariant(variant, MakeContext());
     runner.Check(resolved.has_value(), "a variant with an unplaced resource resolves");
@@ -312,12 +312,12 @@ void TestPlacementAndPassthrough(TestRunner& runner)
     }
 
     const CompiledVariant& value = resolved.value();
-    runner.Check(value.GlobalBindings[0].Placement == ResourcePlacement{ BoundPlacement{ 2u, 3u } },
+    runner.Check(value.Bindings[0].Placement == ResourcePlacement{ BoundPlacement{ 2u, 3u } },
                  "a bound placement reaches the resource unflattened");
     // A resource with no placement is not a resource at group 0 binding 0, and the sum says so.
-    runner.Check(std::holds_alternative<std::monostate>(value.GlobalBindings[1].Placement),
+    runner.Check(std::holds_alternative<std::monostate>(value.Bindings[1].Placement),
                  "an unplaced resource holds no placement at all");
-    runner.Check(value.GlobalBindings[1].ByteSize == 64u, "the declared byte size passes through");
+    runner.Check(value.Bindings[1].ByteSize == 64u, "the declared byte size passes through");
     runner.Check(value.VariantSuffix == "_S512_W1" && value.VariantIndex == 3u,
                  "the variant identity passes through");
 }

@@ -39,8 +39,12 @@ struct WgslDeclaredBinding
 
 std::vector<WgslDeclaredBinding> ScanWgslBindings(std::string_view wgsl);
 
-/** Slang mangles emitted WGSL identifiers with a numeric suffix (`IfftParams` -> `IfftParams_0`), so
- * comparison is on locations first and de-mangled names second. */
+/** Reduces one emitted WGSL identifier to the name the shader author wrote.
+ *
+ * Slang appends a numeric suffix (`IfftParams` -> `IfftParams_0`). It also moves each entry point
+ * `uniform` parameter to the global scope, and gives that scope the fixed name hint
+ * `entryPointParams` (`albedoMap` -> `entryPointParams_albedoMap_0`). Both are decorations the
+ * backend adds, so comparison is on locations first and on de-mangled names second. */
 std::string_view StripSlangNameMangling(std::string_view mangled_name) noexcept;
 
 /** True when the WGSL address space is the one that this binding kind must have.

@@ -406,11 +406,11 @@ namespace
 
     void WriteRawBindings(JsonWriter& writer, const RawVariant& variant)
     {
-        writer.Key("globalBindings");
+        writer.Key("bindings");
         writer.BeginArray();
-        for (size_t i = 0u; i < variant.GlobalBindings.size(); ++i)
+        for (size_t i = 0u; i < variant.Bindings.size(); ++i)
         {
-            const RawBinding& binding = variant.GlobalBindings[i];
+            const RawBinding& binding = variant.Bindings[i];
             writer.BeginObject();
             writer.KeyUInt("index", i);
             writer.KeyString("name", binding.Name);
@@ -621,9 +621,9 @@ std::string DumpResolvedModule(std::string_view module_name, std::span<const Com
         writer.KeyString("suffix", variant.VariantSuffix);
         writer.KeyString("description", variant.VariantDescription);
 
-        writer.Key("globalBindings");
+        writer.Key("bindings");
         writer.BeginArray();
-        for (const ReflectedBinding& binding : variant.GlobalBindings)
+        for (const ReflectedBinding& binding : variant.Bindings)
         {
             WriteBinding(writer, binding);
         }

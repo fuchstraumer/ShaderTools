@@ -71,7 +71,7 @@ CompiledVariant MakeVariant(uint32_t index, bool first_axis_value, bool second_a
     variant.VariantIndex = index;
     variant.VariantSuffix = std::format("_{}_{}", first_axis_value, second_axis_value);
     variant.VariantDescription = std::format("AXIS_A={} AXIS_B={}", first_axis_value, second_axis_value);
-    variant.GlobalBindings.push_back(MakeSharedBinding());
+    variant.Bindings.push_back(MakeSharedBinding());
     variant.EntryPoints.push_back(
         MakeEntryPoint(k_ActiveEntryPoint, std::format("// AXIS_A is {}\n", first_axis_value)));
     variant.EntryPoints.push_back(MakeEntryPoint(k_InertEntryPoint, "// this text never changes\n"));
@@ -86,7 +86,7 @@ CompiledVariant MakeSingleEntryPointVariant(uint32_t index, bool first_axis_valu
     variant.VariantIndex = index;
     variant.VariantSuffix = std::format("_{}", first_axis_value);
     variant.VariantDescription = std::format("AXIS_A={}", first_axis_value);
-    variant.GlobalBindings.push_back(MakeSharedBinding());
+    variant.Bindings.push_back(MakeSharedBinding());
     variant.EntryPoints.push_back(
         MakeEntryPoint(k_ActiveEntryPoint, std::format("// AXIS_A is {}\n", first_axis_value)));
     return variant;
@@ -117,7 +117,7 @@ CompiledVariant MakeConditionalVariant(uint32_t index, bool first_axis_value, bo
     variant.VariantIndex = index;
     variant.VariantSuffix = std::format("_{}_{}", first_axis_value, second_axis_value);
     variant.VariantDescription = std::format("AXIS_A={} AXIS_B={}", first_axis_value, second_axis_value);
-    variant.GlobalBindings.push_back(MakeSharedBinding());
+    variant.Bindings.push_back(MakeSharedBinding());
     variant.EntryPoints.push_back(
         MakeEntryPoint(k_ConditionalEntryPoint,
                        second_axis_value ? std::format("// AXIS_A is {}\n", first_axis_value)

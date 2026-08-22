@@ -25,6 +25,9 @@ scriptsuild.bat
 ```
 
 `scripts/build.bat [Debug|RelWithDebInfo] [preset]` sets the compiler environment and then builds.
+`scripts/configure.bat [preset]` sets the same environment and configures. Run it after a change to a
+`CMakeLists.txt` that adds or removes a target. A bare `cmake --preset` writes a cache that names a
+different toolset, and it leaves a build tree that no longer builds.
 **Use it rather than a bare `cmake --build`.** The build tree keeps the compiler that `CMakeCache.txt`
 holds, which is Visual Studio 18 Community. Another environment gives that compiler the headers of a
 different toolset, `ammintrin.h` raises C4392, and every SPIRV-Tools target fails because Slang builds
@@ -66,7 +69,7 @@ argument it exits 1 on `NoOutputSpecified`, which reads like a failure rather th
 There is no test framework. `tests/TestHarness.hpp` gives a counter, `Check(condition, description)`,
 and a nonzero exit code.
 
-Eleven test targets exist. Ten are unit tests, and each one proves a claim the repository makes. None
+Twelve test targets exist. Ten are unit tests, and each one proves a claim the repository makes. None
 of them needs Slang, a compiler, or an asset, and all ten together run in under one second.
 
 | Target | Proves |
@@ -84,12 +87,19 @@ of them needs Slang, a compiler, or an asset, and all ten together run in under 
 
 An error check prints a diagnostic to `stderr` on purpose. Read the last line for the result.
 
-`CookTest` is the eleventh, and it is different. It is the cooker driver, not an assertion suite.
-`tests/CMakeLists.txt` gives it a command line through `TEST_ARGS`, so `ctest` runs a real cook of
-`OceanFft.slang` with `--verify-deterministic`. It takes about 18 seconds, and it is the only
-end-to-end coverage. Exit code 0 there is a real statement: every variant compiled, every reflection
-agreed with the emitted WGSL, both round trips read back the same bytes, and two cooks agreed byte for
-byte.
+The last two are different. Each one is the cooker driver, and not an assertion suite.
+`tests/CMakeLists.txt` gives each a command line through `TEST_ARGS`, and both build from
+`CookTest.cpp`. Exit code 0 there is a real statement: every variant compiled, every reflection agreed
+with the emitted WGSL, both round trips read back the same bytes, and two cooks agreed byte for byte.
+
+- `CookTest` cooks `OceanFft.slang` with `--verify-deterministic`. It takes about 18 seconds, and it
+  is the end-to-end coverage of the permutation path.
+- `EntryPointParamsCookTest` cooks `tests/assets/EntryPointParams.slang`, which declares a `uniform`
+  parameter on two of its three entry points. Phase E step E0a needed it, and it is the acceptance
+  test for the entry point scope walk. It cooks one variant in about one second.
+
+Each cook writes one shared header and one shared dedupe report, so the two modules cook separately.
+One cook of both would leave no artifact of `OceanFft` byte identical.
 
 Add a test with `add_lodestone_unit_test(<Name> <Name>.cpp)`. Add `TEST_ARGS <args>` after the sources
 when the test needs a command line.

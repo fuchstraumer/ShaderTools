@@ -9,23 +9,24 @@
 #include "ResourceFlags.hpp"
 #include "ShaderLibraryTypes.hpp"
 
-
-
 #include <slang-com-helper.h>
 #include <slang-com-ptr.h>
 #include <slang.h>
 
+#include <algorithm>
 #include <array>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
 #include <expected>
+#include <format>
 #include <ios>
 #include <filesystem>
 #include <fstream>
 #include <iterator>
 #include <memory>
 #include <print>
+#include <ranges>
 #include <span>
 #include <string>
 #include <string_view>
@@ -646,6 +647,38 @@ namespace
         return options;
     }
 
+    /** One binding, plus the `[vx_*]` annotations of that binding. The annotations travel beside the
+     * binding until the order is settled, because a sort of the bindings alone would leave every
+     * annotation against the wrong one. */
+    struct RawBindingDraft
+    {
+        RawBinding Binding;
+        std::vector<RawSizeAttribute> Attributes;
+    };
+
+    /** Moves each draft into the binding list, and keys each annotation against the position its
+     * binding takes. The caller settles the order first, because `BindingIndex` is that position. */
+    void AppendBindingDrafts(std::vector<RawBindingDraft>& drafts,
+                             std::vector<RawBinding>& out_bindings,
+                             std::vector<RawSizeAttribute>& out_attributes)
+    {
+        const auto baseIndex = static_cast<uint32_t>(out_bindings.size());
+        for (auto&& [offset, draft] : std::views::enumerate(drafts))
+        {
+            for (RawSizeAttribute& attribute : draft.Attributes)
+            {
+                attribute.BindingIndex = baseIndex + static_cast<uint32_t>(offset);
+            }
+        }
+
+        out_bindings.insert_range(out_bindings.end(),
+                                  drafts | std::views::as_rvalue
+                                      | std::views::transform(&RawBindingDraft::Binding));
+        out_attributes.insert_range(out_attributes.end(),
+                                    drafts | std::views::transform(&RawBindingDraft::Attributes)
+                                        | std::views::join | std::views::as_rvalue);
+    }
+
 } // namespace
 
 struct SlangCompiler::Impl
@@ -674,21 +707,27 @@ struct SlangCompiler::Impl
     CookResult<RawEntryPoint> ExtractRawEntryPoint(slang::IComponentType* linked_program,
                                                    slang::ProgramLayout* program_layout,
                                                    SlangInt entry_point_index,
-                                                   const std::vector<RawBinding>& global_bindings);
+                                                   std::span<const RawBinding> global_bindings,
+                                                   std::vector<RawBindingDraft>& out_drafts);
     CookResult<void> ExtractRawBindings(slang::ProgramLayout* program_layout,
                                         std::vector<RawBinding>& out_bindings,
                                         std::vector<RawSizeAttribute>& out_attributes);
+    CookResult<void> CollectBindingRangeDrafts(slang::TypeLayoutReflection* containing_layout,
+                                               BoundPlacement base,
+                                               std::vector<RawBindingDraft>& out_drafts) const;
+    [[nodiscard]] CookResult<BoundPlacement> EntryPointScopeBase(
+        slang::EntryPointReflection* entry_point_layout, std::string_view entry_point_name) const;
     CookResult<void> CollectRawSizeAttributes(slang::VariableReflection* leaf_variable,
                                               std::string_view binding_name,
                                               std::vector<RawSizeAttribute>& out_attributes) const;
-    static void ApplyLeafTypeLayout(slang::TypeLayoutReflection* global_layout,
+    static void ApplyLeafTypeLayout(slang::TypeLayoutReflection* containing_layout,
                                     SlangInt range_index,
                                     slang::BindingType binding_type,
                                     RawBinding& binding);
     // Not static: it reports through the sink, which is a member.
     void CollectUsedBindingIndices(slang::IComponentType* linked_program,
                                    SlangInt entry_point_index,
-                                   const std::vector<RawBinding>& global_bindings,
+                                   std::span<const RawBinding> global_bindings,
                                    std::vector<uint32_t>& out_used_indices);
     static void ExtractRasterState(slang::EntryPointReflection* entry_point_layout,
                                    ShaderStageKind stage,
@@ -884,12 +923,13 @@ std::vector<std::string> SlangCompiler::Impl::GenerateEntryPointCode(
  *
  * Slang wraps a resource type around the type it carries, so the useful facts sit one level down.
  * A structured buffer reports its element layout. A texture reports the type it returns. */
-void SlangCompiler::Impl::ApplyLeafTypeLayout(slang::TypeLayoutReflection* global_layout,
+void SlangCompiler::Impl::ApplyLeafTypeLayout(slang::TypeLayoutReflection* containing_layout,
                                               SlangInt range_index,
                                               slang::BindingType binding_type,
                                               RawBinding& binding)
 {
-    slang::TypeLayoutReflection* leafLayout = global_layout->getBindingRangeLeafTypeLayout(range_index);
+    slang::TypeLayoutReflection* leafLayout =
+        containing_layout->getBindingRangeLeafTypeLayout(range_index);
     if (leafLayout == nullptr)
     {
         return;
@@ -897,7 +937,8 @@ void SlangCompiler::Impl::ApplyLeafTypeLayout(slang::TypeLayoutReflection* globa
 
     if (binding.Kind == BindingKind::StorageTexture)
     {
-        binding.StorageFormat = FromSlangImageFormat(global_layout->getBindingRangeImageFormat(range_index));
+        binding.StorageFormat =
+            FromSlangImageFormat(containing_layout->getBindingRangeImageFormat(range_index));
         binding.StorageAccess = FromSlangBindingTypeAccess(binding_type);
     }
 
@@ -992,49 +1033,45 @@ CookResult<void> SlangCompiler::Impl::CollectRawSizeAttributes(
     return {};
 }
 
-CookResult<void> SlangCompiler::Impl::ExtractRawBindings(slang::ProgramLayout* program_layout,
-                                                         std::vector<RawBinding>& out_bindings,
-                                                         std::vector<RawSizeAttribute>& out_attributes)
+/** Walks the binding ranges of one scope, and drafts a binding for each one.
+ *
+ * `base` is where the scope itself sits. A global scope starts at group 0 and binding 0. An entry
+ * point scope starts where its own var layout says, and that offset comes from reflection. */
+CookResult<void> SlangCompiler::Impl::CollectBindingRangeDrafts(
+    slang::TypeLayoutReflection* containing_layout,
+    BoundPlacement base,
+    std::vector<RawBindingDraft>& out_drafts) const
 {
-    // The attributes of one resource travel beside it until the sort is done, because a sort that
-    // moved the bindings alone would leave every attribute pointing at the wrong one.
-    struct RawBindingDraft
-    {
-        RawBinding Binding;
-        std::vector<RawSizeAttribute> Attributes;
-    };
-
-    std::vector<RawBindingDraft> drafts;
-
-    slang::TypeLayoutReflection* globalLayout = program_layout->getGlobalParamsTypeLayout();
-    if (globalLayout == nullptr)
+    if (containing_layout == nullptr)
     {
         return {};
     }
 
-    const SlangInt bindingRangeCount = globalLayout->getBindingRangeCount();
-    drafts.reserve(static_cast<size_t>(bindingRangeCount));
+    const SlangInt bindingRangeCount = containing_layout->getBindingRangeCount();
+    out_drafts.reserve(out_drafts.size() + static_cast<size_t>(bindingRangeCount));
 
     for (SlangInt rangeIndex = 0; rangeIndex < bindingRangeCount; ++rangeIndex)
     {
-        const slang::BindingType bindingType = globalLayout->getBindingRangeType(rangeIndex);
+        const slang::BindingType bindingType = containing_layout->getBindingRangeType(rangeIndex);
         // Skip input/output attributes, which slang considers to be part of the global params
-        if (bindingType == slang::BindingType::Unknown || bindingType == slang::BindingType::VaryingInput ||
+        if (bindingType == slang::BindingType::Unknown ||
+            bindingType == slang::BindingType::VaryingInput ||
             bindingType == slang::BindingType::VaryingOutput)
         {
             continue;
         }
 
-        const SlangInt descriptorSetIndex = globalLayout->getBindingRangeDescriptorSetIndex(rangeIndex);
+        const SlangInt descriptorSetIndex =
+            containing_layout->getBindingRangeDescriptorSetIndex(rangeIndex);
         const SlangInt descriptorRangeIndex =
-            globalLayout->getBindingRangeFirstDescriptorRangeIndex(rangeIndex);
+            containing_layout->getBindingRangeFirstDescriptorRangeIndex(rangeIndex);
         if (descriptorSetIndex < 0 || descriptorRangeIndex < 0)
         {
             continue;
         }
 
-        const SlangInt spaceOffset = globalLayout->getDescriptorSetSpaceOffset(descriptorSetIndex);
-        const SlangInt indexOffset = globalLayout->getDescriptorSetDescriptorRangeIndexOffset(
+        const SlangInt spaceOffset = containing_layout->getDescriptorSetSpaceOffset(descriptorSetIndex);
+        const SlangInt indexOffset = containing_layout->getDescriptorSetDescriptorRangeIndexOffset(
             descriptorSetIndex, descriptorRangeIndex);
 
         if (static_cast<size_t>(indexOffset) == SLANG_UNKNOWN_SIZE ||
@@ -1047,18 +1084,20 @@ CookResult<void> SlangCompiler::Impl::ExtractRawBindings(slang::ProgramLayout* p
             continue;
         }
 
-        slang::VariableReflection* leafVariable = globalLayout->getBindingRangeLeafVariable(rangeIndex);
+        slang::VariableReflection* leafVariable =
+            containing_layout->getBindingRangeLeafVariable(rangeIndex);
         const char* leafName = leafVariable != nullptr ? leafVariable->getName() : nullptr;
 
         RawBindingDraft draft;
         draft.Binding.Name = leafName != nullptr ? leafName : std::string{};
-        draft.Binding.Placement = BoundPlacement{ .Group = static_cast<uint32_t>(spaceOffset),
-                                                  .Binding = static_cast<uint32_t>(indexOffset) };
+        draft.Binding.Placement =
+            BoundPlacement{ .Group = base.Group + static_cast<uint32_t>(spaceOffset),
+                            .Binding = base.Binding + static_cast<uint32_t>(indexOffset) };
         draft.Binding.Kind = FromSlangBindingType(bindingType);
         draft.Binding.ArrayCount =
-            static_cast<uint32_t>(globalLayout->getBindingRangeBindingCount(rangeIndex));
+            static_cast<uint32_t>(containing_layout->getBindingRangeBindingCount(rangeIndex));
 
-        ApplyLeafTypeLayout(globalLayout, rangeIndex, bindingType, draft.Binding);
+        ApplyLeafTypeLayout(containing_layout, rangeIndex, bindingType, draft.Binding);
 
         if (CookResult<void> attributes =
                 CollectRawSizeAttributes(leafVariable, draft.Binding.Name, draft.Attributes);
@@ -1067,34 +1106,71 @@ CookResult<void> SlangCompiler::Impl::ExtractRawBindings(slang::ProgramLayout* p
             return std::unexpected(attributes.error());
         }
 
-        drafts.push_back(std::move(draft));
-    }
-
-    std::ranges::stable_sort(drafts,
-                             [](const RawBindingDraft& lhs, const RawBindingDraft& rhs)
-                             {
-                                 return PlacementLess(lhs.Binding.Placement, rhs.Binding.Placement);
-                             });
-
-    out_bindings.reserve(drafts.size());
-    for (RawBindingDraft& draft : drafts)
-    {
-        const uint32_t bindingIndex = static_cast<uint32_t>(out_bindings.size());
-        for (RawSizeAttribute& attribute : draft.Attributes)
-        {
-            attribute.BindingIndex = bindingIndex;
-            out_attributes.push_back(std::move(attribute));
-        }
-
-        out_bindings.push_back(std::move(draft.Binding));
+        out_drafts.emplace_back(std::move(draft));
     }
 
     return {};
 }
 
+/** Where the parameter scope of one entry point starts.
+ *
+ * Slang reports an unresolved offset as `SLANG_UNKNOWN_SIZE`. That answer cannot be a placement, and
+ * a cook that carried it would emit a binding at a location no shader holds. */
+CookResult<BoundPlacement> SlangCompiler::Impl::EntryPointScopeBase(
+    slang::EntryPointReflection* entry_point_layout, std::string_view entry_point_name) const
+{
+    slang::VariableLayoutReflection* varLayout = entry_point_layout->getVarLayout();
+    if (varLayout == nullptr)
+    {
+        return BoundPlacement{};
+    }
+
+    const size_t group = varLayout->getBindingSpace(SLANG_PARAMETER_CATEGORY_DESCRIPTOR_TABLE_SLOT);
+    const size_t binding = varLayout->getOffset(SLANG_PARAMETER_CATEGORY_DESCRIPTOR_TABLE_SLOT);
+    if (group == SLANG_UNKNOWN_SIZE || binding == SLANG_UNKNOWN_SIZE)
+    {
+        Diagnostic report;
+        report.Severity = DiagnosticSeverity::Error;
+        report.Context = "entryPointScope";
+        report.Message = std::format("entry point {} has an unresolved parameter scope offset",
+                                     entry_point_name);
+        Sink->Report(report);
+        return std::unexpected(CookError::ReflectionUnavailable);
+    }
+
+    return BoundPlacement{ .Group = static_cast<uint32_t>(group),
+                           .Binding = static_cast<uint32_t>(binding) };
+}
+
+CookResult<void> SlangCompiler::Impl::ExtractRawBindings(slang::ProgramLayout* program_layout,
+                                                         std::vector<RawBinding>& out_bindings,
+                                                         std::vector<RawSizeAttribute>& out_attributes)
+{
+    std::vector<RawBindingDraft> drafts;
+    if (CookResult<void> walk = CollectBindingRangeDrafts(
+            program_layout->getGlobalParamsTypeLayout(), BoundPlacement{}, drafts);
+        !walk)
+    {
+        return std::unexpected(walk.error());
+    }
+
+    std::ranges::stable_sort(drafts,
+                             PlacementLess,
+                             [](const RawBindingDraft& draft) -> const RawPlacement&
+                             { return draft.Binding.Placement; });
+
+    AppendBindingDrafts(drafts, out_bindings, out_attributes);
+    return {};
+}
+
+/** Asks the metadata of one entry point which global bindings that entry point reads.
+ *
+ * `global_bindings` holds the global scope alone. Slang generates each entry point as its own
+ * artifact, so two entry points can place different resources at one group and binding. A placement
+ * query over the entry point rows would then let one entry point claim the parameter of another. */
 void SlangCompiler::Impl::CollectUsedBindingIndices(slang::IComponentType* linked_program,
                                                     SlangInt entry_point_index,
-                                                    const std::vector<RawBinding>& global_bindings,
+                                                    std::span<const RawBinding> global_bindings,
                                                     std::vector<uint32_t>& out_used_indices)
 {
     Slang::ComPtr<slang::IMetadata> metadata;
@@ -1131,7 +1207,8 @@ CookResult<RawEntryPoint> SlangCompiler::Impl::ExtractRawEntryPoint(
     slang::IComponentType* linked_program,
     slang::ProgramLayout* program_layout,
     SlangInt entry_point_index,
-    const std::vector<RawBinding>& global_bindings)
+    std::span<const RawBinding> global_bindings,
+    std::vector<RawBindingDraft>& out_drafts)
 {
     RawEntryPoint rawEntryPoint;
     rawEntryPoint.Name = EntryPointNames[static_cast<size_t>(entry_point_index)];
@@ -1158,6 +1235,22 @@ CookResult<RawEntryPoint> SlangCompiler::Impl::ExtractRawEntryPoint(
 
     CollectUsedBindingIndices(
         linked_program, entry_point_index, global_bindings, rawEntryPoint.UsedBindingIndices);
+
+    // A `uniform` parameter on the entry point takes a placement in the space the global bindings
+    // use, and the entry point var layout says where that scope starts.
+    CookResult<BoundPlacement> scopeBase = EntryPointScopeBase(entryPointLayout, rawEntryPoint.Name);
+    if (!scopeBase)
+    {
+        return std::unexpected(scopeBase.error());
+    }
+
+    if (CookResult<void> walk = CollectBindingRangeDrafts(
+            entryPointLayout->getTypeLayout(), scopeBase.value(), out_drafts);
+        !walk)
+    {
+        return std::unexpected(walk.error());
+    }
+
     return rawEntryPoint;
 }
 
@@ -1259,16 +1352,21 @@ CookResult<RawVariant> SlangCompiler::CompileVariantRaw(const VariantDescriptor&
     variant.VariantDescription = DescribeAssignment(descriptor.Canonical);
     variant.VariantIndex = static_cast<uint32_t>(descriptor.Index);
 
-    // Slang reports the bindings for the whole program, so this set is the same for every entry point
-    // of this variant. Extract it once, and let each entry point say which of them it reads.
+    // The global scope is the same for every entry point of this variant. Extract it once, and let
+    // each entry point say which of those bindings it reads. An entry point then appends the
+    // parameters it declares itself.
     if (CookResult<void> bindings =
-            impl->ExtractRawBindings(programLayout, variant.GlobalBindings, variant.SizeAttributes);
+            impl->ExtractRawBindings(programLayout, variant.Bindings, variant.SizeAttributes);
         !bindings)
     {
         return std::unexpected(bindings.error());
     }
 
     variant.EntryPoints.reserve(impl->EntryPointNames.size());
+
+    // The global sort is done. Each entry point appends after it, in declaration order, so a second
+    // sort across the full list is never correct: two placements can be equal across two scopes.
+    const size_t globalBindingCount = variant.Bindings.size();
 
     for (size_t i = 0; i < impl->EntryPointNames.size(); ++i)
     {
@@ -1277,16 +1375,28 @@ CookResult<RawVariant> SlangCompiler::CompileVariantRaw(const VariantDescriptor&
             return std::unexpected(CookError::CodeGenerationFailed);
         }
 
-        CookResult<RawEntryPoint> rawEntryPoint = impl->ExtractRawEntryPoint(
-            linkedProgram, programLayout, static_cast<SlangInt>(i), variant.GlobalBindings);
+        std::vector<RawBindingDraft> entryPointDrafts;
+        CookResult<RawEntryPoint> rawEntryPoint =
+            impl->ExtractRawEntryPoint(linkedProgram,
+                                       programLayout,
+                                       static_cast<SlangInt>(i),
+                                       std::span{ variant.Bindings }.first(globalBindingCount),
+                                       entryPointDrafts);
         if (!rawEntryPoint)
         {
             return std::unexpected(rawEntryPoint.error());
         }
 
+        // An entry point owns its own parameters by construction, so ownership states the visibility
+        // and the placement query never sees these rows.
+        const auto ownedBase = static_cast<uint32_t>(variant.Bindings.size());
+        AppendBindingDrafts(entryPointDrafts, variant.Bindings, variant.SizeAttributes);
+        rawEntryPoint.value().UsedBindingIndices.append_range(
+            std::views::iota(ownedBase, static_cast<uint32_t>(variant.Bindings.size())));
+
         rawEntryPoint.value().VariantSuffix = variant.VariantSuffix;
         rawEntryPoint.value().TargetText = generatedCode[i];
-        variant.EntryPoints.push_back(std::move(rawEntryPoint.value()));
+        variant.EntryPoints.emplace_back(std::move(rawEntryPoint.value()));
     }
 
     return variant;

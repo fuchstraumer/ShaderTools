@@ -113,8 +113,8 @@ CookResult<void> AppendVariantToModule(InternedModule& module,
     // Resources are per-variant (since that's the granularity we will build resources and bind
     // models at, not entrypoints: this is one of the advantages of our system)
     ResourceList resources;
-    resources.reserve(variant.GlobalBindings.size());
-    for (const ReflectedBinding& binding : variant.GlobalBindings)
+    resources.reserve(variant.Bindings.size());
+    for (const ReflectedBinding& binding : variant.Bindings)
     {
         resources.push_back(module.ResourceInterner.Intern(binding, variantOrigin).Index);
     }

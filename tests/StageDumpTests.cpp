@@ -58,7 +58,7 @@ CompiledVariant MakeVariant(uint32_t index, const std::string& suffix, std::stri
     variant.VariantIndex = index;
     variant.VariantSuffix = suffix;
     variant.VariantDescription = "USE_FOO=" + std::string{ index == 0u ? "false" : "true" };
-    variant.GlobalBindings.emplace_back(std::move(binding));
+    variant.Bindings.emplace_back(std::move(binding));
     variant.Footprints.emplace_back(BufferFootprint{ .ElementCount = 1024u, .Expression = "IFFT_SIZE * 4" });
     variant.EntryPoints.emplace_back(std::move(entryPoint));
     return variant;
@@ -146,8 +146,8 @@ RawModule BuildRawModule()
         variant.VariantSuffix = index == 0u ? "_A" : "_B";
         variant.VariantDescription = index == 0u ? "USE_FOO=false" : "USE_FOO=true";
         // Deliberately out of placement order, so the sort has something to do.
-        variant.GlobalBindings.push_back(sampler);
-        variant.GlobalBindings.push_back(buffer);
+        variant.Bindings.push_back(sampler);
+        variant.Bindings.push_back(buffer);
         variant.SizeAttributes.push_back(attribute);
         variant.EntryPoints.push_back(entryPoint);
         module.Variants.push_back(std::move(variant));

@@ -255,13 +255,13 @@ CookResult<CompiledVariant> ResolveVariant(const RawVariant& raw, const ResolveC
     variant.VariantSuffix = raw.VariantSuffix;
     variant.VariantDescription = raw.VariantDescription;
     variant.VariantIndex = raw.VariantIndex;
-    variant.GlobalBindings.reserve(raw.GlobalBindings.size());
+    variant.Bindings.reserve(raw.Bindings.size());
 
-    variant.Footprints.reserve(raw.GlobalBindings.size());
+    variant.Footprints.reserve(raw.Bindings.size());
 
-    for (size_t i = 0u; i < raw.GlobalBindings.size(); ++i)
+    for (size_t i = 0u; i < raw.Bindings.size(); ++i)
     {
-        const RawBinding& rawBinding = raw.GlobalBindings[i];
+        const RawBinding& rawBinding = raw.Bindings[i];
 
         CookResult<ResourceFootprint> footprint =
             ResolveFootprint(AttributesOfBinding(raw, i), rawBinding.Name, context);
@@ -270,7 +270,7 @@ CookResult<CompiledVariant> ResolveVariant(const RawVariant& raw, const ResolveC
             return std::unexpected(footprint.error());
         }
 
-        variant.GlobalBindings.push_back(ResolveBinding(rawBinding));
+        variant.Bindings.push_back(ResolveBinding(rawBinding));
         variant.Footprints.push_back(std::move(footprint.value()));
     }
 
