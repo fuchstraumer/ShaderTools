@@ -413,9 +413,10 @@ namespace
         createInfo.OptimizationLevel = options.OptimizationLevel;
         createInfo.MultithreadEntryPointCodegen = options.MultithreadEntryPointCodegen;
 
-        if (auto initializeResult = compiler.Initialize(createInfo, diagnostics); !initializeResult)
+        if (auto initializeResult = compiler.Initialize(createInfo, diagnostics);
+            initializeResult != CookError::Success)
         {
-            return initializeResult;
+            return std::unexpected(initializeResult);
         }
 
         const std::string_view moduleName = compiler.GetModuleName();

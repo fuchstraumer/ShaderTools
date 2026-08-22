@@ -789,10 +789,10 @@ struct SlangCompiler::Impl
      * because this object moves. */
     DiagnosticSink* Sink{ nullptr };
 
-    CookResult<void> CreateSession(const SlangCompilerCreateInfo& create_info);
-    CookResult<void> LoadRootModule();
+    CookError CreateSession(const SlangCompilerCreateInfo& create_info);
+    CookError LoadRootModule();
     void ReadDependencySourceTexts();
-    CookResult<void> CollectEntryPoints();
+    CookError CollectEntryPoints();
     [[nodiscard]] CookResult<Slang::ComPtr<slang::IComponentType>> LinkVariant(
         const PermutationAssignment& assignment) const;
     std::vector<std::string> GenerateEntryPointCode(slang::IComponentType* linked_program) const;
@@ -801,18 +801,18 @@ struct SlangCompiler::Impl
                                                    SlangInt entry_point_index,
                                                    std::span<const RawBinding> global_bindings,
                                                    std::vector<RawBindingDraft>& out_drafts);
-    CookResult<void> ExtractRawBindings(slang::ProgramLayout* program_layout,
+    CookError ExtractRawBindings(slang::ProgramLayout* program_layout,
                                         std::vector<RawBinding>& out_bindings,
                                         std::vector<RawSizeAttribute>& out_attributes) const;
-    CookResult<void> CollectBindingRangeDrafts(slang::TypeLayoutReflection* containing_layout,
+    CookError CollectBindingRangeDrafts(slang::TypeLayoutReflection* containing_layout,
                                                const BindingScope& scope,
                                                std::vector<RawBindingDraft>& out_drafts) const;
-    CookResult<void> CollectSubObjectDrafts(slang::TypeLayoutReflection* containing_layout,
+    CookError CollectSubObjectDrafts(slang::TypeLayoutReflection* containing_layout,
                                             const BindingScope& scope,
                                             std::vector<RawBindingDraft>& out_drafts) const;
     [[nodiscard]] CookResult<BindingScope> EntryPointScope(slang::EntryPointReflection* entry_point_layout,
                                                            std::string_view entry_point_name) const;
-    CookResult<void> CollectRawSizeAttributes(slang::VariableReflection* leaf_variable,
+    CookError CollectRawSizeAttributes(slang::VariableReflection* leaf_variable,
                                               std::string_view binding_name,
                                               std::vector<RawSizeAttribute>& out_attributes) const;
     static void ApplyLeafTypeLayout(slang::TypeLayoutReflection* containing_layout,
@@ -829,11 +829,11 @@ struct SlangCompiler::Impl
                                    ReflectedRasterState& raster);
 };
 
-CookResult<void> SlangCompiler::Impl::CreateSession(const SlangCompilerCreateInfo& create_info)
+CookError SlangCompiler::Impl::CreateSession(const SlangCompilerCreateInfo& create_info)
 {
     if (SLANG_FAILED(slang::createGlobalSession(GlobalSession.writeRef())) || GlobalSession == nullptr)
     {
-        return std::unexpected(CookError::GlobalSessionCreationFailed);
+        return CookError::GlobalSessionCreationFailed;
     }
 
     CompilerOptions = MakeCompilerOptions(create_info.OptimizationLevel);
@@ -865,15 +865,15 @@ CookResult<void> SlangCompiler::Impl::CreateSession(const SlangCompilerCreateInf
 
     if (SLANG_FAILED(GlobalSession->createSession(sessionDesc, Session.writeRef())) || Session == nullptr)
     {
-        return std::unexpected(CookError::SessionCreationFailed);
+        return CookError::SessionCreationFailed;
     }
 
     ModuleName = canonicalModulePath.stem().string();
     MultithreadEntryPointCodegen = create_info.MultithreadEntryPointCodegen;
-    return {};
+    return CookError::Success;
 }
 
-CookResult<void> SlangCompiler::Impl::LoadRootModule()
+CookError SlangCompiler::Impl::LoadRootModule()
 {
     Slang::ComPtr<slang::IBlob> diagnostics;
     RootModule = Session->loadModule(ModuleName.c_str(), diagnostics.writeRef());
@@ -881,7 +881,7 @@ CookResult<void> SlangCompiler::Impl::LoadRootModule()
 
     if (RootModule == nullptr)
     {
-        return std::unexpected(CookError::ModuleLoadFailed);
+        return CookError::ModuleLoadFailed;
     }
 
     BaseComponents.clear();
@@ -889,7 +889,7 @@ CookResult<void> SlangCompiler::Impl::LoadRootModule()
     BaseComponents.push_back(RootModule);
 
     ReadDependencySourceTexts();
-    return {};
+    return CookError::Success;
 }
 
 /** Slang reports every file the module pulled in, transitively. That set is what the axis-name check
@@ -920,7 +920,7 @@ void SlangCompiler::Impl::ReadDependencySourceTexts()
     }
 }
 
-CookResult<void> SlangCompiler::Impl::CollectEntryPoints()
+CookError SlangCompiler::Impl::CollectEntryPoints()
 {
     const SlangInt entryPointCount = RootModule->getDefinedEntryPointCount();
     EntryPointNames.clear();
@@ -933,7 +933,7 @@ CookResult<void> SlangCompiler::Impl::CollectEntryPoints()
         Slang::ComPtr<slang::IEntryPoint> entryPoint;
         if (SLANG_FAILED(RootModule->getDefinedEntryPoint(i, entryPoint.writeRef())))
         {
-            return std::unexpected(CookError::EntryPointEnumerationFailed);
+            return CookError::EntryPointEnumerationFailed;
         }
 
         EntryPointNames.emplace_back(entryPoint->getFunctionReflection()->getName());
@@ -941,7 +941,7 @@ CookResult<void> SlangCompiler::Impl::CollectEntryPoints()
         EntryPointHandles.push_back(entryPoint);
     }
 
-    return {};
+    return CookError::Success;
 }
 
 CookResult<Slang::ComPtr<slang::IComponentType>> SlangCompiler::Impl::LinkVariant(
@@ -1082,14 +1082,15 @@ void SlangCompiler::Impl::ApplyLeafTypeLayout(slang::TypeLayoutReflection* conta
 
 /** Reads one `[vx_*]` annotation into its argument strings. Stage 3 never evaluates one, so a
  * malformed argument is caught here only when it is not a string at all. */
-CookResult<void> SlangCompiler::Impl::CollectRawSizeAttributes(
+CookError SlangCompiler::Impl::CollectRawSizeAttributes(
     slang::VariableReflection* leaf_variable,
     std::string_view binding_name,
     std::vector<RawSizeAttribute>& out_attributes) const
 {
     if (leaf_variable == nullptr)
     {
-        return {};
+        // end of leaf/chain
+        return CookError::Success;
     }
 
     for (const RawSizeAttributeKind kind : k_SizeAttributeKinds)
@@ -1111,27 +1112,28 @@ CookResult<void> SlangCompiler::Impl::CollectRawSizeAttributes(
             CookResult<std::string> argument = ReadStringArgument(found, i, binding_name);
             if (!argument)
             {
-                return std::unexpected(argument.error());
+                return argument.error();
             }
 
-            attribute.Arguments.push_back(std::move(argument.value()));
+            attribute.Arguments.emplace_back(std::move(argument.value()));
         }
 
-        out_attributes.push_back(std::move(attribute));
+        out_attributes.emplace_back(std::move(attribute));
     }
 
-    return {};
+    return CookError::Success;
 }
 
 /** Walks the binding ranges of one scope, and drafts a binding for each one. */
-CookResult<void> SlangCompiler::Impl::CollectBindingRangeDrafts(
+CookError SlangCompiler::Impl::CollectBindingRangeDrafts(
     slang::TypeLayoutReflection* containing_layout,
     const BindingScope& scope,
     std::vector<RawBindingDraft>& out_drafts) const
 {
     if (containing_layout == nullptr)
     {
-        return {};
+        // reached end of the binding range chain (hopefully)
+        return CookError::Success;
     }
 
     const SlangInt bindingRangeCount = containing_layout->getBindingRangeCount();
@@ -1186,12 +1188,10 @@ CookResult<void> SlangCompiler::Impl::CollectBindingRangeDrafts(
             static_cast<uint32_t>(containing_layout->getBindingRangeBindingCount(rangeIndex));
 
         ApplyLeafTypeLayout(containing_layout, rangeIndex, bindingType, draft.Binding);
-
-        if (CookResult<void> attributes =
-                CollectRawSizeAttributes(leafVariable, draft.Binding.Name, draft.Attributes);
-            !attributes)
+        const CookError collectAttributesError = CollectRawSizeAttributes(leafVariable, draft.Binding.Name, draft.Attributes);
+        if (collectAttributesError != CookError::Success)
         {
-            return std::unexpected(attributes.error());
+            return collectAttributesError;
         }
 
         out_drafts.emplace_back(std::move(draft));
@@ -1219,7 +1219,7 @@ CookResult<void> SlangCompiler::Impl::CollectBindingRangeDrafts(
  *   to hold it, and a client must create it, so it becomes a binding that carries the name of the
  *   block. A block of resources alone emits no such slot, and drafting one moves nothing but does
  *   report a binding the shader has not got. The uniform size of the element says which case this is. */
-CookResult<void> SlangCompiler::Impl::CollectSubObjectDrafts(slang::TypeLayoutReflection* containing_layout,
+CookError SlangCompiler::Impl::CollectSubObjectDrafts(slang::TypeLayoutReflection* containing_layout,
                                                              const BindingScope& scope,
                                                              std::vector<RawBindingDraft>& out_drafts) const
 {
@@ -1310,7 +1310,7 @@ CookResult<void> SlangCompiler::Impl::CollectSubObjectDrafts(slang::TypeLayoutRe
                              "reports no container binding",
                              rangeIndex,
                              uniformSize);
-                return std::unexpected(CookError::ReflectionUnavailable);
+                return CookError::ReflectionUnavailable;
             }
 
             RawBindingDraft draft;
@@ -1324,14 +1324,14 @@ CookResult<void> SlangCompiler::Impl::CollectSubObjectDrafts(slang::TypeLayoutRe
             out_drafts.emplace_back(std::move(draft));
         }
 
-        if (CookResult<void> contents = CollectBindingRangeDrafts(elementLayout, blockScope, out_drafts);
-            !contents)
+        const CookError contentsError = CollectBindingRangeDrafts(elementLayout, blockScope, out_drafts);
+        if (contentsError != CookError::Success)
         {
-            return std::unexpected(contents.error());
+            return contentsError;
         }
     }
 
-    return {};
+    return CookError::Success;
 }
 
 /** The parameter scope of one entry point: where it starts, and the name Slang emits around it.
@@ -1371,16 +1371,15 @@ CookResult<BindingScope> SlangCompiler::Impl::EntryPointScope(slang::EntryPointR
                          .Name = std::string{ k_EntryPointScopeName } };
 }
 
-CookResult<void> SlangCompiler::Impl::ExtractRawBindings(slang::ProgramLayout* program_layout,
+CookError SlangCompiler::Impl::ExtractRawBindings(slang::ProgramLayout* program_layout,
                                                          std::vector<RawBinding>& out_bindings,
                                                          std::vector<RawSizeAttribute>& out_attributes) const
 {
     std::vector<RawBindingDraft> drafts;
-    if (CookResult<void> walk =
-            CollectBindingRangeDrafts(program_layout->getGlobalParamsTypeLayout(), BindingScope{}, drafts);
-        !walk)
+    const CookError walkError = CollectBindingRangeDrafts(program_layout->getGlobalParamsTypeLayout(), BindingScope{}, drafts);
+    if (walkError != CookError::Success)
     {
-        return std::unexpected(walk.error());
+        return walkError;
     }
 
     std::ranges::stable_sort(drafts,
@@ -1391,7 +1390,8 @@ CookResult<void> SlangCompiler::Impl::ExtractRawBindings(slang::ProgramLayout* p
                              });
 
     AppendBindingDrafts(drafts, out_bindings, out_attributes);
-    return {};
+
+    return CookError::Success;
 }
 
 /** Asks the metadata of one entry point which global bindings that entry point reads.
@@ -1414,24 +1414,28 @@ void SlangCompiler::Impl::CollectUsedBindingIndices(slang::IComponentType* linke
         return;
     }
 
-    out_used_indices.reserve(global_bindings.size());
-
-    for (size_t i = 0u; i < global_bindings.size(); ++i)
+    auto isUsedLambda = [&metadata](const RawPlacement& placement) -> bool
     {
-        const BoundPlacement* placement = GetBoundPlacement(global_bindings[i].Placement);
-        if (placement == nullptr)
+        const BoundPlacement* boundPlacement = GetBoundPlacement(placement);
+        if (boundPlacement == nullptr)
         {
-            continue;
+            return false;
         }
 
         bool isUsed = false;
         metadata->isParameterLocationUsed(
-            SLANG_PARAMETER_CATEGORY_DESCRIPTOR_TABLE_SLOT, placement->Group, placement->Binding, isUsed);
-        if (isUsed)
+            SLANG_PARAMETER_CATEGORY_DESCRIPTOR_TABLE_SLOT, boundPlacement->Group, boundPlacement->Binding, isUsed);
+        return isUsed;
+    };
+
+    out_used_indices.append_range(
+        std::views::enumerate(global_bindings) |
+        std::views::filter([&](const auto& pair)
         {
-            out_used_indices.push_back(static_cast<uint32_t>(i));
-        }
-    }
+            return isUsedLambda(std::get<1>(pair).Placement);
+        }) |
+        std::views::transform([](const auto& pair) { return std::get<0>(pair); })
+    );
 }
 
 CookResult<RawEntryPoint> SlangCompiler::Impl::ExtractRawEntryPoint(
@@ -1475,11 +1479,10 @@ CookResult<RawEntryPoint> SlangCompiler::Impl::ExtractRawEntryPoint(
         return std::unexpected(scope.error());
     }
 
-    if (CookResult<void> walk =
-            CollectBindingRangeDrafts(entryPointLayout->getTypeLayout(), scope.value(), out_drafts);
-        !walk)
+    const CookError walkError = CollectBindingRangeDrafts(entryPointLayout->getTypeLayout(), scope.value(), out_drafts);
+    if (walkError != CookError::Success)
     {
-        return std::unexpected(walk.error());
+        return std::unexpected(walkError);
     }
 
     return rawEntryPoint;
@@ -1513,19 +1516,19 @@ SlangCompiler::~SlangCompiler() = default;
 SlangCompiler::SlangCompiler(SlangCompiler&&) noexcept = default;
 SlangCompiler& SlangCompiler::operator=(SlangCompiler&&) noexcept = default;
 
-CookResult<void> SlangCompiler::Initialize(const SlangCompilerCreateInfo& create_info, DiagnosticSink& sink)
+CookError SlangCompiler::Initialize(const SlangCompilerCreateInfo& create_info, DiagnosticSink& sink)
 {
     impl = std::make_unique<Impl>();
     impl->Sink = &sink;
 
-    const CookResult<void> sessionResult = impl->CreateSession(create_info);
-    if (!sessionResult)
+    const CookError sessionResult = impl->CreateSession(create_info);
+    if (sessionResult != CookError::Success)
     {
         return sessionResult;
     }
 
-    const CookResult<void> moduleResult = impl->LoadRootModule();
-    if (!moduleResult)
+    const CookError moduleResult = impl->LoadRootModule();
+    if (moduleResult != CookError::Success)
     {
         return moduleResult;
     }
@@ -1586,11 +1589,10 @@ CookResult<RawVariant> SlangCompiler::CompileVariantRaw(const VariantDescriptor&
     // The global scope is the same for every entry point of this variant. Extract it once, and let
     // each entry point say which of those bindings it reads. An entry point then appends the
     // parameters it declares itself.
-    if (CookResult<void> bindings =
-            impl->ExtractRawBindings(programLayout, variant.Bindings, variant.SizeAttributes);
-        !bindings)
+    const CookError bindingsError = impl->ExtractRawBindings(programLayout, variant.Bindings, variant.SizeAttributes);
+    if (bindingsError != CookError::Success)
     {
-        return std::unexpected(bindings.error());
+        return std::unexpected(bindingsError);
     }
 
     variant.EntryPoints.reserve(impl->EntryPointNames.size());

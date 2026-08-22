@@ -37,7 +37,7 @@ public:
     /** The sink takes every compiler message, and it must outlive this object. It is a parameter
      * rather than a field of the create info because a sink cannot be absent: a compiler that has
      * nowhere to report is a compiler that fails in silence. */
-    CookResult<void> Initialize(const SlangCompilerCreateInfo& create_info, DiagnosticSink& sink);
+    CookError Initialize(const SlangCompilerCreateInfo& create_info, DiagnosticSink& sink);
     /** Stage 3, once for each module. Returns the module facts stage 4 needs and only Slang can
      * supply, the defaults of the extern constants no axis drives among them. A size expression may
      * name one, so call this before the first `CompileVariantRaw`. */
