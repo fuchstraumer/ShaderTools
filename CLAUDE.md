@@ -70,8 +70,8 @@ argument it exits 1 on `NoOutputSpecified`, which reads like a failure rather th
 There is no test framework. `tests/TestHarness.hpp` gives a counter, `Check(condition, description)`,
 and a nonzero exit code.
 
-Twelve test targets exist. Ten are unit tests, and each one proves a claim the repository makes. None
-of them needs Slang, a compiler, or an asset, and all ten together run in under one second.
+Thirteen test targets exist. Ten are unit tests, and each one proves a claim the repository makes.
+None of them needs Slang, a compiler, or an asset, and all ten together run in under one second.
 
 | Target | Proves |
 |---|---|
@@ -88,8 +88,8 @@ of them needs Slang, a compiler, or an asset, and all ten together run in under 
 
 An error check prints a diagnostic to `stderr` on purpose. Read the last line for the result.
 
-The last two are different. Each one is the cooker driver, and not an assertion suite.
-`tests/CMakeLists.txt` gives each a command line through `TEST_ARGS`, and both build from
+The last three are different. Each one is the cooker driver, and not an assertion suite.
+`tests/CMakeLists.txt` gives each a command line through `TEST_ARGS`, and all three build from
 `CookTest.cpp`. Exit code 0 there is a real statement: every variant compiled, every reflection agreed
 with the emitted WGSL, both round trips read back the same bytes, and two cooks agreed byte for byte.
 
@@ -100,8 +100,12 @@ with the emitted WGSL, both round trips read back the same bytes, and two cooks 
   Phase E step E0a needed it, and it is the acceptance test for the entry point scope walk. It cooks
   one variant in about one second.
 
-Each cook writes one shared header and one shared dedupe report, so the two modules cook separately.
-One cook of both would leave no artifact of `OceanFft` byte identical.
+- `ParameterBlocksCookTest` cooks `tests/assets/ParameterBlocks.slang`. It holds a block of
+  resources, a block of ordinary data, a block inside a block, and a block on each of two entry
+  points. Phase E step E0b needed it. It cooks one variant in about one second.
+
+Each cook writes one shared header and one shared dedupe report, so each module cooks on its own.
+One cook of all three would leave no artifact of `OceanFft` byte identical.
 
 Add a test with `add_lodestone_unit_test(<Name> <Name>.cpp)`. Add `TEST_ARGS <args>` after the sources
 when the test needs a command line.
@@ -272,7 +276,13 @@ number would state that every target must supply one. A target supplies a valida
 2. **Enumerate.** `space.EnumerateVariants()` expands the space into a `VariantSet` of
    `VariantDescriptor` values. Each descriptor holds `Active` and `Canonical` (see below) and a dense
    index.
-3. **Compile.** Stage 3 has two entry points. `SlangCompiler::PrepareRawModule` runs once for each
+3. **Compile.** Stage 3 walks three scopes, and each one needs a different call: the global scope,
+   the parameter scope of each entry point, and the element of each `ParameterBlock`. Slang describes
+   a block with descriptor ranges alone, so the binding range of a block reports a descriptor set
+   index of -1 and the range walk drops it. `CollectSubObjectDrafts` keeps exactly the ranges the
+   range walk dropped, so the two walks partition the ranges and no range is drafted twice.
+
+   Stage 3 has two entry points. `SlangCompiler::PrepareRawModule` runs once for each
    module and returns the module facts only Slang can supply: the name, the entry point names, and
    the declared default of every `extern static const` constant no axis drives. A size expression may
    name one of those defaults, so it must run before the first variant.

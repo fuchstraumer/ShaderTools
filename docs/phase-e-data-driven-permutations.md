@@ -147,6 +147,10 @@ therefore stay byte identical. That is the regression check for step 1.
 
 ## 1d. Found work: `ParameterBlock` is invisible for a second reason
 
+**Complete on 2026-08-21.** `tests/assets/ParameterBlocks.slang` cooks, and the cross-check agrees.
+`ParameterBlocksCookTest` runs it. Section 13 of `docs/phase-d-tail-handoff.md` records the three
+numbers as measured, and it corrects two claims below.
+
 A probe found this beside §1c, and a second probe measured it on 2026-08-20. This gap is the other
 half of the §1c gap. It is a separate step, because the correction goes in a different place.
 
@@ -791,7 +795,7 @@ E7 change **what**, and each one adds capability that no golden file can cover.
 | Step | Work | Verified by | Risk |
 |---|---|---|---|
 | E0a | The entry point scope walk, from §1c. **Done on 2026-08-21.** | **A probe module cooks and the cross-check agrees** | low |
-| E0b | The `ParameterBlock` sub-object walk, from §1d | **A probe module cooks and the cross-check agrees** | low |
+| E0b | The `ParameterBlock` sub-object walk, from §1d. **Done on 2026-08-21.** | **A probe module cooks and the cross-check agrees** | low |
 | E0c | Reject a pointer type under a bound access model, from §1e | **A probe module fails the cook** | low |
 | E0 | Slang interface spike, with citations | A written report | none |
 | E1 | Comparison and logical levels in `SizeExpression` | Existing 28 tests, plus new ones | low |

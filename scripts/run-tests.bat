@@ -25,7 +25,7 @@ if not exist "%BIN%" (
 set "FAILED=0"
 
 for %%T in ("%BIN%\*Test.exe") do (
-    if /I not "%%~nT"=="CookTest" if /I not "%%~nT"=="EntryPointParamsCookTest" (
+    if /I not "%%~nT"=="CookTest" if /I not "%%~nT"=="EntryPointParamsCookTest" if /I not "%%~nT"=="ParameterBlocksCookTest" (
         "%%~fT" >nul 2>&1
         if errorlevel 1 (
             echo [FAIL] %%~nT
@@ -55,6 +55,15 @@ if errorlevel 1 (
     set "FAILED=1"
 ) else (
     echo [ ok ] EntryPointParamsCookTest
+)
+
+REM The same driver, on the probe module for the parameter block walk. It cooks one variant.
+"%BIN%\ParameterBlocksCookTest.exe" -o "%REPO%\build\%PRESET%\tests\parameter_blocks_output\ShaderLibrary.hpp" --verify-deterministic "%REPO%\tests\assets\ParameterBlocks.slang" >nul 2>&1
+if errorlevel 1 (
+    echo [FAIL] ParameterBlocksCookTest
+    set "FAILED=1"
+) else (
+    echo [ ok ] ParameterBlocksCookTest
 )
 
 if "%FAILED%"=="1" (

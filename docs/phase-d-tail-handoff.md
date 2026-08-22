@@ -288,3 +288,92 @@ parameter. It accepts one on a **struct field**, so an entry point resource can 
 after all: put the resources in a struct and take one `uniform` parameter of that type.
 `EntryPointParams.slang` covers that form in `MaterialCS`, and the annotation reaches stage 4. The
 struct form is also the readable one, so nothing needs `_AttributeTargets.Param`.
+
+---
+
+## 13. What step E0b found
+
+Written on 2026-08-21. `CollectSubObjectDrafts` in `src/compile/SlangCompiler.cpp` is the walk.
+`tests/assets/ParameterBlocks.slang` and `ParameterBlocksCookTest` are the acceptance test.
+
+### The rule that makes the two walks safe
+
+The range walk keeps every binding range the parent placed itself. The sub-object walk keeps exactly
+the rest, which are the ranges the parent describes with descriptor ranges alone. Both test
+`getBindingRangeDescriptorSetIndex(range) >= 0`, so the two walks partition the ranges: no range is
+drafted twice, and none is dropped.
+
+**A global `ConstantBuffer<T>` is what proves the test is needed.** The parent places it, so it is an
+ordinary binding, and it *also* reports a sub-object range. A walk that filtered on the binding type
+alone drafted it a second time at the wrong location, and every entry point of `OceanFft` then failed
+the cross-check with `reflection has @group(0) @binding(0) IfftParams : wgsl has no binding at that
+location`. §1d step 1 says to filter on the binding type. That filter is not enough on its own.
+
+### The three numbers, as measured
+
+Four probe modules measured these. §1d called two of them right and one wrong.
+
+| Number | Where it comes from | Measured |
+|---|---|---|
+| the space of the block | the sub-element space offset of the sub-object range, **plus the space base of the enclosing scope** | 1 for a block at global scope |
+| the binding the contents start at | nothing: the contents already count from the start of the space | 0 and 1 for a block of two resources, 1 and 2 when a container takes 0 |
+| the binding of the container | `getContainerVarLayout()->getOffset(DESCRIPTOR_TABLE_SLOT)` | 0 |
+
+Two corrections to §1d:
+
+1. **A scope has two bases, and they are not the same number.** `BindingScope` now carries `Base`,
+   where a binding declared directly in the scope sits, and `SpaceBase`, where a block declared in the
+   scope starts counting spaces. An entry point scope reported a slot offset of 0 and a sub-element
+   space offset of 1, and its block took space 1. Reading one for the other puts every content of the
+   block in group 0.
+2. **A container exists only when the block holds ordinary data.** §1d says to give the container a
+   binding of its own, without qualification. A block of resources alone emits no such slot, and
+   drafting one reports a binding the shader has not got. `getSize(SLANG_PARAMETER_CATEGORY_UNIFORM)`
+   on the element says which case this is: 16 for the probe with a `float4`, 0 for the probe without.
+
+Step 3 of §1d is right, and reading the element var layout offset as a base is the way to get it
+wrong: the contents of a block with a container reported 1 and 2, and the element var layout also
+reported 1, so adding it moved every content by one.
+
+### Steps 4 and 5 of §1d
+
+**Step 4 holds.** `isParameterLocationUsed` answers for the contents of a block at global scope.
+`GlobalBlocksCS` reads bindings 0, 1, 2, and 3, and the three that come from blocks reached the list
+through the placement query.
+
+**Step 5 has a stale premise, so nothing changed.** §1d says `FromSlangBindingType` maps
+`BindingType::ParameterBlock` to `BindingKind::UniformBuffer`, and that the answer is wrong for a block
+of textures. It maps to `BindingKind::ParameterBlock`, which states nothing false. The line is still
+unreachable, because a block always carries a descriptor set index of -1 and the range walk drops it.
+`BindingKind::ParameterBlock` is named in one other place, a `ToString` in `src/model/ShaderDataSchema.cpp`.
+
+### Measured, and the regression
+
+`ParameterBlocks.slang` reports eleven bindings across four entry points:
+
+    0  Output       scope=""                          group 0 binding 0   StorageBuffer
+    1  AlbedoMap    scope="MaterialBlock"             group 1 binding 0   Texture
+    2  Sampler      scope="MaterialBlock"             group 1 binding 1   Sampler
+    3  TuningBlock  scope=""                          group 2 binding 0   UniformBuffer, 32 bytes
+    4  DetailMap    scope="OuterBlock"                group 3 binding 0   Texture
+    5  AlbedoMap    scope="OuterBlock_Surface"        group 4 binding 0   Texture
+    6  Sampler      scope="OuterBlock_Surface"        group 4 binding 1   Sampler
+    7  AlbedoMap    scope="entryPointParams_surface"  group 5 binding 0   Texture
+    8  Sampler      scope="entryPointParams_surface"  group 5 binding 1   Sampler
+    9  AlbedoMap    scope="entryPointParams_detail"   group 6 binding 0   Texture
+    10 Sampler      scope="entryPointParams_detail"   group 6 binding 1   Sampler
+
+Four rows are named `AlbedoMap`, and only the scope tells them apart. The `[vx_extent_2d]` annotation
+on the field of the block reaches stage 4 three times, once for each block of that type.
+
+Every `OceanFft` artifact and both stage dumps are byte identical to the state before E0b.
+
+### The two probes §1d asked for, and one it did not
+
+- **A block of ordinary data alone.** It becomes one container in a space of its own. `TuningBlock`
+  took group 2 and no content binding.
+- **Two entry points, and a block on each.** Slang gave them separate spaces, groups 5 and 6, so
+  ownership and a placement query agree in this module. Ownership is still what decides, because
+  nothing states that Slang must separate them.
+- **A block inside a block.** `OuterBlock` holds `Surface`. The spaces add, the contents take group 4,
+  and the scope chain reads `OuterBlock_Surface`.

@@ -37,6 +37,14 @@ add_lodestone_unit_test(EntryPointParamsCookTest CookTest.cpp
     TEST_ARGS -o "${CMAKE_CURRENT_BINARY_DIR}/entry_point_params_output/ShaderLibrary.hpp"
               --verify-deterministic
               "${CMAKE_SOURCE_DIR}/tests/assets/EntryPointParams.slang")
+# The same driver, on the probe module that phase E step E0b needed. `ParameterBlocks.slang` declares
+# a block of resources, a block of ordinary data, a block inside a block, and a block on each of two
+# entry points. Slang describes a block with descriptor ranges alone, so a cooker that walks the
+# binding ranges gives every content of every block no binding at all.
+add_lodestone_unit_test(ParameterBlocksCookTest CookTest.cpp
+    TEST_ARGS -o "${CMAKE_CURRENT_BINARY_DIR}/parameter_blocks_output/ShaderLibrary.hpp"
+              --verify-deterministic
+              "${CMAKE_SOURCE_DIR}/tests/assets/ParameterBlocks.slang")
 add_lodestone_unit_test(ExternConstantScannerTest ExternConstantScannerTests.cpp)
 add_lodestone_unit_test(SizeExpressionTest SizeExpressionTests.cpp)
 add_lodestone_unit_test(ContentInternerTest ContentInternerTests.cpp)

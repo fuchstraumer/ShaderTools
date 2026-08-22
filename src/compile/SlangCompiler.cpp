@@ -656,11 +656,17 @@ namespace
     /** Where one parameter scope starts, and what Slang emits around the bindings inside it.
      *
      * The global scope starts at group 0 and binding 0, and it adds no name. Every other scope takes
-     * both answers from reflection. A nested scope carries the whole chain in `Name`, so the walk
-     * needs no recursion and the emitted name stays `<Name>_<binding>`. */
+     * each answer from reflection. A nested scope carries the whole chain in `Name`, so the emitted
+     * name of a binding stays `<Name>_<binding>` at any depth.
+     *
+     * `Base` and `SpaceBase` are two different numbers, and reading one for the other costs a cook.
+     * `Base` is where a binding declared directly in this scope sits. `SpaceBase` is where a
+     * parameter block declared in this scope starts counting spaces. The entry point scope of a probe
+     * reported a slot offset of 0 and a sub-element space offset of 1, and its block took space 1. */
     struct BindingScope
     {
         BoundPlacement Base;
+        uint32_t SpaceBase{ 0u };
         std::string Name;
     };
 
@@ -692,7 +698,7 @@ namespace
                 continue;
             }
 
-            if (fieldLayout->getFieldCount() != 0u)
+            if (fieldLayout->getKind() == slang::TypeReflection::Kind::Struct)
             {
                 const char* fieldName = field->getName();
                 std::string nested = prefix;
@@ -787,6 +793,9 @@ struct SlangCompiler::Impl
     CookResult<void> CollectBindingRangeDrafts(slang::TypeLayoutReflection* containing_layout,
                                                BindingScope scope,
                                                std::vector<RawBindingDraft>& out_drafts) const;
+    CookResult<void> CollectSubObjectDrafts(slang::TypeLayoutReflection* containing_layout,
+                                            const BindingScope& scope,
+                                            std::vector<RawBindingDraft>& out_drafts) const;
     [[nodiscard]] CookResult<BindingScope> EntryPointScope(
         slang::EntryPointReflection* entry_point_layout, std::string_view entry_point_name) const;
     CookResult<void> CollectRawSizeAttributes(slang::VariableReflection* leaf_variable,
@@ -1182,6 +1191,146 @@ CookResult<void> SlangCompiler::Impl::CollectBindingRangeDrafts(
         out_drafts.emplace_back(std::move(draft));
     }
 
+    return CollectSubObjectDrafts(containing_layout, scope, out_drafts);
+}
+
+/** Walks the parameter blocks of one scope, and drafts the container and the contents of each.
+ *
+ * Slang gives a parent scope only descriptor ranges for a block, so the binding range of the block
+ * carries a descriptor set index of -1 and the range loop drops it. The contents live in a sub-object
+ * range instead, and this is the only walk that reaches them.
+ *
+ * Three numbers come from three different places, and three probe modules measured each one:
+ *
+ * - **The space of the block** is the sub-element space offset of the sub-object range, added to the
+ *   space base of the scope that holds it. `getSubObjectRangeSpaceOffset` is not that number: it
+ *   reported 0 for a block that took space 1.
+ * - **The contents start at binding zero.** Their own descriptor range offsets already count from the
+ *   start of the space, and they already step over the container. A block of resources reported 0 and
+ *   1. The same block with a `float4` added reported 1 and 2, with the container at 0. Adding a base
+ *   moves every content by one.
+ * - **The container exists only when the block holds ordinary data.** Slang adds that constant buffer
+ *   to hold it, and a client must create it, so it becomes a binding that carries the name of the
+ *   block. A block of resources alone emits no such slot, and drafting one moves nothing but does
+ *   report a binding the shader has not got. The uniform size of the element says which case this is. */
+CookResult<void> SlangCompiler::Impl::CollectSubObjectDrafts(
+    slang::TypeLayoutReflection* containing_layout,
+    const BindingScope& scope,
+    std::vector<RawBindingDraft>& out_drafts) const
+{
+    const SlangInt subObjectRangeCount = containing_layout->getSubObjectRangeCount();
+
+    for (SlangInt subObjectIndex = 0; subObjectIndex < subObjectRangeCount; ++subObjectIndex)
+    {
+        const SlangInt rangeIndex =
+            containing_layout->getSubObjectRangeBindingRangeIndex(subObjectIndex);
+        if (rangeIndex < 0)
+        {
+            continue;
+        }
+
+        // The two walks partition the ranges on one test, so no range is drafted twice and none is
+        // dropped. The range walk keeps every range the parent placed itself. This walk keeps the
+        // rest, which are the ranges the parent describes with descriptor ranges alone.
+        //
+        // A global `ConstantBuffer<T>` is the case that proves the test is needed. The parent places
+        // it, so it is an ordinary binding, and it also reports a sub-object range. Walking it here
+        // as well drafts it a second time at the wrong location, and `OceanFft` failed exactly so.
+        if (containing_layout->getBindingRangeDescriptorSetIndex(rangeIndex) >= 0)
+        {
+            continue;
+        }
+
+        // A sub-object range is not always a block. Keep only the two this walk understands.
+        const slang::BindingType bindingType = containing_layout->getBindingRangeType(rangeIndex);
+        if (bindingType != slang::BindingType::ParameterBlock &&
+            bindingType != slang::BindingType::ConstantBuffer)
+        {
+            continue;
+        }
+
+        slang::TypeLayoutReflection* blockLayout =
+            containing_layout->getBindingRangeLeafTypeLayout(rangeIndex);
+        slang::VariableLayoutReflection* spaceOffset =
+            containing_layout->getSubObjectRangeOffset(subObjectIndex);
+        if (blockLayout == nullptr || spaceOffset == nullptr)
+        {
+            continue;
+        }
+
+        slang::TypeLayoutReflection* elementLayout = blockLayout->getElementTypeLayout();
+        if (elementLayout == nullptr)
+        {
+            continue;
+        }
+
+        const size_t space = spaceOffset->getOffset(SLANG_PARAMETER_CATEGORY_SUB_ELEMENT_REGISTER_SPACE);
+        if (space == SLANG_UNKNOWN_SIZE)
+        {
+            std::println(stderr,
+                         "[shader_cooker] parameter block range {} has an unresolved location: "
+                         "link-time constants are affecting reflection output",
+                         rangeIndex);
+            continue;
+        }
+
+        slang::VariableReflection* blockVariable =
+            containing_layout->getBindingRangeLeafVariable(rangeIndex);
+        const char* blockName = blockVariable != nullptr ? blockVariable->getName() : nullptr;
+
+        BindingScope blockScope;
+        blockScope.Base.Group = scope.SpaceBase + static_cast<uint32_t>(space);
+        // A block inside a block takes a space of its own, and it counts from the space of this one.
+        blockScope.SpaceBase = blockScope.Base.Group;
+        blockScope.Name = scope.Name;
+        if (blockName != nullptr)
+        {
+            if (!blockScope.Name.empty())
+            {
+                blockScope.Name += '_';
+            }
+
+            blockScope.Name += blockName;
+        }
+
+        const size_t uniformSize = elementLayout->getSize(SLANG_PARAMETER_CATEGORY_UNIFORM);
+        if (uniformSize != 0u && uniformSize != SLANG_UNKNOWN_SIZE)
+        {
+            slang::VariableLayoutReflection* container = blockLayout->getContainerVarLayout();
+            const size_t containerBinding =
+                container != nullptr
+                    ? container->getOffset(SLANG_PARAMETER_CATEGORY_DESCRIPTOR_TABLE_SLOT)
+                    : SLANG_UNKNOWN_SIZE;
+            if (containerBinding == SLANG_UNKNOWN_SIZE)
+            {
+                std::println(stderr,
+                             "[shader_cooker] parameter block range {} holds {} bytes of data and "
+                             "reports no container binding",
+                             rangeIndex,
+                             uniformSize);
+                return std::unexpected(CookError::ReflectionUnavailable);
+            }
+
+            RawBindingDraft draft;
+            draft.Binding.Name = blockName != nullptr ? blockName : std::string{};
+            draft.Binding.ScopeName = scope.Name;
+            draft.Binding.Placement =
+                BoundPlacement{ .Group = blockScope.Base.Group,
+                                .Binding = static_cast<uint32_t>(containerBinding) };
+            draft.Binding.Kind = BindingKind::UniformBuffer;
+            draft.Binding.ByteSize = static_cast<uint64_t>(uniformSize);
+            CollectUniformMembers(elementLayout, std::string{}, 0u, draft.Binding.UniformMembers);
+            out_drafts.emplace_back(std::move(draft));
+        }
+
+        if (CookResult<void> contents =
+                CollectBindingRangeDrafts(elementLayout, std::move(blockScope), out_drafts);
+            !contents)
+        {
+            return std::unexpected(contents.error());
+        }
+    }
+
     return {};
 }
 
@@ -1204,7 +1353,8 @@ CookResult<BindingScope> SlangCompiler::Impl::EntryPointScope(
 
     const size_t group = varLayout->getBindingSpace(SLANG_PARAMETER_CATEGORY_DESCRIPTOR_TABLE_SLOT);
     const size_t binding = varLayout->getOffset(SLANG_PARAMETER_CATEGORY_DESCRIPTOR_TABLE_SLOT);
-    if (group == SLANG_UNKNOWN_SIZE || binding == SLANG_UNKNOWN_SIZE)
+    const size_t spaceBase = varLayout->getOffset(SLANG_PARAMETER_CATEGORY_SUB_ELEMENT_REGISTER_SPACE);
+    if (group == SLANG_UNKNOWN_SIZE || binding == SLANG_UNKNOWN_SIZE || spaceBase == SLANG_UNKNOWN_SIZE)
     {
         Diagnostic report;
         report.Severity = DiagnosticSeverity::Error;
@@ -1217,6 +1367,7 @@ CookResult<BindingScope> SlangCompiler::Impl::EntryPointScope(
 
     return BindingScope{ .Base = BoundPlacement{ .Group = static_cast<uint32_t>(group),
                                                  .Binding = static_cast<uint32_t>(binding) },
+                         .SpaceBase = static_cast<uint32_t>(spaceBase),
                          .Name = std::string{ k_EntryPointScopeName } };
 }
 
