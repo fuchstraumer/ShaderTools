@@ -137,7 +137,7 @@ namespace
                                     .Diagnostics = BlobToString(diagnostics.get()) };
     }
 
-    SlangOptimizationLevel ToSlangOptimizationLevel(uint32_t level) noexcept
+    constexpr SlangOptimizationLevel ToSlangOptimizationLevel(uint32_t level) noexcept
     {
         switch (level)
         {
@@ -152,7 +152,7 @@ namespace
         }
     }
 
-    ShaderStageKind FromSlangStage(SlangStage stage) noexcept
+    constexpr ShaderStageKind FromSlangStage(SlangStage stage) noexcept
     {
         switch (stage)
         {
@@ -191,7 +191,7 @@ namespace
         }
     }
 
-    BindingKind FromSlangBindingType(slang::BindingType binding_type) noexcept
+    constexpr BindingKind FromSlangBindingType(slang::BindingType binding_type) noexcept
     {
         switch (binding_type)
         {
@@ -228,7 +228,7 @@ namespace
 
     /** Slang packs the base shape and the array and multisample flags into one value, so the base
      * shape must be masked out before the comparison. */
-    ResourceShape FromSlangResourceShape(SlangResourceShape shape) noexcept
+    constexpr ResourceShape FromSlangResourceShape(SlangResourceShape shape) noexcept
     {
         const auto baseShape = static_cast<SlangResourceShape>(shape & SLANG_RESOURCE_BASE_SHAPE_MASK);
         const bool isArray = (shape & SLANG_TEXTURE_ARRAY_FLAG) != 0;
@@ -261,7 +261,7 @@ namespace
 
     /** Maps the scalar type a texture returns onto the sample type WebGPU wants. A depth texture is
      * not distinguishable here, so the graph decides that from the format it creates. */
-    TextureSampleType FromSlangScalarType(slang::TypeReflection::ScalarType scalar_type) noexcept
+    constexpr TextureSampleType FromSlangScalarType(slang::TypeReflection::ScalarType scalar_type) noexcept
     {
         switch (scalar_type)
         {
@@ -292,7 +292,7 @@ namespace
         }
     }
 
-    VertexScalarType FromSlangVertexScalarType(slang::TypeReflection::ScalarType scalar_type) noexcept
+    constexpr VertexScalarType FromSlangVertexScalarType(slang::TypeReflection::ScalarType scalar_type) noexcept
     {
         switch (scalar_type)
         {
@@ -343,12 +343,12 @@ namespace
 
     /** True for a name the hardware supplies, such as SV_Position. Those never become a vertex buffer
      * attribute, so they must not reach the vertex input list. */
-    bool IsSystemSemantic(std::string_view semantic_name) noexcept
+    constexpr bool IsSystemSemantic(std::string_view semantic_name) noexcept
     {
         return semantic_name.starts_with("SV_") || semantic_name.starts_with("sv_");
     }
 
-    bool IsDepthSemantic(std::string_view semantic_name) noexcept
+    constexpr bool IsDepthSemantic(std::string_view semantic_name) noexcept
     {
         return semantic_name == "SV_Depth" || semantic_name == "SV_DEPTH" ||
                semantic_name == "SV_DepthGreaterEqual" || semantic_name == "SV_DepthLessEqual";
