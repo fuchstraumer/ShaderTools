@@ -1,13 +1,14 @@
 #include "compile/SlangCompiler.hpp"
 #include "CookerErrors.hpp"
+#include "ResourceFlags.hpp"
+#include "ShaderLibraryTypes.hpp"
 #include "compile/Diagnostics.hpp"
-#include "compile/SlangDiagnosticParser.hpp"
 #include "compile/RawLibrary.hpp"
+#include "compile/SlangDiagnosticParser.hpp"
 #include "model/ShaderDataSchema.hpp"
 #include "permute/PermutationAssignment.hpp"
 #include "permute/PermutationSpace.hpp"
-#include "ResourceFlags.hpp"
-#include "ShaderLibraryTypes.hpp"
+
 
 #include <slang-com-helper.h>
 #include <slang-com-ptr.h>
@@ -19,10 +20,10 @@
 #include <cstdint>
 #include <cstdio>
 #include <expected>
-#include <format>
-#include <ios>
 #include <filesystem>
+#include <format>
 #include <fstream>
+#include <ios>
 #include <iterator>
 #include <memory>
 #include <print>
@@ -32,6 +33,7 @@
 #include <string_view>
 #include <utility>
 #include <vector>
+
 
 namespace lodestone
 {
@@ -202,7 +204,7 @@ namespace
         case slang::BindingType::ParameterBlock:
             return BindingKind::ParameterBlock;
         case slang::BindingType::TypedBuffer:
-            return BindingKind::ReadOnlyStructuredBuffer;
+            [[fallthrough]];
         case slang::BindingType::RawBuffer:
             return BindingKind::ReadOnlyStructuredBuffer;
         case slang::BindingType::CombinedTextureSampler:
@@ -228,8 +230,7 @@ namespace
      * shape must be masked out before the comparison. */
     ResourceShape FromSlangResourceShape(SlangResourceShape shape) noexcept
     {
-        const auto baseShape =
-            static_cast<SlangResourceShape>(shape & SLANG_RESOURCE_BASE_SHAPE_MASK);
+        const auto baseShape = static_cast<SlangResourceShape>(shape & SLANG_RESOURCE_BASE_SHAPE_MASK);
         const bool isArray = (shape & SLANG_TEXTURE_ARRAY_FLAG) != 0;
         const bool isMultisample = (shape & SLANG_TEXTURE_MULTISAMPLE_FLAG) != 0;
 
@@ -349,18 +350,105 @@ namespace
 
     bool IsDepthSemantic(std::string_view semantic_name) noexcept
     {
-        return semantic_name == "SV_Depth" ||
-               semantic_name == "SV_DEPTH" ||
-               semantic_name == "SV_DepthGreaterEqual" ||
-               semantic_name == "SV_DepthLessEqual";
+        return semantic_name == "SV_Depth" || semantic_name == "SV_DEPTH" ||
+               semantic_name == "SV_DepthGreaterEqual" || semantic_name == "SV_DepthLessEqual";
     }
 
-    /** Flattens one uniform block into rows of name, offset, and size. A nested struct recurses and
-     * its fields take a dotted name, because the consumer compares offsets and a tree would only make
-     * that harder. */
+    /** One leaf of a varying or uniform tree, as the walker found it.
+     *
+     * `Path` holds the var layout of every field from the root to this leaf. That is what a caller
+     * needs to build a qualified name, and a caller that names nothing ignores it. Building the name
+     * in the walker would make three of the four callers pay for a string none of them reads. */
+    struct LeafVisit
+    {
+        slang::VariableLayoutReflection* Var{ nullptr };
+        slang::TypeLayoutReflection* Type{ nullptr };
+        /** The offset of this leaf in the category the walk asked for, summed down the tree. */
+        uint32_t Offset{ 0u };
+        std::span<slang::VariableLayoutReflection* const> Path;
+    };
+
+    /** Calls `visit` for each leaf of one varying or uniform tree.
+     *
+     * Slang states each field's offset against its parent, so the offset accumulates down the tree,
+     * and `category` selects which offset that is. A caller that wants no offset ignores the one it
+     * gets. */
+    template<typename LeafVisitor>
+    void VisitLeaves(slang::VariableLayoutReflection* var_layout,
+                     SlangParameterCategory category,
+                     uint32_t base_offset,
+                     std::vector<slang::VariableLayoutReflection*>& path,
+                     const LeafVisitor& visit)
+    {
+        if (var_layout == nullptr)
+        {
+            return;
+        }
+
+        slang::TypeLayoutReflection* typeLayout = var_layout->getTypeLayout();
+        if (typeLayout == nullptr)
+        {
+            return;
+        }
+
+        const uint32_t offset = base_offset + static_cast<uint32_t>(var_layout->getOffset(category));
+        path.push_back(var_layout);
+
+        if (typeLayout->getKind() == slang::TypeReflection::Kind::Struct)
+        {
+            const unsigned int fieldCount = typeLayout->getFieldCount();
+            for (unsigned int i = 0u; i < fieldCount; ++i)
+            {
+                VisitLeaves(typeLayout->getFieldByIndex(i), category, offset, path, visit);
+            }
+        }
+        else
+        {
+            visit(LeafVisit{ .Var = var_layout,
+                             .Type = typeLayout,
+                             .Offset = offset,
+                             .Path = std::span{ std::as_const(path) } });
+        }
+
+        path.pop_back();
+    }
+
+    /** Walks the tree one var layout roots. The offset of that var layout counts. */
+    template<typename LeafVisitor>
+    void WalkVaryingTree(slang::VariableLayoutReflection* var_layout,
+                         SlangParameterCategory category,
+                         const LeafVisitor& visit)
+    {
+        std::vector<slang::VariableLayoutReflection*> path;
+        VisitLeaves(var_layout, category, 0u, path, visit);
+    }
+
+    /** Joins the field names of one path with dots. Empty when a field on the path has no name, so a
+     * caller that needs a full name can refuse a partial one. */
+    std::string JoinFieldNames(std::span<slang::VariableLayoutReflection* const> path)
+    {
+        std::string joined;
+        for (slang::VariableLayoutReflection* field : path)
+        {
+            const char* name = field->getName();
+            if (name == nullptr)
+            {
+                return {};
+            }
+
+            joined += joined.empty() ? "" : ".";
+            joined += name;
+        }
+
+        return joined;
+    }
+
+    /** Flattens one uniform block into rows of name, offset, and size. A nested field takes a dotted
+     * name, because the consumer compares offsets and a tree would only make that harder.
+     *
+     * The root is a struct type layout and not a var layout, so nothing roots the offset and each
+     * field of it counts from zero. */
     void CollectUniformMembers(slang::TypeLayoutReflection* struct_layout,
-                               const std::string& name_prefix,
-                               uint32_t base_offset,
                                std::vector<ReflectedUniformMember>& members)
     {
         if (struct_layout == nullptr || struct_layout->getKind() != slang::TypeReflection::Kind::Struct)
@@ -368,47 +456,28 @@ namespace
             return;
         }
 
+        const auto visit = [&members](const LeafVisit& leaf)
+        {
+            std::string name = JoinFieldNames(leaf.Path);
+            if (name.empty())
+            {
+                return;
+            }
+
+            members.emplace_back(ReflectedUniformMember{
+                .Name = std::move(name),
+                .Offset = leaf.Offset,
+                .Size = static_cast<uint32_t>(leaf.Type->getSize(SLANG_PARAMETER_CATEGORY_UNIFORM)),
+                .ArrayCount = leaf.Type->getKind() == slang::TypeReflection::Kind::Array
+                                  ? static_cast<uint32_t>(leaf.Type->getElementCount())
+                                  : 1u });
+        };
+
+        std::vector<slang::VariableLayoutReflection*> path;
         const unsigned int fieldCount = struct_layout->getFieldCount();
         for (unsigned int i = 0u; i < fieldCount; ++i)
         {
-            slang::VariableLayoutReflection* field = struct_layout->getFieldByIndex(i);
-            if (field == nullptr)
-            {
-                continue;
-            }
-
-            const char* fieldName = field->getName();
-            if (fieldName == nullptr)
-            {
-                continue;
-            }
-
-            const uint32_t offset =
-                base_offset + static_cast<uint32_t>(field->getOffset(SLANG_PARAMETER_CATEGORY_UNIFORM));
-            const std::string qualifiedName =
-                name_prefix.empty() ? std::string{ fieldName } : name_prefix + "." + fieldName;
-
-            slang::TypeLayoutReflection* fieldLayout = field->getTypeLayout();
-            if (fieldLayout == nullptr)
-            {
-                continue;
-            }
-
-            if (fieldLayout->getKind() == slang::TypeReflection::Kind::Struct)
-            {
-                CollectUniformMembers(fieldLayout, qualifiedName, offset, members);
-                continue;
-            }
-
-            ReflectedUniformMember member;
-            member.Name = qualifiedName;
-            member.Offset = offset;
-            member.Size = static_cast<uint32_t>(fieldLayout->getSize(SLANG_PARAMETER_CATEGORY_UNIFORM));
-            member.ArrayCount = fieldLayout->getKind() == slang::TypeReflection::Kind::Array
-                                    ? static_cast<uint32_t>(fieldLayout->getElementCount())
-                                    : 1u;
-
-            members.push_back(std::move(member));
+            VisitLeaves(struct_layout->getFieldByIndex(i), SLANG_PARAMETER_CATEGORY_UNIFORM, 0u, path, visit);
         }
     }
 
@@ -423,130 +492,66 @@ namespace
         return std::string_view{ name };
     }
 
-    /** Walks the vertex entry point parameters and records every attribute a vertex buffer must
-     * supply. Nested structs recurse, and the location accumulates down the tree, because Slang
-     * states each field's offset against its parent. */
-    void CollectVertexInputs(slang::VariableLayoutReflection* var_layout,
-                             uint32_t base_location,
-                             ReflectedRasterState& raster)
+    /** Records every attribute a vertex buffer must supply. */
+    void CollectVertexInputs(slang::VariableLayoutReflection* var_layout, ReflectedRasterState& raster)
     {
-        if (var_layout == nullptr)
-        {
-            return;
-        }
+        WalkVaryingTree(var_layout,
+                        SLANG_PARAMETER_CATEGORY_VARYING_INPUT,
+                        [&raster](const LeafVisit& leaf)
+                        {
+                            const std::string_view semantic = ReadSemanticName(leaf.Var);
+                            if (semantic.empty() || IsSystemSemantic(semantic))
+                            {
+                                return;
+                            }
 
-        slang::TypeLayoutReflection* typeLayout = var_layout->getTypeLayout();
-        if (typeLayout == nullptr)
-        {
-            return;
-        }
+                            ReflectedVertexInput input;
+                            input.SemanticName = std::string{ semantic };
+                            input.Data.SemanticIndex = static_cast<uint32_t>(leaf.Var->getSemanticIndex());
+                            input.Data.Location = leaf.Offset;
+                            ReadVaryingShape(leaf.Type, input.Data.ScalarType, input.Data.ComponentCount);
 
-        const uint32_t location =
-            base_location +
-            static_cast<uint32_t>(var_layout->getOffset(SLANG_PARAMETER_CATEGORY_VARYING_INPUT));
-
-        if (typeLayout->getKind() == slang::TypeReflection::Kind::Struct)
-        {
-            const unsigned int fieldCount = typeLayout->getFieldCount();
-            for (unsigned int i = 0u; i < fieldCount; ++i)
-            {
-                CollectVertexInputs(typeLayout->getFieldByIndex(i), location, raster);
-            }
-            return;
-        }
-
-        const std::string_view semantic = ReadSemanticName(var_layout);
-        if (semantic.empty() || IsSystemSemantic(semantic))
-        {
-            return;
-        }
-
-        ReflectedVertexInput input;
-        input.SemanticName = std::string{ semantic };
-        input.Data.SemanticIndex = static_cast<uint32_t>(var_layout->getSemanticIndex());
-        input.Data.Location = location;
-        ReadVaryingShape(typeLayout, input.Data.ScalarType, input.Data.ComponentCount);
-
-        raster.VertexInputs.push_back(std::move(input));
+                            raster.VertexInputs.emplace_back(std::move(input));
+                        });
     }
 
-    /** Walks the fragment entry point result and records every color target, plus whether the shader
-     * writes depth itself. */
-    void CollectColorTargets(slang::VariableLayoutReflection* var_layout,
-                             uint32_t base_location,
-                             ReflectedRasterState& raster)
+    /** Records every color target the fragment result declares, and whether it writes depth itself. */
+    void CollectColorTargets(slang::VariableLayoutReflection* var_layout, ReflectedRasterState& raster)
     {
-        if (var_layout == nullptr)
-        {
-            return;
-        }
+        WalkVaryingTree(var_layout,
+                        SLANG_PARAMETER_CATEGORY_VARYING_OUTPUT,
+                        [&raster](const LeafVisit& leaf)
+                        {
+                            if (IsDepthSemantic(ReadSemanticName(leaf.Var)))
+                            {
+                                raster.WritesFragDepth = true;
+                                return;
+                            }
 
-        slang::TypeLayoutReflection* typeLayout = var_layout->getTypeLayout();
-        if (typeLayout == nullptr)
-        {
-            return;
-        }
+                            ReflectedColorTarget target;
+                            target.Location = leaf.Offset;
+                            ReadVaryingShape(leaf.Type, target.ScalarType, target.ComponentCount);
 
-        const uint32_t location =
-            base_location +
-            static_cast<uint32_t>(var_layout->getOffset(SLANG_PARAMETER_CATEGORY_VARYING_OUTPUT));
-
-        if (typeLayout->getKind() == slang::TypeReflection::Kind::Struct)
-        {
-            const unsigned int fieldCount = typeLayout->getFieldCount();
-            for (unsigned int i = 0u; i < fieldCount; ++i)
-            {
-                CollectColorTargets(typeLayout->getFieldByIndex(i), location, raster);
-            }
-            return;
-        }
-
-        const std::string_view semantic = ReadSemanticName(var_layout);
-        if (IsDepthSemantic(semantic))
-        {
-            raster.WritesFragDepth = true;
-            return;
-        }
-
-        ReflectedColorTarget target;
-        target.Location = location;
-        ReadVaryingShape(typeLayout, target.ScalarType, target.ComponentCount);
-
-        if (target.ComponentCount == 0u)
-        {
-            return;
-        }
-
-        raster.ColorTargets.push_back(target);
+                            if (target.ComponentCount != 0u)
+                            {
+                                raster.ColorTargets.emplace_back(target);
+                            }
+                        });
     }
 
+    /** A fragment shader can write depth through an `out` parameter rather than through its result,
+     * so that tree needs a walk of its own. */
     void CollectDepthWrites(slang::VariableLayoutReflection* var_layout, ReflectedRasterState& raster)
     {
-        if (var_layout == nullptr)
-        {
-            return;
-        }
-
-        slang::TypeLayoutReflection* typeLayout = var_layout->getTypeLayout();
-        if (typeLayout == nullptr)
-        {
-            return;
-        }
-
-        if (typeLayout->getKind() == slang::TypeReflection::Kind::Struct)
-        {
-            const unsigned int fieldCount = typeLayout->getFieldCount();
-            for (unsigned int i = 0u; i < fieldCount; ++i)
-            {
-                CollectDepthWrites(typeLayout->getFieldByIndex(i), raster);
-            }
-            return;
-        }
-
-        if (IsDepthSemantic(ReadSemanticName(var_layout)))
-        {
-            raster.WritesFragDepth = true;
-        }
+        WalkVaryingTree(var_layout,
+                        SLANG_PARAMETER_CATEGORY_VARYING_OUTPUT,
+                        [&raster](const LeafVisit& leaf)
+                        {
+                            if (IsDepthSemantic(ReadSemanticName(leaf.Var)))
+                            {
+                                raster.WritesFragDepth = true;
+                            }
+                        });
     }
 
     /** Only the formats Velox curates. An unmapped format returns Invalid on purpose: the graph must
@@ -601,54 +606,63 @@ namespace
         }
     }
 
+    /** One compiler option as a row. A row of `Int` kind reads `IntValue`, and a row of `String`
+     * kind reads `StringValue`. The unused field keeps the value Slang treats as absent, which is
+     * what the entry held before this became a table. */
+    struct CompilerOptionRow
+    {
+        slang::CompilerOptionName Name;
+        slang::CompilerOptionValueKind Kind;
+        int32_t IntValue{ 0 };
+        const char* StringValue{ nullptr };
+    };
+
+    // Order reaches Slang, and the two warning level rows must stay in this order.
+    constexpr std::array<CompilerOptionRow, 7u> k_CompilerOptionRows{
+        CompilerOptionRow{ .Name = slang::CompilerOptionName::WarningLevel,
+                           .Kind = slang::CompilerOptionValueKind::Int,
+                           .IntValue = SLANG_WARNING_LEVEL_PEDANTIC },
+        CompilerOptionRow{ .Name = slang::CompilerOptionName::WarningLevel,
+                           .Kind = slang::CompilerOptionValueKind::Int,
+                           .IntValue = SLANG_WARNING_LEVEL_ALL },
+        CompilerOptionRow{ .Name = slang::CompilerOptionName::DisableWarnings,
+                           .Kind = slang::CompilerOptionValueKind::String,
+                           .StringValue = k_DisabledWarnings },
+        CompilerOptionRow{ .Name = slang::CompilerOptionName::WarningsAsErrors,
+                           .Kind = slang::CompilerOptionValueKind::String,
+                           .StringValue = k_AllWarningsAsErrors },
+        CompilerOptionRow{ .Name = slang::CompilerOptionName::FloatingPointMode,
+                           .Kind = slang::CompilerOptionValueKind::Int,
+                           .IntValue = SLANG_FLOATING_POINT_MODE_FAST },
+        CompilerOptionRow{ .Name = slang::CompilerOptionName::DebugInformation,
+                           .Kind = slang::CompilerOptionValueKind::Int,
+                           .IntValue = SLANG_DEBUG_INFO_LEVEL_NONE },
+        CompilerOptionRow{ .Name = slang::CompilerOptionName::EnableMachineReadableDiagnostics,
+                           .Kind = slang::CompilerOptionValueKind::Int,
+                           .IntValue = 1 }
+    };
+
+    slang::CompilerOptionEntry ToOptionEntry(const CompilerOptionRow& row) noexcept
+    {
+        slang::CompilerOptionEntry entry{};
+        entry.name = row.Name;
+        entry.value.kind = row.Kind;
+        entry.value.intValue0 = row.IntValue;
+        entry.value.stringValue0 = row.StringValue;
+        return entry;
+    }
+
+    /** Every option this cook sets. Only the optimization level comes from a caller, so it is the one
+     * row the table cannot hold. */
     std::vector<slang::CompilerOptionEntry> MakeCompilerOptions(uint32_t optimization_level)
     {
-        std::vector<slang::CompilerOptionEntry> options;
-        options.reserve(6u);
+        std::vector<slang::CompilerOptionEntry> options =
+            k_CompilerOptionRows | std::views::transform(ToOptionEntry) | std::ranges::to<std::vector>();
 
-        slang::CompilerOptionEntry warningLevel{};
-        warningLevel.name = slang::CompilerOptionName::WarningLevel;
-        warningLevel.value.kind = slang::CompilerOptionValueKind::Int;
-        warningLevel.value.intValue0 = SLANG_WARNING_LEVEL_PEDANTIC;
-        options.push_back(warningLevel);
-        warningLevel.value.intValue0 = SLANG_WARNING_LEVEL_ALL;
-        options.push_back(warningLevel);
-
-        slang::CompilerOptionEntry disableWarnings{};
-        disableWarnings.name = slang::CompilerOptionName::DisableWarnings;
-        disableWarnings.value.kind = slang::CompilerOptionValueKind::String;
-        disableWarnings.value.stringValue0 = k_DisabledWarnings;
-        options.push_back(disableWarnings);
-
-        slang::CompilerOptionEntry warningsAsErrors{};
-        warningsAsErrors.name = slang::CompilerOptionName::WarningsAsErrors;
-        warningsAsErrors.value.kind = slang::CompilerOptionValueKind::String;
-        warningsAsErrors.value.stringValue0 = k_AllWarningsAsErrors;
-        options.push_back(warningsAsErrors);
-
-        slang::CompilerOptionEntry floatingPointMode{};
-        floatingPointMode.name = slang::CompilerOptionName::FloatingPointMode;
-        floatingPointMode.value.kind = slang::CompilerOptionValueKind::Int;
-        floatingPointMode.value.intValue0 = SLANG_FLOATING_POINT_MODE_FAST;
-        options.push_back(floatingPointMode);
-
-        slang::CompilerOptionEntry debugInformation{};
-        debugInformation.name = slang::CompilerOptionName::DebugInformation;
-        debugInformation.value.kind = slang::CompilerOptionValueKind::Int;
-        debugInformation.value.intValue0 = SLANG_DEBUG_INFO_LEVEL_NONE;
-        options.push_back(debugInformation);
-
-        slang::CompilerOptionEntry machineReadable{};
-        machineReadable.name = slang::CompilerOptionName::EnableMachineReadableDiagnostics;
-        machineReadable.value.kind = slang::CompilerOptionValueKind::Int;
-        machineReadable.value.intValue0 = 1;
-        options.push_back(machineReadable);
-
-        slang::CompilerOptionEntry optimization{};
-        optimization.name = slang::CompilerOptionName::Optimization;
-        optimization.value.kind = slang::CompilerOptionValueKind::Int;
-        optimization.value.intValue0 = static_cast<int32_t>(ToSlangOptimizationLevel(optimization_level));
-        options.push_back(optimization);
+        options.emplace_back(ToOptionEntry(CompilerOptionRow{
+            .Name = slang::CompilerOptionName::Optimization,
+            .Kind = slang::CompilerOptionValueKind::Int,
+            .IntValue = static_cast<int32_t>(ToSlangOptimizationLevel(optimization_level)) }));
 
         return options;
     }
@@ -750,11 +764,11 @@ namespace
         }
 
         out_bindings.insert_range(out_bindings.end(),
-                                  drafts | std::views::as_rvalue
-                                      | std::views::transform(&RawBindingDraft::Binding));
+                                  drafts | std::views::as_rvalue |
+                                      std::views::transform(&RawBindingDraft::Binding));
         out_attributes.insert_range(out_attributes.end(),
-                                    drafts | std::views::transform(&RawBindingDraft::Attributes)
-                                        | std::views::join | std::views::as_rvalue);
+                                    drafts | std::views::transform(&RawBindingDraft::Attributes) |
+                                        std::views::join | std::views::as_rvalue);
     }
 
 } // namespace
@@ -789,15 +803,15 @@ struct SlangCompiler::Impl
                                                    std::vector<RawBindingDraft>& out_drafts);
     CookResult<void> ExtractRawBindings(slang::ProgramLayout* program_layout,
                                         std::vector<RawBinding>& out_bindings,
-                                        std::vector<RawSizeAttribute>& out_attributes);
+                                        std::vector<RawSizeAttribute>& out_attributes) const;
     CookResult<void> CollectBindingRangeDrafts(slang::TypeLayoutReflection* containing_layout,
-                                               BindingScope scope,
+                                               const BindingScope& scope,
                                                std::vector<RawBindingDraft>& out_drafts) const;
     CookResult<void> CollectSubObjectDrafts(slang::TypeLayoutReflection* containing_layout,
                                             const BindingScope& scope,
                                             std::vector<RawBindingDraft>& out_drafts) const;
-    [[nodiscard]] CookResult<BindingScope> EntryPointScope(
-        slang::EntryPointReflection* entry_point_layout, std::string_view entry_point_name) const;
+    [[nodiscard]] CookResult<BindingScope> EntryPointScope(slang::EntryPointReflection* entry_point_layout,
+                                                           std::string_view entry_point_name) const;
     CookResult<void> CollectRawSizeAttributes(slang::VariableReflection* leaf_variable,
                                               std::string_view binding_name,
                                               std::vector<RawSizeAttribute>& out_attributes) const;
@@ -809,7 +823,7 @@ struct SlangCompiler::Impl
     void CollectUsedBindingIndices(slang::IComponentType* linked_program,
                                    SlangInt entry_point_index,
                                    std::span<const RawBinding> global_bindings,
-                                   std::vector<uint32_t>& out_used_indices);
+                                   std::vector<uint32_t>& out_used_indices) const;
     static void ExtractRasterState(slang::EntryPointReflection* entry_point_layout,
                                    ShaderStageKind stage,
                                    ReflectedRasterState& raster);
@@ -833,12 +847,8 @@ CookResult<void> SlangCompiler::Impl::CreateSession(const SlangCompilerCreateInf
     // per-stage directory, so the asset root resolves without a command-line switch.
     const std::string sharedDirectory = canonicalModulePath.parent_path().parent_path().string();
     const std::string cacheDirectory = create_info.ModuleCacheDirectory.string();
-    const std::array<const char*, 4> searchPaths
-    {
-        sourceDirectory.c_str(),
-        sharedDirectory.c_str(),
-        cacheDirectory.c_str(),
-        attributesPathStr.c_str()
+    const std::array<const char*, 4> searchPaths{
+        sourceDirectory.c_str(), sharedDirectory.c_str(), cacheDirectory.c_str(), attributesPathStr.c_str()
     };
 
     slang::TargetDesc target{};
@@ -1009,8 +1019,7 @@ void SlangCompiler::Impl::ApplyLeafTypeLayout(slang::TypeLayoutReflection* conta
                                               slang::BindingType binding_type,
                                               RawBinding& binding)
 {
-    slang::TypeLayoutReflection* leafLayout =
-        containing_layout->getBindingRangeLeafTypeLayout(range_index);
+    slang::TypeLayoutReflection* leafLayout = containing_layout->getBindingRangeLeafTypeLayout(range_index);
     if (leafLayout == nullptr)
     {
         return;
@@ -1060,7 +1069,7 @@ void SlangCompiler::Impl::ApplyLeafTypeLayout(slang::TypeLayoutReflection* conta
                 static_cast<uint64_t>(elementLayout->getSize(SLANG_PARAMETER_CATEGORY_UNIFORM));
         }
 
-        CollectUniformMembers(elementLayout, std::string{}, 0u, binding.UniformMembers);
+        CollectUniformMembers(elementLayout, binding.UniformMembers);
         return;
     }
 
@@ -1117,7 +1126,7 @@ CookResult<void> SlangCompiler::Impl::CollectRawSizeAttributes(
 /** Walks the binding ranges of one scope, and drafts a binding for each one. */
 CookResult<void> SlangCompiler::Impl::CollectBindingRangeDrafts(
     slang::TypeLayoutReflection* containing_layout,
-    BindingScope scope,
+    const BindingScope& scope,
     std::vector<RawBindingDraft>& out_drafts) const
 {
     if (containing_layout == nullptr)
@@ -1135,15 +1144,13 @@ CookResult<void> SlangCompiler::Impl::CollectBindingRangeDrafts(
     {
         const slang::BindingType bindingType = containing_layout->getBindingRangeType(rangeIndex);
         // Skip input/output attributes, which slang considers to be part of the global params
-        if (bindingType == slang::BindingType::Unknown ||
-            bindingType == slang::BindingType::VaryingInput ||
+        if (bindingType == slang::BindingType::Unknown || bindingType == slang::BindingType::VaryingInput ||
             bindingType == slang::BindingType::VaryingOutput)
         {
             continue;
         }
 
-        const SlangInt descriptorSetIndex =
-            containing_layout->getBindingRangeDescriptorSetIndex(rangeIndex);
+        const SlangInt descriptorSetIndex = containing_layout->getBindingRangeDescriptorSetIndex(rangeIndex);
         const SlangInt descriptorRangeIndex =
             containing_layout->getBindingRangeFirstDescriptorRangeIndex(rangeIndex);
         if (descriptorSetIndex < 0 || descriptorRangeIndex < 0)
@@ -1165,8 +1172,7 @@ CookResult<void> SlangCompiler::Impl::CollectBindingRangeDrafts(
             continue;
         }
 
-        slang::VariableReflection* leafVariable =
-            containing_layout->getBindingRangeLeafVariable(rangeIndex);
+        slang::VariableReflection* leafVariable = containing_layout->getBindingRangeLeafVariable(rangeIndex);
         const char* leafName = leafVariable != nullptr ? leafVariable->getName() : nullptr;
 
         RawBindingDraft draft;
@@ -1213,17 +1219,15 @@ CookResult<void> SlangCompiler::Impl::CollectBindingRangeDrafts(
  *   to hold it, and a client must create it, so it becomes a binding that carries the name of the
  *   block. A block of resources alone emits no such slot, and drafting one moves nothing but does
  *   report a binding the shader has not got. The uniform size of the element says which case this is. */
-CookResult<void> SlangCompiler::Impl::CollectSubObjectDrafts(
-    slang::TypeLayoutReflection* containing_layout,
-    const BindingScope& scope,
-    std::vector<RawBindingDraft>& out_drafts) const
+CookResult<void> SlangCompiler::Impl::CollectSubObjectDrafts(slang::TypeLayoutReflection* containing_layout,
+                                                             const BindingScope& scope,
+                                                             std::vector<RawBindingDraft>& out_drafts) const
 {
     const SlangInt subObjectRangeCount = containing_layout->getSubObjectRangeCount();
 
     for (SlangInt subObjectIndex = 0; subObjectIndex < subObjectRangeCount; ++subObjectIndex)
     {
-        const SlangInt rangeIndex =
-            containing_layout->getSubObjectRangeBindingRangeIndex(subObjectIndex);
+        const SlangInt rangeIndex = containing_layout->getSubObjectRangeBindingRangeIndex(subObjectIndex);
         if (rangeIndex < 0)
         {
             continue;
@@ -1274,8 +1278,7 @@ CookResult<void> SlangCompiler::Impl::CollectSubObjectDrafts(
             continue;
         }
 
-        slang::VariableReflection* blockVariable =
-            containing_layout->getBindingRangeLeafVariable(rangeIndex);
+        slang::VariableReflection* blockVariable = containing_layout->getBindingRangeLeafVariable(rangeIndex);
         const char* blockName = blockVariable != nullptr ? blockVariable->getName() : nullptr;
 
         BindingScope blockScope;
@@ -1298,9 +1301,8 @@ CookResult<void> SlangCompiler::Impl::CollectSubObjectDrafts(
         {
             slang::VariableLayoutReflection* container = blockLayout->getContainerVarLayout();
             const size_t containerBinding =
-                container != nullptr
-                    ? container->getOffset(SLANG_PARAMETER_CATEGORY_DESCRIPTOR_TABLE_SLOT)
-                    : SLANG_UNKNOWN_SIZE;
+                container != nullptr ? container->getOffset(SLANG_PARAMETER_CATEGORY_DESCRIPTOR_TABLE_SLOT)
+                                     : SLANG_UNKNOWN_SIZE;
             if (containerBinding == SLANG_UNKNOWN_SIZE)
             {
                 std::println(stderr,
@@ -1314,17 +1316,15 @@ CookResult<void> SlangCompiler::Impl::CollectSubObjectDrafts(
             RawBindingDraft draft;
             draft.Binding.Name = blockName != nullptr ? blockName : std::string{};
             draft.Binding.ScopeName = scope.Name;
-            draft.Binding.Placement =
-                BoundPlacement{ .Group = blockScope.Base.Group,
-                                .Binding = static_cast<uint32_t>(containerBinding) };
+            draft.Binding.Placement = BoundPlacement{ .Group = blockScope.Base.Group,
+                                                      .Binding = static_cast<uint32_t>(containerBinding) };
             draft.Binding.Kind = BindingKind::UniformBuffer;
             draft.Binding.ByteSize = static_cast<uint64_t>(uniformSize);
-            CollectUniformMembers(elementLayout, std::string{}, 0u, draft.Binding.UniformMembers);
+            CollectUniformMembers(elementLayout, draft.Binding.UniformMembers);
             out_drafts.emplace_back(std::move(draft));
         }
 
-        if (CookResult<void> contents =
-                CollectBindingRangeDrafts(elementLayout, std::move(blockScope), out_drafts);
+        if (CookResult<void> contents = CollectBindingRangeDrafts(elementLayout, blockScope, out_drafts);
             !contents)
         {
             return std::unexpected(contents.error());
@@ -1342,8 +1342,8 @@ CookResult<void> SlangCompiler::Impl::CollectSubObjectDrafts(
  * The scope name is the parameter's own name when the entry point declares one parameter of a struct
  * type. Slang collects loose `uniform` parameters into a synthetic struct instead, and names that
  * `entryPointParams`. Both answers come from the same call, so neither is a special case here. */
-CookResult<BindingScope> SlangCompiler::Impl::EntryPointScope(
-    slang::EntryPointReflection* entry_point_layout, std::string_view entry_point_name) const
+CookResult<BindingScope> SlangCompiler::Impl::EntryPointScope(slang::EntryPointReflection* entry_point_layout,
+                                                              std::string_view entry_point_name) const
 {
     slang::VariableLayoutReflection* varLayout = entry_point_layout->getVarLayout();
     if (varLayout == nullptr)
@@ -1359,8 +1359,8 @@ CookResult<BindingScope> SlangCompiler::Impl::EntryPointScope(
         Diagnostic report;
         report.Severity = DiagnosticSeverity::Error;
         report.Context = "entryPointScope";
-        report.Message = std::format("entry point {} has an unresolved parameter scope offset",
-                                     entry_point_name);
+        report.Message =
+            std::format("entry point {} has an unresolved parameter scope offset", entry_point_name);
         Sink->Report(report);
         return std::unexpected(CookError::ReflectionUnavailable);
     }
@@ -1373,11 +1373,11 @@ CookResult<BindingScope> SlangCompiler::Impl::EntryPointScope(
 
 CookResult<void> SlangCompiler::Impl::ExtractRawBindings(slang::ProgramLayout* program_layout,
                                                          std::vector<RawBinding>& out_bindings,
-                                                         std::vector<RawSizeAttribute>& out_attributes)
+                                                         std::vector<RawSizeAttribute>& out_attributes) const
 {
     std::vector<RawBindingDraft> drafts;
-    if (CookResult<void> walk = CollectBindingRangeDrafts(
-            program_layout->getGlobalParamsTypeLayout(), BindingScope{}, drafts);
+    if (CookResult<void> walk =
+            CollectBindingRangeDrafts(program_layout->getGlobalParamsTypeLayout(), BindingScope{}, drafts);
         !walk)
     {
         return std::unexpected(walk.error());
@@ -1386,7 +1386,9 @@ CookResult<void> SlangCompiler::Impl::ExtractRawBindings(slang::ProgramLayout* p
     std::ranges::stable_sort(drafts,
                              PlacementLess,
                              [](const RawBindingDraft& draft) -> const RawPlacement&
-                             { return draft.Binding.Placement; });
+                             {
+                                 return draft.Binding.Placement;
+                             });
 
     AppendBindingDrafts(drafts, out_bindings, out_attributes);
     return {};
@@ -1400,7 +1402,7 @@ CookResult<void> SlangCompiler::Impl::ExtractRawBindings(slang::ProgramLayout* p
 void SlangCompiler::Impl::CollectUsedBindingIndices(slang::IComponentType* linked_program,
                                                     SlangInt entry_point_index,
                                                     std::span<const RawBinding> global_bindings,
-                                                    std::vector<uint32_t>& out_used_indices)
+                                                    std::vector<uint32_t>& out_used_indices) const
 {
     Slang::ComPtr<slang::IMetadata> metadata;
     Slang::ComPtr<slang::IBlob> diagnostics;
@@ -1473,8 +1475,8 @@ CookResult<RawEntryPoint> SlangCompiler::Impl::ExtractRawEntryPoint(
         return std::unexpected(scope.error());
     }
 
-    if (CookResult<void> walk = CollectBindingRangeDrafts(
-            entryPointLayout->getTypeLayout(), std::move(scope.value()), out_drafts);
+    if (CookResult<void> walk =
+            CollectBindingRangeDrafts(entryPointLayout->getTypeLayout(), scope.value(), out_drafts);
         !walk)
     {
         return std::unexpected(walk.error());
@@ -1489,7 +1491,7 @@ void SlangCompiler::Impl::ExtractRasterState(slang::EntryPointReflection* entry_
 {
     if (stage == ShaderStageKind::Vertex)
     {
-        CollectVertexInputs(entry_point_layout->getVarLayout(), 0u, raster);
+        CollectVertexInputs(entry_point_layout->getVarLayout(), raster);
         return;
     }
 
@@ -1498,7 +1500,7 @@ void SlangCompiler::Impl::ExtractRasterState(slang::EntryPointReflection* entry_
         return;
     }
 
-    CollectColorTargets(entry_point_layout->getResultVarLayout(), 0u, raster);
+    CollectColorTargets(entry_point_layout->getResultVarLayout(), raster);
     CollectDepthWrites(entry_point_layout->getVarLayout(), raster);
 }
 
