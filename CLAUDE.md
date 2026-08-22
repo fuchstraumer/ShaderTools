@@ -21,8 +21,15 @@ cmake --preset ninja-msvc
 ```
 
 ```bash
-cmake --build build/ninja-msvc --config Debug
+scriptsuild.bat
 ```
+
+`scripts/build.bat [Debug|RelWithDebInfo] [preset]` sets the compiler environment and then builds.
+**Use it rather than a bare `cmake --build`.** The build tree keeps the compiler that `CMakeCache.txt`
+holds, which is Visual Studio 18 Community. Another environment gives that compiler the headers of a
+different toolset, `ammintrin.h` raises C4392, and every SPIRV-Tools target fails because Slang builds
+them with `/WX`. The `lodestone` targets still build, so the fault stays hidden until a change
+invalidates the whole graph.
 
 Presets: `ninja-msvc` and `ninja-clang-cl`. Configurations: `Debug` and `RelWithDebInfo`.
 Clang-CL with the MSVC frontend variant is a hard configure error.
@@ -39,23 +46,28 @@ failed build then looks like a success.
 Run every test:
 
 ```bash
-ctest --test-dir build/ninja-msvc -C Debug --output-on-failure
+scripts
+un-tests.bat
 ```
 
-Run one test:
+It runs each executable directly and prints one line for each. A failing target is run a second time
+with its output shown.
 
-```bash
-ctest --test-dir build/ninja-msvc -C Debug -R SizeExpressionTest --output-on-failure
-```
+`ctest --test-dir build/ninja-msvc -C Debug -R SizeExpressionTest --output-on-failure` runs one test.
+
+**Do not pipe a long run into a pager or into PowerShell `Select-Object`.** The whole stream is held
+until the command ends. The run then prints nothing for minutes, and it looks like a deadlock. A test
+that stops with an assertion also loses its buffered output.
 
 Each test target is also a standalone executable. Run it directly to debug it:
-`build/ninja-msvc/tests/Debug/CookTest.exe`.
+`build/ninja-msvc/tests/Debug/CookTest.exe`. `CookTest` is the one that needs a command line. With no
+argument it exits 1 on `NoOutputSpecified`, which reads like a failure rather than a usage error.
 
 There is no test framework. `tests/TestHarness.hpp` gives a counter, `Check(condition, description)`,
 and a nonzero exit code.
 
-Ten test targets exist. Nine are unit tests, and each one proves a claim the repository makes. None of
-them needs Slang, a compiler, or an asset, and all nine together run in under one second.
+Eleven test targets exist. Ten are unit tests, and each one proves a claim the repository makes. None
+of them needs Slang, a compiler, or an asset, and all ten together run in under one second.
 
 | Target | Proves |
 |---|---|
@@ -64,6 +76,7 @@ them needs Slang, a compiler, or an asset, and all nine together run in under on
 | `PermutationIndexTest` | A variant index is unique, dense, and stable, and a partial assignment resolves to one variant. |
 | `ShaderManifestRejectTest` | The manifest reader rejects a short, misaligned, or damaged file, and opens a real one. |
 | `WgslBindingScannerTest` | The cross-check reads the emitted WGSL correctly, and fails on a real mismatch. |
+| `ExternConstantScannerTest` | The scanner reads an `extern static const` declaration out of shader text, and refuses a use of the name as a declaration. Nothing compares this answer against a second opinion, and it decides buffer sizes. |
 | `StageDumpTest` | A stage dump holds the model and no target text, it names itself the way `--dump-stage` names it, and two dumps of one input agree byte for byte. |
 | `DedupeInfluenceTest` | Dedup changes what the tables cost and never what the cook measures. It builds one module in both arms and checks that the axis influence agrees, and that the measurement reads every group of variants. |
 | `DiagnosticParserTest` | The parser reads Slang's machine-readable diagnostic form into a record. It names no Slang type, so it needs no compiler. |
@@ -71,7 +84,7 @@ them needs Slang, a compiler, or an asset, and all nine together run in under on
 
 An error check prints a diagnostic to `stderr` on purpose. Read the last line for the result.
 
-`CookTest` is the tenth, and it is different. It is the cooker driver, not an assertion suite.
+`CookTest` is the eleventh, and it is different. It is the cooker driver, not an assertion suite.
 `tests/CMakeLists.txt` gives it a command line through `TEST_ARGS`, so `ctest` runs a real cook of
 `OceanFft.slang` with `--verify-deterministic`. It takes about 18 seconds, and it is the only
 end-to-end coverage. Exit code 0 there is a real statement: every variant compiled, every reflection
@@ -88,7 +101,7 @@ it. `lodestone` itself stays a static library: the tool parses a command line, b
 `FileOutputSink`, and calls `RunCook`. `CookTest.cpp` drives the same three calls with a command line
 that `tests/CMakeLists.txt` supplies.
 
-`ParseCommandLine` in `src/CookerOptions.cpp` parses the flags, and `GetUsageText` prints them:
+`ParseCommandLine` in `src/driver/CookerOptions.cpp` parses the flags, and `GetUsageText` prints them:
 `--output/-o`, `--cache-dir`, `--O0` to `--O3`, `--target=<name>`, `--no-validate`, `--quiet`,
 `--single-threaded`, `--no-dedupe`, `--verify-deterministic`, and `--dump-stage=<name>`.
 
@@ -108,6 +121,33 @@ the client half stays free of the compiler.
 Test shaders live in `tests/assets/`. `tests/assets/compute/Ocean/OceanFft.slang` is the reference
 module, because it is the only module with a registered permutation space.
 
+## Where the code lives
+
+`include/` and `src/` mirror each other, and each holds six folders. **Every include is qualified**,
+such as `#include "permute/PermutationSpace.hpp"`. One include directory, not six. A wrong dependency
+is therefore a visible word in a diff: the day a file in `emit/` writes
+`#include "compile/SlangCompiler.hpp"`, review shows it.
+
+| Folder | Holds | Why it is one thing |
+|---|---|---|
+| `permute/` | `PermutationValue`, `PermutationAxis`, `PermutationAssignment`, `PermutationSpace`, `PermutationPolicy`, `PermutationRegistry`, `SizeExpression`, `ExternConstantScanner` | The authoring parameter domain. Stages 1 and 2. Phase E fills this folder. |
+| `compile/` | `SlangCompiler`, `SlangDiagnosticParser`, `RawLibrary`, `Diagnostics` | **The Slang wall. No file outside this folder names a Slang type.** |
+| `model/` | `ResolveStage`, `ShaderDataSchema`, `ContentHash`, `ContentInterner`, `CookedLibrary` | The data that flows, interns, and freezes. Stages 4, 6, and 7. |
+| `target/` | `TargetProfile`, `WgslBindingScanner` | A target, its access model, and its validator. Phase F fills this folder. |
+| `emit/` | `ShaderLibraryEmitter`, `ShaderManifestEmitter`, `OutputSink`, `StageDump`, `DedupeReport` | Everything that writes through a sink. Stage 8, plus the two reports. |
+| `driver/` | `CookerDriver`, `CookerOptions` | The loop and its command line. |
+
+`CookerErrors.hpp` sits at the top of `include/`, because every folder uses it.
+
+`client/include/` is not part of this split. It is the contract a renderer links against, and it holds
+four headers and nothing else.
+
+There is no `validate/` folder, and that is worth knowing. Three of the four validators are functions
+inside the file they check: `VerifyLibraryRoundTrip` and `VerifyLayoutRoundTrip` live in
+`src/driver/CookerDriver.cpp`, and `VerifyManifestRoundTrip` lives in
+`src/emit/ShaderManifestEmitter.cpp`. Only `WgslBindingScanner` is its own file. The tree cannot show
+that validators rank beside stages, and no arrangement of the current files would.
+
 ## The two problem domains
 
 The repository serves two domains, and the whole design follows from the split.
@@ -120,7 +160,7 @@ A renderer links against that header, and against nothing else in this repositor
 therefore does not force the renderer to rebuild.
 
 Do not put a Slang type, a WebGPU type, or a `std::filesystem` type into the client headers or into
-`ShaderDataSchema.hpp`. A compiler type that leaks into the schema becomes a dependency the engine
+`model/ShaderDataSchema.hpp`. A compiler type that leaks into the schema becomes a dependency the engine
 must carry forever.
 
 ## How this repository thinks
@@ -164,7 +204,7 @@ commit that caused it, naming the axis and the entry point. Cost that nobody can
 **The escape hatch stays working.** `--no-dedupe` is not a debug flag. It is the control arm, and both
 arms must emit valid output. A mechanism with no way to turn it off is a mechanism nobody can debug.
 
-**A third-party type never rises above the layer that needs it.** `SlangCompiler.hpp` names no Slang
+**A third-party type never rises above the layer that needs it.** `compile/SlangCompiler.hpp` names no Slang
 type. `manifest_dump` links only the client half, and that link line is the proof the client half stays
 free of the compiler. When a dependency arrives, it goes behind a facade in one translation unit.
 
@@ -205,7 +245,7 @@ She would rather be told an idea is aimed at nothing than be helped to build it.
 
 ## Data flow, one cook
 
-`RunCook` in `src/CookerDriver.cpp` is the whole loop. Read that file first. It calls each stage in
+`RunCook` in `src/driver/CookerDriver.cpp` is the whole loop. Read that file first. It calls each stage in
 order, for each module path.
 
 **A stage transforms. A validator compares.** The pipeline has eight numbered stages, and each one
@@ -214,10 +254,12 @@ against a second opinion, and changes nothing. A validator gets a name and no nu
 number would state that every target must supply one. A target supplies a validator only when it can.
 
 1. **Declare.** `FindPermutationSpaceForModule(name)` finds the module's axes.
-   `VerifyAxisNamesAreDeclared` checks each axis name against the `extern static const` declarations
-   in the Slang source texts. A module with no registered space gets an empty space and one variant.
-2. **Enumerate.** `EnumerateVariants` expands the space into a `VariantSet` of `VariantDescriptor`
-   values. Each descriptor holds `Active` and `Canonical` (see below) and a dense index.
+   `space.VerifyAxisNamesAreDeclared` checks each axis name against the `extern static const`
+   declarations in the Slang source texts, through `ExternConstantScanner`. A module with no
+   registered space gets an empty space and one variant.
+2. **Enumerate.** `space.EnumerateVariants()` expands the space into a `VariantSet` of
+   `VariantDescriptor` values. Each descriptor holds `Active` and `Canonical` (see below) and a dense
+   index.
 3. **Compile.** Stage 3 has two entry points. `SlangCompiler::PrepareRawModule` runs once for each
    module and returns the module facts only Slang can supply: the name, the entry point names, and
    the declared default of every `extern static const` constant no axis drives. A size expression may
@@ -227,10 +269,10 @@ number would state that every target must supply one. A target supplies a valida
    for target text for each entry point. Entry point codegen runs on `std::async` unless
    `MultithreadEntryPointCodegen` is false. Output is `RawVariant`. Every `[vx_*]` argument comes back
    as the string the author wrote, because evaluating one is stage 4's job.
-4. **Resolve.** `ResolveVariant` in `ResolveStage.cpp` reads the `[vx_*]` attributes and evaluates each
+4. **Resolve.** `ResolveVariant` in `model/ResolveStage.cpp` reads the `[vx_*]` attributes and evaluates each
    size expression against a `ResolveContext`. Output is `CompiledVariant`.
-   **`SlangCompiler.cpp` names no size expression and no `[vx_*]` attribute, and `ResolveStage.cpp`
-   names no Slang type.** Phase D step D5 made that true, and it is what lets a second target language
+   **`compile/SlangCompiler.cpp` names no size expression and no `[vx_*]` attribute, and
+   `model/ResolveStage.cpp` names no Slang type.** Phase D step D5 made that true, and it is what lets a second target language
    exist. Do not undo it.
 5. **Normalize.** Empty on purpose. The dedup report says `normalization passes active: (none)`. A
    whitespace pass with no stage boundary hides the difference between a true collapse and an effect
@@ -274,28 +316,32 @@ unordered container reached the output.
 
 | Type | Header | Role |
 |---|---|---|
-| `CookerOptions` | `CookerOptions.hpp` | Every knob one cook has. `ParseCommandLine` fills it. |
-| `OutputSink` | `OutputSink.hpp` | Where artifacts go. `FileOutputSink` and `MemoryOutputSink`. The seam a live cooker will use. |
-| `PermutationAxis`, `PermutationSpace` | `PermutationSpace.hpp` | One axis of variation, and the list of axes for a module. |
-| `VariantDescriptor` | `PermutationSpace.hpp` | One variant identity. `Active` and `Canonical`. |
-| `CanonicalAssignment` | `PermutationSpace.hpp` | An assignment that holds every axis of one space. Only `CanonicalizeAssignment` builds one, so `ComputeVariantIndex` cannot be given a partial assignment. |
-| `ModulePolicy` | `PermutationSpace.hpp` | A variant budget, plus the axis influence the author expects. |
-| `CompiledVariant`, `CompiledEntryPoint` | `ShaderDataSchema.hpp` | Compiler output: WGSL text plus reflection. Owns its strings. |
-| `ReflectedBinding` | `ShaderDataSchema.hpp` | What the shader states about one resource. The CPU side never writes any of it. |
-| `RawVariant`, `RawModule` | `RawLibrary.hpp` | Stage 3 output. Everything Slang says, with no opinion about any of it. A `[vx_*]` argument is still the string the author wrote. |
-| `ResolveContext` | `ResolveStage.hpp` | Stage 4 input. The axis values of one variant, plus the extern constant defaults that stage 3 carried out. |
-| `TargetProfile` | `TargetProfile.hpp` | A target name, an access model, and an optional validator. `--target` names one. |
-| `DiagnosticRecord`, `DiagnosticSink` | `Diagnostics.hpp` | One compiler message as a record, and where it goes. Compilation never formats a string. |
-| `ContentInterner<T>` | `ContentInterner.hpp` | Collapses equal payloads, keeps provenance, counts collisions. |
-| `InternedModule` | `CookedLibrary.hpp` | The stage 6 builder. It holds the six interners, and it is the only place the provenance of a collapse survives. |
-| `CookedModule`, `CookedLibrary` | `CookedLibrary.hpp` | The frozen model. Every emitter reads this and nothing earlier. |
+| `CookerOptions` | `driver/CookerOptions.hpp` | Every knob one cook has. `ParseCommandLine` fills it. |
+| `OutputSink` | `emit/OutputSink.hpp` | Where artifacts go. `FileOutputSink` and `MemoryOutputSink`. The seam a live cooker will use. |
+| `PermutationValue` | `permute/PermutationValue.hpp` | One axis value: bool, uint32, or int32. A tagged union, and not a `std::variant`, so no header downstream carries the template. |
+| `PermutationAxis` | `permute/PermutationAxis.hpp` | One axis of variation. Values are stored in place, capped at `k_MaxValues`. `ParentIndex` names the parent axis inside the owning space. |
+| `PermutationSpace` | `permute/PermutationSpace.hpp` | A named, ordered set of axes, and every question you ask about them. It **owns** its axes, so it cannot be copied. |
+| `PermutationBinding`, `PermutationAssignment` | `permute/PermutationAssignment.hpp` | One axis bound to one value, and a list of them. |
+| `VariantDescriptor` | `permute/PermutationAssignment.hpp` | One variant identity. `Active` and `Canonical`. |
+| `CanonicalAssignment` | `permute/PermutationAssignment.hpp` | An assignment that holds every axis of one space. Only `PermutationSpace::CanonicalizeAssignment` builds one, so `ComputeVariantIndex` cannot be given a partial assignment. |
+| `ModulePolicy` | `permute/PermutationPolicy.hpp` | A variant budget, plus the axis influence the author expects. |
+| `ExternConstantDeclaration` | `permute/ExternConstantScanner.hpp` | One `extern static const` line read out of shader text. |
+| `CompiledVariant`, `CompiledEntryPoint` | `model/ShaderDataSchema.hpp` | Compiler output: WGSL text plus reflection. Owns its strings. |
+| `ReflectedBinding` | `model/ShaderDataSchema.hpp` | What the shader states about one resource. The CPU side never writes any of it. |
+| `RawVariant`, `RawModule` | `compile/RawLibrary.hpp` | Stage 3 output. Everything Slang says, with no opinion about any of it. A `[vx_*]` argument is still the string the author wrote. |
+| `ResolveContext` | `model/ResolveStage.hpp` | Stage 4 input. The axis values of one variant, plus the extern constant defaults that stage 3 carried out. |
+| `TargetProfile` | `target/TargetProfile.hpp` | A target name, an access model, and an optional validator. `--target` names one. |
+| `DiagnosticRecord`, `DiagnosticSink` | `compile/Diagnostics.hpp` | One compiler message as a record, and where it goes. Compilation never formats a string. |
+| `ContentInterner<T>` | `model/ContentInterner.hpp` | Collapses equal payloads, keeps provenance, counts collisions. |
+| `InternedModule` | `model/CookedLibrary.hpp` | The stage 6 builder. It holds the six interners, and it is the only place the provenance of a collapse survives. |
+| `CookedModule`, `CookedLibrary` | `model/CookedLibrary.hpp` | The frozen model. Every emitter reads this and nothing earlier. |
 | `ShaderManifestView` | `client/include/ShaderManifest.hpp` | Read-only spans over the manifest bytes. Allocates nothing to open. |
 | `ShaderSourceProvider` | `client/include/ShaderLibraryTypes.hpp` | Where a renderer gets source, bindings, and workgroup size. `Generation()` is the hot-reload hook. |
 
-`ContentHashValue` is xxHash3, 64 bit. `ContentHash.hpp` holds the streaming form as well, which the
+`ContentHashValue` is xxHash3, 64 bit. `model/ContentHash.hpp` holds the streaming form as well, which the
 composite keys use. The hash name reaches the output, so a new hash needs a new name, and
 `k_HashName` is the only place that name is written. Every interner takes it from there. The name was
-once spelled out a second time in `CookedLibrary.hpp`, the two copies drifted, and the dump then
+once spelled out a second time in `model/CookedLibrary.hpp`, the two copies drifted, and the dump then
 reported a name that no constant held.
 
 ## Rules the code depends on
@@ -331,7 +377,8 @@ emitted text. `Canonical` holds every axis in declaration order, with the first 
 disabled axis. It drives the dense mixed-radix index only. Canonicalization therefore can never
 change shader output, and a caller can find a variant with a partial set of values.
 
-`Canonical` has its own type, `CanonicalAssignment`, and only `CanonicalizeAssignment` builds one.
+`Canonical` has its own type, `CanonicalAssignment`, and only `PermutationSpace::CanonicalizeAssignment`
+builds one.
 `PermutationAssignment` named four different things: an active assignment, a partial one, a canonical
 one, and the parameter of every function that takes any of them. `ComputeVariantIndex` needs the
 canonical form, and it stated that in a parameter name alone. A partial assignment now fails to
@@ -353,9 +400,15 @@ own name. The README shows `lodestone_element_count`; the code says `vx_element_
 
 ## Where to register a module
 
-`FindPermutationSpaceForModule` and `FindPolicyForModule` read a static table, `k_ModuleSpaces`, at
-the top of `src/PermutationSpace.cpp`. Add an axis, a space, a policy, and a table row there. Only
-`OceanFft` has an entry today.
+`FindPermutationSpaceForModule` and `FindPolicyForModule` read a static table, `k_ModuleSpaces`, in
+`src/permute/PermutationRegistry.cpp`. Add an axis, a space, a policy, and a table row there. Only
+`OceanFft` has an entry today. That file holds nothing else, so phase E step E6 deletes it whole.
+
+An axis names its parent by index into the space that owns it, and not by pointer. A
+`PermutationSpace` owns its axes by value, so a copy would leave every `PermutationBinding` of the
+original aimed at a different object, and a child axis would then read as absent and quietly reduce
+the variant count. Copying a space is deleted for that reason. Moving one is safe, because moving the
+vector keeps the axis addresses.
 
 This table is compiled in. Replacing it is phase E, and
 `docs/phase-e-data-driven-permutations.md` plans it: the axis moves onto the `extern static const`
@@ -382,13 +435,19 @@ complete. No `velox` name remains in `src/`, `include/`, `client/`, `tests/`, or
 
 The shader side keeps the old prefix on purpose. `tests/assets/LodestoneAttributes.slang` declares
 `module VeloxAttributes` and the `vx_element_count`, `vx_extent_2d`, and `vx_extent_3d` attributes.
-Those names are part of the shader-side contract, and `src/SlangCompiler.cpp` reads them by string. A
+Those names are part of the shader-side contract, and `src/compile/SlangCompiler.cpp` reads them by string. A
 rename there touches every test shader, so treat it as its own task.
 
 ## Documents
 
+**`docs/` is in `.gitignore`.** Only `shader-cooker-handoff.md` and `shader-cooker-change-summary.md`
+are tracked, because they were added before the rule. Every other document below exists on disk and
+in no commit. Force-add one with `git add -f` when it must survive.
+
 ### Background — what the repository is
 
+- `docs/phase-d-tail-handoff.md` — **read this first.** State, the decisions the author settled, the
+  defects found, and the next task. It is newer than this file on anything that moves.
 - `docs/cooker-rendergraph-plan.md` — the design document. It comes from the engine repository, so it
   frames the rendergraph as the consumer. The real goal is any rendering backend.
 - `docs/shader-cooker-handoff.md` — state, invariants, and the agreed next tasks. The stage 3 and
@@ -408,7 +467,8 @@ beside them.
 - `docs/phase-e-data-driven-permutations.md` — axis declarations in the shader, policy in a data file,
   constraint expressions, and a ranking index in place of mixed radix. **This is the next work.**
   §9 lists what phase D was asked to leave behind. One item is open: the space dump does not yet
-  carry the axis fields that E2 adds.
+  carry the axis fields that E2 adds. §1c, §1d, and §1e hold steps E0a, E0b, and E0c, which are found
+  work rather than phase E ideas, and which come first.
 - `docs/phase-f-vocabulary.md` — **read this before proposing anything about targets or bindings.**
   It defines axis kind, binding time, and access model, and it divides the work between Slang's
   capability system and this repository. It is a vocabulary, not a plan.

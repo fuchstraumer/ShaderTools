@@ -1,15 +1,16 @@
 #include "compile/SlangCompiler.hpp"
 #include "CookerErrors.hpp"
 #include "compile/Diagnostics.hpp"
+#include "compile/SlangDiagnosticParser.hpp"
+#include "compile/RawLibrary.hpp"
+#include "model/ShaderDataSchema.hpp"
+#include "permute/PermutationAssignment.hpp"
 #include "permute/PermutationSpace.hpp"
 #include "ResourceFlags.hpp"
-#include "model/ShaderDataSchema.hpp"
 #include "ShaderLibraryTypes.hpp"
-#include "compile/SlangDiagnosticParser.hpp"
 
-#include <filesystem>
-#include <ios>
-#include <memory>
+
+
 #include <slang-com-helper.h>
 #include <slang-com-ptr.h>
 #include <slang.h>
@@ -19,9 +20,11 @@
 #include <cstdint>
 #include <cstdio>
 #include <expected>
+#include <ios>
+#include <filesystem>
 #include <fstream>
-#include <future>
 #include <iterator>
+#include <memory>
 #include <print>
 #include <span>
 #include <string>
@@ -218,7 +221,7 @@ namespace
      * shape must be masked out before the comparison. */
     ResourceShape FromSlangResourceShape(SlangResourceShape shape) noexcept
     {
-        const SlangResourceShape baseShape =
+        const auto baseShape =
             static_cast<SlangResourceShape>(shape & SLANG_RESOURCE_BASE_SHAPE_MASK);
         const bool isArray = (shape & SLANG_TEXTURE_ARRAY_FLAG) != 0;
         const bool isMultisample = (shape & SLANG_TEXTURE_MULTISAMPLE_FLAG) != 0;
@@ -238,7 +241,9 @@ namespace
         case SLANG_TEXTURE_CUBE:
             return isArray ? ResourceShape::TextureCubeArray : ResourceShape::TextureCube;
         case SLANG_STRUCTURED_BUFFER:
+            [[fallthrough]];
         case SLANG_BYTE_ADDRESS_BUFFER:
+            [[fallthrough]];
         case SLANG_TEXTURE_BUFFER:
             return ResourceShape::Buffer;
         default:
@@ -253,17 +258,25 @@ namespace
         switch (scalar_type)
         {
         case slang::TypeReflection::ScalarType::Int8:
+            [[fallthrough]];
         case slang::TypeReflection::ScalarType::Int16:
+            [[fallthrough]];
         case slang::TypeReflection::ScalarType::Int32:
+            [[fallthrough]];
         case slang::TypeReflection::ScalarType::Int64:
             return TextureSampleType::SignedInteger;
         case slang::TypeReflection::ScalarType::UInt8:
+            [[fallthrough]];
         case slang::TypeReflection::ScalarType::UInt16:
+            [[fallthrough]];
         case slang::TypeReflection::ScalarType::UInt32:
+            [[fallthrough]];
         case slang::TypeReflection::ScalarType::UInt64:
             return TextureSampleType::UnsignedInteger;
         case slang::TypeReflection::ScalarType::Float16:
+            [[fallthrough]];
         case slang::TypeReflection::ScalarType::Float32:
+            [[fallthrough]];
         case slang::TypeReflection::ScalarType::Float64:
             return TextureSampleType::Float;
         default:
@@ -329,8 +342,10 @@ namespace
 
     bool IsDepthSemantic(std::string_view semantic_name) noexcept
     {
-        return semantic_name == "SV_Depth" || semantic_name == "SV_DEPTH" ||
-               semantic_name == "SV_DepthGreaterEqual" || semantic_name == "SV_DepthLessEqual";
+        return semantic_name == "SV_Depth" ||
+               semantic_name == "SV_DEPTH" ||
+               semantic_name == "SV_DepthGreaterEqual" ||
+               semantic_name == "SV_DepthLessEqual";
     }
 
     /** Flattens one uniform block into rows of name, offset, and size. A nested struct recurses and
@@ -536,31 +551,31 @@ namespace
         case SLANG_IMAGE_FORMAT_r8:
             return TextureFormat::R8Unorm;
         case SLANG_IMAGE_FORMAT_rg8:
-            return TextureFormat::Rg8Unorm;
+            return TextureFormat::RG8Unorm;
         case SLANG_IMAGE_FORMAT_rgba8:
-            return TextureFormat::Rgba8Unorm;
+            return TextureFormat::RGBA8Unorm;
         case SLANG_IMAGE_FORMAT_r16f:
             return TextureFormat::R16Float;
         case SLANG_IMAGE_FORMAT_rg16f:
-            return TextureFormat::Rg16Float;
+            return TextureFormat::RG16Float;
         case SLANG_IMAGE_FORMAT_rgba16f:
-            return TextureFormat::Rgba16Float;
+            return TextureFormat::RGBA16Float;
         case SLANG_IMAGE_FORMAT_r32f:
             return TextureFormat::R32Float;
         case SLANG_IMAGE_FORMAT_rg32f:
-            return TextureFormat::Rg32Float;
+            return TextureFormat::RG32Float;
         case SLANG_IMAGE_FORMAT_rgba32f:
-            return TextureFormat::Rgba32Float;
+            return TextureFormat::RGBA32Float;
         case SLANG_IMAGE_FORMAT_r32ui:
             return TextureFormat::R32Uint;
         case SLANG_IMAGE_FORMAT_rg32ui:
-            return TextureFormat::Rg32Uint;
+            return TextureFormat::RG32Uint;
         case SLANG_IMAGE_FORMAT_rgba32ui:
-            return TextureFormat::Rgba32Uint;
+            return TextureFormat::RGBA32Uint;
         case SLANG_IMAGE_FORMAT_rgb10_a2:
-            return TextureFormat::Rgb10A2Unorm;
+            return TextureFormat::R10G10B10A2Unorm;
         case SLANG_IMAGE_FORMAT_r11f_g11f_b10f:
-            return TextureFormat::Rg11B10Ufloat;
+            return TextureFormat::R11G11B10Ufloat;
         default:
             return TextureFormat::Invalid;
         }
@@ -653,7 +668,7 @@ struct SlangCompiler::Impl
     CookResult<void> LoadRootModule();
     void ReadDependencySourceTexts();
     CookResult<void> CollectEntryPoints();
-    CookResult<Slang::ComPtr<slang::IComponentType>> LinkVariant(
+    [[nodiscard]] CookResult<Slang::ComPtr<slang::IComponentType>> LinkVariant(
         const PermutationAssignment& assignment) const;
     std::vector<std::string> GenerateEntryPointCode(slang::IComponentType* linked_program) const;
     CookResult<RawEntryPoint> ExtractRawEntryPoint(slang::IComponentType* linked_program,
@@ -698,8 +713,12 @@ CookResult<void> SlangCompiler::Impl::CreateSession(const SlangCompilerCreateInf
     // per-stage directory, so the asset root resolves without a command-line switch.
     const std::string sharedDirectory = canonicalModulePath.parent_path().parent_path().string();
     const std::string cacheDirectory = create_info.ModuleCacheDirectory.string();
-    const std::array<const char*, 4> searchPaths{
-        sourceDirectory.c_str(), sharedDirectory.c_str(), cacheDirectory.c_str(), attributesPathStr.c_str()
+    const std::array<const char*, 4> searchPaths
+    {
+        sourceDirectory.c_str(),
+        sharedDirectory.c_str(),
+        cacheDirectory.c_str(),
+        attributesPathStr.c_str()
     };
 
     slang::TargetDesc target{};
@@ -712,7 +731,7 @@ CookResult<void> SlangCompiler::Impl::CreateSession(const SlangCompilerCreateInf
     sessionDesc.searchPaths = searchPaths.data();
     sessionDesc.searchPathCount = static_cast<SlangInt>(searchPaths.size());
     sessionDesc.compilerOptionEntries = CompilerOptions.data();
-    sessionDesc.compilerOptionEntryCount = static_cast<SlangInt>(CompilerOptions.size());
+    sessionDesc.compilerOptionEntryCount = static_cast<uint32_t>(CompilerOptions.size());
 
     if (SLANG_FAILED(GlobalSession->createSession(sessionDesc, Session.writeRef())) || Session == nullptr)
     {
@@ -850,34 +869,6 @@ std::vector<std::string> SlangCompiler::Impl::GenerateEntryPointCode(
 {
     const size_t entryPointCount = EntryPointNames.size();
     std::vector<std::string> generated(entryPointCount);
-
-    if (MultithreadEntryPointCodegen)
-    {
-        // A worker carries its diagnostic text back rather than reporting it. Two reasons: a sink has
-        // no lock, and a message reported from a worker would arrive in whatever order the threads
-        // finished. Reporting on the joining thread puts every message in entry point order, so two
-        // runs of one cook say the same thing in the same sequence.
-        std::vector<std::future<GeneratedEntryPoint>> pending;
-        pending.reserve(entryPointCount);
-
-        for (size_t i = 0; i < entryPointCount; ++i)
-        {
-            pending.push_back(std::async(std::launch::async,
-                                         [linked_program, i]()
-                                         {
-                                             return GenerateOneEntryPoint(linked_program, i);
-                                         }));
-        }
-
-        for (size_t i = 0; i < entryPointCount; ++i)
-        {
-            GeneratedEntryPoint result = pending[i].get();
-            ReportDiagnosticText(*Sink, "getEntryPointCode", result.Diagnostics);
-            generated[i] = std::move(result.Code);
-        }
-
-        return generated;
-    }
 
     for (size_t i = 0; i < entryPointCount; ++i)
     {
@@ -1266,7 +1257,7 @@ CookResult<RawVariant> SlangCompiler::CompileVariantRaw(const VariantDescriptor&
     RawVariant variant;
     variant.VariantSuffix = MakeAssignmentSuffix(descriptor.Canonical);
     variant.VariantDescription = DescribeAssignment(descriptor.Canonical);
-    variant.VariantIndex = descriptor.Index;
+    variant.VariantIndex = static_cast<uint32_t>(descriptor.Index);
 
     // Slang reports the bindings for the whole program, so this set is the same for every entry point
     // of this variant. Extract it once, and let each entry point say which of them it reads.

@@ -1,0 +1,57 @@
+@echo off
+REM Runs every test executable and prints one line for each. Usage: scripts\run-tests.bat [Debug|RelWithDebInfo] [preset]
+REM
+REM Each test runs directly, and not through ctest. A direct run prints as it goes. A run behind a
+REM pager or behind PowerShell `Select-Object` prints nothing until the end, which looks like a
+REM deadlock, and a test that stops with an assertion loses its buffered output.
+REM
+REM CookTest takes a command line. With no argument it exits 1 on NoOutputSpecified, which reads
+REM like a failure. tests/CMakeLists.txt gives ctest the same arguments this script gives it.
+setlocal enabledelayedexpansion
+
+set "CONFIG=%~1"
+if "%CONFIG%"=="" set "CONFIG=Debug"
+set "PRESET=%~2"
+if "%PRESET%"=="" set "PRESET=ninja-msvc"
+
+set "REPO=%~dp0.."
+set "BIN=%REPO%\build\%PRESET%\tests\%CONFIG%"
+
+if not exist "%BIN%" (
+    echo [tests] no test binaries at %BIN%. Run scripts\build.bat first.
+    exit /b 1
+)
+
+set "FAILED=0"
+
+for %%T in ("%BIN%\*Test.exe") do (
+    if /I not "%%~nT"=="CookTest" (
+        "%%~fT" >nul 2>&1
+        if errorlevel 1 (
+            echo [FAIL] %%~nT
+            set "FAILED=1"
+            "%%~fT"
+        ) else (
+            echo [ ok ] %%~nT
+        )
+    )
+)
+
+REM The end-to-end cook. Exit code 0 states that every variant compiled, every reflection agreed
+REM with the emitted WGSL, both round trips read back the same bytes, and two cooks agreed byte for
+REM byte. It takes about 15 seconds.
+"%BIN%\CookTest.exe" -o "%REPO%\build\%PRESET%\tests\cook_test_output\ShaderLibrary.hpp" --verify-deterministic "%REPO%\tests\assets\compute\Ocean\OceanFft.slang" >nul 2>&1
+if errorlevel 1 (
+    echo [FAIL] CookTest
+    set "FAILED=1"
+) else (
+    echo [ ok ] CookTest
+)
+
+if "%FAILED%"=="1" (
+    echo [tests] at least one target failed
+    exit /b 1
+)
+
+echo [tests] all targets passed
+exit /b 0
