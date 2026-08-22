@@ -22,6 +22,7 @@
 #include <ios>
 #include <iterator>
 #include <memory>
+#include <optional>
 #include <print>
 #include <ranges>
 #include <span>
@@ -61,6 +62,14 @@ namespace
                                                          
     std::string BlobToString(slang::IBlob* blob)
     {
+        // Slang leaves the blob null when a call has nothing to say, and a clean codegen is the common
+        // case. `GenerateOneEntryPoint` reads its diagnostic blob without asking, so the check is here
+        // and not only in `ReportDiagnostics`.
+        if (blob == nullptr)
+        {
+            return {};
+        }
+
         return std::string{ static_cast<const char*>(blob->getBufferPointer()), blob->getBufferSize() };
     }
 
@@ -344,6 +353,58 @@ namespace
         return semantic_name == "SV_Depth" || semantic_name == "SV_DEPTH" ||
                semantic_name == "SV_DepthGreaterEqual" || semantic_name == "SV_DepthLessEqual";
     }
+    
+    /** Only the formats Velox curates. An unmapped format returns Invalid on purpose: the graph must
+     * reject a shader that asks for a format the engine does not express. */
+    constexpr TextureFormat FromSlangImageFormat(SlangImageFormat format) noexcept
+    {
+        switch (format)
+        {
+        case SLANG_IMAGE_FORMAT_r8:
+            return TextureFormat::R8Unorm;
+        case SLANG_IMAGE_FORMAT_rg8:
+            return TextureFormat::RG8Unorm;
+        case SLANG_IMAGE_FORMAT_rgba8:
+            return TextureFormat::RGBA8Unorm;
+        case SLANG_IMAGE_FORMAT_r16f:
+            return TextureFormat::R16Float;
+        case SLANG_IMAGE_FORMAT_rg16f:
+            return TextureFormat::RG16Float;
+        case SLANG_IMAGE_FORMAT_rgba16f:
+            return TextureFormat::RGBA16Float;
+        case SLANG_IMAGE_FORMAT_r32f:
+            return TextureFormat::R32Float;
+        case SLANG_IMAGE_FORMAT_rg32f:
+            return TextureFormat::RG32Float;
+        case SLANG_IMAGE_FORMAT_rgba32f:
+            return TextureFormat::RGBA32Float;
+        case SLANG_IMAGE_FORMAT_r32ui:
+            return TextureFormat::R32Uint;
+        case SLANG_IMAGE_FORMAT_rg32ui:
+            return TextureFormat::RG32Uint;
+        case SLANG_IMAGE_FORMAT_rgba32ui:
+            return TextureFormat::RGBA32Uint;
+        case SLANG_IMAGE_FORMAT_rgb10_a2:
+            return TextureFormat::R10G10B10A2Unorm;
+        case SLANG_IMAGE_FORMAT_r11f_g11f_b10f:
+            return TextureFormat::R11G11B10Ufloat;
+        default:
+            return TextureFormat::Invalid;
+        }
+    }
+
+    constexpr StorageTextureAccess FromSlangBindingTypeAccess(slang::BindingType binding_type) noexcept
+    {
+        switch (binding_type)
+        {
+        case slang::BindingType::MutableTexture:
+            return StorageTextureAccess::ReadWrite;
+        case slang::BindingType::Texture:
+            return StorageTextureAccess::ReadOnly;
+        default:
+            return StorageTextureAccess::Invalid;
+        }
+    }
 
     /** One leaf of a varying or uniform tree, as the walker found it.
      *
@@ -542,58 +603,6 @@ namespace
                         });
     }
 
-    /** Only the formats Velox curates. An unmapped format returns Invalid on purpose: the graph must
-     * reject a shader that asks for a format the engine does not express. */
-    TextureFormat FromSlangImageFormat(SlangImageFormat format) noexcept
-    {
-        switch (format)
-        {
-        case SLANG_IMAGE_FORMAT_r8:
-            return TextureFormat::R8Unorm;
-        case SLANG_IMAGE_FORMAT_rg8:
-            return TextureFormat::RG8Unorm;
-        case SLANG_IMAGE_FORMAT_rgba8:
-            return TextureFormat::RGBA8Unorm;
-        case SLANG_IMAGE_FORMAT_r16f:
-            return TextureFormat::R16Float;
-        case SLANG_IMAGE_FORMAT_rg16f:
-            return TextureFormat::RG16Float;
-        case SLANG_IMAGE_FORMAT_rgba16f:
-            return TextureFormat::RGBA16Float;
-        case SLANG_IMAGE_FORMAT_r32f:
-            return TextureFormat::R32Float;
-        case SLANG_IMAGE_FORMAT_rg32f:
-            return TextureFormat::RG32Float;
-        case SLANG_IMAGE_FORMAT_rgba32f:
-            return TextureFormat::RGBA32Float;
-        case SLANG_IMAGE_FORMAT_r32ui:
-            return TextureFormat::R32Uint;
-        case SLANG_IMAGE_FORMAT_rg32ui:
-            return TextureFormat::RG32Uint;
-        case SLANG_IMAGE_FORMAT_rgba32ui:
-            return TextureFormat::RGBA32Uint;
-        case SLANG_IMAGE_FORMAT_rgb10_a2:
-            return TextureFormat::R10G10B10A2Unorm;
-        case SLANG_IMAGE_FORMAT_r11f_g11f_b10f:
-            return TextureFormat::R11G11B10Ufloat;
-        default:
-            return TextureFormat::Invalid;
-        }
-    }
-
-    StorageTextureAccess FromSlangBindingTypeAccess(slang::BindingType binding_type) noexcept
-    {
-        switch (binding_type)
-        {
-        case slang::BindingType::MutableTexture:
-            return StorageTextureAccess::ReadWrite;
-        case slang::BindingType::Texture:
-            return StorageTextureAccess::ReadOnly;
-        default:
-            return StorageTextureAccess::Invalid;
-        }
-    }
-
     /** One compiler option as a row. A row of `Int` kind reads `IntValue`, and a row of `String`
      * kind reads `StringValue`. The unused field keeps the value Slang treats as absent, which is
      * what the entry held before this became a table. */
@@ -678,6 +687,53 @@ namespace
      * only thing that says which field a range came from. Walk the fields to recover the path the
      * emitter writes: a struct field adds its name to the chain, and a resource field does not,
      * because the leaf variable already carries that name. */
+    /** One reflected number, or nothing.
+     *
+     * Slang answers `SLANG_UNKNOWN_SIZE` when a value depends on an unresolved generic parameter or
+     * on a link-time constant. That answer is not a number, and a cook that carried it would place a
+     * binding at a location no shader holds. Every read of a placement number goes through here. */
+    constexpr std::optional<uint32_t> ResolvedNumber(size_t value) noexcept
+    {
+        if (value == SLANG_UNKNOWN_SIZE)
+        {
+            return std::nullopt;
+        }
+
+        return static_cast<uint32_t>(value);
+    }
+
+    std::optional<uint32_t> ReadOffset(slang::VariableLayoutReflection* var_layout,
+                                       SlangParameterCategory category)
+    {
+        return var_layout != nullptr ? ResolvedNumber(var_layout->getOffset(category)) : std::nullopt;
+    }
+
+    /** Says that one range holds a number reflection could not resolve. Both walks report the same
+     * fact about different ranges, so both report it in the same words. */
+    void ReportUnresolvedLocation(std::string_view range_kind, SlangInt range_index)
+    {
+        std::println(stderr,
+                     "[shader_cooker] {} range {} has an unresolved location: link-time constants are "
+                     "affecting reflection output",
+                     range_kind,
+                     range_index);
+    }
+
+    /** Adds one name to a scope chain. Slang joins a scope to what it holds with an underscore, and
+     * a chain that starts empty takes the name alone. */
+    std::string JoinScopeName(std::string_view prefix, const char* name)
+    {
+        if (name == nullptr)
+        {
+            return std::string{ prefix };
+        }
+
+        std::string joined{ prefix };
+        joined += joined.empty() ? "" : "_";
+        joined += name;
+        return joined;
+    }
+
     void CollectScopeNames(slang::TypeLayoutReflection* layout,
                            const std::string& prefix,
                            SlangInt base,
@@ -702,28 +758,16 @@ namespace
 
             if (fieldLayout->getKind() == slang::TypeReflection::Kind::Struct)
             {
-                const char* fieldName = field->getName();
-                std::string nested = prefix;
-                if (fieldName != nullptr)
-                {
-                    if (!nested.empty())
-                    {
-                        nested += '_';
-                    }
-
-                    nested += fieldName;
-                }
-
-                CollectScopeNames(fieldLayout, nested, fieldBase, out_names);
+                CollectScopeNames(fieldLayout, JoinScopeName(prefix, field->getName()), fieldBase, out_names);
                 continue;
             }
 
             const SlangInt last =
                 std::min<SlangInt>(fieldBase + fieldRangeCount, static_cast<SlangInt>(out_names.size()));
-            for (SlangInt range = fieldBase; range < last; ++range)
-            {
-                out_names[static_cast<size_t>(range)] = prefix;
-            }
+            // std::fill the tail here
+            std::fill(out_names.begin() + static_cast<std::ptrdiff_t>(fieldBase),
+                      out_names.begin() + static_cast<std::ptrdiff_t>(last),
+                      prefix);
         }
     }
 
@@ -735,6 +779,121 @@ namespace
         RawBinding Binding;
         std::vector<RawSizeAttribute> Attributes;
     };
+
+    /** One parameter block, as the sub-object range of its parent describes it.
+     *
+     * `UniformSize` is zero when the block holds resources alone. Slang emits no container for such a
+     * block, so drafting one would report a binding the shader has not got. */
+    struct ParameterBlockInfo
+    {
+        slang::TypeLayoutReflection* ElementLayout{ nullptr };
+        slang::VariableLayoutReflection* Container{ nullptr };
+        std::string_view Name;
+        BindingScope Scope;
+        uint32_t UniformSize{ 0u };
+    };
+
+    /** Reads one sub-object range as a parameter block, or refuses it.
+     *
+     * Two numbers come from places that are not the obvious ones, and probe modules measured both.
+     * **The space of the block** is the sub-element space offset of the sub-object range, added to
+     * the space base of the scope that holds it. `getSubObjectRangeSpaceOffset` is not that number:
+     * it reported 0 for a block that took space 1. **The contents start at binding zero**, because
+     * their own descriptor range offsets already count from the start of the space and already step
+     * over the container. A block of two resources reported 0 and 1, and the same block with a
+     * `float4` added reported 1 and 2, with the container at 0.
+     *
+     * The two walks partition the ranges on one test, so no range is drafted twice and none is
+     * dropped. The range walk keeps every range the parent placed itself. This one keeps the rest,
+     * which are the ranges the parent describes with descriptor ranges alone.
+     *
+     * A global `ConstantBuffer<T>` is the case that proves the test is needed. The parent places it,
+     * so it is an ordinary binding, and it also reports a sub-object range. Reading it here as well
+     * drafts it a second time at the wrong location, and `OceanFft` failed exactly so. */
+    std::optional<ParameterBlockInfo> ReadParameterBlock(slang::TypeLayoutReflection* containing_layout,
+                                                         SlangInt sub_object_index,
+                                                         const BindingScope& scope)
+    {
+        const SlangInt rangeIndex = containing_layout->getSubObjectRangeBindingRangeIndex(sub_object_index);
+        if (rangeIndex < 0 || containing_layout->getBindingRangeDescriptorSetIndex(rangeIndex) >= 0)
+        {
+            return std::nullopt;
+        }
+
+        // A sub-object range is not always a block. Keep only the two this walk understands.
+        const slang::BindingType bindingType = containing_layout->getBindingRangeType(rangeIndex);
+        if (bindingType != slang::BindingType::ParameterBlock &&
+            bindingType != slang::BindingType::ConstantBuffer)
+        {
+            return std::nullopt;
+        }
+
+        slang::TypeLayoutReflection* blockLayout =
+            containing_layout->getBindingRangeLeafTypeLayout(rangeIndex);
+        slang::VariableLayoutReflection* spaceOffset =
+            containing_layout->getSubObjectRangeOffset(sub_object_index);
+        if (blockLayout == nullptr || spaceOffset == nullptr || blockLayout->getElementTypeLayout() == nullptr)
+        {
+            return std::nullopt;
+        }
+
+        const std::optional<uint32_t> space =
+            ReadOffset(spaceOffset, SLANG_PARAMETER_CATEGORY_SUB_ELEMENT_REGISTER_SPACE);
+        if (!space)
+        {
+            ReportUnresolvedLocation("parameter block", rangeIndex);
+            return std::nullopt;
+        }
+
+        slang::VariableReflection* blockVariable = containing_layout->getBindingRangeLeafVariable(rangeIndex);
+        const char* blockName = blockVariable != nullptr ? blockVariable->getName() : nullptr;
+
+        ParameterBlockInfo block;
+        block.ElementLayout = blockLayout->getElementTypeLayout();
+        block.Container = blockLayout->getContainerVarLayout();
+        block.Name = blockName != nullptr ? std::string_view{ blockName } : std::string_view{};
+        block.Scope.Base.Group = scope.SpaceBase + *space;
+        // A block inside a block takes a space of its own, and it counts from the space of this one.
+        block.Scope.SpaceBase = block.Scope.Base.Group;
+        block.Scope.Name = JoinScopeName(scope.Name, blockName);
+
+        // An unresolved size reads as no ordinary data at all, which is the answer that drafts no
+        // container. A block whose size a link-time constant decides has no fixed container anyway.
+        block.UniformSize =
+            ResolvedNumber(block.ElementLayout->getSize(SLANG_PARAMETER_CATEGORY_UNIFORM)).value_or(0u);
+        return block;
+    }
+
+    /** The constant buffer Slang adds to hold the ordinary data of a block. Neither range list holds
+     * it, and a client must create it, so it becomes a binding that carries the name of the block.
+     *
+     * A block of resources alone holds no such data and gets no such slot, so the caller asks only
+     * when `UniformSize` is not zero. Drafting one anyway reports a binding the shader has not got. */
+    CookResult<RawBindingDraft> ReadBlockContainer(const ParameterBlockInfo& block,
+                                                   std::string_view scope_name)
+    {
+        const std::optional<uint32_t> containerBinding =
+            ReadOffset(block.Container, SLANG_PARAMETER_CATEGORY_DESCRIPTOR_TABLE_SLOT);
+        if (!containerBinding)
+        {
+            std::println(stderr,
+                         "[shader_cooker] parameter block '{}' holds {} bytes of data and reports no "
+                         "container binding",
+                         block.Name,
+                         block.UniformSize);
+            return std::unexpected(CookError::ReflectionUnavailable);
+        }
+
+        RawBindingDraft draft;
+        draft.Binding.Name = std::string{ block.Name };
+        draft.Binding.ScopeName = std::string{ scope_name };
+        draft.Binding.Placement =
+            BoundPlacement{ .Group = block.Scope.Base.Group, .Binding = *containerBinding };
+        draft.Binding.Kind = BindingKind::UniformBuffer;
+        draft.Binding.ByteSize = static_cast<uint64_t>(block.UniformSize);
+        CollectUniformMembers(block.ElementLayout, draft.Binding.UniformMembers);
+        return draft;
+    }
 
     /** Moves each draft into the binding list, and keys each annotation against the position its
      * binding takes. The caller settles the order first, because `BindingIndex` is that position. */
@@ -1149,17 +1308,14 @@ CookError SlangCompiler::Impl::CollectBindingRangeDrafts(slang::TypeLayoutReflec
             continue;
         }
 
-        const SlangInt spaceOffset = containing_layout->getDescriptorSetSpaceOffset(descriptorSetIndex);
-        const SlangInt indexOffset = containing_layout->getDescriptorSetDescriptorRangeIndexOffset(
-            descriptorSetIndex, descriptorRangeIndex);
-
-        if (static_cast<size_t>(indexOffset) == SLANG_UNKNOWN_SIZE ||
-            static_cast<size_t>(spaceOffset) == SLANG_UNKNOWN_SIZE)
+        const std::optional<uint32_t> spaceOffset = ResolvedNumber(
+            static_cast<size_t>(containing_layout->getDescriptorSetSpaceOffset(descriptorSetIndex)));
+        const std::optional<uint32_t> indexOffset =
+            ResolvedNumber(static_cast<size_t>(containing_layout->getDescriptorSetDescriptorRangeIndexOffset(
+                descriptorSetIndex, descriptorRangeIndex)));
+        if (!spaceOffset || !indexOffset)
         {
-            std::println(stderr,
-                         "[shader_cooker] binding range {} has an unresolved location: link-time "
-                         "constants are affecting reflection output",
-                         rangeIndex);
+            ReportUnresolvedLocation("binding", rangeIndex);
             continue;
         }
 
@@ -1169,9 +1325,8 @@ CookError SlangCompiler::Impl::CollectBindingRangeDrafts(slang::TypeLayoutReflec
         RawBindingDraft draft;
         draft.Binding.Name = leafName != nullptr ? leafName : std::string{};
         draft.Binding.ScopeName = std::move(scopeNames[static_cast<size_t>(rangeIndex)]);
-        draft.Binding.Placement =
-            BoundPlacement{ .Group = scope.Base.Group + static_cast<uint32_t>(spaceOffset),
-                            .Binding = scope.Base.Binding + static_cast<uint32_t>(indexOffset) };
+        draft.Binding.Placement = BoundPlacement{ .Group = scope.Base.Group + *spaceOffset,
+                                                  .Binding = scope.Base.Binding + *indexOffset };
         draft.Binding.Kind = FromSlangBindingType(bindingType);
         draft.Binding.ArrayCount =
             static_cast<uint32_t>(containing_layout->getBindingRangeBindingCount(rangeIndex));
@@ -1193,22 +1348,9 @@ CookError SlangCompiler::Impl::CollectBindingRangeDrafts(slang::TypeLayoutReflec
 /** Walks the parameter blocks of one scope, and drafts the container and the contents of each.
  *
  * Slang gives a parent scope only descriptor ranges for a block, so the binding range of the block
- * carries a descriptor set index of -1 and the range loop drops it. The contents live in a sub-object
- * range instead, and this is the only walk that reaches them.
- *
- * Three numbers come from three different places, and three probe modules measured each one:
- *
- * - **The space of the block** is the sub-element space offset of the sub-object range, added to the
- *   space base of the scope that holds it. `getSubObjectRangeSpaceOffset` is not that number: it
- *   reported 0 for a block that took space 1.
- * - **The contents start at binding zero.** Their own descriptor range offsets already count from the
- *   start of the space, and they already step over the container. A block of resources reported 0 and
- *   1. The same block with a `float4` added reported 1 and 2, with the container at 0. Adding a base
- *   moves every content by one.
- * - **The container exists only when the block holds ordinary data.** Slang adds that constant buffer
- *   to hold it, and a client must create it, so it becomes a binding that carries the name of the
- *   block. A block of resources alone emits no such slot, and drafting one moves nothing but does
- *   report a binding the shader has not got. The uniform size of the element says which case this is. */
+ * carries a descriptor set index of -1 and the range walk drops it. The contents live in a sub-object
+ * range instead, and this is the only walk that reaches them. `ReadParameterBlock` reads one range,
+ * and `ReadBlockContainer` reads the slot Slang adds to hold the ordinary data. */
 CookError SlangCompiler::Impl::CollectSubObjectDrafts(slang::TypeLayoutReflection* containing_layout,
                                                       const BindingScope& scope,
                                                       std::vector<RawBindingDraft>& out_drafts) const
@@ -1217,104 +1359,26 @@ CookError SlangCompiler::Impl::CollectSubObjectDrafts(slang::TypeLayoutReflectio
 
     for (SlangInt subObjectIndex = 0; subObjectIndex < subObjectRangeCount; ++subObjectIndex)
     {
-        const SlangInt rangeIndex = containing_layout->getSubObjectRangeBindingRangeIndex(subObjectIndex);
-        if (rangeIndex < 0)
+        const std::optional<ParameterBlockInfo> block =
+            ReadParameterBlock(containing_layout, subObjectIndex, scope);
+        if (!block)
         {
             continue;
         }
 
-        // The two walks partition the ranges on one test, so no range is drafted twice and none is
-        // dropped. The range walk keeps every range the parent placed itself. This walk keeps the
-        // rest, which are the ranges the parent describes with descriptor ranges alone.
-        //
-        // A global `ConstantBuffer<T>` is the case that proves the test is needed. The parent places
-        // it, so it is an ordinary binding, and it also reports a sub-object range. Walking it here
-        // as well drafts it a second time at the wrong location, and `OceanFft` failed exactly so.
-        if (containing_layout->getBindingRangeDescriptorSetIndex(rangeIndex) >= 0)
+        if (block->UniformSize != 0u)
         {
-            continue;
-        }
-
-        // A sub-object range is not always a block. Keep only the two this walk understands.
-        const slang::BindingType bindingType = containing_layout->getBindingRangeType(rangeIndex);
-        if (bindingType != slang::BindingType::ParameterBlock &&
-            bindingType != slang::BindingType::ConstantBuffer)
-        {
-            continue;
-        }
-
-        slang::TypeLayoutReflection* blockLayout =
-            containing_layout->getBindingRangeLeafTypeLayout(rangeIndex);
-        slang::VariableLayoutReflection* spaceOffset =
-            containing_layout->getSubObjectRangeOffset(subObjectIndex);
-        if (blockLayout == nullptr || spaceOffset == nullptr)
-        {
-            continue;
-        }
-
-        slang::TypeLayoutReflection* elementLayout = blockLayout->getElementTypeLayout();
-        if (elementLayout == nullptr)
-        {
-            continue;
-        }
-
-        const size_t space = spaceOffset->getOffset(SLANG_PARAMETER_CATEGORY_SUB_ELEMENT_REGISTER_SPACE);
-        if (space == SLANG_UNKNOWN_SIZE)
-        {
-            std::println(stderr,
-                         "[shader_cooker] parameter block range {} has an unresolved location: "
-                         "link-time constants are affecting reflection output",
-                         rangeIndex);
-            continue;
-        }
-
-        slang::VariableReflection* blockVariable = containing_layout->getBindingRangeLeafVariable(rangeIndex);
-        const char* blockName = blockVariable != nullptr ? blockVariable->getName() : nullptr;
-
-        BindingScope blockScope;
-        blockScope.Base.Group = scope.SpaceBase + static_cast<uint32_t>(space);
-        // A block inside a block takes a space of its own, and it counts from the space of this one.
-        blockScope.SpaceBase = blockScope.Base.Group;
-        blockScope.Name = scope.Name;
-        if (blockName != nullptr)
-        {
-            if (!blockScope.Name.empty())
+            CookResult<RawBindingDraft> container = ReadBlockContainer(*block, scope.Name);
+            if (!container)
             {
-                blockScope.Name += '_';
+                return container.error();
             }
 
-            blockScope.Name += blockName;
+            out_drafts.emplace_back(std::move(container.value()));
         }
 
-        const size_t uniformSize = elementLayout->getSize(SLANG_PARAMETER_CATEGORY_UNIFORM);
-        if (uniformSize != 0u && uniformSize != SLANG_UNKNOWN_SIZE)
-        {
-            slang::VariableLayoutReflection* container = blockLayout->getContainerVarLayout();
-            const size_t containerBinding =
-                container != nullptr ? container->getOffset(SLANG_PARAMETER_CATEGORY_DESCRIPTOR_TABLE_SLOT)
-                                     : SLANG_UNKNOWN_SIZE;
-            if (containerBinding == SLANG_UNKNOWN_SIZE)
-            {
-                std::println(stderr,
-                             "[shader_cooker] parameter block range {} holds {} bytes of data and "
-                             "reports no container binding",
-                             rangeIndex,
-                             uniformSize);
-                return CookError::ReflectionUnavailable;
-            }
-
-            RawBindingDraft draft;
-            draft.Binding.Name = blockName != nullptr ? blockName : std::string{};
-            draft.Binding.ScopeName = scope.Name;
-            draft.Binding.Placement = BoundPlacement{ .Group = blockScope.Base.Group,
-                                                      .Binding = static_cast<uint32_t>(containerBinding) };
-            draft.Binding.Kind = BindingKind::UniformBuffer;
-            draft.Binding.ByteSize = static_cast<uint64_t>(uniformSize);
-            CollectUniformMembers(elementLayout, draft.Binding.UniformMembers);
-            out_drafts.emplace_back(std::move(draft));
-        }
-
-        const CookError contentsError = CollectBindingRangeDrafts(elementLayout, blockScope, out_drafts);
+        const CookError contentsError =
+            CollectBindingRangeDrafts(block->ElementLayout, block->Scope, out_drafts);
         if (contentsError != CookError::Success)
         {
             return contentsError;
@@ -1341,10 +1405,13 @@ CookResult<BindingScope> SlangCompiler::Impl::EntryPointScope(slang::EntryPointR
         return BindingScope{};
     }
 
-    const size_t group = varLayout->getBindingSpace(SLANG_PARAMETER_CATEGORY_DESCRIPTOR_TABLE_SLOT);
-    const size_t binding = varLayout->getOffset(SLANG_PARAMETER_CATEGORY_DESCRIPTOR_TABLE_SLOT);
-    const size_t spaceBase = varLayout->getOffset(SLANG_PARAMETER_CATEGORY_SUB_ELEMENT_REGISTER_SPACE);
-    if (group == SLANG_UNKNOWN_SIZE || binding == SLANG_UNKNOWN_SIZE || spaceBase == SLANG_UNKNOWN_SIZE)
+    const std::optional<uint32_t> group =
+        ResolvedNumber(varLayout->getBindingSpace(SLANG_PARAMETER_CATEGORY_DESCRIPTOR_TABLE_SLOT));
+    const std::optional<uint32_t> binding =
+        ReadOffset(varLayout, SLANG_PARAMETER_CATEGORY_DESCRIPTOR_TABLE_SLOT);
+    const std::optional<uint32_t> spaceBase =
+        ReadOffset(varLayout, SLANG_PARAMETER_CATEGORY_SUB_ELEMENT_REGISTER_SPACE);
+    if (!group || !binding || !spaceBase)
     {
         Diagnostic report;
         report.Severity = DiagnosticSeverity::Error;
@@ -1355,9 +1422,8 @@ CookResult<BindingScope> SlangCompiler::Impl::EntryPointScope(slang::EntryPointR
         return std::unexpected(CookError::ReflectionUnavailable);
     }
 
-    return BindingScope{ .Base = BoundPlacement{ .Group = static_cast<uint32_t>(group),
-                                                 .Binding = static_cast<uint32_t>(binding) },
-                         .SpaceBase = static_cast<uint32_t>(spaceBase),
+    return BindingScope{ .Base = BoundPlacement{ .Group = *group, .Binding = *binding },
+                         .SpaceBase = *spaceBase,
                          .Name = std::string{ k_EntryPointScopeName } };
 }
 
