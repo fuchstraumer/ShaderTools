@@ -25,14 +25,15 @@ scriptsuild.bat
 ```
 
 `scripts/build.bat [Debug|RelWithDebInfo] [preset]` sets the compiler environment and then builds.
-`scripts/configure.bat [preset]` sets the same environment and configures. Run it after a change to a
-`CMakeLists.txt` that adds or removes a target. A bare `cmake --preset` writes a cache that names a
-different toolset, and it leaves a build tree that no longer builds.
 **Use it rather than a bare `cmake --build`.** The build tree keeps the compiler that `CMakeCache.txt`
 holds, which is Visual Studio 18 Community. Another environment gives that compiler the headers of a
 different toolset, `ammintrin.h` raises C4392, and every SPIRV-Tools target fails because Slang builds
 them with `/WX`. The `lodestone` targets still build, so the fault stays hidden until a change
 invalidates the whole graph.
+
+`scripts/configure.bat [preset]` sets the same environment and configures. Run it after a change to a
+`CMakeLists.txt` that adds or removes a target. A bare `cmake --preset` writes a cache that names a
+different toolset, and it leaves a build tree that no longer builds.
 
 Presets: `ninja-msvc` and `ninja-clang-cl`. Configurations: `Debug` and `RelWithDebInfo`.
 Clang-CL with the MSVC frontend variant is a hard configure error.
@@ -78,7 +79,7 @@ of them needs Slang, a compiler, or an asset, and all ten together run in under 
 | `ContentInternerTest` | A hash never decides equality. It supplies a hash that returns one constant, so only the byte comparison can separate the payloads. |
 | `PermutationIndexTest` | A variant index is unique, dense, and stable, and a partial assignment resolves to one variant. |
 | `ShaderManifestRejectTest` | The manifest reader rejects a short, misaligned, or damaged file, and opens a real one. |
-| `WgslBindingScannerTest` | The cross-check reads the emitted WGSL correctly, and fails on a real mismatch. |
+| `WgslBindingScannerTest` | The cross-check reads the emitted WGSL correctly, and fails on a real mismatch. It also proves that a scoped binding states the name the emitted text must declare. |
 | `ExternConstantScannerTest` | The scanner reads an `extern static const` declaration out of shader text, and refuses a use of the name as a declaration. Nothing compares this answer against a second opinion, and it decides buffer sizes. |
 | `StageDumpTest` | A stage dump holds the model and no target text, it names itself the way `--dump-stage` names it, and two dumps of one input agree byte for byte. |
 | `DedupeInfluenceTest` | Dedup changes what the tables cost and never what the cook measures. It builds one module in both arms and checks that the axis influence agrees, and that the measurement reads every group of variants. |
@@ -94,9 +95,10 @@ with the emitted WGSL, both round trips read back the same bytes, and two cooks 
 
 - `CookTest` cooks `OceanFft.slang` with `--verify-deterministic`. It takes about 18 seconds, and it
   is the end-to-end coverage of the permutation path.
-- `EntryPointParamsCookTest` cooks `tests/assets/EntryPointParams.slang`, which declares a `uniform`
-  parameter on two of its three entry points. Phase E step E0a needed it, and it is the acceptance
-  test for the entry point scope walk. It cooks one variant in about one second.
+- `EntryPointParamsCookTest` cooks `tests/assets/EntryPointParams.slang`. Three of its four entry
+  points declare a `uniform` parameter, and one of those takes a struct with an annotated field.
+  Phase E step E0a needed it, and it is the acceptance test for the entry point scope walk. It cooks
+  one variant in about one second.
 
 Each cook writes one shared header and one shared dedupe report, so the two modules cook separately.
 One cook of both would leave no artifact of `OceanFft` byte identical.
@@ -337,7 +339,7 @@ unordered container reached the output.
 | `ModulePolicy` | `permute/PermutationPolicy.hpp` | A variant budget, plus the axis influence the author expects. |
 | `ExternConstantDeclaration` | `permute/ExternConstantScanner.hpp` | One `extern static const` line read out of shader text. |
 | `CompiledVariant`, `CompiledEntryPoint` | `model/ShaderDataSchema.hpp` | Compiler output: WGSL text plus reflection. Owns its strings. |
-| `ReflectedBinding` | `model/ShaderDataSchema.hpp` | What the shader states about one resource. The CPU side never writes any of it. |
+| `ReflectedBinding` | `model/ShaderDataSchema.hpp` | What the shader states about one resource. The CPU side never writes any of it. `Name` and `ScopeName` together are the identity: two entry points can each declare `albedoMap`. |
 | `RawVariant`, `RawModule` | `compile/RawLibrary.hpp` | Stage 3 output. Everything Slang says, with no opinion about any of it. A `[vx_*]` argument is still the string the author wrote. |
 | `ResolveContext` | `model/ResolveStage.hpp` | Stage 4 input. The axis values of one variant, plus the extern constant defaults that stage 3 carried out. |
 | `TargetProfile` | `target/TargetProfile.hpp` | A target name, an access model, and an optional validator. `--target` names one. |
@@ -373,7 +375,10 @@ Break one of these and the cook can exit 0 with wrong content.
    serialization is faithful. Every field a consumer reads must still take part in a key, and a field
    cannot leave a key while it stays in the type. See `docs/phase-d-stage-separation-plan.md` §4b.
 4. **The emitted artifact decides group and binding numbers. Reflection decides sizes and types.**
-   That asymmetry is the only reason the cross-check finds real errors.
+   That asymmetry is the only reason the cross-check finds real errors. A **name** is neither: the
+   cross-check builds the name it expects from `ScopeName` and `Name`, and compares that against the
+   de-mangled emitted identifier. It states what it expects rather than removing a prefix it does not
+   recognise.
 5. **Every emitter reads one frozen model.** An emitter must not reach past `CookedLibrary` into
    `CompiledVariant` or into Slang.
 6. **An axis name must match the Slang `extern static const` name exactly.** A mismatch links a
@@ -432,8 +437,9 @@ The generated C++ and the binary manifest carry the same tables from the same `C
 - The C++ form compiles into the program. The header holds identity and lookup only, never shader
   text, so naming a shader does not rebuild when the text changes.
 - The manifest form arrives as bytes. Every cross-reference is a `uint32` index, never a pointer, so
-  the reader is a set of spans and it relocates nothing. Sections start on 8-byte boundaries. Record
-  sizes are pinned with `static_assert`, because they are part of the file format.
+  the reader is a set of spans and it relocates nothing. Sections start on 8-byte boundaries. A record must be
+  trivially copyable, and `k_IsManifestRecord` holds that line. Record **sizes** are not pinned, and
+  `ShaderManifest.hpp` says so: the format has no version migration yet, so a record can still grow.
 
 `todo.md` states the author's plan to delete the C++ emitter once the manifest path is complete. Do
 not start that removal without a request.

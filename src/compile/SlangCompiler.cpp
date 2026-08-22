@@ -40,6 +40,12 @@ namespace
 {
 
     constexpr SlangInt k_WgslTargetIndex = 0;
+    /** What Slang names the scope it moves each entry point `uniform` parameter into.
+     *
+     * `slang-ir-entry-point-uniforms.cpp` writes this string as a name hint, and reflection reports it
+     * nowhere. It is a Slang convention, so it lives behind the Slang wall and reaches no other
+     * folder. Every emitted name of an entry point parameter starts with it. */
+    constexpr std::string_view k_EntryPointScopeName = "entryPointParams";
     constexpr const char* k_AllWarningsAsErrors = "all";
     constexpr const char* k_DisabledWarnings = "31010";
     constexpr SlangUInt k_WorkgroupAxisCount = 3u;
@@ -647,6 +653,72 @@ namespace
         return options;
     }
 
+    /** Where one parameter scope starts, and what Slang emits around the bindings inside it.
+     *
+     * The global scope starts at group 0 and binding 0, and it adds no name. Every other scope takes
+     * both answers from reflection. A nested scope carries the whole chain in `Name`, so the walk
+     * needs no recursion and the emitted name stays `<Name>_<binding>`. */
+    struct BindingScope
+    {
+        BoundPlacement Base;
+        std::string Name;
+    };
+
+    /** Names the scope of every binding range of one layout, in place.
+     *
+     * Slang flattens a scope into one list of binding ranges, and `getFieldBindingRangeOffset` is the
+     * only thing that says which field a range came from. Walk the fields to recover the path the
+     * emitter writes: a struct field adds its name to the chain, and a resource field does not,
+     * because the leaf variable already carries that name. */
+    void CollectScopeNames(slang::TypeLayoutReflection* layout,
+                           const std::string& prefix,
+                           SlangInt base,
+                           std::vector<std::string>& out_names)
+    {
+        const unsigned int fieldCount = layout->getFieldCount();
+        for (unsigned int fieldIndex = 0u; fieldIndex < fieldCount; ++fieldIndex)
+        {
+            slang::VariableLayoutReflection* field = layout->getFieldByIndex(fieldIndex);
+            slang::TypeLayoutReflection* fieldLayout = field != nullptr ? field->getTypeLayout() : nullptr;
+            if (fieldLayout == nullptr)
+            {
+                continue;
+            }
+
+            const SlangInt fieldBase = base + layout->getFieldBindingRangeOffset(fieldIndex);
+            const SlangInt fieldRangeCount = fieldLayout->getBindingRangeCount();
+            if (fieldRangeCount <= 0 || fieldBase < 0)
+            {
+                continue;
+            }
+
+            if (fieldLayout->getFieldCount() != 0u)
+            {
+                const char* fieldName = field->getName();
+                std::string nested = prefix;
+                if (fieldName != nullptr)
+                {
+                    if (!nested.empty())
+                    {
+                        nested += '_';
+                    }
+
+                    nested += fieldName;
+                }
+
+                CollectScopeNames(fieldLayout, nested, fieldBase, out_names);
+                continue;
+            }
+
+            const SlangInt last =
+                std::min<SlangInt>(fieldBase + fieldRangeCount, static_cast<SlangInt>(out_names.size()));
+            for (SlangInt range = fieldBase; range < last; ++range)
+            {
+                out_names[static_cast<size_t>(range)] = prefix;
+            }
+        }
+    }
+
     /** One binding, plus the `[vx_*]` annotations of that binding. The annotations travel beside the
      * binding until the order is settled, because a sort of the bindings alone would leave every
      * annotation against the wrong one. */
@@ -713,9 +785,9 @@ struct SlangCompiler::Impl
                                         std::vector<RawBinding>& out_bindings,
                                         std::vector<RawSizeAttribute>& out_attributes);
     CookResult<void> CollectBindingRangeDrafts(slang::TypeLayoutReflection* containing_layout,
-                                               BoundPlacement base,
+                                               BindingScope scope,
                                                std::vector<RawBindingDraft>& out_drafts) const;
-    [[nodiscard]] CookResult<BoundPlacement> EntryPointScopeBase(
+    [[nodiscard]] CookResult<BindingScope> EntryPointScope(
         slang::EntryPointReflection* entry_point_layout, std::string_view entry_point_name) const;
     CookResult<void> CollectRawSizeAttributes(slang::VariableReflection* leaf_variable,
                                               std::string_view binding_name,
@@ -1033,13 +1105,10 @@ CookResult<void> SlangCompiler::Impl::CollectRawSizeAttributes(
     return {};
 }
 
-/** Walks the binding ranges of one scope, and drafts a binding for each one.
- *
- * `base` is where the scope itself sits. A global scope starts at group 0 and binding 0. An entry
- * point scope starts where its own var layout says, and that offset comes from reflection. */
+/** Walks the binding ranges of one scope, and drafts a binding for each one. */
 CookResult<void> SlangCompiler::Impl::CollectBindingRangeDrafts(
     slang::TypeLayoutReflection* containing_layout,
-    BoundPlacement base,
+    BindingScope scope,
     std::vector<RawBindingDraft>& out_drafts) const
 {
     if (containing_layout == nullptr)
@@ -1049,6 +1118,9 @@ CookResult<void> SlangCompiler::Impl::CollectBindingRangeDrafts(
 
     const SlangInt bindingRangeCount = containing_layout->getBindingRangeCount();
     out_drafts.reserve(out_drafts.size() + static_cast<size_t>(bindingRangeCount));
+
+    std::vector<std::string> scopeNames(static_cast<size_t>(bindingRangeCount), scope.Name);
+    CollectScopeNames(containing_layout, scope.Name, 0, scopeNames);
 
     for (SlangInt rangeIndex = 0; rangeIndex < bindingRangeCount; ++rangeIndex)
     {
@@ -1090,9 +1162,10 @@ CookResult<void> SlangCompiler::Impl::CollectBindingRangeDrafts(
 
         RawBindingDraft draft;
         draft.Binding.Name = leafName != nullptr ? leafName : std::string{};
+        draft.Binding.ScopeName = std::move(scopeNames[static_cast<size_t>(rangeIndex)]);
         draft.Binding.Placement =
-            BoundPlacement{ .Group = base.Group + static_cast<uint32_t>(spaceOffset),
-                            .Binding = base.Binding + static_cast<uint32_t>(indexOffset) };
+            BoundPlacement{ .Group = scope.Base.Group + static_cast<uint32_t>(spaceOffset),
+                            .Binding = scope.Base.Binding + static_cast<uint32_t>(indexOffset) };
         draft.Binding.Kind = FromSlangBindingType(bindingType);
         draft.Binding.ArrayCount =
             static_cast<uint32_t>(containing_layout->getBindingRangeBindingCount(rangeIndex));
@@ -1112,17 +1185,21 @@ CookResult<void> SlangCompiler::Impl::CollectBindingRangeDrafts(
     return {};
 }
 
-/** Where the parameter scope of one entry point starts.
+/** The parameter scope of one entry point: where it starts, and the name Slang emits around it.
  *
  * Slang reports an unresolved offset as `SLANG_UNKNOWN_SIZE`. That answer cannot be a placement, and
- * a cook that carried it would emit a binding at a location no shader holds. */
-CookResult<BoundPlacement> SlangCompiler::Impl::EntryPointScopeBase(
+ * a cook that carried it would emit a binding at a location no shader holds.
+ *
+ * The scope name is the parameter's own name when the entry point declares one parameter of a struct
+ * type. Slang collects loose `uniform` parameters into a synthetic struct instead, and names that
+ * `entryPointParams`. Both answers come from the same call, so neither is a special case here. */
+CookResult<BindingScope> SlangCompiler::Impl::EntryPointScope(
     slang::EntryPointReflection* entry_point_layout, std::string_view entry_point_name) const
 {
     slang::VariableLayoutReflection* varLayout = entry_point_layout->getVarLayout();
     if (varLayout == nullptr)
     {
-        return BoundPlacement{};
+        return BindingScope{};
     }
 
     const size_t group = varLayout->getBindingSpace(SLANG_PARAMETER_CATEGORY_DESCRIPTOR_TABLE_SLOT);
@@ -1138,8 +1215,9 @@ CookResult<BoundPlacement> SlangCompiler::Impl::EntryPointScopeBase(
         return std::unexpected(CookError::ReflectionUnavailable);
     }
 
-    return BoundPlacement{ .Group = static_cast<uint32_t>(group),
-                           .Binding = static_cast<uint32_t>(binding) };
+    return BindingScope{ .Base = BoundPlacement{ .Group = static_cast<uint32_t>(group),
+                                                 .Binding = static_cast<uint32_t>(binding) },
+                         .Name = std::string{ k_EntryPointScopeName } };
 }
 
 CookResult<void> SlangCompiler::Impl::ExtractRawBindings(slang::ProgramLayout* program_layout,
@@ -1148,7 +1226,7 @@ CookResult<void> SlangCompiler::Impl::ExtractRawBindings(slang::ProgramLayout* p
 {
     std::vector<RawBindingDraft> drafts;
     if (CookResult<void> walk = CollectBindingRangeDrafts(
-            program_layout->getGlobalParamsTypeLayout(), BoundPlacement{}, drafts);
+            program_layout->getGlobalParamsTypeLayout(), BindingScope{}, drafts);
         !walk)
     {
         return std::unexpected(walk.error());
@@ -1238,14 +1316,14 @@ CookResult<RawEntryPoint> SlangCompiler::Impl::ExtractRawEntryPoint(
 
     // A `uniform` parameter on the entry point takes a placement in the space the global bindings
     // use, and the entry point var layout says where that scope starts.
-    CookResult<BoundPlacement> scopeBase = EntryPointScopeBase(entryPointLayout, rawEntryPoint.Name);
-    if (!scopeBase)
+    CookResult<BindingScope> scope = EntryPointScope(entryPointLayout, rawEntryPoint.Name);
+    if (!scope)
     {
-        return std::unexpected(scopeBase.error());
+        return std::unexpected(scope.error());
     }
 
     if (CookResult<void> walk = CollectBindingRangeDrafts(
-            entryPointLayout->getTypeLayout(), scopeBase.value(), out_drafts);
+            entryPointLayout->getTypeLayout(), std::move(scope.value()), out_drafts);
         !walk)
     {
         return std::unexpected(walk.error());

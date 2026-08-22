@@ -64,6 +64,7 @@ struct RawSizeAttribute
 struct RawBinding
 {
     std::string Name;
+    std::string ScopeName;
     RawPlacement Placement;
     BindingKind Kind{ BindingKind::Invalid };
 

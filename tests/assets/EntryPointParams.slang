@@ -42,3 +42,24 @@ void ClearCS(uint3 threadId: SV_DispatchThreadID)
 {
     Output[threadId.x] = float4(0.0f, 0.0f, 0.0f, 0.0f);
 }
+
+// A struct parameter is the readable form, and it is the one an author should write. Slang accepts a
+// `[vx_*]` annotation on a struct field, and refuses one on a bare parameter, so this is also the
+// only way an entry point resource can declare a footprint.
+//
+// It nests the scope one level deeper than the two entry points above: those emit under
+// `entryPointParams_`, and this one emits under `entryPointParams_material_`.
+struct MaterialParams
+{
+    [vx_extent_2d("256", "128")]
+    Texture2D<float4> albedoMap;
+    SamplerState albedoSampler;
+};
+
+[shader("compute")]
+[numthreads(64, 1, 1)]
+void MaterialCS(uint3 threadId: SV_DispatchThreadID, uniform MaterialParams material)
+{
+    const float2 uv = float2(threadId.xy) * (1.0f / 256.0f);
+    Output[threadId.x] = material.albedoMap.SampleLevel(material.albedoSampler, uv, 0.0f);
+}

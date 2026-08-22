@@ -100,6 +100,7 @@ struct ReflectedUniformMember
 struct ReflectedBinding
 {
     std::string Name;
+    std::string ScopeName;
     ResourcePlacement Placement;
     BindingKind Kind{ BindingKind::Invalid };
 

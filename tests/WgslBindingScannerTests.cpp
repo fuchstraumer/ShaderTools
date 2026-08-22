@@ -20,6 +20,7 @@
 using lodestone::BindingComparison;
 using lodestone::BindingKind;
 using lodestone::CompareBindings;
+using lodestone::ExpectedDeclaredName;
 using lodestone::ReflectedBinding;
 using lodestone::ScanWgslBindings;
 using lodestone::StripSlangNameMangling;
@@ -142,10 +143,19 @@ int main()
     runner.Check(StripSlangNameMangling("IfftParams_12") == "IfftParams", "a multi digit suffix is removed");
     runner.Check(StripSlangNameMangling("Buffer0") == "Buffer0",
                  "a trailing digit with no underscore is part of the name");
-    runner.Check(StripSlangNameMangling("entryPointParams_albedoMap_0") == "albedoMap",
-                 "the entry point scope prefix comes off with the suffix");
-    runner.Check(StripSlangNameMangling("materialParams_albedoMap_0") == "materialParams_albedoMap",
-                 "only the one fixed prefix comes off");
+    runner.Check(StripSlangNameMangling("material_albedoMap_0") == "material_albedoMap",
+                 "a scope prefix is not a suffix, and stays");
+
+    runner.BeginSection("a scoped binding states the name the emitted text must declare");
+    ReflectedBinding globalBinding;
+    globalBinding.Name = "IfftParams";
+    runner.Check(ExpectedDeclaredName(globalBinding) == "IfftParams",
+                 "a binding at global scope emits under its own name");
+    ReflectedBinding scopedBinding;
+    scopedBinding.Name = "albedoMap";
+    scopedBinding.ScopeName = "material";
+    runner.Check(ExpectedDeclaredName(scopedBinding) == "material_albedoMap",
+                 "a binding inside a scope emits under the scope chain");
 
     runner.BeginSection("agreeing reflection passes the cross-check");
     const std::vector<ReflectedBinding> agreeing = MakeAgreeingReflection();

@@ -122,6 +122,7 @@ namespace
         ManifestBinding record;
         record.ByteSize = binding.ByteSize;
         record.NameString = strings.Add(binding.Name);
+        record.ScopeString = strings.Add(binding.ScopeName);
         record.Group = GroupOf(binding);
         record.Binding = BindingOf(binding);
         record.ElementStride = binding.ElementStride;
@@ -355,6 +356,7 @@ namespace
             const ManifestBinding& read = view.Bindings()[resources[local]];
 
             if (view.String(read.NameString) != expected.Resource->Name ||
+                view.String(read.ScopeString) != expected.Resource->ScopeName ||
                 !RecordMatchesBinding(read, *expected.Resource) ||
                 !RecordMatchesFootprint(footprints[local], *expected.Footprint) ||
                 !ManifestUniformMembersMatch(view, read, *expected.Resource))

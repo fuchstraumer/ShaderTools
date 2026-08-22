@@ -479,6 +479,7 @@ BindingInfo ManifestShaderSourceProvider::MakeBindingInfo(const ManifestBinding&
 {
     BindingInfo info;
     info.Name = view.String(record.NameString);
+    info.ScopeName = view.String(record.ScopeString);
     info.Group = record.Group;
     info.Binding = record.Binding;
     info.Kind = static_cast<BindingKind>(record.Kind);

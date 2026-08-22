@@ -134,6 +134,7 @@ namespace
     {
         writer.BeginObject();
         writer.KeyString("name", binding.Name);
+        writer.KeyString("scope", binding.ScopeName);
         writer.KeyString("placementKind", GetBoundPlacement(binding.Placement) != nullptr ? "bound" : "none");
         writer.KeyUInt("group", GroupOf(binding));
         writer.KeyUInt("binding", BindingOf(binding));
@@ -414,6 +415,7 @@ namespace
             writer.BeginObject();
             writer.KeyUInt("index", i);
             writer.KeyString("name", binding.Name);
+            writer.KeyString("scope", binding.ScopeName);
             WriteRawPlacement(writer, binding.Placement);
             writer.KeyString("kind", magic_enum::enum_name(binding.Kind));
             writer.KeyUInt("elementStride", binding.ElementStride);

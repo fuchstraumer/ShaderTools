@@ -213,8 +213,9 @@ namespace
     std::string EmitBindingRow(const ResolvedBinding& resolved, std::string_view member_table_name)
     {
         const ReflectedBinding& binding = resolved.Resource;
-        std::string row = std::format("    lodestone::BindingInfo{{ \"{}\", {}u, {}u, {}",
+        std::string row = std::format(R"(    lodestone::BindingInfo{{ "{}", "{}", {}u, {}u, {})",
                                       binding.Name,
+                                      binding.ScopeName,
                                       GroupOf(binding),
                                       BindingOf(binding),
                                       BindingKindEnumerator(binding.Kind));

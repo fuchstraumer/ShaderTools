@@ -1,8 +1,19 @@
 #include "target/WgslBindingScanner.hpp"
+#include "ShaderLibraryTypes.hpp"
+#include "model/ShaderDataSchema.hpp"
+#include "target/TargetProfile.hpp"
 #include <algorithm>
 #include <charconv>
+#include <cstddef>
+#include <cstdint>
 #include <format>
 #include <optional>
+#include <span>
+#include <string>
+#include <string_view>
+#include <system_error>
+#include <tuple>
+#include <vector>
 
 namespace lodestone
 {
@@ -243,14 +254,6 @@ std::vector<WgslDeclaredBinding> ScanWgslBindings(std::string_view wgsl)
 
 std::string_view StripSlangNameMangling(std::string_view mangled_name) noexcept
 {
-    // `slang-ir-entry-point-uniforms.cpp` adds this name hint when it moves an entry point `uniform`
-    // parameter to the global scope. The prefix is a fixed string, so only that string is removed.
-    constexpr std::string_view k_EntryPointScopePrefix = "entryPointParams_";
-    if (mangled_name.starts_with(k_EntryPointScopePrefix))
-    {
-        mangled_name.remove_prefix(k_EntryPointScopePrefix.size());
-    }
-
     size_t end = mangled_name.size();
     while (end > 0u && mangled_name[end - 1u] >= '0' && mangled_name[end - 1u] <= '9')
     {
@@ -263,6 +266,16 @@ std::string_view StripSlangNameMangling(std::string_view mangled_name) noexcept
     }
 
     return mangled_name;
+}
+
+std::string ExpectedDeclaredName(const ReflectedBinding& binding)
+{
+    if (binding.ScopeName.empty())
+    {
+        return binding.Name;
+    }
+
+    return std::format("{}_{}", binding.ScopeName, binding.Name);
 }
 
 std::string_view ToString(WgslAddressSpace address_space) noexcept
@@ -331,7 +344,7 @@ BindingComparison CompareBindings(std::span<const WgslDeclaredBinding> declared,
         if (declaredTuple == reflectedTuple)
         {
 
-            if (StripSlangNameMangling(declaredBinding.Name) != StripSlangNameMangling(reflectedBinding->Name))
+            if (StripSlangNameMangling(declaredBinding.Name) != ExpectedDeclaredName(*reflectedBinding))
             {
                 comparison.Matches = false;
                 comparison.Report += std::format("  wgsl declares @group({}) @binding({}) {} : reflection has "
@@ -374,7 +387,7 @@ BindingComparison CompareBindings(std::span<const WgslDeclaredBinding> declared,
                                              "no binding at that location\n",
                                              std::get<0>(reflectedTuple),
                                              std::get<1>(reflectedTuple),
-                                             StripSlangNameMangling(reflectedBinding->Name));
+                                             ExpectedDeclaredName(*reflectedBinding));
             ++iterReflected;
         }
     }
@@ -401,7 +414,7 @@ BindingComparison CompareBindings(std::span<const WgslDeclaredBinding> declared,
                                          "no binding at that location\n",
                                          GroupOf(*reflectedBinding),
                                          BindingOf(*reflectedBinding),
-                                         StripSlangNameMangling(reflectedBinding->Name));
+                                         ExpectedDeclaredName(*reflectedBinding));
         ++iterReflected;
     }
 

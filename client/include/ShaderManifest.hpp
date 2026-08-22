@@ -130,6 +130,7 @@ struct ManifestBinding
 {
     uint64_t ByteSize{ 0u };
     uint32_t NameString{ 0u };
+    uint32_t ScopeString{ 0u };
     uint32_t Group{ 0u };
     uint32_t Binding{ 0u };
     uint32_t ElementStride{ 0u };
@@ -137,7 +138,7 @@ struct ManifestBinding
     uint32_t StorageFormat{ 0u };
     uint32_t FirstUniformMember{ 0u };
     uint32_t UniformMemberCount{ 0u };
-    /** @brief Which placement fields mean anything. `Bound` uses Group and Binding. */
+    uint32_t Reserved2{ 0u };
     uint8_t PlacementKind{ 0u };
     uint8_t Kind{ 0u };
     uint8_t Shape{ 0u };

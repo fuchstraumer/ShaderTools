@@ -199,6 +199,7 @@ namespace
     {
         ReflectedBinding binding;
         binding.Name = raw_binding.Name;
+        binding.ScopeName = raw_binding.ScopeName;
         binding.Placement = raw_binding.Placement;
         binding.Kind = raw_binding.Kind;
         binding.ElementStride = raw_binding.ElementStride;

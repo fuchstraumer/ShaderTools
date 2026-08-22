@@ -181,6 +181,7 @@ struct UniformMemberInfo
 struct BindingInfo
 {
     std::string_view Name;
+    std::string_view ScopeName;
     uint32_t Group{ static_cast<uint32_t>(-1) };
     uint32_t Binding{ static_cast<uint32_t>(-1) };
     BindingKind Kind{ BindingKind::Invalid };

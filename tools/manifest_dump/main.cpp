@@ -166,6 +166,7 @@ void WriteBinding(lodestone::JsonWriter& writer,
 {
     writer.BeginObject();
     writer.KeyString("name", view.String(binding.NameString));
+    writer.KeyString("scope", view.String(binding.ScopeString));
     writer.KeyUInt("group", binding.Group);
     writer.KeyUInt("binding", binding.Binding);
     writer.KeyString("kind", magic_enum::enum_name(static_cast<lodestone::BindingKind>(binding.Kind)));
